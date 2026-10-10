@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core'
+import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import { AppModule } from './app.module.js'
-import { getCorsOrigins, getPositiveInt, isProduction } from './env.js'
+import { getCorsOrigins, getPositiveInt, isProduction } from './config/env.js'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
@@ -9,6 +10,10 @@ async function bootstrap() {
   // Added before the routes are mounted, so every response carries the
   // security headers.
   app.use(helmet())
+
+  // Parses the `Cookie` header into `req.cookies`, which the session guard
+  // and the auth routes read.
+  app.use(cookieParser())
 
   if (isProduction()) {
     // Only a deployed API serves a browser client, and only the origins it is

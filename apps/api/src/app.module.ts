@@ -4,9 +4,12 @@ import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { DatabaseModule } from '@workspace/db'
+import { AuthModule } from './auth/auth.module.js'
+import { AuthGuard } from './common/session/auth.guard.js'
 import { AppController } from './app.controller.js'
 import { AppService } from './app.service.js'
-import { getPositiveInt, isProduction, validateEnv } from './env.js'
+import { getPositiveInt, isProduction, validateEnv } from './config/env.js'
+import { TenantsModule } from './tenants/tenants.module.js'
 
 /** Requests one IP may send per `THROTTLE_TTL_MS` when the limits are enforced. */
 const THROTTLE_LIMIT = 20
@@ -42,6 +45,8 @@ const THROTTLE_TTL_MS = 60_000
       }),
     }),
     DatabaseModule,
+    AuthModule,
+    TenantsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -49,6 +54,11 @@ const THROTTLE_TTL_MS = 60_000
     // Applies the throttler to every route, so a new controller is covered
     // without repeating the guard.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Guards every route with the cookie session. The auth routes are marked
+    // `@Public()` — a session is being created or replaced there, so a
+    // request cannot be required to present one. Everything else 401s
+    // without cookies.
+    { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })
 export class AppModule {}

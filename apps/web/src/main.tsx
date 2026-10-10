@@ -2,8 +2,9 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
 import "@workspace/ui/globals.css"
+import "@/lib/i18n.js"
 import { App } from "./App.tsx"
-import { ThemeProvider } from "@/components/theme-provider.tsx"
+import { ThemeProvider } from "@/components/layout/theme-provider.tsx"
 
 const rootElement = document.getElementById("root")
 

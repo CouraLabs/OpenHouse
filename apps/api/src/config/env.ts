@@ -24,7 +24,7 @@ type NodeEnvironment = (typeof NODE_ENVIRONMENTS)[number]
  * instead of being ignored. Variables a host injects (`PATH`, `HOSTNAME`, …)
  * do not use these prefixes and pass through untouched.
  */
-const RESERVED_PREFIXES = ['APP_', 'CORS_', 'DB_', 'THROTTLE_']
+const RESERVED_PREFIXES = ['APP_', 'CORS_', 'DB_', 'JWT_', 'THROTTLE_']
 
 /** What a declared variable accepts. */
 type VariableSpec =
@@ -32,6 +32,8 @@ type VariableSpec =
   | { kind: 'text' }
   /** Origins a browser may call the API from, comma-separated. */
   | { kind: 'originList'; requiredInProduction: boolean }
+  /** A string a production deployment must set and development may leave out. */
+  | { kind: 'secret'; requiredInProduction: boolean }
   | { kind: 'positiveInteger' }
 
 /**
@@ -48,6 +50,18 @@ const VARIABLES: Record<string, VariableSpec> = {
   DB_POOL_MAX: { kind: 'positiveInteger' },
   DB_CONNECTION_TIMEOUT_MS: { kind: 'positiveInteger' },
   DB_IDLE_TIMEOUT_MS: { kind: 'positiveInteger' },
+  // The HMAC secret the JWTs are signed with. A development default keeps the
+  // app bootable without a file; a deployment must set its own.
+  JWT_SECRET: { kind: 'secret', requiredInProduction: true },
+  // How long an access token lives, in seconds. Short by design: the session
+  // survives it through the refresh token.
+  JWT_ACCESS_TTL_S: { kind: 'positiveInteger' },
+  // How long the server honors a refresh token, in seconds, when the sign-in
+  // did not ask to be remembered. Remembered sessions use JWT_REFRESH_TTL_S.
+  JWT_REFRESH_TTL_S: { kind: 'positiveInteger' },
+  // How long the server honors a refresh token, in seconds, when the sign-in
+  // asked to be remembered.
+  JWT_REMEMBER_REFRESH_TTL_S: { kind: 'positiveInteger' },
   // Read by `@workspace/db`, not by this application directly. It is declared
   // so that the API knows the variable the database module needs.
   DATABASE_URL: { kind: 'text' },
@@ -109,6 +123,29 @@ export function getPositiveInt(name: string, fallback: number): number {
   return getInt(name) ?? fallback
 }
 
+/**
+ * Returns the secret the JWTs are signed with. Development falls back to a
+ * fixed value — tokens it signs are only honored by the same local process —
+ * and production cannot reach this function without the variable, which
+ * `validateEnv` enforces.
+ */
+export function getJwtSecret(): string {
+  return text(process.env.JWT_SECRET) ?? 'development-only-secret'
+}
+
+/**
+ * Returns how long the tokens live, in seconds: an access token always, and a
+ * refresh token for a session that did not (`refreshTtlS`) or did
+ * (`rememberRefreshTtlS`) ask to be remembered.
+ */
+export function getJwtTtls() {
+  return {
+    accessTtlS: getPositiveInt('JWT_ACCESS_TTL_S', 900),
+    refreshTtlS: getPositiveInt('JWT_REFRESH_TTL_S', 86_400),
+    rememberRefreshTtlS: getPositiveInt('JWT_REMEMBER_REFRESH_TTL_S', 2_592_000),
+  }
+}
+
 /** Returns a value as a string, treating an empty one as unset. */
 function text(value: unknown): string | undefined {
   if (value === undefined || value === null) {
@@ -159,6 +196,15 @@ function assertUsable(
     !isPositiveInteger(value)
   ) {
     throw new Error(`${name} must be a positive integer, got "${value}".`)
+  }
+
+  if (
+    spec.kind === 'secret' &&
+    spec.requiredInProduction &&
+    text(value) === undefined &&
+    nodeEnv === 'production'
+  ) {
+    throw new Error(`${name} is required when NODE_ENV is production.`)
   }
 
   if (

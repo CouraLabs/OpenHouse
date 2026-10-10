@@ -53,6 +53,10 @@
         "CORS_ORIGINS",
         "THROTTLE_TTL_MS",
         "THROTTLE_LIMIT",
+        "JWT_SECRET",
+        "JWT_ACCESS_TTL_S",
+        "JWT_REFRESH_TTL_S",
+        "JWT_REMEMBER_REFRESH_TTL_S",
         "DB_POOL_MAX",
         "DB_CONNECTION_TIMEOUT_MS",
         "DB_IDLE_TIMEOUT_MS"

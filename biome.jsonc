@@ -25,6 +25,12 @@
       "tailwindDirectives": true
     }
   },
+  "javascript": {
+    // NestJS DI uses constructor parameter decorators (`@Inject`, `@Param`).
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  },
   "linter": {
     "enabled": true,
     "domains": {

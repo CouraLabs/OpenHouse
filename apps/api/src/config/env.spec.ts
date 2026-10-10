@@ -1,5 +1,7 @@
 import {
   getCorsOrigins,
+  getJwtSecret,
+  getJwtTtls,
   getPositiveInt,
   isProduction,
   validateEnv,
@@ -29,6 +31,7 @@ describe('validateEnv', () => {
     const config = {
       NODE_ENV: 'production',
       CORS_ORIGINS: 'http://localhost:3000',
+      JWT_SECRET: 's3cret',
     }
 
     expect(validateEnv(config)).toMatchObject(config)
@@ -47,6 +50,24 @@ describe('validateEnv', () => {
     expect(() => validateEnv({ PORT: '0' })).toThrow(
       'PORT must be a positive integer'
     )
+  })
+
+  it('allows a development boot without JWT_SECRET', () => {
+    expect(() => validateEnv({})).not.toThrow()
+  })
+
+  it('requires JWT_SECRET in production', () => {
+    expect(() =>
+      validateEnv({ NODE_ENV: 'production', CORS_ORIGINS: 'http://x' })
+    ).toThrow('JWT_SECRET is required when NODE_ENV is production.')
+
+    expect(() =>
+      validateEnv({
+        NODE_ENV: 'production',
+        CORS_ORIGINS: 'http://x',
+        JWT_SECRET: 's3cret',
+      })
+    ).not.toThrow()
   })
 
   it('leaves the variables a host injects untouched', () => {
@@ -91,6 +112,20 @@ describe('the parsing helpers', () => {
 
     process.env.PORT = 'zero'
     expect(getPositiveInt('PORT', 3000)).toBe(3000)
+  })
+
+  it('falls back to the development secret and default TTLs', () => {
+    delete process.env.JWT_SECRET
+    delete process.env.JWT_ACCESS_TTL_S
+    delete process.env.JWT_REFRESH_TTL_S
+    delete process.env.JWT_REMEMBER_REFRESH_TTL_S
+
+    expect(getJwtSecret()).toBe('development-only-secret')
+    expect(getJwtTtls()).toEqual({
+      accessTtlS: 900,
+      refreshTtlS: 86_400,
+      rememberRefreshTtlS: 2_592_000,
+    })
   })
 
   it('reports production only when NODE_ENV says so', () => {

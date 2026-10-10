@@ -1,0 +1,37 @@
+{
+  "app": {
+    "name": "OpenHouse"
+  },
+  "nav": {
+    "platform": "Platform",
+    "playground": "Playground",
+    "history": "History",
+    "starred": "Starred",
+    "settings": "Settings",
+    "models": "Models",
+    "documentation": "Documentation",
+    "projects": "Projects",
+    "design-engineering": "Design Engineering",
+    "sales-marketing": "Sales & Marketing",
+    "travel": "Travel"
+  },
+  "breadcrumb": {
+    "home": "Home"
+  },
+  "profile": {
+    "account": "Account",
+    "billing": "Billing",
+    "notifications": "Notifications",
+    "logout": "Log out"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "label": "Language",
+    "en-US": "English"
+  }
+}
