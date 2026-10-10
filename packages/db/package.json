@@ -1,0 +1,35 @@
+{
+  "name": "@workspace/db",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "lint": "biome lint .",
+    "format": "prettier --write \"**/*.{ts,mjs}\"",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "node scripts/generate.mjs",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "dotenv": "^17.2.4",
+    "drizzle-orm": "1.0.0-rc.4",
+    "pg": "^8.23.1"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^12.0.0",
+    "@nestjs/drizzle": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "1.0.0-rc.4",
+    "typescript": "^6.0.2"
+  }
+}

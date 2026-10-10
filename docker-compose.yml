@@ -1,0 +1,41 @@
+# The stack `docker compose up --build` starts: the API and the PostgreSQL it
+# reads. Export `CORS_ORIGINS` first — a production API refuses to start
+# without it:
+#
+#   CORS_ORIGINS=http://localhost:3000 docker compose up --build
+#
+# Migrations are not run here. The database publishes no port, so run them from
+# the host against a port published for one command:
+#
+#   docker compose run --rm -p 5433:5432 db
+#   DATABASE_URL=postgres://postgres:postgres@localhost:5433/openhouse npm run db:migrate
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: openhouse
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready --username=postgres --dbname=openhouse']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build: .
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@db:5432/openhouse
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "format": {
+      "dependsOn": ["^format"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck", "^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "env": [
+        "DATABASE_URL",
+        "DB_POOL_MAX",
+        "DB_CONNECTION_TIMEOUT_MS",
+        "DB_IDLE_TIMEOUT_MS"
+      ]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "env": [
+        "DATABASE_URL",
+        "DB_POOL_MAX",
+        "DB_CONNECTION_TIMEOUT_MS",
+        "DB_IDLE_TIMEOUT_MS"
+      ]
+    },
+    "db:generate": {
+      "cache": false,
+      "env": ["DATABASE_URL"]
+    },
+    "db:migrate": {
+      "cache": false,
+      "env": ["DATABASE_URL"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
+      "env": [
+        "DATABASE_URL",
+        "PORT",
+        "NODE_ENV",
+        "CORS_ORIGINS",
+        "THROTTLE_TTL_MS",
+        "THROTTLE_LIMIT",
+        "DB_POOL_MAX",
+        "DB_CONNECTION_TIMEOUT_MS",
+        "DB_IDLE_TIMEOUT_MS"
+      ]
+    }
+  }
+}
