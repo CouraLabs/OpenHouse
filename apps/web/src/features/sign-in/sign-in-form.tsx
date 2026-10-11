@@ -5,7 +5,7 @@ import { signInSchema } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { ApiError } from '@/lib/api.js'
 import { useSignIn } from '@/lib/auth.js'
-import { TextField } from '@/components/ui/text-field.js'
+import { TextField } from '@workspace/ui/components/text-field'
 
 /**
  * The fields the sign-in form holds. The rules come from the shared poco

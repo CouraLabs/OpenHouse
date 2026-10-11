@@ -1,0 +1,24 @@
+import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+
+import {
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@workspace/ui/components/sidebar'
+
+import type { NavItem } from './nav.js'
+
+/** A plain navigation entry rendered as a link button. */
+export function NavButtonItem({ item }: { item: NavItem }) {
+  const { t } = useTranslation()
+  const Icon = item.icon
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton render={<Link to={item.to} />}>
+        {Icon ? <Icon /> : null}
+        <span>{t(item.key)}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}

@@ -12,7 +12,6 @@ export function SignUpPage() {
   return (
     <AuthLayout>
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <h1 className="font-medium">Sign up</h1>
         <SignUpForm onSuccess={() => void navigate({ to: '/' })} />
         <p className="text-sm text-muted-foreground">
           Already have an account?{' '}

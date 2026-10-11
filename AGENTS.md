@@ -81,6 +81,13 @@ packages/
 8. **Tests sit next to their code** (`<name>.spec.ts`) and e2e specs in
    `apps/api/test/`. Vitest picks up both from any depth — moving files needs no
    config changes.
+9. **One component per file.** Every React component lives in its own file
+   (`<component>.tsx`); never stack multiple components in one file. Tiny
+   single-use helpers used only by that component may stay inline, but anything
+   exported is its own file.
+10. **Reusable components go to `packages/ui`.** A component needed by more
+    than one feature (or app) belongs in the shared design system, not in
+    `apps/web/src/components/`.
 
 When a section of this contract stops fitting (e.g. `common/` needs
 sub-domain splitting, or web needs shared data-access layers), change the

@@ -5,7 +5,7 @@ import { hasExactlyOneTenantField } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { ApiError } from '@/lib/api.js'
 import { useSignUp } from '@/lib/auth.js'
-import { TextField } from '@/components/ui/text-field.js'
+import { TextField } from '@workspace/ui/components/text-field'
 
 /**
  * The fields the sign-up form holds. The exclusivity rule — exactly one of

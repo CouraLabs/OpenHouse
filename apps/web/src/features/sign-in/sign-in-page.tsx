@@ -12,7 +12,6 @@ export function SignInPage() {
   return (
     <AuthLayout>
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <h1 className="font-medium">Sign in</h1>
         <SignInForm onSuccess={() => void navigate({ to: '/' })} />
         <p className="text-sm text-muted-foreground">
           No account yet?{' '}

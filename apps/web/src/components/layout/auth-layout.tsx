@@ -2,7 +2,8 @@ import { House } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { LocaleSwitcher, ThemeSwitcher } from '@/components/layout/switchers.js'
+import { LocaleSwitcher } from '@/components/layout/locale-switcher.js'
+import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
 
 /**
  * The chrome of the signed-out pages: the brand (logo mark and app name) top
