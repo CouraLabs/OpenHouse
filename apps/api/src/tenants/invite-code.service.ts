@@ -48,6 +48,10 @@ export class InviteCodeService {
   }
 
   private toCreatedInviteCode(row: TenantCode): CreatedInviteCode {
-    return { code: row.code, expiresAt: row.expiresAt, createdAt: row.createdAt }
+    return {
+      code: row.code,
+      expiresAt: row.expiresAt,
+      createdAt: row.createdAt,
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { CacheModule } from '@nestjs/cache-manager'
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { ScheduleModule } from '@nestjs/schedule'
 import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { DatabaseModule } from '@workspace/db'
@@ -9,7 +10,15 @@ import { AuthGuard } from './common/session/auth.guard.js'
 import { AppController } from './app.controller.js'
 import { AppService } from './app.service.js'
 import { getPositiveInt, isProduction, validateEnv } from './config/env.js'
+import { CategoriesModule } from './categories/categories.module.js'
+import { LimitsModule } from './limits/limits.module.js'
+import { AccountsModule } from './accounts/accounts.module.js'
+import { GoalsModule } from './goals/goals.module.js'
 import { TenantsModule } from './tenants/tenants.module.js'
+import { ReceiversModule } from './receivers/receivers.module.js'
+import { RecurringTransactionsModule } from './recurring-transactions/recurring-transactions.module.js'
+import { TransactionsModule } from './transactions/transactions.module.js'
+import { TransactionLinkersModule } from './transaction-linkers/transaction-linkers.module.js'
 
 /** Requests one IP may send per `THROTTLE_TTL_MS` when the limits are enforced. */
 const THROTTLE_LIMIT = 20
@@ -28,6 +37,8 @@ const THROTTLE_TTL_MS = 60_000
     // The in-memory store is enough while the API is a single process. A
     // shared store (Redis) is what a second replica would need.
     CacheModule.register({ isGlobal: true }),
+    // Powers the recurring rules' background cron.
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       // A factory rather than `forRoot`, so the limits are read after
       // `ConfigModule` has validated and parsed the environment.
@@ -47,6 +58,14 @@ const THROTTLE_TTL_MS = 60_000
     DatabaseModule,
     AuthModule,
     TenantsModule,
+    CategoriesModule,
+    LimitsModule,
+    AccountsModule,
+    GoalsModule,
+    ReceiversModule,
+    TransactionLinkersModule,
+    TransactionsModule,
+    RecurringTransactionsModule,
   ],
   controllers: [AppController],
   providers: [

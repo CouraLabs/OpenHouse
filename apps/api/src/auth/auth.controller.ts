@@ -16,8 +16,17 @@ import {
   baseCookieOptions,
   REFRESH_COOKIE,
 } from '../common/session/auth.guard.js'
-import { CurrentSession, Public, type Session } from '../common/session/session.js'
-import { signInSchema, signUpSchema, type SignInBody, type SignUpBody } from '@workspace/poco'
+import {
+  CurrentSession,
+  Public,
+  type Session,
+} from '../common/session/session.js'
+import {
+  signInSchema,
+  signUpSchema,
+  type SignInBody,
+  type SignUpBody,
+} from '@workspace/poco'
 import { TokenService } from './token.service.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
@@ -67,7 +76,10 @@ export class AuthController {
     @Body(new ZodValidationPipe(signInSchema)) body: SignInBody,
     @Res({ passthrough: true }) response: Response
   ): Promise<SessionResponse> {
-    const session = await this.auth.signIn({ email: body.email, password: body.password })
+    const session = await this.auth.signIn({
+      email: body.email,
+      password: body.password,
+    })
 
     return this.establish(response, session, body.rememberMe)
   }
@@ -165,7 +177,9 @@ export class AuthController {
     response.cookie(
       REFRESH_COOKIE,
       issued.refreshToken,
-      rememberMe ? { ...options, maxAge: issued.refreshMaxAgeS * 1000 } : options
+      rememberMe
+        ? { ...options, maxAge: issued.refreshMaxAgeS * 1000 }
+        : options
     )
 
     return session

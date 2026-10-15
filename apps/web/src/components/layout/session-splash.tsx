@@ -8,7 +8,7 @@ import { House } from 'lucide-react'
  */
 export function SessionSplash() {
   return (
-    <div className="bg-background flex min-h-svh items-center justify-center">
+    <div className="flex min-h-svh items-center justify-center bg-background">
       <House className="size-8 animate-pulse text-muted-foreground" />
     </div>
   )

@@ -1,4 +1,9 @@
-import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common'
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common'
 import bcrypt from 'bcrypt'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, eq, isNull } from 'drizzle-orm'
@@ -154,7 +159,10 @@ export class AuthService {
    * whether the email is unknown or the password is wrong, so the endpoint
    * cannot be used to discover which emails have signed up.
    */
-  async signIn(body: { email: string; password: string }): Promise<SessionResponse> {
+  async signIn(body: {
+    email: string
+    password: string
+  }): Promise<SessionResponse> {
     const [user] = await this.db.query.users.findMany({
       where: { email: body.email },
       limit: 1,
@@ -181,7 +189,10 @@ export class AuthService {
    * A token that verifies but does not match the stored hash was rotated out
    * — reuse of a stolen one — and revokes the session outright.
    */
-  async refresh(userId: number, presentedToken: string): Promise<SessionResponse> {
+  async refresh(
+    userId: number,
+    presentedToken: string
+  ): Promise<SessionResponse> {
     const [user] = await this.db.query.users.findMany({
       where: { id: userId },
       limit: 1,
@@ -194,7 +205,10 @@ export class AuthService {
     ) {
       // The presented token is not the one this session was issued with.
       // Revoke everything this user could still have in flight.
-      await this.db.update(users).set({ refreshTokenHash: null }).where(eq(users.id, userId))
+      await this.db
+        .update(users)
+        .set({ refreshTokenHash: null })
+        .where(eq(users.id, userId))
 
       throw new UnauthorizedException('Session expired or invalid.')
     }
@@ -209,7 +223,10 @@ export class AuthService {
 
   /** Ends the session server-side: the next refresh token stops working. */
   async signOut(userId: number): Promise<void> {
-    await this.db.update(users).set({ refreshTokenHash: null }).where(eq(users.id, userId))
+    await this.db
+      .update(users)
+      .set({ refreshTokenHash: null })
+      .where(eq(users.id, userId))
   }
 
   /**
@@ -220,7 +237,12 @@ export class AuthService {
   async establishSession(
     user: PublicUser | { id: number; role: UserRole },
     rememberMe: boolean
-  ): Promise<{ accessToken: string; refreshToken: string; accessMaxAgeS: number; refreshMaxAgeS: number }> {
+  ): Promise<{
+    accessToken: string
+    refreshToken: string
+    accessMaxAgeS: number
+    refreshMaxAgeS: number
+  }> {
     const accessToken = this.tokens.signAccessToken(user.id)
     const { token: refreshToken } = this.tokens.signRefreshToken(user.id)
     await this.db
@@ -239,12 +261,19 @@ export class AuthService {
   }
 
   /** Shapes a user and their tenant for the response, dropping secrets. */
-  private sessionResponse(user: PublicUser | Omit<User, 'password' | 'refreshTokenHash'>, tenant: Tenant | undefined): SessionResponse {
+  private sessionResponse(
+    user: PublicUser | Omit<User, 'password' | 'refreshTokenHash'>,
+    tenant: Tenant | undefined
+  ): SessionResponse {
     if (tenant === undefined) {
       throw new UnauthorizedException('Session expired or invalid.')
     }
 
-    const { password: _password, refreshTokenHash: _hash, ...publicUser } = user as User
+    const {
+      password: _password,
+      refreshTokenHash: _hash,
+      ...publicUser
+    } = user as User
 
     return {
       user: {
@@ -273,7 +302,9 @@ export class AuthService {
   private conflictFor(error: unknown, email: string): Error {
     const message = error instanceof Error ? error.message : String(error)
     if (message.includes('users_tenant_id_email_key')) {
-      return new ConflictException(`The email ${email} is already in this tenant.`)
+      return new ConflictException(
+        `The email ${email} is already in this tenant.`
+      )
     }
     if (message.includes('tenants_name_key')) {
       return new ConflictException('This tenant name is already taken.')

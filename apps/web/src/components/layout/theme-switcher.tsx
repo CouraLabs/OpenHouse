@@ -35,7 +35,11 @@ export function ThemeSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label={t('theme.label')} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t('theme.label')}
+          />
         }
       >
         <CurrentIcon />

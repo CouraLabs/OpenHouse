@@ -1,7 +1,4 @@
-import {
-  Breadcrumb,
-  BreadcrumbList,
-} from '@workspace/ui/components/breadcrumb'
+import { Breadcrumb, BreadcrumbList } from '@workspace/ui/components/breadcrumb'
 import { Separator } from '@workspace/ui/components/separator'
 import { SidebarTrigger } from '@workspace/ui/components/sidebar'
 
@@ -15,7 +12,7 @@ import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
  */
 export function AppHeader() {
   return (
-    <header className="bg-sidebar flex h-14 shrink-0 items-center gap-2 border-b px-4">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-sidebar px-4">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-2 h-4 self-center!" />
       <Breadcrumb>

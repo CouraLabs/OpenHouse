@@ -25,7 +25,7 @@ export function NavGroupContent({ group }: { group: NavGroup }) {
               <CollapsibleNavItemView key={item.key} item={item} />
             ) : (
               <NavButtonItem key={item.key} item={item} />
-            ),
+            )
           )}
         </SidebarMenu>
       </SidebarGroupContent>

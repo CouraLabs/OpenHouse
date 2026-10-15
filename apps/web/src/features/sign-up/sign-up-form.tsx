@@ -19,7 +19,10 @@ const signUpFormSchema = z
     tenantName: z
       .string()
       .max(120)
-      .refine((value) => value.trim() === '' || value.length > 0, 'Enter a tenant name.'),
+      .refine(
+        (value) => value.trim() === '' || value.length > 0,
+        'Enter a tenant name.'
+      ),
     tenantCode: z.string().max(120),
     name: z.string().min(1, 'Enter your name.').max(120),
     email: z.string().email('Enter a valid email.'),
@@ -31,10 +34,12 @@ const signUpFormSchema = z
     // plain strings, so the empty one is masked to `undefined` first.
     const hasName = values.tenantName.trim() !== ''
     const hasCode = values.tenantCode.trim() !== ''
-    if (!hasExactlyOneTenantField({
-      tenantName: hasName ? values.tenantName : undefined,
-      tenantCode: hasCode ? values.tenantCode : undefined,
-    })) {
+    if (
+      !hasExactlyOneTenantField({
+        tenantName: hasName ? values.tenantName : undefined,
+        tenantCode: hasCode ? values.tenantCode : undefined,
+      })
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['tenantCode'],
@@ -70,16 +75,29 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
   const onSubmit = handleSubmit(async (values) => {
     // The form holds both fields as strings; the API expects exactly one, so
     // the empty one is left out.
-    const body = values.tenantCode.trim() !== ''
-      ? { tenantCode: values.tenantCode.trim(), name: values.name, email: values.email, password: values.password }
-      : { tenantName: values.tenantName.trim(), name: values.name, email: values.email, password: values.password }
+    const body =
+      values.tenantCode.trim() !== ''
+        ? {
+            tenantCode: values.tenantCode.trim(),
+            name: values.name,
+            email: values.email,
+            password: values.password,
+          }
+        : {
+            tenantName: values.tenantName.trim(),
+            name: values.name,
+            email: values.email,
+            password: values.password,
+          }
 
     try {
       await signUp.mutateAsync(body)
       onSuccess()
     } catch (error) {
       if (error instanceof ApiError) {
-        const codeFieldIssue = error.issues?.find((issue) => issue.path.includes('tenantCode'))
+        const codeFieldIssue = error.issues?.find((issue) =>
+          issue.path.includes('tenantCode')
+        )
 
         if (codeFieldIssue !== undefined) {
           setError('tenantCode', { message: codeFieldIssue.message })
@@ -116,6 +134,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
         label="Your name"
         placeholder="Ana Owner"
         autoComplete="name"
+        required
         error={errors.name}
         {...register('name')}
       />
@@ -124,6 +143,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
         labelFor="sign-up-email"
         placeholder="you@example.com"
         autoComplete="email"
+        required
         error={errors.email}
         {...register('email')}
       />
@@ -132,6 +152,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
         labelFor="sign-up-password"
         placeholder="At least 8 characters"
         autoComplete="new-password"
+        required
         error={errors.password}
         {...register('password')}
       />

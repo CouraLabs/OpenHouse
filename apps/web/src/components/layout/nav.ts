@@ -1,9 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
-import { Cuboid, FileText, Settings2, Sparkles } from 'lucide-react'
+import { ArrowLeftRight, Link, PiggyBank, Repeat, Tags, Target, Users, Wallet } from 'lucide-react'
 
 /**
- * A navigation entry the sidebar renders as a link. The paths are inert
- * placeholders until their pages exist; the shell itself owns no routes.
+ * A navigation entry the sidebar renders as a link.
  */
 export type NavItem = {
   key: string
@@ -20,30 +19,17 @@ export type NavGroup = {
   items: Array<NavItem | CollapsibleNavItem>
 }
 
-export const PLATFORM_GROUP: NavGroup = {
-  key: 'nav.platform',
+/** The financial records a signed-in user manages. */
+export const FINANCIAL_GROUP: NavGroup = {
+  key: 'nav.financial',
   items: [
-    {
-      key: 'nav.playground',
-      to: '/playground',
-      icon: Sparkles,
-      children: [
-        { key: 'nav.history', to: '/playground/history' },
-        { key: 'nav.starred', to: '/playground/starred' },
-        { key: 'nav.settings', to: '/playground/settings' },
-      ],
-    },
-    { key: 'nav.models', to: '/models', icon: Cuboid },
-    { key: 'nav.documentation', to: '/documentation', icon: FileText },
-    { key: 'nav.settings', to: '/settings', icon: Settings2 },
-  ],
-}
-
-export const PROJECTS_GROUP: NavGroup = {
-  key: 'nav.projects',
-  items: [
-    { key: 'nav.design-engineering', to: '/projects/design-engineering' },
-    { key: 'nav.sales-marketing', to: '/projects/sales-marketing' },
-    { key: 'nav.travel', to: '/projects/travel' },
+    { key: 'nav.transactions', to: '/transactions', icon: ArrowLeftRight },
+    { key: 'nav.categories', to: '/categories', icon: Tags },
+    { key: 'nav.receivers', to: '/receivers', icon: Users },
+    { key: 'nav.transaction-linkers', to: '/transaction-linkers', icon: Link },
+    { key: 'nav.recurring-transactions', to: '/recurring-transactions', icon: Repeat },
+    { key: 'nav.limits', to: '/limits', icon: PiggyBank },
+    { key: 'nav.goals', to: '/goals', icon: Target },
+    { key: 'nav.accounts', to: '/accounts', icon: Wallet },
   ],
 }

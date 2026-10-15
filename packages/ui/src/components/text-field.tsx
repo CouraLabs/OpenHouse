@@ -31,6 +31,9 @@ interface TextFieldProps {
   label?: string
   labelFor: string
   error?: { message?: string }
+  /** Whether the field is required: marks the label with a red asterisk
+   * and carries the native `required` attribute for assistive tech. */
+  required?: boolean
 }
 
 /**
@@ -43,14 +46,30 @@ export function TextField({
   label,
   labelFor,
   error,
+  required,
   ...inputProps
 }: TextFieldProps & Omit<ComponentProps<typeof Input>, 'type' | 'id'>) {
   const shownLabel = label ?? LABELS[type]
 
   return (
     <Field data-invalid={error !== undefined}>
-      {shownLabel !== '' && <FieldLabel htmlFor={labelFor}>{shownLabel}</FieldLabel>}
-      <Input id={labelFor} type={INPUT_TYPES[type]} aria-invalid={error !== undefined} {...inputProps} />
+      {shownLabel !== '' && (
+        <FieldLabel htmlFor={labelFor}>
+          {shownLabel}
+          {required ? (
+            <span aria-hidden="true" className="text-destructive">
+              *
+            </span>
+          ) : null}
+        </FieldLabel>
+      )}
+      <Input
+        id={labelFor}
+        type={INPUT_TYPES[type]}
+        required={required}
+        aria-invalid={error !== undefined}
+        {...inputProps}
+      />
       <FieldError errors={error !== undefined ? [error] : undefined} />
     </Field>
   )

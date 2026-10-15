@@ -21,10 +21,11 @@ describe('the session guard (e2e)', () => {
   })
 
   it('rejects a request without a session', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(401)
-      .expect({ message: 'Missing session.', error: 'Unauthorized', statusCode: 401 })
+    return request(app.getHttpServer()).get('/').expect(401).expect({
+      message: 'Missing session.',
+      error: 'Unauthorized',
+      statusCode: 401,
+    })
   })
 
   it('rejects a request whose access cookie does not verify', () => {

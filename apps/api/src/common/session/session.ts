@@ -25,7 +25,11 @@ const PUBLIC_KEY = 'is-public'
  * a request cannot present a session it is in the middle of creating.
  */
 export function Public(): MethodDecorator & ClassDecorator {
-  return (target: object, _propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
+  return (
+    target: object,
+    _propertyKey?: string | symbol,
+    descriptor?: PropertyDescriptor
+  ) => {
     Reflect.defineMetadata(PUBLIC_KEY, true, descriptor?.value ?? target)
   }
 }
@@ -49,9 +53,17 @@ const ROLES_KEY = 'accepted-roles'
  */
 export function Roles(
   ...roles: readonly UserRole[]
-): ((target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor) => void) &
+): ((
+  target: object,
+  _propertyKey: string | symbol,
+  descriptor: PropertyDescriptor
+) => void) &
   ((target: object) => void) {
-  return (target: object, _propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
+  return (
+    target: object,
+    _propertyKey?: string | symbol,
+    descriptor?: PropertyDescriptor
+  ) => {
     Reflect.defineMetadata(ROLES_KEY, roles, descriptor?.value ?? target)
   }
 }

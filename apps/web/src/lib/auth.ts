@@ -2,9 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import type { SessionResponse, SignInBody, SignUpBody } from '@workspace/poco'
 import { ApiError, api } from './api.js'
-
-/** The session query lives under this key; sign-in/out invalidate it. */
-export const SESSION_QUERY_KEY = ['session'] as const
+import { SESSION_QUERY_KEY } from './query.js'
 
 /**
  * The session the current cookies resolve to, or `null` when they resolve to
@@ -40,7 +38,10 @@ export function useSignIn() {
 
   return useMutation({
     mutationFn: (input: SignInBody) =>
-      api<SessionResponse>('/auth/sign-in', { method: 'POST', body: JSON.stringify(input) }),
+      api<SessionResponse>('/auth/sign-in', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
     onSuccess: (session) => {
       queryClient.setQueryData(SESSION_QUERY_KEY, session)
     },
@@ -53,7 +54,10 @@ export function useSignUp() {
 
   return useMutation({
     mutationFn: (input: SignUpBody) =>
-      api<SessionResponse>('/auth/sign-up', { method: 'POST', body: JSON.stringify(input) }),
+      api<SessionResponse>('/auth/sign-up', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
     onSuccess: (session) => {
       queryClient.setQueryData(SESSION_QUERY_KEY, session)
     },

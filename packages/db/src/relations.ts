@@ -10,6 +10,14 @@ export const relations = defineRelations(schema, (r) => ({
   tenants: {
     users: r.many.users(),
     tenantCodes: r.many.tenantCodes(),
+    categories: r.many.categories(),
+    limits: r.many.limits(),
+    accounts: r.many.accounts(),
+    goals: r.many.goals(),
+    receivers: r.many.receivers(),
+    transactionLinkers: r.many.transactionLinkers(),
+    recurringTransactions: r.many.recurringTransactions(),
+    transactions: r.many.transactions(),
   },
   users: {
     tenant: r.one.tenants({
@@ -22,6 +30,136 @@ export const relations = defineRelations(schema, (r) => ({
     tenant: r.one.tenants({
       from: r.tenantCodes.tenantId,
       to: r.tenants.id,
+      optional: false,
+    }),
+  },
+  categories: {
+    tenant: r.one.tenants({
+      from: r.categories.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    limits: r.many.limits(),
+  },
+  limits: {
+    tenant: r.one.tenants({
+      from: r.limits.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    category: r.one.categories({
+      from: r.limits.categoryId,
+      to: r.categories.id,
+      optional: false,
+    }),
+  },
+  accounts: {
+    tenant: r.one.tenants({
+      from: r.accounts.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    goals: r.many.goals(),
+  },
+  goals: {
+    tenant: r.one.tenants({
+      from: r.goals.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    linkedAccount: r.one.accounts({
+      from: r.goals.linkedAccountId,
+      to: r.accounts.id,
+      optional: false,
+    }),
+  },
+  receivers: {
+    tenant: r.one.tenants({
+      from: r.receivers.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    transactionLinkers: r.many.transactionLinkers(),
+    recurringTransactions: r.many.recurringTransactions(),
+    transactions: r.many.transactions(),
+  },
+  transactionLinkers: {
+    tenant: r.one.tenants({
+      from: r.transactionLinkers.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    category: r.one.categories({
+      from: r.transactionLinkers.categoryId,
+      to: r.categories.id,
+      optional: false,
+    }),
+    receiver: r.one.receivers({
+      from: r.transactionLinkers.receiverId,
+      to: r.receivers.id,
+      optional: true,
+    }),
+  },
+  recurringTransactions: {
+    tenant: r.one.tenants({
+      from: r.recurringTransactions.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    receiver: r.one.receivers({
+      from: r.recurringTransactions.receiverId,
+      to: r.receivers.id,
+      optional: false,
+    }),
+    category: r.one.categories({
+      from: r.recurringTransactions.categoryId,
+      to: r.categories.id,
+      optional: false,
+    }),
+    linkedAccount: r.one.accounts({
+      from: r.recurringTransactions.linkedAccountId,
+      to: r.accounts.id,
+      optional: false,
+    }),
+    transactions: r.many.transactions(),
+  },
+  transactions: {
+    tenant: r.one.tenants({
+      from: r.transactions.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    linkedAccount: r.one.accounts({
+      from: r.transactions.linkedAccountId,
+      to: r.accounts.id,
+      optional: false,
+    }),
+    category: r.one.categories({
+      from: r.transactions.categoryId,
+      to: r.categories.id,
+      optional: false,
+    }),
+    receiver: r.one.receivers({
+      from: r.transactions.receiverId,
+      to: r.receivers.id,
+      optional: true,
+    }),
+    recurring: r.one.recurringTransactions({
+      from: r.transactions.recurringId,
+      to: r.recurringTransactions.id,
+      optional: true,
+    }),
+    history: r.many.transactionHistory(),
+  },
+  transactionHistory: {
+    tenant: r.one.tenants({
+      from: r.transactionHistory.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    transaction: r.one.transactions({
+      from: r.transactionHistory.transactionId,
+      to: r.transactions.id,
       optional: false,
     }),
   },

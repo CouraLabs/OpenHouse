@@ -27,13 +27,20 @@ export function UserFooter({ user }: { user: SessionUser }) {
   return (
     <SidebarFooter>
       <DropdownMenu>
-        <DropdownMenuTrigger render={<button type="button" className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-sidebar-accent" />}>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-sidebar-accent"
+            />
+          }
+        >
           <Avatar>
             <AvatarFallback>{initials(user.name)}</AvatarFallback>
           </Avatar>
           <div className="grid flex-1 leading-tight">
             <span className="truncate text-sm font-medium">{user.name}</span>
-            <span className="text-muted-foreground truncate text-xs">
+            <span className="truncate text-xs text-muted-foreground">
               {user.email}
             </span>
           </div>
@@ -42,7 +49,7 @@ export function UserFooter({ user }: { user: SessionUser }) {
           <DropdownMenuGroup>
             <DropdownMenuLabel className="flex flex-col">
               <span>{user.name}</span>
-              <span className="text-muted-foreground text-xs font-normal">
+              <span className="text-xs font-normal text-muted-foreground">
                 {user.email}
               </span>
             </DropdownMenuLabel>

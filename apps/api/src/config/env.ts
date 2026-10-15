@@ -142,7 +142,10 @@ export function getJwtTtls() {
   return {
     accessTtlS: getPositiveInt('JWT_ACCESS_TTL_S', 900),
     refreshTtlS: getPositiveInt('JWT_REFRESH_TTL_S', 86_400),
-    rememberRefreshTtlS: getPositiveInt('JWT_REMEMBER_REFRESH_TTL_S', 2_592_000),
+    rememberRefreshTtlS: getPositiveInt(
+      'JWT_REMEMBER_REFRESH_TTL_S',
+      2_592_000
+    ),
   }
 }
 

@@ -14,10 +14,10 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
 
   return (
-    <div className="bg-background flex min-h-svh flex-col">
+    <div className="flex min-h-svh flex-col bg-background">
       <header className="flex items-center justify-between p-4">
         <div className="flex items-center gap-2">
-          <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <House className="size-4" />
           </div>
           <span className="font-semibold">{t('app.name')}</span>

@@ -31,7 +31,9 @@ export function baseCookieOptions() {
 
 /** The max-age, in seconds, of the refresh cookie for a session. */
 export function refreshCookieMaxAgeS(rememberMe: boolean): number {
-  return rememberMe ? getJwtTtls().rememberRefreshTtlS : getJwtTtls().refreshTtlS
+  return rememberMe
+    ? getJwtTtls().rememberRefreshTtlS
+    : getJwtTtls().refreshTtlS
 }
 
 /** The roles a route accepts when it declares none: any signed-in user. */

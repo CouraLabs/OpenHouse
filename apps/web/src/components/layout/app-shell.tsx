@@ -22,9 +22,7 @@ export function AppShell({
       <AppSidebar user={session.user} tenantName={session.tenant.name} />
       <SidebarInset>
         <AppHeader />
-        <main className="flex flex-1 flex-col">
-          {children}
-        </main>
+        <main className="flex flex-1 flex-col">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

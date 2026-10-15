@@ -64,6 +64,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
         labelFor="sign-in-email"
         placeholder="you@example.com"
         autoComplete="email"
+        required
         error={errors.email}
         {...register('email')}
       />
@@ -72,6 +73,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
         labelFor="sign-in-password"
         placeholder="Your password"
         autoComplete="current-password"
+        required
         error={errors.password}
         {...register('password')}
       />

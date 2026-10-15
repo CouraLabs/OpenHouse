@@ -1,7 +1,8 @@
 import { QueryClient } from '@tanstack/react-query'
 import type { SessionResponse } from '@workspace/poco'
 
-import { SESSION_QUERY_KEY } from './auth.js'
+/** The session query lives under this key; sign-in/out invalidate it. */
+export const SESSION_QUERY_KEY = ['session'] as const
 
 /** The query client every query and mutation of the app shares. */
 export const queryClient = new QueryClient()
@@ -13,5 +14,7 @@ export const queryClient = new QueryClient()
  * guard must see the cache of that tick, not the props of the last render.
  */
 export function currentSession(): SessionResponse | null {
-  return queryClient.getQueryData<SessionResponse | null>(SESSION_QUERY_KEY) ?? null
+  return (
+    queryClient.getQueryData<SessionResponse | null>(SESSION_QUERY_KEY) ?? null
+  )
 }

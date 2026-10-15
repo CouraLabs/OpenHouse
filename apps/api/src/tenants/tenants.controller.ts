@@ -23,7 +23,8 @@ export class TenantsController {
   @Post('invite-codes')
   async createInviteCode(
     @CurrentSession() session: Session,
-    @Body(new ZodValidationPipe(createInviteCodeSchema)) body: CreateInviteCodeBody
+    @Body(new ZodValidationPipe(createInviteCodeSchema))
+    body: CreateInviteCodeBody
   ): Promise<InviteCode> {
     const expiresAt =
       body.expiresInDays === undefined

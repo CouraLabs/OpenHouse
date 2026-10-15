@@ -1,0 +1,2 @@
+ALTER TABLE "transactions" ADD COLUMN "transfer_group_id" uuid;--> statement-breakpoint
+CREATE UNIQUE INDEX "transactions_recurring_materialized_key" ON "transactions" ("tenant_id","recurring_id","transaction_dt") WHERE status = 'ACTIVE' and recurring_id is not null;

@@ -1,0 +1,1 @@
+ALTER TABLE "recurring_transactions" ADD COLUMN "type" text DEFAULT 'Expense' NOT NULL;

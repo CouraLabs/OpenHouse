@@ -15,7 +15,10 @@ export function SignInPage() {
         <SignInForm onSuccess={() => void navigate({ to: '/' })} />
         <p className="text-sm text-muted-foreground">
           No account yet?{' '}
-          <Link to="/sign-up" className="text-foreground underline underline-offset-4">
+          <Link
+            to="/sign-up"
+            className="text-foreground underline underline-offset-4"
+          >
             Sign up
           </Link>
         </p>
