@@ -19,6 +19,11 @@ import { ReceiversPage } from '@/features/receivers/receivers-page.js'
 import { TransactionLinkersPage } from '@/features/transaction-linkers/transaction-linkers-page.js'
 import { RecurringTransactionsPage } from '@/features/recurring-transactions/recurring-transactions-page.js'
 import { MainPage } from '@/features/main/main-page.js'
+import { TipsPage } from '@/features/tips/tips-page.js'
+import { InterestComparisonPage } from '@/features/interest-comparison/interest-comparison-page.js'
+import { RateConversionPage } from '@/features/rate-conversion/rate-conversion-page.js'
+import { FinancialIndependencePage } from '@/features/financial-independence/financial-independence-page.js'
+import { RentVsBuyPage } from '@/features/rent-vs-buy/rent-vs-buy-page.js'
 import { MainLayout } from '@/components/layout/main-layout.js'
 
 /** The root route renders nothing but the matched child. */
@@ -131,6 +136,41 @@ const recurringTransactionsRoute = createRoute({
   component: RecurringTransactionsPage,
 })
 
+/** The page with the financial tips guides. */
+const tipsRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'tips',
+  component: TipsPage,
+})
+
+/** The simple-vs-compound interest projection. */
+const interestComparisonRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'tips/interest-comparison',
+  component: InterestComparisonPage,
+})
+
+/** The rate conversion tool. */
+const rateConversionRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'tips/rate-conversion',
+  component: RateConversionPage,
+})
+
+/** The financial-independence calculators. */
+const financialIndependenceRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'tips/financial-independence',
+  component: FinancialIndependencePage,
+})
+
+/** The buy-or-rent projection. */
+const rentVsBuyRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'tips/rent-vs-buy',
+  component: RentVsBuyPage,
+})
+
 const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
@@ -144,6 +184,11 @@ const routeTree = rootRoute.addChildren([
     receiversRoute,
     transactionLinkersRoute,
     recurringTransactionsRoute,
+    tipsRoute,
+    interestComparisonRoute,
+    rateConversionRoute,
+    financialIndependenceRoute,
+    rentVsBuyRoute,
   ]),
 ])
 

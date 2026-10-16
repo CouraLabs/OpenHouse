@@ -1,7 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   ArrowLeftRight,
+  House,
+  Landmark,
+  Lightbulb,
   Link,
+  Percent,
   PiggyBank,
   Repeat,
   Tags,
@@ -67,6 +71,28 @@ export const FINANCIAL_GROUP: NavGroup = {
       items: [
         { key: 'nav.limits', to: '/limits', icon: PiggyBank },
         { key: 'nav.goals', to: '/goals', icon: Target },
+      ],
+    },
+    {
+      key: 'nav.subgroup.tips',
+      items: [
+        { key: 'nav.tips', to: '/tips', icon: Lightbulb },
+        {
+          key: 'nav.interest-comparison',
+          to: '/tips/interest-comparison',
+          icon: Percent,
+        },
+        {
+          key: 'nav.rate-conversion',
+          to: '/tips/rate-conversion',
+          icon: ArrowLeftRight,
+        },
+        {
+          key: 'nav.financial-independence',
+          to: '/tips/financial-independence',
+          icon: Landmark,
+        },
+        { key: 'nav.rent-vs-buy', to: '/tips/rent-vs-buy', icon: House },
       ],
     },
   ],

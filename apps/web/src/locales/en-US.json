@@ -7,7 +7,8 @@
     "subgroup": {
       "setup": "Setup",
       "activity": "Activity",
-      "planning": "Planning"
+      "planning": "Planning",
+      "tips": "Tips"
     },
     "categories": "Categories",
     "limits": "Limits",
@@ -16,7 +17,12 @@
     "transactions": "Transactions",
     "receivers": "Receivers",
     "transaction-linkers": "Transaction Linkers",
-    "recurring-transactions": "Recurring Transactions"
+    "recurring-transactions": "Recurring Transactions",
+    "tips": "Financial Tips",
+    "interest-comparison": "Simple vs Compound Interest",
+    "rate-conversion": "Rate Conversion",
+    "financial-independence": "Financial Independence",
+    "rent-vs-buy": "Buy or Rent"
   },
   "breadcrumb": {
     "home": "Home"
@@ -193,6 +199,150 @@
     "USD": "US Dollar",
     "BRL": "Brazilian Real",
     "EUR": "Euro"
+  },
+  "tips": {
+    "title": "Financial Tips",
+    "subtitle": "Short guides to organize your money — no data required, just good habits.",
+    "ten-tips": {
+      "title": "10 Tips for Financial Organization",
+      "description": "Small habits that keep your money under control, one day at a time.",
+      "items": {
+        "track-expenses": {
+          "title": "Write down every expense",
+          "body": "Record everything you spend, cash or card. What isn't tracked can't be controlled."
+        },
+        "goals": {
+          "title": "Set realistic goals",
+          "body": "Give your money a direction: short-, medium-, and long-term targets keep you focused."
+        },
+        "budget": {
+          "title": "Build a monthly budget",
+          "body": "Plan where your income goes before the month starts, then follow the plan."
+        },
+        "pay-yourself-first": {
+          "title": "Pay yourself first",
+          "body": "Set your savings aside the day the money arrives — spend what's left, not the other way around."
+        },
+        "cut-expenses": {
+          "title": "Cut unnecessary expenses",
+          "body": "Subscriptions and small daily habits add up fast; cancel what you don't really use."
+        },
+        "impulse": {
+          "title": "Avoid impulse purchases",
+          "body": "Wait before buying anything non-essential — the urge usually fades."
+        },
+        "installments": {
+          "title": "Avoid installments",
+          "body": "Splitting a purchase hides its true cost and promises future income you haven't earned yet."
+        },
+        "emergency-fund": {
+          "title": "Build an emergency fund",
+          "body": "Aim for three to six months of expenses so a surprise doesn't become a debt."
+        },
+        "review": {
+          "title": "Review your money regularly",
+          "body": "Check your budget every week and adjust before small leaks grow."
+        },
+        "tool": {
+          "title": "Use a tracking tool",
+          "body": "An app that logs income and expenses keeps the whole picture in one place."
+        }
+      }
+    },
+    "save-money": {
+      "title": "How to Save Money",
+      "description": "A straightforward path from deciding to save to watching the balance grow.",
+      "items": {
+        "goal": {
+          "title": "Set a clear goal",
+          "body": "Know what you are saving for and by when — a goal without a date is just a wish."
+        },
+        "numbers": {
+          "title": "Know your numbers",
+          "body": "Add up your income and every expense to see how much you can actually set aside."
+        },
+        "cut": {
+          "title": "Cut the superfluous",
+          "body": "Small daily savings compound into the bulk of what you'll accumulate."
+        },
+        "save-first": {
+          "title": "Save first, spend later",
+          "body": "Move the money to savings on payday, before any spending."
+        },
+        "automate": {
+          "title": "Automate the transfer",
+          "body": "A scheduled transfer keeps the promise to yourself even on busy months."
+        },
+        "extra-income": {
+          "title": "Look for extra income",
+          "body": "Sell what you no longer use or add a side gig to speed things up."
+        },
+        "progress": {
+          "title": "Track your progress",
+          "body": "Watch the balance grow against the goal and celebrate each milestone."
+        }
+      }
+    },
+    "six-jars": {
+      "title": "The Six Jars Method",
+      "description": "Split every income into six fixed shares so every area of life gets funded.",
+      "items": {
+        "necessities": {
+          "title": "Necessities",
+          "body": "Housing, food, transport, and bills — the fixed cost of living."
+        },
+        "freedom": {
+          "title": "Financial freedom",
+          "body": "Invest so your money eventually works for you."
+        },
+        "education": {
+          "title": "Education",
+          "body": "Courses, books, and skills that raise your earning power."
+        },
+        "savings": {
+          "title": "Savings and goals",
+          "body": "The long-term projects — a trip, a car, a house."
+        },
+        "fun": {
+          "title": "Fun",
+          "body": "Guilt-free spending — enjoy the money you worked for."
+        },
+        "giving": {
+          "title": "Giving",
+          "body": "Donate to causes and people you believe in."
+        }
+      }
+    },
+    "organize-strategy": {
+      "title": "A Strategy to Organize Your Finances",
+      "description": "Six steps to take your finances from chaos to a working plan.",
+      "items": {
+        "map": {
+          "title": "Map income and expenses",
+          "body": "List everything coming in and going out for a full month — knowledge comes first."
+        },
+        "debts": {
+          "title": "Organize your debts",
+          "body": "List what you owe, prioritize the most expensive, and negotiate what you can."
+        },
+        "cut": {
+          "title": "Cut superfluous spending",
+          "body": "With the map in hand, trim what doesn't serve your goals."
+        },
+        "reserve": {
+          "title": "Build an emergency reserve",
+          "body": "Protect the plan: savings for the unexpected come before investments."
+        },
+        "goals": {
+          "title": "Set goals and plan",
+          "body": "Turn intention into numbers: a target, a date, and a monthly amount."
+        },
+        "monitor": {
+          "title": "Monitor and adjust",
+          "body": "Review monthly — a budget is a living plan, not a one-time document."
+        }
+      }
+    }
   },
   "receivers": {
     "title": "Receivers",
@@ -407,5 +557,144 @@
     "load-more": "Load more",
     "category-account": "Category / Account",
     "status-change": "Change status"
+  },
+  "interest-comparison": {
+    "title": "Simple vs Compound Interest",
+    "subtitle": "Watch the same money grow two ways — interest on the principal only, or interest on the interest.",
+    "params": {
+      "title": "Projection",
+      "present-value": "Present value",
+      "amount-placeholder": "15000.00",
+      "rate": "Net return rate (% a year)",
+      "rate-placeholder": "10",
+      "periods": "Period",
+      "periods-placeholder": "15",
+      "unit": "Unit",
+      "unit-year": "Years",
+      "unit-month": "Months"
+    },
+    "summary": {
+      "simple": "Capital under simple interest",
+      "compound": "Capital under compound interest",
+      "difference": "The compound advantage"
+    },
+    "chart": {
+      "title": "Capital over time",
+      "simple": "Simple interest",
+      "compound": "Compound interest"
+    },
+    "table": {
+      "title": "Schedule",
+      "period": "Period",
+      "simple-capital": "Simple capital",
+      "simple-interest": "Simple interest",
+      "compound-capital": "Compound capital",
+      "compound-interest": "Compound interest",
+      "variation": "Difference"
+    }
+  },
+  "rate-conversion": {
+    "title": "Rate Conversion",
+    "subtitle": "Translate a rate between year, month, and business day — by compounding, never by dividing.",
+    "converter": {
+      "title": "Convert a rate",
+      "rate": "Rate (%)",
+      "rate-placeholder": "10",
+      "unit": "Period",
+      "unit-year": "Year",
+      "unit-month": "Month",
+      "unit-day": "Business day",
+      "year": "Per year",
+      "month": "Per month",
+      "day": "Per business day"
+    },
+    "cdi": {
+      "title": "CDI example: a share of the DI rate",
+      "description": "A CDI-linked investment pays a share of the DI rate: the DI rate becomes a daily rate, your share comes off it, and the result compounds back into the year your savings run on.",
+      "di-rate": "DI rate (% a year)",
+      "share": "Share of DI (%)",
+      "deposit": "Saved per year",
+      "years": "Years saving",
+      "daily-rate": "Daily DI rate",
+      "daily-net": "Daily net rate",
+      "effective-annual": "Effective annual rate",
+      "future-value": "Saved every year for the whole span, this grows to"
+    }
+  },
+  "financial-independence": {
+    "title": "Financial Independence",
+    "subtitle": "How much to put away every month to reach a target — and how much an accumulated balance pays out monthly.",
+    "accumulation": {
+      "title": "Reaching a target",
+      "description": "The monthly contribution that turns today's balance into your target over the years, net of inflation, fees, and income tax on the gains.",
+      "target": "Target amount",
+      "present": "Current balance",
+      "rate": "Net return (% a month)",
+      "inflation": "Inflation (% a month)",
+      "admin-fee": "Admin fee (% a month)",
+      "loading-fee": "Loading fee (% a month)",
+      "income-tax": "Income tax (% a year)",
+      "years": "Years",
+      "result": "Monthly contribution",
+      "contributed": "Total contributed",
+      "tax": "Total income tax"
+    },
+    "withdrawal": {
+      "title": "Living off the accumulation",
+      "description": "The constant monthly withdrawal an accumulated balance supports over the years — the tax charged on the interest share only.",
+      "balance": "Accumulated balance",
+      "rate": "Net return (% a month)",
+      "inflation": "Inflation (% a month)",
+      "admin-fee": "Admin fee (% a month)",
+      "income-tax": "Income tax (% a year)",
+      "years": "Years",
+      "result": "Monthly withdrawal",
+      "first-interest": "First month's net interest"
+    }
+  },
+  "rent-vs-buy": {
+    "title": "Buy or Rent",
+    "subtitle": "Financing a property against renting and investing the difference, month by month.",
+    "params": {
+      "title": "Scenario",
+      "property-value": "Property value",
+      "down-payment": "Down payment",
+      "mortgage-rate": "Mortgage rate (% a year)",
+      "appreciation": "Property appreciation (% a year)",
+      "term": "Term (months)",
+      "system": "Amortization",
+      "system-sac": "SAC",
+      "system-price": "Price",
+      "rent": "Monthly rent",
+      "return": "Investment return (% a year)",
+      "rent-increase": "Rent increase (% a year)"
+    },
+    "buy": {
+      "title": "Buying",
+      "amortization": "Paid in amortization and down payment",
+      "interest": "Paid in interest",
+      "total": "Paid in installments",
+      "patrimony": "Property value at the end"
+    },
+    "rent": {
+      "title": "Renting",
+      "rent-total": "Paid in rent",
+      "surplus": "Difference invested",
+      "investment": "Investment at the end"
+    },
+    "chart": {
+      "title": "Patrimony over time",
+      "property": "Property value",
+      "investment": "Renting and investing"
+    },
+    "table": {
+      "title": "Financing schedule",
+      "month": "Month",
+      "balance": "Outstanding balance",
+      "payment": "Installment",
+      "amortization": "Amortization",
+      "interest": "Interest",
+      "property": "Property value"
+    }
   }
 }
