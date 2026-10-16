@@ -3,7 +3,11 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type { CreateReceiverBody, Receiver, ReceiverType } from '@workspace/poco'
+import type {
+  CreateReceiverBody,
+  Receiver,
+  ReceiverType,
+} from '@workspace/poco'
 import { createReceiverSchema, receiverTypes } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'

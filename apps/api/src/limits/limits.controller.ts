@@ -15,6 +15,7 @@ import type {
   EntityStatus,
   Limit,
   LimitType,
+  LimitUsage,
   Currency,
   PagedResults,
   SearchLimitsArgs,
@@ -29,6 +30,7 @@ import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
+import type { LimitRow } from './limit.repository.js'
 import { LimitService } from './limit.service.js'
 
 /**
@@ -60,6 +62,15 @@ export class LimitsController {
     const { rows, total } = await this.limits.search(session.tenant.id, args)
 
     return { total, items: rows.map(toWire) }
+  }
+
+  /** Reads every ACTIVE limit with what the tenant has spent against it in
+   * the period each limit covers — what the usage gauges render. */
+  @Get('usage')
+  async usage(@CurrentSession() session: Session): Promise<LimitUsage[]> {
+    const rows = await this.limits.usage(session.tenant.id)
+
+    return rows.map(toUsageWire)
   }
 
   /** Reads one limit, deleted rows included. */
@@ -115,5 +126,13 @@ function toWire(row: {
     status: row.status,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),
+  }
+}
+
+/** Maps a usage row onto the wire shape: the limit plus what it spent. */
+function toUsageWire(row: LimitRow & { spent: string }): LimitUsage {
+  return {
+    ...toWire(row),
+    spent: row.spent,
   }
 }

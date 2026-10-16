@@ -20,9 +20,8 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   currency: 'USD',
   limit: null,
   closeDay: null,
-  closeMonth: null,
   dueDay: null,
-  dueMonth: null,
+  isDefault: false,
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -90,6 +89,7 @@ const repository = () => ({
   insertWithBalance: vi.fn(),
   insertTransfer: vi.fn(),
   updateWithBalance: vi.fn(),
+  updateStatus: vi.fn(),
   softDeleteWithBalance: vi.fn(),
   search: vi.fn(),
   summary: vi.fn(),
@@ -178,6 +178,40 @@ describe('TransactionService', () => {
     ).rejects.toThrow(NotFoundException)
   })
 
+  it('changes the status through the narrow route, not the ledger', async () => {
+    const repo = repository()
+    repo.updateStatus.mockResolvedValue(row({ reviewStatus: 'Checked' }))
+    const svc = service(repo)
+
+    const changed = await svc.changeStatus(1, 7, { id: 1, status: 'Checked' })
+
+    expect(changed.reviewStatus).toBe('Checked')
+    // Only the status travels: the full-row update path — which reverts and
+    // re-applies the same delta — never runs for a review-status change.
+    expect(repo.updateStatus).toHaveBeenCalledWith(1, 1, 7, 'Checked')
+    expect(repo.updateWithBalance).not.toHaveBeenCalled()
+  })
+
+  it('rejects the status change of a DELETED transaction', async () => {
+    const repo = repository()
+    repo.findById.mockResolvedValue(row({ status: 'DELETED' }))
+
+    await expect(
+      service(repo).changeStatus(1, 7, { id: 1, status: 'Checked' })
+    ).rejects.toThrow(NotFoundException)
+    expect(repo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('forwards the session user with the status change', async () => {
+    const repo = repository()
+    repo.updateStatus.mockResolvedValue(row())
+    const svc = service(repo)
+
+    await svc.changeStatus(1, 42, { id: 1, status: 'Canceled' })
+
+    expect(repo.updateStatus).toHaveBeenCalledWith(1, 1, 42, 'Canceled')
+  })
+
   it('updates an ACTIVE transaction, keeping its recurring link', async () => {
     const repo = repository()
     repo.findById.mockResolvedValue(row({ recurringId: 9 }))
@@ -226,8 +260,18 @@ describe('TransactionService', () => {
     it('creates exactly two rows through one ledger pass', async () => {
       const repo = repository()
       repo.insertTransfer.mockResolvedValue([
-        row({ id: 21, name: 'TRANSFER_OUT', linkedAccountId: 10, type: 'Expense' }),
-        row({ id: 22, name: 'TRANSFER_IN', linkedAccountId: 11, type: 'Income' }),
+        row({
+          id: 21,
+          name: 'TRANSFER_OUT',
+          linkedAccountId: 10,
+          type: 'Expense',
+        }),
+        row({
+          id: 22,
+          name: 'TRANSFER_IN',
+          linkedAccountId: 11,
+          type: 'Income',
+        }),
       ])
       const accs = accounts()
       accs.findById

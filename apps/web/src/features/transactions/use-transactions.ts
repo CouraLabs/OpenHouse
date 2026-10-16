@@ -13,6 +13,7 @@ import type {
   ReceiverRef,
   SearchTransactionsArgs,
   Transaction,
+  TransactionStatus,
   TransactionSummary,
   TransferBody,
   UpdateTransactionBody,
@@ -51,7 +52,10 @@ export function useTransactionsInfinite(args: SearchTransactionsArgs) {
         return undefined
       }
 
-      const loaded = allPages.reduce((total, page) => total + page.items.length, 0)
+      const loaded = allPages.reduce(
+        (total, page) => total + page.items.length,
+        0
+      )
 
       return loaded < last.total ? loaded : undefined
     },
@@ -60,7 +64,9 @@ export function useTransactionsInfinite(args: SearchTransactionsArgs) {
 }
 
 /** Totals the transactions a filter describes, grouped by currency. */
-export function useTransactionSummary(filter: SearchTransactionsArgs['filter']) {
+export function useTransactionSummary(
+  filter: SearchTransactionsArgs['filter']
+) {
   return useQuery({
     queryKey: [...TRANSACTIONS_KEY, 'summary', filter],
     queryFn: ({ signal }) =>
@@ -123,6 +129,27 @@ export function useTransfer() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
+    },
+  })
+}
+
+/**
+ * Changes a transaction's review status alone. Deliberately invalidates
+ * only the transactions: a review-status change never moves money — the
+ * API writes no amount, account, or day — so the accounts cannot have
+ * changed, unlike the other mutations.
+ */
+export function useChangeTransactionStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: TransactionStatus }) =>
+      api<Transaction>(`/transactions/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ id, status }),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
     },
   })
 }

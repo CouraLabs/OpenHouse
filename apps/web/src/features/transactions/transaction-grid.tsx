@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react'
-import type { Currency, Transaction } from '@workspace/poco'
+import type { Currency, Transaction, TransactionStatus } from '@workspace/poco'
+import { transactionStatuses } from '@workspace/poco'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@workspace/ui/components/dropdown-menu'
 import { Spinner } from '@workspace/ui/components/spinner'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Pencil, Trash2 } from 'lucide-react'
@@ -37,9 +44,9 @@ type GridItem =
 
 /** What the grid's columns and actions are called, translated by the page. */
 export interface TransactionGridLabels {
+  description: string
   when: string
   category: string
-  account: string
   amount: string
   status: string
   selectAll: string
@@ -54,6 +61,8 @@ export interface TransactionGridLabels {
 export interface TransactionRowActions {
   onEdit: (transaction: Transaction) => void
   onDelete: (transaction: Transaction) => void
+  /** Moves the row straight to another review status, from the grid. */
+  onStatusChange: (transaction: Transaction, status: TransactionStatus) => void
 }
 
 const HEADER_HEIGHT = 40
@@ -167,7 +176,7 @@ export function TransactionGrid({
         />
         <span>{labels.when}</span>
         <span>{labels.category}</span>
-        <span>{labels.account}</span>
+        <span>{labels.description}</span>
         <span className="text-right">{labels.amount}</span>
         <span>{labels.status}</span>
         <span />
@@ -187,11 +196,17 @@ export function TransactionGrid({
             return (
               <div
                 key={virtual.key}
+                data-index={virtual.index}
+                ref={virtualizer.measureElement}
                 className="absolute inset-x-0"
                 style={{ transform: `translateY(${virtual.start}px)` }}
               >
                 {item.kind === 'header' ? (
-                  <DayHeader group={item.group} locale={locale} labels={labels} />
+                  <DayHeader
+                    group={item.group}
+                    locale={locale}
+                    labels={labels}
+                  />
                 ) : (
                   <TransactionRow
                     transaction={item.transaction}
@@ -212,7 +227,9 @@ export function TransactionGrid({
           {stickyItem !== undefined && stickyItem.kind === 'header' ? (
             <div
               className="absolute inset-x-0 z-10 shadow-sm"
-              style={{ transform: `translateY(${virtualizer.scrollOffset ?? 0}px)` }}
+              style={{
+                transform: `translateY(${virtualizer.scrollOffset ?? 0}px)`,
+              }}
             >
               <DayHeader
                 group={stickyItem.group}
@@ -222,8 +239,11 @@ export function TransactionGrid({
             </div>
           ) : null}
           {isFetchingNextPage ? (
-            <div className="absolute inset-x-0 flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground"
-              style={{ transform: `translateY(${(virtualizer.scrollOffset ?? 0) + HEADER_HEIGHT}px)` }}
+            <div
+              className="absolute inset-x-0 flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground"
+              style={{
+                transform: `translateY(${(virtualizer.scrollOffset ?? 0) + HEADER_HEIGHT}px)`,
+              }}
             >
               <Spinner className="size-4" />
               {labels.loading}
@@ -390,7 +410,8 @@ function DayHeader({
   )
 }
 
-/** One transaction's row: when, category, account, amount, status, actions. */
+/** One transaction's row: when, category with the account it moved
+ * through, description, amount, status, actions. */
 function TransactionRow({
   transaction,
   locale,
@@ -423,7 +444,7 @@ function TransactionRow({
           month: '2-digit',
         }).format(new Date(`${transaction.transactionDt}T00:00:00`))}
       </span>
-      <span>
+      <span className="flex min-w-0 items-center gap-2">
         <Badge
           variant="outline"
           style={
@@ -437,9 +458,15 @@ function TransactionRow({
         >
           {transaction.categoryName}
         </Badge>
+        <span
+          className="truncate text-muted-foreground"
+          title={transaction.accountName}
+        >
+          {transaction.accountName}
+        </span>
       </span>
-      <span className="truncate" title={transaction.accountName}>
-        {transaction.accountName}
+      <span className="truncate" title={transaction.name}>
+        {transaction.name}
       </span>
       <span
         className={`text-right font-medium tabular-nums ${
@@ -451,7 +478,11 @@ function TransactionRow({
         {signed}
       </span>
       <span>
-        <StatusBadge status={transaction.status} t={t} />
+        <StatusBadge
+          status={transaction.status}
+          onChange={(status) => actions.onStatusChange(transaction, status)}
+          t={t}
+        />
       </span>
       <div className="flex items-center justify-end gap-1">
         <Button
@@ -478,12 +509,16 @@ function TransactionRow({
   )
 }
 
-/** The review workflow's badge: Verify neutral, Checked green, Canceled red. */
+/** The review workflow's badge: Verify neutral, Checked green, Canceled
+ * red. Clicking it opens the other statuses — picking one changes the row
+ * straight from the grid, no form needed. */
 function StatusBadge({
   status,
+  onChange,
   t,
 }: {
   status: Transaction['status']
+  onChange: (status: TransactionStatus) => void
   t: (key: string) => string
 }) {
   const variants = {
@@ -493,8 +528,26 @@ function StatusBadge({
   } as const
 
   return (
-    <Badge variant={variants[status]}>
-      {t(`transactions.status-${status.toLowerCase()}`)}
-    </Badge>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={t('transactions.status-change')}
+        className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <Badge variant={variants[status]}>
+          {t(`transactions.status-${status.toLowerCase()}`)}
+        </Badge>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {transactionStatuses.map((value) => (
+          <DropdownMenuItem
+            key={value}
+            disabled={value === status}
+            onClick={() => onChange(value)}
+          >
+            {t(`transactions.status-${value.toLowerCase()}`)}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

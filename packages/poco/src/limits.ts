@@ -64,6 +64,25 @@ export type UpdateLimitBody = z.infer<typeof updateLimitSchema>
 export type SearchLimitsArgs = z.infer<typeof searchLimitsSchema>
 
 /**
+ * One limit with what the tenant has already spent against it in the period
+ * the limit covers — the pair a usage gauge renders. The `spent` total is
+ * the sum of the period's expense transactions in the limit's category and
+ * currency; transfer sides and Canceled transactions never count.
+ */
+export type LimitUsage = {
+  id: number
+  categoryId: number
+  categoryName: string
+  amount: string
+  type: LimitType
+  currency: Currency
+  status: EntityStatus
+  createdDt: string
+  updateDt: string
+  spent: string
+}
+
+/**
  * What the limit routes return: the wire shape, dates as ISO strings. The
  * `categoryName` comes joined from the `categories` table on every read, so
  * the UI never has to resolve a `categoryId` — and the name survives even

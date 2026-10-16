@@ -1,7 +1,13 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import type {
+  ChangeTransactionStatusBody,
   CreateTransactionBody,
   SearchTransactionsArgs,
+  TransactionBreakdownArgs,
   TransactionFilter,
   TransferBody,
   UpdateTransactionBody,
@@ -49,6 +55,7 @@ export class TransactionService {
     return this.repository.insertWithBalance(tenantId, userId, {
       ...rest,
       note: body.note ?? null,
+      invoice: body.invoice ?? null,
       receiverId: body.receiverId ?? null,
       statusNote: body.statusNote ?? null,
       recurringId: null,
@@ -67,6 +74,12 @@ export class TransactionService {
   /** Totals the tenant's transactions over a filter, per currency. */
   async summary(tenantId: number, filter: TransactionFilter) {
     return this.repository.summary(tenantId, filter)
+  }
+
+  /** Totals the tenant's expenses over a filter, grouped by a breakdown's
+   * dimension — category or account — per currency. */
+  async breakdown(tenantId: number, args: TransactionBreakdownArgs) {
+    return this.repository.breakdown(tenantId, args.dimension, args)
   }
 
   /** Reads one transaction — deleted included; the caller decides what to
@@ -113,11 +126,42 @@ export class TransactionService {
       {
         ...rest,
         note: body.note ?? null,
+        invoice: body.invoice ?? null,
         receiverId: body.receiverId ?? null,
         statusNote: body.statusNote ?? null,
         recurringId: row.recurringId,
         reviewStatus: status,
       }
+    )
+
+    if (updated === undefined) {
+      throw new NotFoundException(`No transaction with id ${body.id}.`)
+    }
+
+    return updated
+  }
+
+  /**
+   * Changes only a transaction's review status. A deleted transaction
+   * changes like a missing one: it is gone for the UI. Nothing else is
+   * written — no amount, account, or day — so the balance never moves.
+   */
+  async changeStatus(
+    tenantId: number,
+    userId: number,
+    body: ChangeTransactionStatusBody
+  ): Promise<TransactionRow> {
+    const row = await this.find(tenantId, body.id)
+
+    if (row.status === 'DELETED') {
+      throw new NotFoundException(`No transaction with id ${body.id}.`)
+    }
+
+    const updated = await this.repository.updateStatus(
+      tenantId,
+      body.id,
+      userId,
+      body.status
     )
 
     if (updated === undefined) {
@@ -156,9 +200,7 @@ export class TransactionService {
     const from = await this.accounts.findById(tenantId, body.fromAccountId)
 
     if (from === undefined || from.status === 'DELETED') {
-      throw new NotFoundException(
-        `No account with id ${body.fromAccountId}.`
-      )
+      throw new NotFoundException(`No account with id ${body.fromAccountId}.`)
     }
 
     const to = await this.accounts.findById(tenantId, body.toAccountId)
@@ -177,10 +219,7 @@ export class TransactionService {
       )
     }
 
-    const category = await this.categories.findById(
-      tenantId,
-      body.categoryId
-    )
+    const category = await this.categories.findById(tenantId, body.categoryId)
 
     if (category === undefined || category.status === 'DELETED') {
       throw new NotFoundException(`No category with id ${body.categoryId}.`)
@@ -202,31 +241,20 @@ export class TransactionService {
     tenantId: number,
     body: CreateTransactionBody | UpdateTransactionBody
   ): Promise<void> {
-    const account = await this.accounts.findById(
-      tenantId,
-      body.linkedAccountId
-    )
+    const account = await this.accounts.findById(tenantId, body.linkedAccountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(
-        `No account with id ${body.linkedAccountId}.`
-      )
+      throw new NotFoundException(`No account with id ${body.linkedAccountId}.`)
     }
 
-    const category = await this.categories.findById(
-      tenantId,
-      body.categoryId
-    )
+    const category = await this.categories.findById(tenantId, body.categoryId)
 
     if (category === undefined || category.status === 'DELETED') {
       throw new NotFoundException(`No category with id ${body.categoryId}.`)
     }
 
     if (body.receiverId != null) {
-      const receiver = await this.receivers.findById(
-        tenantId,
-        body.receiverId
-      )
+      const receiver = await this.receivers.findById(tenantId, body.receiverId)
 
       if (receiver === undefined || receiver.status === 'DELETED') {
         throw new NotFoundException(`No receiver with id ${body.receiverId}.`)

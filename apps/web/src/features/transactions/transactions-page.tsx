@@ -8,7 +8,16 @@ import type {
   TransactionType,
   TransferBody,
 } from '@workspace/poco'
-import { ArrowLeftRight, Plus } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronUp,
+  Gauge,
+  PieChart,
+  Plus,
+  Target,
+  Wallet,
+} from 'lucide-react'
 
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
@@ -18,16 +27,29 @@ import {
 } from '@workspace/ui/components/filter-dialog'
 import { PageHeader } from '@/components/page-header.js'
 import { formatDateOnly } from '@/lib/format-date-only.js'
+import { ExpensePieCard } from './expense-pie-card.js'
 import { FilterChips } from './filter-chips.js'
+import { forecastNextMonthExpenses } from './forecast-next-month.js'
+import { GoalGaugesCard } from './goal-gauges-card.js'
+import { LastMonthCard } from './last-month-card.js'
+import { LimitUsageCard } from './limit-usage-card.js'
 import { MonthFilter } from './month-filter.js'
+import { NextMonthCard } from './next-month-card.js'
 import { SummaryCards } from './summary-cards.js'
 import { TransactionForm } from './transaction-form.js'
 import { TransactionGrid } from './transaction-grid.js'
 import { TransferForm } from './transfer-form.js'
 import {
+  useExpenseBreakdown,
+  useGoals,
+  useLimitUsage,
+  useRecurringRules,
+} from './use-dashboard.js'
+import {
   useActiveAccounts,
   useActiveCategories,
   useActiveReceivers,
+  useChangeTransactionStatus,
   useDeleteTransaction,
   useSaveTransaction,
   useTransactionsInfinite,
@@ -79,6 +101,10 @@ export function TransactionsPage() {
   // The rows the selection checkbox column holds.
   const [selection, setSelection] = useState<Set<number>>(new Set())
 
+  // Whether the summary and dashboard cards are on screen: the grid alone
+  // is the daily workhorse, and the cards fold away when it is.
+  const [cardsOpen, setCardsOpen] = useState(true)
+
   const accounts = useActiveAccounts()
   const categories = useActiveCategories()
   const receivers = useActiveReceivers()
@@ -125,6 +151,43 @@ export function TransactionsPage() {
   const save = useSaveTransaction()
   const remove = useDeleteTransaction()
   const transfer = useTransfer()
+  const statusChange = useChangeTransactionStatus()
+
+  // The dashboard cards' data: the expenses split by category and by
+  // account, the previous month's totals, the goals and limits with their
+  // progress, and the recurring rules the next month projects.
+  const categoryArgs = useMemo<
+    SearchTransactionsArgs['filter'] & { dimension: 'category' }
+  >(() => ({ ...args.filter, dimension: 'category' }), [args.filter])
+  const accountArgs = useMemo<
+    SearchTransactionsArgs['filter'] & { dimension: 'account' }
+  >(() => ({ ...args.filter, dimension: 'account' }), [args.filter])
+  const categoryBreakdown = useExpenseBreakdown(categoryArgs)
+  const accountBreakdown = useExpenseBreakdown(accountArgs)
+  const lastMonthRange = useMemo(
+    () => monthRange(shiftMonth(anchor, -1)),
+    [anchor]
+  )
+  const lastMonthSummary = useTransactionSummary({
+    transactionDtFrom: lastMonthRange.from,
+    transactionDtTo: lastMonthRange.to,
+    lifecycle: 'ACTIVE' as const,
+  })
+  const goals = useGoals()
+  const limitUsage = useLimitUsage()
+  const recurringRules = useRecurringRules()
+
+  const nextMonthSlices = useMemo(
+    () =>
+      forecastNextMonthExpenses(
+        recurringRules.data?.items ?? [],
+        shiftMonth(anchor, 1),
+        (accountId) =>
+          (accounts.data ?? []).find((account) => account.id === accountId)
+            ?.currency
+      ),
+    [recurringRules.data, anchor, accounts.data]
+  )
 
   // The loaded rows, flattened newest first — what the grid groups by day.
   const rows = useMemo(
@@ -148,6 +211,11 @@ export function TransactionsPage() {
   const transferError = transfer.isError
     ? transfer.error instanceof Error
       ? transfer.error.message
+      : t('transactions.error')
+    : undefined
+  const statusChangeError = statusChange.isError
+    ? statusChange.error instanceof Error
+      ? statusChange.error.message
       : t('transactions.error')
     : undefined
 
@@ -240,6 +308,17 @@ export function TransactionsPage() {
     })
   }
 
+  // A status change from the grid skips the form: only the review status
+  // travels, on the narrow PATCH route — no field the grid holds is resent,
+  // so a stale row can never overwrite what another save already changed.
+  // The ledger mirrors the status to the transfer's other side API-side.
+  const changeStatus = (
+    transaction: Transaction,
+    status: TransactionStatus
+  ) => {
+    statusChange.mutate({ id: transaction.id, status })
+  }
+
   const submitTransfer = (body: TransferBody) => {
     transfer.mutate(body, {
       onSuccess: () => {
@@ -295,6 +374,17 @@ export function TransactionsPage() {
         subtitle={t('transactions.subtitle')}
         actions={
           <>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={cardsOpen}
+              onClick={() => setCardsOpen((open) => !open)}
+            >
+              {cardsOpen ? <ChevronUp /> : <ChevronDown />}
+              {cardsOpen
+                ? t('transactions.cards-hide')
+                : t('transactions.cards-show')}
+            </Button>
             <MonthFilter
               label={monthLabel}
               onPrevious={() => setAnchor((current) => shiftMonth(current, -1))}
@@ -391,24 +481,93 @@ export function TransactionsPage() {
           </>
         }
       />
-      <SummaryCards
-        groups={summary.data?.groups ?? []}
-        locale={i18n.language}
-        labels={{
-          incomes: t('transactions.summary-incomes'),
-          expenses: t('transactions.summary-expenses'),
-          net: t('transactions.summary-net'),
-          creditExpenses: t('transactions.summary-credit-expenses'),
-        }}
-      />
+      {/* The applied filters lead the page: the cards answer to them as
+       * much as the grid does. */}
       <FilterChips chips={chips} />
+      {cardsOpen ? (
+        <>
+          <SummaryCards
+            groups={summary.data?.groups ?? []}
+            locale={i18n.language}
+            labels={{
+              incomes: t('transactions.summary-incomes'),
+              expenses: t('transactions.summary-expenses'),
+              net: t('transactions.summary-net'),
+              creditExpenses: t('transactions.summary-credit-expenses'),
+            }}
+          />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <ExpensePieCard
+              title={t('transactions.dashboard-category-expenses')}
+              icon={<PieChart aria-hidden className="size-4" />}
+              groups={categoryBreakdown.data?.groups ?? []}
+              locale={i18n.language}
+              labels={{
+                other: t('transactions.dashboard-other'),
+                empty: t('transactions.dashboard-empty'),
+              }}
+            />
+            <ExpensePieCard
+              title={t('transactions.dashboard-account-expenses')}
+              icon={<Wallet aria-hidden className="size-4" />}
+              groups={accountBreakdown.data?.groups ?? []}
+              locale={i18n.language}
+              labels={{
+                other: t('transactions.dashboard-other'),
+                empty: t('transactions.dashboard-empty'),
+              }}
+            />
+            <LastMonthCard
+              title={t('transactions.dashboard-last-month')}
+              groups={lastMonthSummary.data?.groups ?? []}
+              locale={i18n.language}
+              labels={{
+                incomes: t('transactions.summary-incomes'),
+                expenses: t('transactions.summary-expenses'),
+              }}
+            />
+            <NextMonthCard
+              title={t('transactions.dashboard-next-month')}
+              slices={nextMonthSlices}
+              locale={i18n.language}
+              labels={{
+                expected: t('transactions.dashboard-next-month-expected'),
+                empty: t('transactions.dashboard-next-month-empty'),
+              }}
+            />
+            <GoalGaugesCard
+              title={t('transactions.dashboard-goals')}
+              icon={<Target aria-hidden className="size-4" />}
+              goals={goals.data?.items ?? []}
+              locale={i18n.language}
+              ariaLabelFor={(goal) =>
+                t('transactions.dashboard-goal-aria', { name: goal.name })
+              }
+              labels={{ empty: t('transactions.dashboard-goals-empty') }}
+            />
+            <LimitUsageCard
+              title={t('transactions.dashboard-limits')}
+              icon={<Gauge aria-hidden className="size-4" />}
+              usage={limitUsage.data ?? []}
+              locale={i18n.language}
+              labels={{
+                empty: t('transactions.dashboard-limits-empty'),
+                aria: (limit) =>
+                  t('transactions.dashboard-limit-aria', {
+                    name: limit.categoryName,
+                  }),
+              }}
+            />
+          </div>
+        </>
+      ) : null}
       <TransactionGrid
         rows={rows}
         locale={i18n.language}
         labels={{
+          description: t('transactions.name'),
           when: t('transactions.when'),
-          category: t('transactions.category'),
-          account: t('transactions.account'),
+          category: t('transactions.category-account'),
           amount: t('transactions.amount'),
           status: t('transactions.status'),
           selectAll: t('transactions.select-all'),
@@ -435,6 +594,7 @@ export function TransactionsPage() {
             save.reset()
             setDeleting(transaction)
           },
+          onStatusChange: changeStatus,
         }}
         hasMore={hasMore}
         isFetchingNextPage={search.isFetchingNextPage}
@@ -444,10 +604,17 @@ export function TransactionsPage() {
       {deleteError ? (
         <p className="text-sm text-destructive">{deleteError}</p>
       ) : null}
+      {/* A status change from the grid runs with the form closed, so its
+       * error — otherwise the sheet's — shows here. */}
+      {!formOpen && (saveError ?? statusChangeError) ? (
+        <p className="text-sm text-destructive">
+          {saveError ?? statusChangeError}
+        </p>
+      ) : null}
       <TransactionForm
         open={formOpen}
         transaction={editing}
-        defaultDt={range.from}
+        defaultDt={formatDateOnly(new Date())}
         error={saveError}
         isSaving={save.isPending}
         onSubmit={submitSave}

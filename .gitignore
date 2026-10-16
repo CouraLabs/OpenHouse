@@ -33,3 +33,8 @@ coverage
 
 # typescript
 *.tsbuildinfo
+
+# claude code local state and verification scratch
+.claude/settings.local.json
+.verify-scratch/
+plans/

@@ -15,7 +15,12 @@ import { amountSchema } from './limits.js'
  */
 
 /** The kinds of account a tenant keeps. */
-export const accountTypes = ['Checking', 'Credit', 'Savings'] as const
+export const accountTypes = [
+  'Checking',
+  'Wallet',
+  'Savings',
+  'Credit Card',
+] as const
 
 export const accountTypeSchema = z.enum(accountTypes, {
   error: 'Pick a type.',
@@ -25,7 +30,7 @@ export type AccountType = (typeof accountTypes)[number]
 
 /**
  * The balance an account body accepts: the same shape as an amount, but a
- * Credit card's balance runs negative, so a leading minus is allowed.
+ * credit card's balance runs negative, so a leading minus is allowed.
  */
 export const balanceSchema = z
   .string()
@@ -33,12 +38,14 @@ export const balanceSchema = z
 
 /**
  * The body creating an account accepts. Which fields a type needs is a
- * business rule, not a shape: the refinement below makes the agency
- * required for Checking and Savings, and the limit and the close/due
- * month-day pairs required for Credit — and forbids the credit-only fields
- * everywhere else. A close or due date carries no year, so it stores a
- * month-day pair. The `number` is bounded to what the `integer` column
- * stores — anything larger would 500 at insert instead of rejecting here.
+ * business rule, not a shape: the refinement below makes the agency and the
+ * number required for Checking and Savings, the limit and the close/due days
+ * required for a Credit Card — and forbids the card-only fields everywhere
+ * else, and the agency and the number on the account kinds that have no bank
+ * behind them. A close or due date is a day of the month alone — a card
+ * closes on the 15th, whatever the month — so no month rides along. The
+ * `number` is bounded to what the `integer` column stores — anything larger
+ * would 500 at insert instead of rejecting here.
  */
 export const createAccountSchema = z
   .object({
@@ -48,16 +55,19 @@ export const createAccountSchema = z
       .number({ error: 'Enter an account number.' })
       .int('Enter a whole number.')
       .positive('Enter an account number.')
-      .max(2_147_483_647, 'Keep the number under 2147483647.'),
+      .max(2_147_483_647, 'Keep the number under 2147483647.')
+      .nullish(),
     type: accountTypeSchema,
     balance: balanceSchema,
     /** The currency the account's money is denominated in. */
     currency: currencySchema,
     limit: amountSchema.nullish(),
     closeDay: z.number().int().min(1).max(31).nullish(),
-    closeMonth: z.number().int().min(1).max(12).nullish(),
     dueDay: z.number().int().min(1).max(31).nullish(),
-    dueMonth: z.number().int().min(1).max(12).nullish(),
+    /** Whether the account is the tenant's default — the one new
+     * transactions start in. Only one account carries the flag; the API
+     * clears the previous holder. */
+    isDefault: z.boolean().prefault(false),
   })
   .superRefine((account, ctx) => {
     if (account.type === 'Checking' || account.type === 'Savings') {
@@ -72,8 +82,33 @@ export const createAccountSchema = z
           message: 'Enter the agency.',
         })
       }
+      if (account.number === undefined || account.number === null) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['number'],
+          message: 'Enter the account number.',
+        })
+      }
     }
-    if (account.type === 'Credit') {
+    if (account.type === 'Wallet' || account.type === 'Credit Card') {
+      // Neither a wallet nor a card sits at a bank branch.
+      if (account.agency !== undefined && account.agency !== null && account.agency !== '') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['agency'],
+          message: 'Only a bank account has an agency.',
+        })
+      }
+      // …and neither carries a bank account number.
+      if (account.number !== undefined && account.number !== null) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['number'],
+          message: 'Only a bank account has a number.',
+        })
+      }
+    }
+    if (account.type === 'Credit Card') {
       if (account.limit === undefined || account.limit === null) {
         ctx.addIssue({
           code: 'custom',
@@ -81,24 +116,14 @@ export const createAccountSchema = z
           message: 'Enter the limit.',
         })
       }
-      if (
-        account.closeDay === undefined ||
-        account.closeDay === null ||
-        account.closeMonth === undefined ||
-        account.closeMonth === null
-      ) {
+      if (account.closeDay === undefined || account.closeDay === null) {
         ctx.addIssue({
           code: 'custom',
           path: ['closeDay'],
           message: 'Pick the close date.',
         })
       }
-      if (
-        account.dueDay === undefined ||
-        account.dueDay === null ||
-        account.dueMonth === undefined ||
-        account.dueMonth === null
-      ) {
+      if (account.dueDay === undefined || account.dueDay === null) {
         ctx.addIssue({
           code: 'custom',
           path: ['dueDay'],
@@ -106,42 +131,15 @@ export const createAccountSchema = z
         })
       }
     } else {
-      // Credit-only fields must be empty on the other types.
-      for (const field of [
-        'limit',
-        'closeDay',
-        'closeMonth',
-        'dueDay',
-        'dueMonth',
-      ] as const) {
+      // Card-only fields must be empty on the other types.
+      for (const field of ['limit', 'closeDay', 'dueDay'] as const) {
         if (account[field] !== undefined && account[field] !== null) {
           ctx.addIssue({
             code: 'custom',
             path: [field],
-            message: 'Only a Credit account has this.',
+            message: 'Only a Credit Card has this.',
           })
         }
-      }
-    }
-    // A day must exist in its month (leap-aware, year pinned to 2000).
-    for (const [dayKey, monthKey] of [
-      ['closeDay', 'closeMonth'],
-      ['dueDay', 'dueMonth'],
-    ] as const) {
-      const day = account[dayKey]
-      const month = account[monthKey]
-      if (
-        day !== undefined &&
-        day !== null &&
-        month !== undefined &&
-        month !== null &&
-        day > new Date(2000, month, 0).getDate()
-      ) {
-        ctx.addIssue({
-          code: 'custom',
-          path: [dayKey],
-          message: 'That day does not exist in the month.',
-        })
       }
     }
   })
@@ -176,25 +174,27 @@ export type AccountRef = {
   /** The currency the account's money is denominated in — a picker
    * matching two accounts for a transfer reads it here. */
   currency: Currency
+  /** Whether the account is the tenant's default — the one a new
+   * transaction starts in. */
+  isDefault: boolean
 }
 
 /**
  * What the account routes return: the wire shape, dates as ISO strings.
- * The close and due dates are month-day pairs without a year.
+ * The close and due dates are days of the month, without a month or year.
  */
 export type Account = {
   id: number
   name: string
   agency: string | null
-  number: number
+  number: number | null
   type: AccountType
   balance: string
   currency: Currency
   limit: string | null
   closeDay: number | null
-  closeMonth: number | null
   dueDay: number | null
-  dueMonth: number | null
+  isDefault: boolean
   status: EntityStatus
   createdDt: string
   updateDt: string

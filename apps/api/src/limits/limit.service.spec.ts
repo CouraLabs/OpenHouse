@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Category, Limit } from '@workspace/db'
 
 import { CategoryRepository } from '../categories/category.repository.js'
+import { TransactionRepository } from '../transactions/transaction.repository.js'
 import { LimitRepository } from './limit.repository.js'
 import { LimitService } from './limit.service.js'
 
@@ -50,6 +51,12 @@ const categories = () => ({
   findById: vi.fn(async (): Promise<Category | undefined> => category()),
 })
 
+/** A transaction repository stub — the usage view reads it; these tests
+ * never do. */
+const transactions = {
+  expenseTotalsByCategory: vi.fn(async () => []),
+} as unknown as TransactionRepository
+
 describe('LimitService', () => {
   it('creates a limit when the category is usable', async () => {
     const repo = repository()
@@ -57,7 +64,8 @@ describe('LimitService', () => {
     repo.insert.mockResolvedValue({ ...row(), categoryName: 'Office' })
     const service = new LimitService(
       repo as unknown as LimitRepository,
-      cats as unknown as CategoryRepository
+      cats as unknown as CategoryRepository,
+      transactions
     )
 
     const created = await service.create(1, 7, {
@@ -82,7 +90,8 @@ describe('LimitService', () => {
     cats.findById.mockResolvedValue(undefined)
     const service = new LimitService(
       repo as unknown as LimitRepository,
-      cats as unknown as CategoryRepository
+      cats as unknown as CategoryRepository,
+      transactions
     )
 
     await expect(
@@ -102,7 +111,8 @@ describe('LimitService', () => {
     cats.findById.mockResolvedValue(category({ status: 'DELETED' }))
     const service = new LimitService(
       repo as unknown as LimitRepository,
-      cats as unknown as CategoryRepository
+      cats as unknown as CategoryRepository,
+      transactions
     )
 
     await expect(
@@ -126,7 +136,8 @@ describe('LimitService', () => {
     })
     const service = new LimitService(
       repo as unknown as LimitRepository,
-      cats as unknown as CategoryRepository
+      cats as unknown as CategoryRepository,
+      transactions
     )
 
     const updated = await service.update(1, 7, {
@@ -158,7 +169,8 @@ describe('LimitService', () => {
     })
     const service = new LimitService(
       repo as unknown as LimitRepository,
-      cats as unknown as CategoryRepository
+      cats as unknown as CategoryRepository,
+      transactions
     )
 
     await expect(
@@ -179,7 +191,8 @@ describe('LimitService', () => {
     repo.findById.mockResolvedValue(undefined)
     const service = new LimitService(
       repo as unknown as LimitRepository,
-      cats as unknown as CategoryRepository
+      cats as unknown as CategoryRepository,
+      transactions
     )
 
     await expect(service.find(1, 999)).rejects.toThrow(NotFoundException)
@@ -192,7 +205,8 @@ describe('LimitService', () => {
     repo.softDelete.mockResolvedValue(row({ status: 'DELETED' }))
     const service = new LimitService(
       repo as unknown as LimitRepository,
-      cats as unknown as CategoryRepository
+      cats as unknown as CategoryRepository,
+      transactions
     )
 
     await expect(service.softDelete(1, 7, 1)).resolves.toBeUndefined()

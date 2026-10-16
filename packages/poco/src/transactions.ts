@@ -56,7 +56,7 @@ export const transactionRangeSchema = z.object({
 export const createTransactionSchema = z.object({
   name: z.string().min(1, 'Enter a name.').max(255),
   note: z.string().max(2000, 'Keep the note under 2000 characters.').nullish(),
-  invoice: z.string().min(1, 'Enter the invoice.').max(255),
+  invoice: z.string().max(255, 'Keep the invoice under 255 characters.').nullish(),
   amount: amountSchema,
   transactionDt: transactionDtSchema,
   linkedAccountId: z
@@ -79,6 +79,17 @@ export const createTransactionSchema = z.object({
 /** The body updating a transaction accepts: the same fields, plus which row. */
 export const updateTransactionSchema = createTransactionSchema.extend({
   id: z.number().int().positive(),
+})
+
+/**
+ * The body the status route accepts: which row, and the review status it
+ * moves to — nothing else. A review-status change never moves money, so the
+ * route takes no fields a stale grid row could resend: the full PUT remains
+ * the only writer of every other field, and of the status note.
+ */
+export const changeTransactionStatusSchema = z.object({
+  id: z.number().int().positive(),
+  status: transactionStatusSchema,
 })
 
 /**
@@ -135,6 +146,9 @@ export const transferSchema = z
 
 export type CreateTransactionBody = z.infer<typeof createTransactionSchema>
 export type UpdateTransactionBody = z.infer<typeof updateTransactionSchema>
+export type ChangeTransactionStatusBody = z.infer<
+  typeof changeTransactionStatusSchema
+>
 export type SearchTransactionsArgs = z.infer<typeof searchTransactionsSchema>
 export type TransactionFilter = z.infer<typeof transactionFilterSchema>
 export type TransferBody = z.infer<typeof transferSchema>
@@ -152,7 +166,7 @@ export type Transaction = {
   id: number
   name: string
   note: string | null
-  invoice: string
+  invoice: string | null
   amount: string
   transactionDt: string
   balanceOnDt: string
@@ -195,6 +209,55 @@ export type TransactionSummaryGroup = {
 /** What the summary route returns. */
 export type TransactionSummary = {
   groups: TransactionSummaryGroup[]
+}
+
+/**
+ * The dimensions a breakdown totals over: which category an expense
+ * belongs to, or which account it moved through. The pies of the
+ * transaction screen render one or the other.
+ */
+export const transactionBreakdownDimensions = ['category', 'account'] as const
+
+export const transactionBreakdownDimensionSchema = z.enum(
+  transactionBreakdownDimensions,
+  { error: 'Pick a dimension.' }
+)
+
+export type TransactionBreakdownDimension =
+  (typeof transactionBreakdownDimensions)[number]
+
+/**
+ * The body the breakdown route accepts: the same filter a search accepts,
+ * naming the dimension it groups by. The route always totals expenses —
+ * the pies answer where the money went, not where it came from.
+ */
+export const transactionBreakdownSchema = transactionFilterSchema.extend({
+  dimension: transactionBreakdownDimensionSchema,
+})
+
+export type TransactionBreakdownArgs = z.infer<
+  typeof transactionBreakdownSchema
+>
+
+/** One slice of a breakdown: a category's or an account's expense total. */
+export type TransactionBreakdownItem = {
+  name: string
+  /** The color the category carries, or nothing when the dimension is
+   * accounts — the UI assigns the series colors there. */
+  color: string | null
+  total: string
+}
+
+/** One currency's slices of a breakdown — mixed-currency tenants never sum
+ * across currencies, so a pie renders per group. */
+export type TransactionBreakdownGroup = {
+  currency: Currency
+  items: TransactionBreakdownItem[]
+}
+
+/** What the breakdown route returns. */
+export type TransactionBreakdown = {
+  groups: TransactionBreakdownGroup[]
 }
 
 /** The actions a history entry records. The database spelling lives in

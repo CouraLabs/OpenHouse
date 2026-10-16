@@ -54,11 +54,7 @@ const receivers = () => ({
   findById: vi.fn(async (): Promise<Receiver | undefined> => receiver()),
 })
 
-const service = (
-  repo = repository(),
-  cats = categories(),
-  rcv = receivers()
-) =>
+const service = (repo = repository(), cats = categories(), rcv = receivers()) =>
   new TransactionLinkerService(
     repo as unknown as TransactionLinkerRepository,
     cats as unknown as CategoryRepository,

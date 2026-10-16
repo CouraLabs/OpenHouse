@@ -74,7 +74,6 @@ export function useDeleteReceiver() {
 export function useActiveReceivers() {
   return useQuery({
     queryKey: [...RECEIVERS_KEY, 'active'],
-    queryFn: ({ signal }) =>
-      api<ReceiverRef[]>('/receivers', { signal }),
+    queryFn: ({ signal }) => api<ReceiverRef[]>('/receivers', { signal }),
   })
 }

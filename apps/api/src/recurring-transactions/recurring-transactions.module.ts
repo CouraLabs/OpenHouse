@@ -17,7 +17,12 @@ import { RecurringTransactionsController } from './recurring-transactions.contro
  * repositories they export.
  */
 @Module({
-  imports: [AccountsModule, CategoriesModule, ReceiversModule, TransactionsModule],
+  imports: [
+    AccountsModule,
+    CategoriesModule,
+    ReceiversModule,
+    TransactionsModule,
+  ],
   controllers: [RecurringTransactionsController],
   providers: [
     RecurringTransactionService,

@@ -77,9 +77,7 @@ export function localDayOf(date: Date): string {
 export function shiftDay(day: string, days: number): string {
   const [year, month, date] = day.split('-').map(Number)
 
-  return localDayOf(
-    new Date(year, month - 1, date + days, 12)
-  )
+  return localDayOf(new Date(year, month - 1, date + days, 12))
 }
 
 /**
@@ -113,7 +111,9 @@ export class RecurringRunService {
    * it created. One failing tenant never stops the others. `days` widens
    * the catch-up window — the tests pin it to one day. */
   @Cron('0 30 0 * * *')
-  async runDue(days: number = RecurringRunService.CATCH_UP_DAYS): Promise<number> {
+  async runDue(
+    days: number = RecurringRunService.CATCH_UP_DAYS
+  ): Promise<number> {
     return this.materializeWindow(days)
   }
 
@@ -156,7 +156,9 @@ export class RecurringRunService {
     }
 
     if (created > 0) {
-      this.logger.log(`Materialized ${created} recurring transactions up to ${today}.`)
+      this.logger.log(
+        `Materialized ${created} recurring transactions up to ${today}.`
+      )
     }
 
     return created

@@ -180,7 +180,9 @@ export function LinkerForm({
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">{t('linkers.receiver-placeholder')}</SelectItem>
+              <SelectItem value="none">
+                {t('linkers.receiver-placeholder')}
+              </SelectItem>
               {(receivers.data ?? []).map((receiver: ReceiverRef) => (
                 <SelectItem key={receiver.id} value={receiver.id}>
                   {receiver.name}

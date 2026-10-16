@@ -217,16 +217,21 @@ export type NewLimit = typeof limits.$inferInsert
  * The kinds of account a tenant keeps. The wire spelling lives in
  * `@workspace/poco` (`accountTypes`) — keep the two in step.
  */
-export const accountTypes = ['Checking', 'Credit', 'Savings'] as const
+export const accountTypes = [
+  'Checking',
+  'Wallet',
+  'Savings',
+  'Credit Card',
+] as const
 
 export type AccountType = (typeof accountTypes)[number]
 
 /**
- * An account of the tenant: a bank account (Checking, Savings) or a credit
- * card (Credit). The amount columns are `numeric` mapped to strings, so
- * money never travels through a float. A credit card closes on a day of
- * the month and its bill is due on another, so the close and due dates are
- * month-day pairs without a year.
+ * An account of the tenant: a bank account (Checking, Savings), a wallet, or
+ * a credit card (Credit Card). The amount columns are `numeric` mapped to
+ * strings, so money never travels through a float. A credit card closes on a
+ * day of the month and its bill is due on another — days of the month alone,
+ * with no month or year, since a card closes on the 15th whatever the month.
  */
 export const accounts = pgTable(
   'accounts',
@@ -237,8 +242,8 @@ export const accounts = pgTable(
     name: varchar({ length: 255 }).notNull(),
     /** The bank or branch the account sits at; a credit card has none. */
     agency: varchar({ length: 255 }),
-    /** The account's number. */
-    number: integer().notNull(),
+    /** The bank account's number; a wallet or a card has none. */
+    number: integer(),
     /** The kind of account, which decides which other fields apply. */
     type: text().$type<AccountType>().notNull(),
     /** The current balance, carried as a string like "12.34". */
@@ -248,16 +253,23 @@ export const accounts = pgTable(
     /** The credit card's limit; `limit` is a reserved SQL word, safe here
      * because drizzle quotes identifiers. */
     limit: numeric({ precision: 16, scale: 2 }),
-    /** The day of the month the credit card bill closes, without a year. */
+    /** The day of the month the credit card bill closes. */
     closeDay: smallint(),
-    closeMonth: smallint(),
-    /** The day of the month the credit card bill is due, without a year. */
+    /** The day of the month the credit card bill is due. */
     dueDay: smallint(),
-    dueMonth: smallint(),
+    /** Whether the account is the tenant's default — the one new
+     * transactions start in. At most one account of a tenant carries the
+     * flag; the write paths clear the previous holder first. */
+    isDefault: boolean('is_default').notNull().default(false),
   },
   (table) => [
     // Every query that lists or searches accounts starts from the tenant.
     index('accounts_tenant_id_idx').on(table.tenantId),
+    // The one-default rule, enforced by the database: a tenant can never
+    // hold two flagged rows, whatever the write path does.
+    uniqueIndex('accounts_one_default_per_tenant_key')
+      .on(table.tenantId)
+      .where(sql`is_default`),
   ]
 )
 
@@ -310,7 +322,12 @@ export type NewGoal = typeof goals.$inferInsert
  * The kinds of receiver a payment goes to. The wire spelling lives in
  * `@workspace/poco` (`receiverTypes`) — keep the two in step.
  */
-export const receiverTypes = ['Person', 'Service', 'Merchant', 'Charity'] as const
+export const receiverTypes = [
+  'Person',
+  'Service',
+  'Merchant',
+  'Charity',
+] as const
 
 export type ReceiverType = (typeof receiverTypes)[number]
 
@@ -458,14 +475,17 @@ export const transactions = pgTable(
     name: varchar({ length: 255 }).notNull(),
     /** A free note, or nothing. */
     note: text(),
-    /** The invoice reference the transaction is backed by. */
-    invoice: varchar({ length: 255 }).notNull(),
+    /** The invoice reference the transaction is backed by, or nothing. */
+    invoice: varchar({ length: 255 }),
     /** The moved amount, carried as a string like "12.34". */
     amount: numeric({ precision: 16, scale: 2 }).notNull(),
     /** The day the transaction happened, without a time or timezone. */
     transactionDt: date('transaction_dt').notNull(),
     /** The linked account's balance after the transaction applied. */
-    balanceOnDt: numeric('balance_on_dt', { precision: 16, scale: 2 }).notNull(),
+    balanceOnDt: numeric('balance_on_dt', {
+      precision: 16,
+      scale: 2,
+    }).notNull(),
     /** The account the money moved in or out of. */
     linkedAccountId: integer('linked_account_id')
       .notNull()
@@ -479,7 +499,9 @@ export const transactions = pgTable(
     receiverId: integer('receiver_id').references(() => receivers.id),
     /** The recurring rule that materialized this transaction, or nothing
      * for a hand-entered one. */
-    recurringId: integer('recurring_id').references(() => recurringTransactions.id),
+    recurringId: integer('recurring_id').references(
+      () => recurringTransactions.id
+    ),
     /** Whether the money came in or went out. */
     type: text().$type<TransactionType>().notNull(),
     /** Where the transaction stands in the review workflow. The wire name
@@ -499,7 +521,10 @@ export const transactions = pgTable(
     // Every query that lists or searches transactions starts from the
     // tenant, and the month window plus the day grouping start from the day.
     index('transactions_tenant_id_idx').on(table.tenantId),
-    index('transactions_tenant_id_dt_idx').on(table.tenantId, table.transactionDt),
+    index('transactions_tenant_id_dt_idx').on(
+      table.tenantId,
+      table.transactionDt
+    ),
     // A recurring rule materializes at most one ACTIVE transaction per day.
     // The partial unique index turns the cron's find-then-insert into an
     // atomic claim — two replicas racing lose one to the index — and leaves
@@ -519,7 +544,8 @@ export type NewTransaction = typeof transactions.$inferInsert
  */
 export const transactionHistoryActions = ['CREATE', 'UPDATE', 'DELETE'] as const
 
-export type TransactionHistoryAction = (typeof transactionHistoryActions)[number]
+export type TransactionHistoryAction =
+  (typeof transactionHistoryActions)[number]
 
 /**
  * An append-only record of one change to a transaction: the row before and

@@ -31,9 +31,7 @@ export function MonthFilter({
       >
         <ChevronLeft />
       </Button>
-      <span className="min-w-36 text-center text-sm font-medium">
-        {label}
-      </span>
+      <span className="min-w-36 text-center text-sm font-medium">{label}</span>
       <Button
         variant="ghost"
         size="icon-sm"

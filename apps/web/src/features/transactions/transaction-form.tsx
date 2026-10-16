@@ -40,6 +40,7 @@ import { Textarea } from '@workspace/ui/components/textarea'
 import { TextField } from '@workspace/ui/components/text-field'
 
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
+import { inferCategory } from './infer-category.js'
 import {
   useActiveAccounts,
   useActiveCategories,
@@ -62,7 +63,8 @@ interface TransactionFormProps {
   open: boolean
   /** The transaction being edited, or nothing while creating. */
   transaction: Transaction | null
-  /** The day a new transaction starts on — the month the grid shows. */
+  /** The day a new transaction starts on — today, whatever month the grid
+   * shows. */
   defaultDt: string
   /** What a submit should do; the page decides where it saves. */
   onSubmit: (body: CreateTransactionBody) => void
@@ -113,7 +115,7 @@ export function TransactionForm({
         : {
             name: transaction.name,
             note: transaction.note ?? undefined,
-            invoice: transaction.invoice,
+            invoice: transaction.invoice ?? '',
             amount: transaction.amount,
             transactionDt: transaction.transactionDt,
             linkedAccountId: transaction.linkedAccountId,
@@ -133,10 +135,40 @@ export function TransactionForm({
   const accountId = watch('linkedAccountId')
   const categoryId = watch('categoryId')
   const receiverId = watch('receiverId')
+  const name = watch('name')
 
   const accounts = useActiveAccounts()
   const categories = useActiveCategories()
   const receivers = useActiveReceivers()
+
+  // A new transaction starts in the tenant's default account, once the
+  // picker's accounts arrive and the user has not chosen one.
+  useEffect(() => {
+    if (!open || transaction !== null || accountId !== undefined) {
+      return
+    }
+
+    const preferred = (accounts.data ?? []).find((account) => account.isDefault)
+
+    if (preferred !== undefined) {
+      setValue('linkedAccountId', preferred.id, { shouldValidate: true })
+    }
+  }, [open, transaction, accountId, accounts.data, setValue])
+
+  // A new transaction's category is inferred from the description: the
+  // best fuzzy match against the tenant's categories, applied only while
+  // the user has not picked one.
+  useEffect(() => {
+    if (!open || transaction !== null || categoryId !== undefined) {
+      return
+    }
+
+    const inferred = inferCategory(name, categories.data ?? [])
+
+    if (inferred !== undefined) {
+      setValue('categoryId', inferred.id, { shouldValidate: true })
+    }
+  }, [open, transaction, name, categoryId, categories.data, setValue])
 
   return (
     <Sheet
@@ -243,7 +275,9 @@ export function TransactionForm({
             onChange={(value) =>
               setValue(
                 'linkedAccountId',
-                value === undefined ? (undefined as unknown as number) : Number(value),
+                value === undefined
+                  ? (undefined as unknown as number)
+                  : Number(value),
                 { shouldValidate: true }
               )
             }
@@ -262,7 +296,9 @@ export function TransactionForm({
             onChange={(value) =>
               setValue(
                 'categoryId',
-                value === undefined ? (undefined as unknown as number) : Number(value),
+                value === undefined
+                  ? (undefined as unknown as number)
+                  : Number(value),
                 { shouldValidate: true }
               )
             }
@@ -299,9 +335,11 @@ export function TransactionForm({
             label={t('transactions.invoice')}
             labelFor="transaction-invoice"
             placeholder={t('transactions.invoice-placeholder')}
-            required
             error={errors.invoice}
-            {...register('invoice')}
+            {...register('invoice', {
+              // An empty field is no invoice: the wire carries nothing, not ''.
+              setValueAs: (value) => (value === '' ? undefined : value),
+            })}
           />
           <Field data-invalid={errors.note !== undefined}>
             <FieldLabel htmlFor="transaction-note">
@@ -358,7 +396,8 @@ export function TransactionForm({
   )
 }
 
-/** The values a new transaction starts with: the month the grid shows. */
+/** The values a new transaction starts with: today's day, the review
+ * already checked, and nothing else picked for the user yet. */
 function newValues(defaultDt: string): TransactionFormInput {
   return {
     name: '',
@@ -370,7 +409,7 @@ function newValues(defaultDt: string): TransactionFormInput {
     categoryId: undefined as unknown as number,
     receiverId: undefined,
     type: 'Expense',
-    status: 'Verify' as TransactionStatus,
+    status: 'Checked' as TransactionStatus,
     statusNote: undefined,
   }
 }

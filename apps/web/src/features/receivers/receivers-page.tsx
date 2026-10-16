@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateReceiverBody, Receiver, ReceiverType } from '@workspace/poco'
+import type {
+  CreateReceiverBody,
+  Receiver,
+  ReceiverType,
+} from '@workspace/poco'
 import { receiverTypes } from '@workspace/poco'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
@@ -50,8 +54,7 @@ export function ReceiversPage() {
         dir: clause.desc ? ('desc' as const) : ('asc' as const),
       })),
       filter: {
-        name:
-          filter.name === undefined ? undefined : String(filter.name),
+        name: filter.name === undefined ? undefined : String(filter.name),
         type:
           filter.type === undefined ? undefined : (filter.type as ReceiverType),
         status: 'ACTIVE' as const,

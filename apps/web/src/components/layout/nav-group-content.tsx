@@ -10,6 +10,7 @@ import {
 import type { NavGroup } from './nav.js'
 import { CollapsibleNavItemView } from './collapsible-nav-item.js'
 import { NavButtonItem } from './nav-button-item.js'
+import { NavSubgroupItems } from './nav-subgroup-items.js'
 
 /** One sidebar section: the group label and its items. */
 export function NavGroupContent({ group }: { group: NavGroup }) {
@@ -21,7 +22,9 @@ export function NavGroupContent({ group }: { group: NavGroup }) {
       <SidebarGroupContent>
         <SidebarMenu>
           {group.items.map((item) =>
-            'children' in item ? (
+            'items' in item ? (
+              <NavSubgroupItems key={item.key} subgroup={item} />
+            ) : 'children' in item ? (
               <CollapsibleNavItemView key={item.key} item={item} />
             ) : (
               <NavButtonItem key={item.key} item={item} />

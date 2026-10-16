@@ -12,9 +12,11 @@ import type {
 import { AccountRepository, type AccountWrite } from './account.repository.js'
 
 /**
- * The rules of accounts: a deleted account is a status change, and the
- * audit trail records the user the session acted as. The tenant and the
- * user always arrive from the caller — this service never reads a request.
+ * The rules of accounts: a deleted account is a status change, the audit
+ * trail records the user the session acted as, and at most one account of
+ * the tenant carries the default flag — the repository moves it, never
+ * duplicates it. The tenant and the user always arrive from the caller —
+ * this service never reads a request.
  */
 @Injectable()
 export class AccountService {
@@ -54,7 +56,7 @@ export class AccountService {
    * currency — every transaction, balance, limit, and transfer already
    * recorded is denominated in it, and re-labeling them would falsify
    * every total — and the type, once transactions exist, because the type
-   * decides how spending counts (a Credit card's expenses land in the
+   * decides how spending counts (a Credit Card's expenses land in the
    * credit totals; a Checking account's never do).
    */
   async update(tenantId: number, userId: number, body: UpdateAccountBody) {
@@ -109,14 +111,13 @@ function toWrite(body: CreateAccountBody): AccountWrite {
   return {
     name: body.name,
     agency: body.agency ?? null,
-    number: body.number,
+    number: body.number ?? null,
     type: body.type,
     balance: body.balance,
     currency: body.currency,
     limit: body.limit ?? null,
     closeDay: body.closeDay ?? null,
-    closeMonth: body.closeMonth ?? null,
     dueDay: body.dueDay ?? null,
-    dueMonth: body.dueMonth ?? null,
+    isDefault: body.isDefault,
   }
 }

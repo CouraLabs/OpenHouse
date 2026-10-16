@@ -9,6 +9,7 @@
     "lint": "biome lint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {

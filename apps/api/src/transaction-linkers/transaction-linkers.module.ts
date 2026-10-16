@@ -2,9 +2,7 @@ import { Module } from '@nestjs/common'
 
 import { CategoriesModule } from '../categories/categories.module.js'
 import { ReceiversModule } from '../receivers/receivers.module.js'
-import {
-  TransactionLinkerRepository,
-} from './transaction-linker.repository.js'
+import { TransactionLinkerRepository } from './transaction-linker.repository.js'
 import { TransactionLinkerService } from './transaction-linker.service.js'
 import { TransactionLinkersController } from './transaction-linkers.controller.js'
 

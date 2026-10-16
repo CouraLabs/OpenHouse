@@ -11,6 +11,7 @@ import type {
 } from '@workspace/poco'
 import { accountTypes, createAccountSchema, currencies } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
+import { Checkbox } from '@workspace/ui/components/checkbox'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
@@ -21,15 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@workspace/ui/components/select'
-import { DayMonthPicker } from '@workspace/ui/components/day-month-picker'
 import { TextField } from '@workspace/ui/components/text-field'
 
 /**
  * The fields the account form holds. The rules come straight from the
  * shared poco schema — the same check the API runs, whose messages are
  * already the UX messages — so the form never re-declares them. Its
- * refinement is what makes the agency required for Checking and Savings and
- * the limit and close/due dates required for Credit.
+ * refinement is what makes the agency and the number required for Checking
+ * and Savings and the limit and close/due days required for a Credit Card.
  */
 const accountFormSchema = createAccountSchema
 
@@ -52,31 +52,34 @@ interface AccountFormProps {
 const NEW_ACCOUNT: AccountFormValues = {
   name: '',
   agency: null,
-  number: undefined as unknown as number,
+  number: null,
   type: 'Checking',
   balance: '',
   currency: 'USD',
   limit: null,
   closeDay: null,
-  closeMonth: null,
   dueDay: null,
-  dueMonth: null,
+  isDefault: false,
 }
 
-/** The fields only a Credit account carries; the other types never keep them. */
-const CREDIT_ONLY_FIELDS = [
-  'limit',
-  'closeDay',
-  'closeMonth',
-  'dueDay',
-  'dueMonth',
-] as const
+/** The fields only a Credit Card carries; the other types never keep them. */
+const CARD_ONLY_FIELDS = ['limit', 'closeDay', 'dueDay'] as const
+
+/** The types that have no bank behind them, so no agency field either. */
+const AGENCY_LESS_TYPES: readonly AccountType[] = ['Wallet', 'Credit Card']
+
+/** The types that carry no bank account number, so no number field either. */
+const NUMBER_LESS_TYPES: readonly AccountType[] = ['Wallet', 'Credit Card']
+
+/** The days of the month a close or due date can fall on. */
+const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, index) => index + 1)
 
 /**
- * The insert and edit form of the accounts page. Credit-only fields render
- * only while the type is Credit; switching away clears them, so a stale
- * value can never ride along into a Checking or Savings account. It renders
- * above the table; the page decides when it is open and what a submit saves.
+ * The insert and edit form of the accounts page. Card-only fields render
+ * only while the type is Credit Card, and the agency and the number only
+ * while the account sits at a bank; switching away clears what the previous
+ * type owned, so a stale value can never ride along. It renders above the
+ * table; the page decides when it is open and what a submit saves.
  */
 export function AccountForm({
   account,
@@ -105,16 +108,22 @@ export function AccountForm({
         ? NEW_ACCOUNT
         : {
             name: account.name,
-            agency: account.agency,
-            number: account.number,
+            // A wallet or card has no agency or number — a legacy row that
+            // carried one must not fail the schema's check on a field with
+            // no input.
+            agency: AGENCY_LESS_TYPES.includes(account.type)
+              ? null
+              : account.agency,
+            number: NUMBER_LESS_TYPES.includes(account.type)
+              ? null
+              : account.number,
             type: account.type,
             balance: account.balance,
             currency: account.currency,
             limit: account.limit,
             closeDay: account.closeDay,
-            closeMonth: account.closeMonth,
             dueDay: account.dueDay,
-            dueMonth: account.dueMonth,
+            isDefault: account.isDefault,
           }
     )
   }, [account, reset])
@@ -124,26 +133,27 @@ export function AccountForm({
   const balance = watch('balance')
   const limit = watch('limit')
   const closeDay = watch('closeDay')
-  const closeMonth = watch('closeMonth')
   const dueDay = watch('dueDay')
-  const dueMonth = watch('dueMonth')
-  const isCredit = type === 'Credit'
-
-  // The month names, localized: the picker renders what the caller passes.
-  const monthOptions = Array.from({ length: 12 }, (_, index) => ({
-    value: index + 1,
-    label: new Intl.DateTimeFormat(i18n.language, { month: 'long' }).format(
-      new Date(2000, index, 1)
-    ),
-  }))
+  const isDefault = watch('isDefault')
+  const isCard = type === 'Credit Card'
+  const hasAgency = !AGENCY_LESS_TYPES.includes(type)
+  const hasNumber = !NUMBER_LESS_TYPES.includes(type)
 
   return (
     <form
       onSubmit={handleSubmit((values) =>
-        // An empty agency is no agency: the wire carries null, not ''.
+        // An empty agency is no agency: the wire carries null, not '' — and
+        // a wallet or card has no agency or number at all, even when the row
+        // once did.
         onSubmit({
           ...values,
-          agency: values.agency === '' ? null : values.agency,
+          agency:
+            values.agency === '' || AGENCY_LESS_TYPES.includes(values.type)
+              ? null
+              : values.agency,
+          number: NUMBER_LESS_TYPES.includes(values.type)
+            ? null
+            : values.number,
         })
       )}
       className="flex flex-col gap-4 rounded-lg border p-4"
@@ -153,7 +163,7 @@ export function AccountForm({
         {account === null ? t('accounts.new') : t('accounts.edit-title')}
       </p>
       {/* Rows of at most four: identity first, then money and dates. The
-      credit-only fields join the money row when the type is Credit. */}
+      card-only fields join the money row when the type is Credit Card. */}
       <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
         <TextField
           type="text"
@@ -165,28 +175,32 @@ export function AccountForm({
           error={errors.name}
           {...register('name')}
         />
-        <TextField
-          type="text"
-          className="h-8"
-          label={t('accounts.agency')}
-          labelFor="account-agency"
-          placeholder={t('accounts.agency-placeholder')}
-          error={errors.agency}
-          {...register('agency', {
-            setValueAs: (value) => (value === '' ? null : value),
-          })}
-        />
-        <TextField
-          type="text"
-          className="h-8"
-          label={t('accounts.number')}
-          labelFor="account-number"
-          placeholder={t('accounts.number-placeholder')}
-          inputMode="numeric"
-          required
-          error={errors.number}
-          {...register('number', { valueAsNumber: true })}
-        />
+        {hasAgency ? (
+          <TextField
+            type="text"
+            className="h-8"
+            label={t('accounts.agency')}
+            labelFor="account-agency"
+            placeholder={t('accounts.agency-placeholder')}
+            error={errors.agency}
+            {...register('agency', {
+              setValueAs: (value) => (value === '' ? null : value),
+            })}
+          />
+        ) : null}
+        {hasNumber ? (
+          <TextField
+            type="text"
+            className="h-8"
+            label={t('accounts.number')}
+            labelFor="account-number"
+            placeholder={t('accounts.number-placeholder')}
+            inputMode="numeric"
+            required
+            error={errors.number}
+            {...register('number', { valueAsNumber: true })}
+          />
+        ) : null}
         <Field data-invalid={errors.type !== undefined}>
           <FieldLabel htmlFor="account-type">
             {t('accounts.type')}
@@ -199,12 +213,19 @@ export function AccountForm({
             onValueChange={(value) => {
               const nextType = value as AccountType
               setValue('type', nextType, { shouldValidate: true })
-              // Leaving Credit leaves the credit-only fields behind: they
-              // are cleared, so a stale limit or date never rides along.
-              if (nextType !== 'Credit') {
-                for (const field of CREDIT_ONLY_FIELDS) {
+              // Leaving Credit Card leaves the card-only fields behind, and
+              // a wallet or card has no agency or number: all are cleared,
+              // so a stale value never rides along into the next type.
+              if (nextType !== 'Credit Card') {
+                for (const field of CARD_ONLY_FIELDS) {
                   setValue(field, null)
                 }
+              }
+              if (AGENCY_LESS_TYPES.includes(nextType)) {
+                setValue('agency', null)
+              }
+              if (NUMBER_LESS_TYPES.includes(nextType)) {
+                setValue('number', null)
               }
             }}
             items={accountTypes.map((value) => ({
@@ -280,7 +301,23 @@ export function AccountForm({
             }
           />
         </Field>
-        {isCredit ? (
+        <Field>
+          {/* The flag rides on the account, not on a type: any kind can be
+              the one new transactions start in. Raising it here takes it
+              from the previous holder — the API moves it, never refuses. */}
+          <FieldLabel htmlFor="account-is-default">
+            {t('accounts.is-default')}
+          </FieldLabel>
+          <Checkbox
+            id="account-is-default"
+            className="mt-1"
+            checked={isDefault}
+            onCheckedChange={(checked) =>
+              setValue('isDefault', checked === true, { shouldValidate: true })
+            }
+          />
+        </Field>
+        {isCard ? (
           <>
             <MoneyField
               locale={i18n.language}
@@ -295,62 +332,80 @@ export function AccountForm({
               error={errors.limit}
             />
             <Field data-invalid={errors.closeDay !== undefined}>
-              <FieldLabel>{t('accounts.close-date')}</FieldLabel>
-              <DayMonthPicker
-                id="account-close"
-                day={closeDay ?? null}
-                month={closeMonth ?? null}
-                onDayChange={(day) =>
-                  setValue('closeDay', day, { shouldValidate: true })
+              <FieldLabel htmlFor="account-close-day">
+                {t('accounts.close-date')}
+              </FieldLabel>
+              <Select
+                value={closeDay == null ? null : String(closeDay)}
+                onValueChange={(value) =>
+                  setValue('closeDay', value === null ? null : Number(value), {
+                    shouldValidate: true,
+                  })
                 }
-                onMonthChange={(month) =>
-                  setValue('closeMonth', month, { shouldValidate: true })
-                }
-                monthOptions={monthOptions}
-                labels={{
-                  day: t('accounts.day'),
-                  month: t('accounts.month'),
-                  dayPlaceholder: t('accounts.day-placeholder'),
-                  monthPlaceholder: t('accounts.month-placeholder'),
-                }}
-              />
+              >
+                <SelectTrigger
+                  id="account-close-day"
+                  className="w-full"
+                  size="sm"
+                  aria-invalid={errors.closeDay !== undefined}
+                >
+                  {/* The selected label renders explicitly — a value set while
+                      the popup was closed is not derived from the items alone. */}
+                  <SelectValue placeholder={t('accounts.day-placeholder')}>
+                    {closeDay != null
+                      ? String(closeDay).padStart(2, '0')
+                      : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS_OF_MONTH.map((day) => (
+                    <SelectItem key={day} value={String(day)}>
+                      {String(day).padStart(2, '0')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FieldError
                 errors={
-                  errors.closeDay !== undefined
-                    ? [errors.closeDay]
-                    : errors.closeMonth !== undefined
-                      ? [errors.closeMonth]
-                      : undefined
+                  errors.closeDay !== undefined ? [errors.closeDay] : undefined
                 }
               />
             </Field>
             <Field data-invalid={errors.dueDay !== undefined}>
-              <FieldLabel>{t('accounts.due-date')}</FieldLabel>
-              <DayMonthPicker
-                id="account-due"
-                day={dueDay ?? null}
-                month={dueMonth ?? null}
-                onDayChange={(day) =>
-                  setValue('dueDay', day, { shouldValidate: true })
+              <FieldLabel htmlFor="account-due-day">
+                {t('accounts.due-date')}
+              </FieldLabel>
+              <Select
+                value={dueDay == null ? null : String(dueDay)}
+                onValueChange={(value) =>
+                  setValue('dueDay', value === null ? null : Number(value), {
+                    shouldValidate: true,
+                  })
                 }
-                onMonthChange={(month) =>
-                  setValue('dueMonth', month, { shouldValidate: true })
-                }
-                monthOptions={monthOptions}
-                labels={{
-                  day: t('accounts.day'),
-                  month: t('accounts.month'),
-                  dayPlaceholder: t('accounts.day-placeholder'),
-                  monthPlaceholder: t('accounts.month-placeholder'),
-                }}
-              />
+              >
+                <SelectTrigger
+                  id="account-due-day"
+                  className="w-full"
+                  size="sm"
+                  aria-invalid={errors.dueDay !== undefined}
+                >
+                  <SelectValue placeholder={t('accounts.day-placeholder')}>
+                    {dueDay != null
+                      ? String(dueDay).padStart(2, '0')
+                      : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS_OF_MONTH.map((day) => (
+                    <SelectItem key={day} value={String(day)}>
+                      {String(day).padStart(2, '0')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FieldError
                 errors={
-                  errors.dueDay !== undefined
-                    ? [errors.dueDay]
-                    : errors.dueMonth !== undefined
-                      ? [errors.dueMonth]
-                      : undefined
+                  errors.dueDay !== undefined ? [errors.dueDay] : undefined
                 }
               />
             </Field>

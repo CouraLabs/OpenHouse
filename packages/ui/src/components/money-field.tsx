@@ -114,7 +114,7 @@ function toDisplay(value: string | undefined, locale: string): string {
   const formatted = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(`${whole}.${fraction}`)
+  }).format(Number(`${whole}.${fraction}`))
 
   return text.startsWith('-') ? `-${formatted}` : formatted
 }

@@ -5,7 +5,10 @@ import type { Database, TransactionLinker } from '@workspace/db'
 import { categories, receivers, transactionLinkers } from '@workspace/db'
 import type { SearchTransactionLinkersArgs } from '@workspace/poco'
 
-import { buildPagedQuery, escapeLikePattern } from '../common/search/fetch.helper.js'
+import {
+  buildPagedQuery,
+  escapeLikePattern,
+} from '../common/search/fetch.helper.js'
 
 /**
  * A linker row with the category's and the receiver's names joined on —
@@ -65,17 +68,13 @@ export class TransactionLinkerRepository {
     tenantId: number,
     args: SearchTransactionLinkersArgs
   ): Promise<TransactionLinkerSearch> {
-    const query = buildPagedQuery(
-      args,
-      this.filterToSql(tenantId, args),
-      {
-        description: transactionLinkers.description,
-        categoryName: categories.name,
-        receiverName: receivers.name,
-        createdDt: transactionLinkers.createdDt,
-        updateDt: transactionLinkers.updateDt,
-      }
-    )
+    const query = buildPagedQuery(args, this.filterToSql(tenantId, args), {
+      description: transactionLinkers.description,
+      categoryName: categories.name,
+      receiverName: receivers.name,
+      createdDt: transactionLinkers.createdDt,
+      updateDt: transactionLinkers.updateDt,
+    })
 
     const [rows, [counted]] = await Promise.all([
       this.db
@@ -121,7 +120,12 @@ export class TransactionLinkerRepository {
       .from(transactionLinkers)
       .leftJoin(categories, eq(transactionLinkers.categoryId, categories.id))
       .leftJoin(receivers, eq(transactionLinkers.receiverId, receivers.id))
-      .where(and(eq(transactionLinkers.tenantId, tenantId), eq(transactionLinkers.id, id)))
+      .where(
+        and(
+          eq(transactionLinkers.tenantId, tenantId),
+          eq(transactionLinkers.id, id)
+        )
+      )
 
     return row
   }
@@ -143,7 +147,12 @@ export class TransactionLinkerRepository {
         updateBy: userId,
         updateDt: new Date(),
       })
-      .where(and(eq(transactionLinkers.tenantId, tenantId), eq(transactionLinkers.id, id)))
+      .where(
+        and(
+          eq(transactionLinkers.tenantId, tenantId),
+          eq(transactionLinkers.id, id)
+        )
+      )
       .returning()
 
     return row === undefined ? undefined : this.withNames(row)
@@ -158,7 +167,12 @@ export class TransactionLinkerRepository {
     const [row] = await this.db
       .update(transactionLinkers)
       .set({ status: 'DELETED', updateBy: userId, updateDt: new Date() })
-      .where(and(eq(transactionLinkers.tenantId, tenantId), eq(transactionLinkers.id, id)))
+      .where(
+        and(
+          eq(transactionLinkers.tenantId, tenantId),
+          eq(transactionLinkers.id, id)
+        )
+      )
       .returning()
 
     return row
@@ -192,9 +206,7 @@ export class TransactionLinkerRepository {
     }
 
     if (args.filter.receiverId !== undefined) {
-      conditions.push(
-        eq(transactionLinkers.receiverId, args.filter.receiverId)
-      )
+      conditions.push(eq(transactionLinkers.receiverId, args.filter.receiverId))
     }
 
     conditions.push(eq(transactionLinkers.status, args.filter.status))

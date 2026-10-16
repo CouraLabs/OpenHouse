@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import type { CreateRecurringTransactionBody, SearchRecurringTransactionsArgs, UpdateRecurringTransactionBody } from '@workspace/poco'
+import type {
+  CreateRecurringTransactionBody,
+  SearchRecurringTransactionsArgs,
+  UpdateRecurringTransactionBody,
+} from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
@@ -113,10 +117,7 @@ export class RecurringTransactionService {
     tenantId: number,
     body: CreateRecurringTransactionBody | UpdateRecurringTransactionBody
   ): Promise<void> {
-    const receiver = await this.receivers.findById(
-      tenantId,
-      body.receiverId
-    )
+    const receiver = await this.receivers.findById(tenantId, body.receiverId)
 
     if (receiver === undefined || receiver.status === 'DELETED') {
       throw new NotFoundException(`No receiver with id ${body.receiverId}.`)
@@ -128,15 +129,10 @@ export class RecurringTransactionService {
       throw new NotFoundException(`No category with id ${body.categoryId}.`)
     }
 
-    const account = await this.accounts.findById(
-      tenantId,
-      body.linkedAccountId
-    )
+    const account = await this.accounts.findById(tenantId, body.linkedAccountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(
-        `No account with id ${body.linkedAccountId}.`
-      )
+      throw new NotFoundException(`No account with id ${body.linkedAccountId}.`)
     }
   }
 }

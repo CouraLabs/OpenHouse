@@ -64,8 +64,7 @@ export function buildRecurringColumns(
     {
       accessorKey: 'amount',
       header: t('recurring.amount'),
-      cell: (context) =>
-        formatRuleAmount(context.row.original.amount, locale),
+      cell: (context) => formatRuleAmount(context.row.original.amount, locale),
     },
     {
       accessorKey: 'frequency',
@@ -81,10 +80,7 @@ export function buildRecurringColumns(
       header: '',
       enableSorting: false,
       cell: (context) => (
-        <RecurringActionsCell
-          rule={context.row.original}
-          actions={actions}
-        />
+        <RecurringActionsCell rule={context.row.original} actions={actions} />
       ),
     },
   ]

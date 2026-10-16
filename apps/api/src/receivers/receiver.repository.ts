@@ -129,7 +129,9 @@ export class ReceiverRepository {
     return this.db
       .select()
       .from(receivers)
-      .where(and(eq(receivers.tenantId, tenantId), eq(receivers.status, 'ACTIVE')))
+      .where(
+        and(eq(receivers.tenantId, tenantId), eq(receivers.status, 'ACTIVE'))
+      )
       .orderBy(asc(receivers.name))
   }
 

@@ -48,9 +48,8 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   currency: 'USD',
   limit: null,
   closeDay: null,
-  closeMonth: null,
   dueDay: null,
-  dueMonth: null,
+  isDefault: false,
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -101,17 +100,28 @@ const createBody = {
   frequencyMonth: null,
 }
 
-const service = (repo = repository(), rcv = receiver(), cat = category(), acc = account()) =>
+const service = (
+  repo = repository(),
+  rcv = receiver(),
+  cat = category(),
+  acc = account()
+) =>
   new RecurringTransactionService(
     repo as unknown as RecurringTransactionRepository,
     {
-      findById: vi.fn(async (_t: number, id: number) => (rcv.id === id ? rcv : undefined)),
+      findById: vi.fn(async (_t: number, id: number) =>
+        rcv.id === id ? rcv : undefined
+      ),
     } as unknown as ReceiverRepository,
     {
-      findById: vi.fn(async (_t: number, id: number) => (cat.id === id ? cat : undefined)),
+      findById: vi.fn(async (_t: number, id: number) =>
+        cat.id === id ? cat : undefined
+      ),
     } as unknown as CategoryRepository,
     {
-      findById: vi.fn(async (_t: number, id: number) => (acc.id === id ? acc : undefined)),
+      findById: vi.fn(async (_t: number, id: number) =>
+        acc.id === id ? acc : undefined
+      ),
     } as unknown as AccountRepository
   )
 
@@ -158,7 +168,11 @@ describe('RecurringTransactionService', () => {
     repo.update.mockResolvedValue({ ...row, amount: '109.90' })
     const svc = service(repo)
 
-    const updated = await svc.update(1, 7, { ...createBody, id: 1, amount: '109.90' })
+    const updated = await svc.update(1, 7, {
+      ...createBody,
+      id: 1,
+      amount: '109.90',
+    })
 
     expect(updated.amount).toBe('109.90')
   })

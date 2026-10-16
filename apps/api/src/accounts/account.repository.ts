@@ -1,4 +1,4 @@
-import { and, asc, count, eq } from 'drizzle-orm'
+import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Account, Database } from '@workspace/db'
@@ -17,16 +17,18 @@ export interface AccountSearch {
 export interface AccountWrite {
   name: string
   agency: string | null
-  number: number
+  number: number | null
   type: Account['type']
   balance: string
   currency: Account['currency']
   limit: string | null
   closeDay: number | null
-  closeMonth: number | null
   dueDay: number | null
-  dueMonth: number | null
+  isDefault: boolean
 }
+
+/** The handle a write runs on: the pool, or one transaction of it. */
+type DbOrTx = Database | Parameters<Parameters<Database['transaction']>[0]>[0]
 
 /**
  * The account rows, reached only through the tenant of the session. Every
@@ -37,23 +39,34 @@ export interface AccountWrite {
 export class AccountRepository {
   constructor(@InjectDrizzle() private readonly db: Database) {}
 
-  /** Inserts an account, stamping the audit trail with the acting user. */
+  /**
+   * Inserts an account, stamping the audit trail with the acting user. A
+   * default account takes the flag from the previous holder first, so the
+   * tenant never holds two defaults — both writes in one database
+   * transaction, under the one-default unique index.
+   */
   async insert(
     tenantId: number,
     userId: number,
     data: AccountWrite
   ): Promise<Account> {
-    const [row] = await this.db
-      .insert(accounts)
-      .values({
-        tenantId,
-        createdBy: userId,
-        updateBy: userId,
-        ...data,
-      })
-      .returning()
+    return this.db.transaction(async (tx) => {
+      if (data.isDefault) {
+        await this.clearDefaultInTx(tx, tenantId, null)
+      }
 
-    return row
+      const [row] = await tx
+        .insert(accounts)
+        .values({
+          tenantId,
+          createdBy: userId,
+          updateBy: userId,
+          ...data,
+        })
+        .returning()
+
+      return row
+    })
   }
 
   /** Runs the paged search a `FetchArgs` describes, over the tenant's rows. */
@@ -99,28 +112,62 @@ export class AccountRepository {
     return row
   }
 
-  /** Updates an account's fields and audit trail. The written columns are
-   * named one by one: the id is GENERATED ALWAYS and must never be in a SET. */
+  /**
+   * Updates an account's fields and audit trail. The written columns are
+   * named one by one: the id is GENERATED ALWAYS and must never be in a SET.
+   * A default account takes the flag from the previous holder first, so the
+   * tenant never holds two defaults — both writes in one database
+   * transaction, under the one-default unique index.
+   */
   async update(
     tenantId: number,
     id: number,
     userId: number,
     data: AccountWrite
   ): Promise<Account | undefined> {
+    return this.db.transaction(async (tx) => {
+      if (data.isDefault) {
+        await this.clearDefaultInTx(tx, tenantId, id)
+      }
+
+      const [row] = await tx
+        .update(accounts)
+        .set({
+          name: data.name,
+          agency: data.agency,
+          number: data.number,
+          type: data.type,
+          balance: data.balance,
+          currency: data.currency,
+          limit: data.limit,
+          closeDay: data.closeDay,
+          dueDay: data.dueDay,
+          isDefault: data.isDefault,
+          updateBy: userId,
+          updateDt: new Date(),
+        })
+        .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id)))
+        .returning()
+
+      return row
+    })
+  }
+
+  /**
+   * Soft-deletes an account: a status change, stamped like any update. A
+   * deleted account is no account's default — the flag goes with it, so
+   * the tenant is free to raise another.
+   */
+  async softDelete(
+    tenantId: number,
+    id: number,
+    userId: number
+  ): Promise<Account | undefined> {
     const [row] = await this.db
       .update(accounts)
       .set({
-        name: data.name,
-        agency: data.agency,
-        number: data.number,
-        type: data.type,
-        balance: data.balance,
-        currency: data.currency,
-        limit: data.limit,
-        closeDay: data.closeDay,
-        closeMonth: data.closeMonth,
-        dueDay: data.dueDay,
-        dueMonth: data.dueMonth,
+        status: 'DELETED',
+        isDefault: false,
         updateBy: userId,
         updateDt: new Date(),
       })
@@ -130,19 +177,26 @@ export class AccountRepository {
     return row
   }
 
-  /** Soft-deletes an account: a status change, stamped like any update. */
-  async softDelete(
+  /** Clears the default flag from every account of the tenant but `keepId`
+   * — the step that keeps the one-default promise before a write sets it. */
+  private async clearDefaultInTx(
+    tx: DbOrTx,
     tenantId: number,
-    id: number,
-    userId: number
-  ): Promise<Account | undefined> {
-    const [row] = await this.db
-      .update(accounts)
-      .set({ status: 'DELETED', updateBy: userId, updateDt: new Date() })
-      .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id)))
-      .returning()
+    keepId: number | null
+  ): Promise<void> {
+    const conditions = [
+      eq(accounts.tenantId, tenantId),
+      eq(accounts.isDefault, true),
+    ]
 
-    return row
+    if (keepId !== null) {
+      conditions.push(ne(accounts.id, keepId))
+    }
+
+    await tx
+      .update(accounts)
+      .set({ isDefault: false })
+      .where(and(...conditions))
   }
 
   /** Answers whether the account carries any ACTIVE transaction — the

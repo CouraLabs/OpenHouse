@@ -64,7 +64,8 @@ export class AccountsController {
   }
 
   /** Lists the tenant's ACTIVE accounts by name, for pickers. The `type`
-   * rides along so a picker can offer only the kinds it means. */
+   * and the default flag ride along so a picker can offer only the kinds
+   * it means — and start a new transaction in the default account. */
   @Get()
   async list(@CurrentSession() session: Session): Promise<AccountRef[]> {
     const rows = await this.accounts.listActive(session.tenant.id)
@@ -74,6 +75,7 @@ export class AccountsController {
       name: row.name,
       type: row.type,
       currency: row.currency,
+      isDefault: row.isDefault,
     }))
   }
 
@@ -113,15 +115,14 @@ function toWire(row: {
   id: number
   name: string
   agency: string | null
-  number: number
+  number: number | null
   type: AccountType
   balance: string
   currency: Currency
   limit: string | null
   closeDay: number | null
-  closeMonth: number | null
   dueDay: number | null
-  dueMonth: number | null
+  isDefault: boolean
   status: EntityStatus
   createdDt: Date
   updateDt: Date
@@ -136,9 +137,8 @@ function toWire(row: {
     currency: row.currency,
     limit: row.limit,
     closeDay: row.closeDay,
-    closeMonth: row.closeMonth,
     dueDay: row.dueDay,
-    dueMonth: row.dueMonth,
+    isDefault: row.isDefault,
     status: row.status,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),

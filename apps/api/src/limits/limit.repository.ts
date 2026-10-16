@@ -90,6 +90,20 @@ export class LimitRepository {
     return { rows, total: counted.value }
   }
 
+  /** Reads every ACTIVE limit of the tenant, id order — what the usage
+   * view totals against; a usage gauge is drawn for each. */
+  async listActive(tenantId: number): Promise<LimitRow[]> {
+    return this.db
+      .select({
+        ...getTableColumns(limits),
+        categoryName: sql<string>`coalesce(${categories.name}, '')`,
+      })
+      .from(limits)
+      .leftJoin(categories, eq(limits.categoryId, categories.id))
+      .where(and(eq(limits.tenantId, tenantId), eq(limits.status, 'ACTIVE')))
+      .orderBy(asc(limits.id))
+  }
+
   /** Reads one limit of the tenant — deleted rows included. */
   async findById(tenantId: number, id: number): Promise<LimitRow | undefined> {
     const [row] = await this.db

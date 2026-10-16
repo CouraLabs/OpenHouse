@@ -49,7 +49,9 @@ export function GaugeBar({
           className="h-full rounded-full bg-primary transition-all"
           style={{
             width: `${pct}%`,
-            ...(colorFor !== undefined ? { backgroundColor: colorFor(pct) } : {}),
+            ...(colorFor !== undefined
+              ? { backgroundColor: colorFor(pct) }
+              : {}),
           }}
         />
       </div>

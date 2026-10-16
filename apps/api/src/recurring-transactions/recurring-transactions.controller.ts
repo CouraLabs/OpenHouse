@@ -60,10 +60,7 @@ export class RecurringTransactionsController {
     @Body(new ZodValidationPipe(searchRecurringTransactionsSchema))
     args: SearchRecurringTransactionsArgs
   ): Promise<PagedResults<RecurringTransaction>> {
-    const { rows, total } = await this.recurring.search(
-      session.tenant.id,
-      args
-    )
+    const { rows, total } = await this.recurring.search(session.tenant.id, args)
 
     return { total, items: rows.map(toWire) }
   }

@@ -34,7 +34,11 @@ export class TransactionLinkerService {
     userId: number,
     body: CreateTransactionLinkerBody
   ): Promise<TransactionLinkerRow> {
-    await this.assertReferencesUsable(tenantId, body.categoryId, body.receiverId)
+    await this.assertReferencesUsable(
+      tenantId,
+      body.categoryId,
+      body.receiverId
+    )
 
     return this.repository.insert(tenantId, userId, {
       description: body.description,
@@ -75,7 +79,11 @@ export class TransactionLinkerService {
       throw new NotFoundException(`No transaction linker with id ${body.id}.`)
     }
 
-    await this.assertReferencesUsable(tenantId, body.categoryId, body.receiverId)
+    await this.assertReferencesUsable(
+      tenantId,
+      body.categoryId,
+      body.receiverId
+    )
 
     const updated = await this.repository.update(tenantId, body.id, userId, {
       description: body.description,

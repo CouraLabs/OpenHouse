@@ -96,9 +96,18 @@ export class RecurringTransactionRepository {
       this.db
         .select({ value: count() })
         .from(recurringTransactions)
-        .innerJoin(receivers, eq(recurringTransactions.receiverId, receivers.id))
-        .innerJoin(categories, eq(recurringTransactions.categoryId, categories.id))
-        .innerJoin(accounts, eq(recurringTransactions.linkedAccountId, accounts.id))
+        .innerJoin(
+          receivers,
+          eq(recurringTransactions.receiverId, receivers.id)
+        )
+        .innerJoin(
+          categories,
+          eq(recurringTransactions.categoryId, categories.id)
+        )
+        .innerJoin(
+          accounts,
+          eq(recurringTransactions.linkedAccountId, accounts.id)
+        )
         .where(query.where),
     ])
 
@@ -110,13 +119,12 @@ export class RecurringTransactionRepository {
     tenantId: number,
     id: number
   ): Promise<RecurringTransactionRow | undefined> {
-    const [row] = await this.selectJoined()
-      .where(
-        and(
-          eq(recurringTransactions.tenantId, tenantId),
-          eq(recurringTransactions.id, id)
-        )
+    const [row] = await this.selectJoined().where(
+      and(
+        eq(recurringTransactions.tenantId, tenantId),
+        eq(recurringTransactions.id, id)
       )
+    )
 
     return row
   }
@@ -143,7 +151,12 @@ export class RecurringTransactionRepository {
         updateBy: userId,
         updateDt: new Date(),
       })
-      .where(and(eq(recurringTransactions.tenantId, tenantId), eq(recurringTransactions.id, id)))
+      .where(
+        and(
+          eq(recurringTransactions.tenantId, tenantId),
+          eq(recurringTransactions.id, id)
+        )
+      )
       .returning()
 
     return row === undefined ? undefined : this.withNames(row)
@@ -158,7 +171,12 @@ export class RecurringTransactionRepository {
     const [row] = await this.db
       .update(recurringTransactions)
       .set({ status: 'DELETED', updateBy: userId, updateDt: new Date() })
-      .where(and(eq(recurringTransactions.tenantId, tenantId), eq(recurringTransactions.id, id)))
+      .where(
+        and(
+          eq(recurringTransactions.tenantId, tenantId),
+          eq(recurringTransactions.id, id)
+        )
+      )
       .returning()
 
     return row
@@ -193,8 +211,14 @@ export class RecurringTransactionRepository {
       })
       .from(recurringTransactions)
       .innerJoin(receivers, eq(recurringTransactions.receiverId, receivers.id))
-      .innerJoin(categories, eq(recurringTransactions.categoryId, categories.id))
-      .innerJoin(accounts, eq(recurringTransactions.linkedAccountId, accounts.id))
+      .innerJoin(
+        categories,
+        eq(recurringTransactions.categoryId, categories.id)
+      )
+      .innerJoin(
+        accounts,
+        eq(recurringTransactions.linkedAccountId, accounts.id)
+      )
   }
 
   /** Translates the wire filter into SQL, always inside the tenant. */
@@ -220,7 +244,9 @@ export class RecurringTransactionRepository {
     }
 
     if (args.filter.frequency !== undefined) {
-      conditions.push(eq(recurringTransactions.frequency, args.filter.frequency))
+      conditions.push(
+        eq(recurringTransactions.frequency, args.filter.frequency)
+      )
     }
 
     conditions.push(eq(recurringTransactions.status, args.filter.status))

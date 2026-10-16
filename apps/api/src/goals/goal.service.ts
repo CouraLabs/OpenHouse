@@ -134,7 +134,7 @@ export class GoalService {
 
     if (account.currency !== currency) {
       throw new ConflictException(
-        'The goal must be denominated in the account\'s currency.'
+        "The goal must be denominated in the account's currency."
       )
     }
   }

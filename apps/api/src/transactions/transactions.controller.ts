@@ -7,16 +7,20 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Put,
 } from '@nestjs/common'
 import type {
+  ChangeTransactionStatusBody,
   CreateTransactionBody,
   Currency,
   EntityStatus,
   PagedResults,
   SearchTransactionsArgs,
   Transaction,
+  TransactionBreakdown,
+  TransactionBreakdownArgs,
   TransactionHistoryAction,
   TransactionHistoryEntry,
   TransactionSummary,
@@ -25,8 +29,10 @@ import type {
   UpdateTransactionBody,
 } from '@workspace/poco'
 import {
+  changeTransactionStatusSchema,
   createTransactionSchema,
   searchTransactionsSchema,
+  transactionBreakdownSchema,
   transferSchema,
   updateTransactionSchema,
 } from '@workspace/poco'
@@ -88,6 +94,19 @@ export class TransactionsController {
     return { groups }
   }
 
+  /** Totals the tenant's expenses over a filter, grouped by category or by
+   * account, per currency — what the expense pies render. */
+  @Post('breakdown')
+  async breakdown(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(transactionBreakdownSchema))
+    args: TransactionBreakdownArgs
+  ): Promise<TransactionBreakdown> {
+    const groups = await this.transactions.breakdown(session.tenant.id, args)
+
+    return { groups }
+  }
+
   /** Moves money between two accounts: two transactions, one database
    * transaction. */
   @Post('transfer')
@@ -134,6 +153,23 @@ export class TransactionsController {
   ): Promise<Transaction> {
     return toWire(
       await this.transactions.update(session.tenant.id, session.user.id, body)
+    )
+  }
+
+  /** Changes only a transaction's review status: no other field is written,
+   * and no balance moves. Both sides of a transfer flip together. */
+  @Patch(':id/status')
+  async changeStatus(
+    @CurrentSession() session: Session,
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(changeTransactionStatusSchema))
+    body: ChangeTransactionStatusBody
+  ): Promise<Transaction> {
+    return toWire(
+      await this.transactions.changeStatus(session.tenant.id, session.user.id, {
+        ...body,
+        id,
+      })
     )
   }
 
@@ -187,7 +223,7 @@ interface TransactionRowLike {
   id: number
   name: string
   note: string | null
-  invoice: string
+  invoice: string | null
   amount: string
   transactionDt: string
   balanceOnDt: string

@@ -6,11 +6,13 @@ import type {
 } from '@workspace/poco'
 
 import { CategoryRepository } from '../categories/category.repository.js'
+import { TransactionRepository } from '../transactions/transaction.repository.js'
 import {
   LimitRepository,
   type LimitRow,
   type LimitSearch,
 } from './limit.repository.js'
+import { periodWindow } from './limit-period.js'
 
 /**
  * The rules of limits: a limit must point at a category the tenant owns and
@@ -22,7 +24,8 @@ import {
 export class LimitService {
   constructor(
     private readonly repository: LimitRepository,
-    private readonly categories: CategoryRepository
+    private readonly categories: CategoryRepository,
+    private readonly transactions: TransactionRepository
   ) {}
 
   /** Creates a limit for the tenant, rejecting a category it cannot use. */
@@ -39,6 +42,46 @@ export class LimitService {
   /** Runs the tenant's paged search. */
   async search(tenantId: number, args: SearchLimitsArgs): Promise<LimitSearch> {
     return this.repository.search(tenantId, args)
+  }
+
+  /**
+   * Reads every ACTIVE limit with what the tenant has already spent against
+   * it — the sum of the expense transactions its category and currency
+   * share over the period the limit covers: its own day for a Daily limit,
+   * the Monday-based week, the calendar month, the calendar year. One
+   * totals query per period type answers every limit of that type.
+   */
+  async usage(tenantId: number): Promise<Array<LimitRow & { spent: string }>> {
+    const rows = await this.repository.listActive(tenantId)
+
+    if (rows.length === 0) {
+      return []
+    }
+
+    // One window per period type the tenant actually limits with — never
+    // more queries than the four periods.
+    const windows = new Map(
+      rows.map((row) => [row.type, periodWindow(row.type, new Date())])
+    )
+
+    const spent = new Map<string, string>()
+
+    for (const [, window] of windows) {
+      const totals = await this.transactions.expenseTotalsByCategory(
+        tenantId,
+        window.from,
+        window.to
+      )
+
+      for (const total of totals) {
+        spent.set(`${total.categoryId}:${total.currency}`, total.total)
+      }
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      spent: spent.get(`${row.categoryId}:${row.currency}`) ?? '0.00',
+    }))
   }
 
   /** Reads one limit — deleted included; the caller decides what to show. */

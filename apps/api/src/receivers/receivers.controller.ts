@@ -55,7 +55,8 @@ export class ReceiversController {
   @Post('search')
   async search(
     @CurrentSession() session: Session,
-    @Body(new ZodValidationPipe(searchReceiversSchema)) args: SearchReceiversArgs
+    @Body(new ZodValidationPipe(searchReceiversSchema))
+    args: SearchReceiversArgs
   ): Promise<PagedResults<Receiver>> {
     const { rows, total } = await this.receivers.search(session.tenant.id, args)
 
@@ -64,9 +65,7 @@ export class ReceiversController {
 
   /** Lists the tenant's ACTIVE receivers by name, for pickers. */
   @Get()
-  async list(
-    @CurrentSession() session: Session
-  ): Promise<ReceiverRef[]> {
+  async list(@CurrentSession() session: Session): Promise<ReceiverRef[]> {
     return this.receivers.listActive(session.tenant.id)
   }
 
@@ -97,11 +96,7 @@ export class ReceiversController {
     @CurrentSession() session: Session,
     @Param('id', ParseIntPipe) id: number
   ): Promise<void> {
-    await this.receivers.softDelete(
-      session.tenant.id,
-      session.user.id,
-      id
-    )
+    await this.receivers.softDelete(session.tenant.id, session.user.id, id)
   }
 }
 

@@ -1,10 +1,10 @@
 import type { Account } from '@workspace/poco'
+import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
 import { Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { formatDayMonth } from '@/lib/format-day-month.js'
 import { formatMoney } from '@/lib/format-money.js'
 
 /** What the actions column can do to a row, reported upward. */
@@ -16,7 +16,7 @@ export interface AccountRowActions {
 /**
  * The columns the accounts grid shows: the id, the account — its name with
  * the type beside it, and the agency/number pair beneath — and the balance
- * with, for a credit card, the free credit and the due/close dates beneath.
+ * with, for a credit card, the free credit and the due/close days beneath.
  * The caller owns what edit and delete do; the columns only route the
  * events. Called during the page's render, so the labels arrive translated.
  */
@@ -40,11 +40,14 @@ export function buildAccountsColumns(
 
         return (
           <div className="flex flex-col">
-            <span>
+            <span className="flex items-center gap-2">
               {account.name}{' '}
               <span className="text-muted-foreground">
                 ({t(`accounts.type-${account.type.toLowerCase()}`)})
               </span>
+              {account.isDefault ? (
+                <Badge variant="secondary">{t('accounts.default-badge')}</Badge>
+              ) : null}
             </span>
             <span className="text-xs text-muted-foreground">
               {[account.agency, account.number].filter(Boolean).join(' / ')}
@@ -61,7 +64,7 @@ export function buildAccountsColumns(
         // A credit card's free credit is its limit minus what is spent on
         // it; the other types have no limit, so no free credit.
         const freeCredit =
-          account.type === 'Credit' && account.limit !== null
+          account.type === 'Credit Card' && account.limit !== null
             ? Number(account.limit) - Number(account.balance)
             : null
 
@@ -76,11 +79,13 @@ export function buildAccountsColumns(
                 </span>
               ) : null}
             </span>
-            {account.type === 'Credit' ? (
+            {account.type === 'Credit Card' ? (
               <span className="text-xs text-muted-foreground">
-                {formatDayMonth(account.dueDay, account.dueMonth)}
+                {t('accounts.due-short')}{' '}
+                {String(account.dueDay).padStart(2, '0')}
                 {' · '}
-                {formatDayMonth(account.closeDay, account.closeMonth)}
+                {t('accounts.close-short')}{' '}
+                {String(account.closeDay).padStart(2, '0')}
               </span>
             ) : null}
           </div>

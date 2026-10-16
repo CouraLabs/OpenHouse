@@ -29,6 +29,7 @@ import {
 import type {
   Currency,
   SearchTransactionsArgs,
+  TransactionBreakdownArgs,
   TransactionFilter,
   TransactionStatus,
   TransactionType,
@@ -69,7 +70,7 @@ export interface TransactionSearch {
 export interface TransactionWrite {
   name: string
   note: string | null
-  invoice: string
+  invoice: string | null
   amount: string
   transactionDt: string
   linkedAccountId: number
@@ -171,7 +172,11 @@ export class TransactionRepository {
         return undefined
       }
 
-      const before = (await this.findByIdInTx(tx, tenantId, id)) as TransactionRow
+      const before = (await this.findByIdInTx(
+        tx,
+        tenantId,
+        id
+      )) as TransactionRow
 
       await applyTransactionDelta(
         tx,
@@ -222,6 +227,93 @@ export class TransactionRepository {
   }
 
   /**
+   * Changes only a transaction's review status: no amount, account, or day
+   * is written, so no delta is reverted or re-applied and `balanceOnDt`
+   * stays as it was — a review-status change never moves money.
+   *
+   * The row is locked `FOR UPDATE` and its lifecycle checked inside the
+   * database transaction, as in `updateWithBalance`. The other side of a
+   * transfer is mirrored in the same transaction: the summary and the
+   * breakdown exclude Canceled rows, so flipping one side alone would count
+   * the pair's money on one screen and drop it on the other.
+   */
+  async updateStatus(
+    tenantId: number,
+    id: number,
+    userId: number,
+    reviewStatus: TransactionStatus
+  ): Promise<TransactionRow | undefined> {
+    return this.db.transaction(async (tx) => {
+      const locked = await this.lockInTx(tx, tenantId, id)
+
+      if (locked === undefined || locked.status === 'DELETED') {
+        return undefined
+      }
+
+      const before = (await this.findByIdInTx(
+        tx,
+        tenantId,
+        id
+      )) as TransactionRow
+
+      const [row] = await tx
+        .update(transactions)
+        .set({ reviewStatus, updateBy: userId, updateDt: new Date() })
+        .where(
+          and(
+            eq(transactions.tenantId, tenantId),
+            eq(transactions.id, id),
+            eq(transactions.status, 'ACTIVE')
+          )
+        )
+        .returning()
+
+      await this.recordHistory(tx, tenantId, id, userId, 'UPDATE', before, row)
+
+      if (before.transferGroupId !== null) {
+        const sibling = await this.findTransferSiblingInTx(
+          tx,
+          tenantId,
+          before.transferGroupId,
+          id
+        )
+
+        if (sibling !== undefined && sibling.status === 'ACTIVE') {
+          const [siblingRow] = await tx
+            .update(transactions)
+            .set({
+              reviewStatus,
+              updateBy: userId,
+              updateDt: new Date(),
+            })
+            .where(
+              and(
+                eq(transactions.tenantId, tenantId),
+                eq(transactions.id, sibling.id),
+                eq(transactions.status, 'ACTIVE')
+              )
+            )
+            .returning()
+
+          if (siblingRow !== undefined) {
+            await this.recordHistory(
+              tx,
+              tenantId,
+              sibling.id,
+              userId,
+              'UPDATE',
+              sibling,
+              siblingRow
+            )
+          }
+        }
+      }
+
+      return this.findByIdInTx(tx, tenantId, id) as Promise<TransactionRow>
+    })
+  }
+
+  /**
    * Soft-deletes a transaction: reverts its delta from the account, marks
    * the row DELETED, and records the history. A transfer side takes its
    * other side with it — deleting one side alone would give money back to
@@ -239,7 +331,11 @@ export class TransactionRepository {
         return undefined
       }
 
-      const before = (await this.findByIdInTx(tx, tenantId, id)) as TransactionRow
+      const before = (await this.findByIdInTx(
+        tx,
+        tenantId,
+        id
+      )) as TransactionRow
 
       if (before.status === 'DELETED') {
         return before
@@ -319,18 +415,22 @@ export class TransactionRepository {
     tenantId: number,
     args: SearchTransactionsArgs
   ): Promise<TransactionSearch> {
-    const query = buildPagedQuery(args, this.filterToSql(tenantId, args.filter), {
-      transactionDt: transactions.transactionDt,
-      amount: transactions.amount,
-      name: transactions.name,
-      reviewStatus: transactions.reviewStatus,
-      type: transactions.type,
-      categoryName: categories.name,
-      accountName: accounts.name,
-      createdDt: transactions.createdDt,
-      updateDt: transactions.updateDt,
-      id: transactions.id,
-    })
+    const query = buildPagedQuery(
+      args,
+      this.filterToSql(tenantId, args.filter),
+      {
+        transactionDt: transactions.transactionDt,
+        amount: transactions.amount,
+        name: transactions.name,
+        reviewStatus: transactions.reviewStatus,
+        type: transactions.type,
+        categoryName: categories.name,
+        accountName: accounts.name,
+        createdDt: transactions.createdDt,
+        updateDt: transactions.updateDt,
+        id: transactions.id,
+      }
+    )
 
     // The id is the tie-breaker: rows the sort clauses leave equal keep
     // one order, so a page never shuffles its neighbors. A sort that
@@ -359,7 +459,10 @@ export class TransactionRepository {
    * Reads one transaction of the tenant with the joined names — deleted
    * rows included; the caller decides what to show.
    */
-  async findById(tenantId: number, id: number): Promise<TransactionRow | undefined> {
+  async findById(
+    tenantId: number,
+    id: number
+  ): Promise<TransactionRow | undefined> {
     return this.findByIdInTx(this.db, tenantId, id)
   }
 
@@ -378,7 +481,7 @@ export class TransactionRepository {
         currency: accounts.currency,
         incomes: sql<string>`coalesce(sum(case when ${transactions.type} = 'Income' then ${transactions.amount} else 0 end), 0)`,
         expenses: sql<string>`coalesce(sum(case when ${transactions.type} = 'Expense' then ${transactions.amount} else 0 end), 0)`,
-        creditExpenses: sql<string>`coalesce(sum(case when ${transactions.type} = 'Expense' and ${accounts.type} = 'Credit' then ${transactions.amount} else 0 end), 0)`,
+        creditExpenses: sql<string>`coalesce(sum(case when ${transactions.type} = 'Expense' and ${accounts.type} = 'Credit Card' then ${transactions.amount} else 0 end), 0)`,
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
@@ -395,6 +498,104 @@ export class TransactionRepository {
       ...row,
       net: addMoney(row.incomes, negateMoney(row.expenses)),
     }))
+  }
+
+  /**
+   * Totals the tenant's expenses over a filter, grouped by the dimension a
+   * breakdown names — the category an expense belongs to, or the account it
+   * moved through — one group per currency, largest slice first. Transfer
+   * rows and Canceled review statuses never count, as in `summary`: the two
+   * sides of a transfer are not spending, and a canceled transaction is
+   * money that did not move.
+   */
+  async breakdown(
+    tenantId: number,
+    dimension: TransactionBreakdownArgs['dimension'],
+    filter: TransactionFilter
+  ) {
+    const nameColumn =
+      dimension === 'category' ? categories.name : accounts.name
+    const colorColumn = dimension === 'category' ? categories.color : undefined
+
+    const totals = await this.db
+      .select({
+        name: sql<string>`coalesce(${nameColumn}, '')`,
+        color:
+          colorColumn === undefined
+            ? sql<null>`null`
+            : sql<string | null>`coalesce(${colorColumn}, null)`,
+        currency: accounts.currency,
+        total: sql<string>`coalesce(sum(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(
+        and(
+          this.filterToSql(tenantId, filter),
+          eq(transactions.type, 'Expense'),
+          isNull(transactions.transferGroupId),
+          ne(transactions.reviewStatus, 'Canceled')
+        )
+      )
+      .groupBy(
+        accounts.currency,
+        nameColumn,
+        // The color rides along so a category slice paints in the color the
+        // tenant picked; grouping by it keeps one row per category even when
+        // two categories share a name.
+        ...(colorColumn === undefined ? [] : [colorColumn])
+      )
+
+    // One group per currency, its slices ordered largest first — the pies
+    // render one chart per group.
+    const groups = new Map<
+      Currency,
+      Array<{ name: string; color: string | null; total: string }>
+    >()
+
+    for (const row of totals.sort((a, b) => compareCents(b.total, a.total))) {
+      const items = groups.get(row.currency) ?? []
+
+      items.push({ name: row.name, color: row.color, total: row.total })
+      groups.set(row.currency, items)
+    }
+
+    return [...groups].map(([currency, items]) => ({ currency, items }))
+  }
+
+  /**
+   * Totals the tenant's expenses between two `YYYY-MM-DD` days, grouped by
+   * the category and the currency — the raw material a limit's usage sums
+   * from, so the limits feature never re-derives what a transaction is.
+   * Transfer rows and Canceled review statuses never count, as in
+   * `summary`.
+   */
+  async expenseTotalsByCategory(
+    tenantId: number,
+    from: string,
+    to: string
+  ): Promise<Array<{ categoryId: number; currency: Currency; total: string }>> {
+    return this.db
+      .select({
+        categoryId: transactions.categoryId,
+        currency: accounts.currency,
+        total: sql<string>`coalesce(sum(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.status, 'ACTIVE'),
+          eq(transactions.type, 'Expense'),
+          gte(transactions.transactionDt, from),
+          lte(transactions.transactionDt, to),
+          isNull(transactions.transferGroupId),
+          ne(transactions.reviewStatus, 'Canceled')
+        )
+      )
+      .groupBy(transactions.categoryId, accounts.currency)
   }
 
   /** Reads a transaction's history, newest first, paged. */
@@ -500,8 +701,9 @@ export class TransactionRepository {
     tenantId: number,
     id: number
   ): Promise<TransactionRow | undefined> {
-    const [row] = await this.selectJoined(db)
-      .where(and(eq(transactions.tenantId, tenantId), eq(transactions.id, id)))
+    const [row] = await this.selectJoined(db).where(
+      and(eq(transactions.tenantId, tenantId), eq(transactions.id, id))
+    )
 
     return row
   }
@@ -589,7 +791,15 @@ export class TransactionRepository {
       .returning()
 
     if (row !== undefined) {
-      await this.recordHistory(tx, tenantId, before.id, userId, 'DELETE', before, null)
+      await this.recordHistory(
+        tx,
+        tenantId,
+        before.id,
+        userId,
+        'DELETE',
+        before,
+        null
+      )
     }
   }
 
@@ -685,9 +895,7 @@ export class TransactionRepository {
     }
 
     if (filter.linkedAccountId !== undefined) {
-      conditions.push(
-        eq(transactions.linkedAccountId, filter.linkedAccountId)
-      )
+      conditions.push(eq(transactions.linkedAccountId, filter.linkedAccountId))
     }
 
     if (filter.receiverId !== undefined) {
@@ -714,7 +922,26 @@ function isUniqueViolation(error: unknown): boolean {
   const codes = [error, (error as { cause?: unknown } | null)?.cause]
 
   return codes.some(
-    (candidate) =>
-      (candidate as { code?: string } | null)?.code === '23505'
+    (candidate) => (candidate as { code?: string } | null)?.code === '23505'
   )
+}
+
+/** Orders two positive money strings by their cents, exactly — a sort never
+ * rounds a 14-digit total into a float that cannot tell neighbors apart. */
+function compareCents(a: string, b: string): number {
+  const cents = (amount: string): bigint => {
+    const [whole, fraction = ''] = amount.split('.')
+
+    return BigInt(`${whole}${fraction.padEnd(2, '0')}`)
+  }
+
+  if (cents(a) < cents(b)) {
+    return -1
+  }
+
+  if (cents(a) > cents(b)) {
+    return 1
+  }
+
+  return 0
 }

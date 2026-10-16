@@ -45,7 +45,9 @@ export function useSaveLinker() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (body: CreateTransactionLinkerBody | UpdateTransactionLinkerBody) =>
+    mutationFn: (
+      body: CreateTransactionLinkerBody | UpdateTransactionLinkerBody
+    ) =>
       'id' in body
         ? api<TransactionLinker>('/transaction-linkers', {
             method: 'PUT',
@@ -86,7 +88,6 @@ export function useActiveCategories() {
 export function useActiveReceivers() {
   return useQuery({
     queryKey: ['receivers', 'active'],
-    queryFn: ({ signal }) =>
-      api<ReceiverRef[]>('/receivers', { signal }),
+    queryFn: ({ signal }) => api<ReceiverRef[]>('/receivers', { signal }),
   })
 }

@@ -8,7 +8,8 @@ import type { TransactionType } from '@workspace/poco'
  * plain injected database or a transaction it opened. Both expose the same
  * query builder, so every ledger helper accepts either.
  */
-export type DbOrTx = Database | Parameters<Parameters<Database['transaction']>[0]>[0]
+export type DbOrTx =
+  Database | Parameters<Parameters<Database['transaction']>[0]>[0]
 
 /**
  * Adds two decimal money strings exactly, on cents — money never travels
@@ -54,7 +55,9 @@ export async function applyTransactionDelta(
   const [account] = await tx
     .select({ balance: accounts.balance })
     .from(accounts)
-    .where(sql`${eq(accounts.id, accountId)} and ${eq(accounts.tenantId, tenantId)} for update`)
+    .where(
+      sql`${eq(accounts.id, accountId)} and ${eq(accounts.tenantId, tenantId)} for update`
+    )
 
   if (account === undefined) {
     throw new Error(`No account with id ${accountId} in tenant ${tenantId}.`)

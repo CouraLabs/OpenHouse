@@ -152,7 +152,9 @@ export function TransferForm({
               }
             />
           </div>
-          {from !== undefined && to !== undefined && from.currency !== to.currency ? (
+          {from !== undefined &&
+          to !== undefined &&
+          from.currency !== to.currency ? (
             <p className="text-sm text-destructive">
               {t('transactions.transfer-currency-mismatch')}
             </p>
@@ -308,10 +310,7 @@ function AccountPick({
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
-            <SelectItem
-              key={option.id}
-              value={option.id as unknown as string}
-            >
+            <SelectItem key={option.id} value={option.id as unknown as string}>
               {option.name}
             </SelectItem>
           ))}

@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import type { Account } from '@workspace/db'
+import { createAccountSchema } from '@workspace/poco'
 
 import { AccountRepository } from './account.repository.js'
 import { AccountService } from './account.service.js'
@@ -17,9 +18,8 @@ const row = (overrides: Partial<Account> = {}): Account => ({
   currency: 'USD',
   limit: null,
   closeDay: null,
-  closeMonth: null,
   dueDay: null,
-  dueMonth: null,
+  isDefault: false,
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -49,6 +49,7 @@ describe('AccountService', () => {
       type: 'Checking',
       balance: '12.34',
       currency: 'USD',
+      isDefault: false,
     })
 
     expect(repo.insert).toHaveBeenCalledWith(1, 7, {
@@ -60,9 +61,8 @@ describe('AccountService', () => {
       currency: 'USD',
       limit: null,
       closeDay: null,
-      closeMonth: null,
       dueDay: null,
-      dueMonth: null,
+      isDefault: false,
     })
   })
 
@@ -104,6 +104,7 @@ describe('AccountService', () => {
       type: 'Checking',
       balance: '99.00',
       currency: 'USD',
+      isDefault: false,
     })
 
     expect(updated.balance).toBe('99.00')
@@ -118,9 +119,8 @@ describe('AccountService', () => {
       currency: 'USD',
       limit: null,
       closeDay: null,
-      closeMonth: null,
       dueDay: null,
-      dueMonth: null,
+      isDefault: false,
     })
   })
 
@@ -137,9 +137,39 @@ describe('AccountService', () => {
         type: 'Checking',
         balance: '99.00',
         currency: 'USD',
+        isDefault: false,
       })
     ).rejects.toThrow(NotFoundException)
     expect(repo.update).not.toHaveBeenCalled()
+  })
+
+  it('creates a Wallet without a number, writing null', async () => {
+    const repo = repository()
+    repo.insert.mockResolvedValue(
+      row({ type: 'Wallet', agency: null, number: null })
+    )
+    const service = new AccountService(repo as unknown as AccountRepository)
+
+    await service.create(1, 7, {
+      name: 'Cash',
+      type: 'Wallet',
+      balance: '12.34',
+      currency: 'USD',
+      isDefault: false,
+    })
+
+    expect(repo.insert).toHaveBeenCalledWith(1, 7, {
+      name: 'Cash',
+      agency: null,
+      number: null,
+      type: 'Wallet',
+      balance: '12.34',
+      currency: 'USD',
+      limit: null,
+      closeDay: null,
+      dueDay: null,
+      isDefault: false,
+    })
   })
 
   it('soft-deletes an account as a status change', async () => {
@@ -150,5 +180,63 @@ describe('AccountService', () => {
 
     await expect(service.softDelete(1, 7, 1)).resolves.toBeUndefined()
     expect(repo.softDelete).toHaveBeenCalledWith(1, 1, 7)
+  })
+})
+
+describe('createAccountSchema', () => {
+  /** A bank account body: the fields the shape accepts before refining. */
+  const bankBody = {
+    name: 'Everyday',
+    agency: '1234',
+    number: 9876,
+    type: 'Checking',
+    balance: '12.34',
+    currency: 'USD',
+    isDefault: false,
+  }
+
+  it('accepts a bank account carrying its agency and number', () => {
+    expect(createAccountSchema.safeParse(bankBody).success).toBe(true)
+  })
+
+  it('rejects a Savings without a number', () => {
+    const parsed = createAccountSchema.safeParse({
+      ...bankBody,
+      type: 'Savings',
+      number: null,
+    })
+    expect(parsed.success).toBe(false)
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.path).toEqual(['number'])
+    }
+  })
+
+  it('accepts a Wallet without a number', () => {
+    const parsed = createAccountSchema.safeParse({
+      name: 'Cash',
+      agency: null,
+      number: null,
+      type: 'Wallet',
+      balance: '12.34',
+      currency: 'USD',
+      isDefault: false,
+    })
+    expect(parsed.success).toBe(true)
+  })
+
+  it('rejects a Wallet that carries a number', () => {
+    const parsed = createAccountSchema.safeParse({
+      name: 'Cash',
+      agency: null,
+      number: 9876,
+      type: 'Wallet',
+      balance: '12.34',
+      currency: 'USD',
+      isDefault: false,
+    })
+    expect(parsed.success).toBe(false)
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.path).toEqual(['number'])
+    }
   })
 })

@@ -8,7 +8,11 @@ import type {
   Frequency,
   RecurringTransaction,
 } from '@workspace/poco'
-import { createRecurringTransactionSchema, frequencies, transactionTypes } from '@workspace/poco'
+import {
+  createRecurringTransactionSchema,
+  frequencies,
+  transactionTypes,
+} from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'

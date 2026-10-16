@@ -19,12 +19,26 @@ import {
 
 describe('isDueOn', () => {
   it('is due every day', () => {
-    expect(isDueOn({ frequency: 'Daily', frequencyDay: null, frequencyMonth: null }, '2026-10-14')).toBe(true)
-    expect(isDueOn({ frequency: 'Daily', frequencyDay: null, frequencyMonth: null }, '2027-02-28')).toBe(true)
+    expect(
+      isDueOn(
+        { frequency: 'Daily', frequencyDay: null, frequencyMonth: null },
+        '2026-10-14'
+      )
+    ).toBe(true)
+    expect(
+      isDueOn(
+        { frequency: 'Daily', frequencyDay: null, frequencyMonth: null },
+        '2027-02-28'
+      )
+    ).toBe(true)
   })
 
   it('matches the ISO weekday, Monday first', () => {
-    const weekly = (day: number) => ({ frequency: 'Weekly' as const, frequencyDay: day, frequencyMonth: null })
+    const weekly = (day: number) => ({
+      frequency: 'Weekly' as const,
+      frequencyDay: day,
+      frequencyMonth: null,
+    })
 
     // 2026-10-14 is a Wednesday (ISO weekday 3).
     expect(isDueOn(weekly(3), '2026-10-14')).toBe(true)
@@ -33,14 +47,22 @@ describe('isDueOn', () => {
   })
 
   it('matches the day of the month', () => {
-    const monthly = { frequency: 'Monthly' as const, frequencyDay: 14, frequencyMonth: null }
+    const monthly = {
+      frequency: 'Monthly' as const,
+      frequencyDay: 14,
+      frequencyMonth: null,
+    }
 
     expect(isDueOn(monthly, '2026-10-14')).toBe(true)
     expect(isDueOn(monthly, '2026-10-15')).toBe(false)
   })
 
-  it('clamps a day past the month\'s end to the last day', () => {
-    const monthly = { frequency: 'Monthly' as const, frequencyDay: 31, frequencyMonth: null }
+  it("clamps a day past the month's end to the last day", () => {
+    const monthly = {
+      frequency: 'Monthly' as const,
+      frequencyDay: 31,
+      frequencyMonth: null,
+    }
 
     // September has 30 days: the rule runs on the 30th.
     expect(isDueOn(monthly, '2026-09-30')).toBe(true)
@@ -50,7 +72,11 @@ describe('isDueOn', () => {
   })
 
   it('clamps February 29 to February 28 of a common year', () => {
-    const yearly = { frequency: 'Yearly' as const, frequencyDay: 29, frequencyMonth: 2 }
+    const yearly = {
+      frequency: 'Yearly' as const,
+      frequencyDay: 29,
+      frequencyMonth: 2,
+    }
 
     expect(isDueOn(yearly, '2028-02-29')).toBe(true)
     expect(isDueOn(yearly, '2027-02-28')).toBe(true)
@@ -58,7 +84,11 @@ describe('isDueOn', () => {
   })
 
   it('matches the month and the day for a yearly rule', () => {
-    const yearly = { frequency: 'Yearly' as const, frequencyDay: 25, frequencyMonth: 12 }
+    const yearly = {
+      frequency: 'Yearly' as const,
+      frequencyDay: 25,
+      frequencyMonth: 12,
+    }
 
     expect(isDueOn(yearly, '2026-12-25')).toBe(true)
     expect(isDueOn(yearly, '2027-12-25')).toBe(true)
@@ -82,7 +112,9 @@ describe('localDayOf and shiftDay', () => {
 })
 
 /** A rule the cron can read, ACTIVE by default. */
-const rule = (overrides: Partial<RecurringTransaction> = {}): RecurringTransaction => ({
+const rule = (
+  overrides: Partial<RecurringTransaction> = {}
+): RecurringTransaction => ({
   id: 1,
   tenantId: 1,
   receiverId: 5,
@@ -122,10 +154,14 @@ describe('RecurringRunService.runDue', () => {
       })),
     }
     const transactionsRepo = {
-      findByRecurringAndDate: vi.fn(async () => (existing ? ({ id: 99 } as const) : undefined)),
+      findByRecurringAndDate: vi.fn(async () =>
+        existing ? ({ id: 99 } as const) : undefined
+      ),
       insertGenerated: vi.fn(
-        async (_tenantId: number, _write: TransactionWrite): Promise<TransactionRow | undefined> =>
-          ({}) as TransactionRow
+        async (
+          _tenantId: number,
+          _write: TransactionWrite
+        ): Promise<TransactionRow | undefined> => ({}) as TransactionRow
       ),
     }
     const accountsRepo = {
@@ -145,7 +181,14 @@ describe('RecurringRunService.runDue', () => {
       receiversRepo as unknown as ReceiverRepository
     )
 
-    return { svc, rulesRepo, transactionsRepo, accountsRepo, categoriesRepo, receiversRepo }
+    return {
+      svc,
+      rulesRepo,
+      transactionsRepo,
+      accountsRepo,
+      categoriesRepo,
+      receiversRepo,
+    }
   }
 
   it('materializes a due rule that has no transaction today', async () => {
@@ -219,7 +262,11 @@ describe('RecurringRunService.runDue', () => {
   })
 
   it('skips a rule not due today', async () => {
-    const notDue = rule({ frequency: 'Yearly', frequencyDay: 25, frequencyMonth: 12 })
+    const notDue = rule({
+      frequency: 'Yearly',
+      frequencyDay: 25,
+      frequencyMonth: 12,
+    })
     const { svc, transactionsRepo } = run([notDue], false)
 
     const created = await svc.runDue(1)
@@ -264,13 +311,24 @@ describe('RecurringRunService.runDue', () => {
     const transactionsRepo = {
       findByRecurringAndDate: vi.fn(async () => undefined),
       insertGenerated: vi
-        .fn(async (_tenantId: number, _write: TransactionWrite): Promise<TransactionRow | undefined> => ({}) as TransactionRow)
+        .fn(
+          async (
+            _tenantId: number,
+            _write: TransactionWrite
+          ): Promise<TransactionRow | undefined> => ({}) as TransactionRow
+        )
         .mockRejectedValueOnce(new Error('boom'))
         .mockResolvedValue({} as TransactionRow),
     }
-    const accountsRepo = { findById: vi.fn(async () => ({ id: 10, status: 'ACTIVE' })) }
-    const categoriesRepo = { findById: vi.fn(async () => ({ id: 3, status: 'ACTIVE' })) }
-    const receiversRepo = { findById: vi.fn(async () => ({ id: 5, status: 'ACTIVE' })) }
+    const accountsRepo = {
+      findById: vi.fn(async () => ({ id: 10, status: 'ACTIVE' })),
+    }
+    const categoriesRepo = {
+      findById: vi.fn(async () => ({ id: 3, status: 'ACTIVE' })),
+    }
+    const receiversRepo = {
+      findById: vi.fn(async () => ({ id: 5, status: 'ACTIVE' })),
+    }
     const svc = new RecurringRunService(
       rulesRepo as unknown as RecurringTransactionRepository,
       transactionsRepo as unknown as TransactionRepository,
