@@ -1,0 +1,188 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Warm monochrome: bone canvas, charcoal ink, one hairline border, and four
+ * washed-out pastels reserved for tags and icon wells. Color carries meaning
+ * here or it does not appear. Every color is a variable so `.dark` (set by
+ * ThemeProvider from the system preference or the nav toggle) can swap the
+ * whole palette for its warm-charcoal twin.
+ */
+@theme {
+  --font-sans:
+    'Geist Variable', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  --font-serif: 'Newsreader Variable', 'Lyon Text', Georgia, serif;
+  --font-mono:
+    'Geist Mono Variable', 'SF Mono', 'JetBrains Mono', ui-monospace,
+    monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-bone: var(--bone);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-hover: var(--ink-hover);
+  --color-on-ink: var(--on-ink);
+  --color-body: var(--body);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+
+  --color-red-wash: var(--red-wash);
+  --color-red-ink: var(--red-ink);
+  --color-blue-wash: var(--blue-wash);
+  --color-blue-ink: var(--blue-ink);
+  --color-green-wash: var(--green-wash);
+  --color-green-ink: var(--green-ink);
+  --color-yellow-wash: var(--yellow-wash);
+  --color-yellow-ink: var(--yellow-ink);
+
+  --shadow-lift: var(--lift);
+}
+
+:root {
+  color-scheme: light;
+
+  --canvas: #fbfbfa;
+  --bone: #f7f6f3;
+  --surface: #ffffff;
+  --ink: #111111;
+  --ink-hover: #333333;
+  --on-ink: #ffffff;
+  --body: #2f3437;
+  --muted: #787774;
+  --line: #eaeaea;
+
+  --red-wash: #fdebec;
+  --red-ink: #9f2f2d;
+  --blue-wash: #e1f3fe;
+  --blue-ink: #1f6c9f;
+  --green-wash: #edf3ec;
+  --green-ink: #346538;
+  --yellow-wash: #fbf3db;
+  --yellow-ink: #956400;
+
+  --lift: 0 2px 8px rgb(0 0 0 / 0.04);
+  --grid-line: rgb(0 0 0 / 0.035);
+  --ambient: rgb(214 170 110 / 0.09);
+}
+
+/* The same roles at night: warm charcoal, bone-white ink, dimmed washes. */
+.dark {
+  color-scheme: dark;
+
+  --canvas: #161615;
+  --bone: #1e1e1c;
+  --surface: #1b1b1a;
+  --ink: #f1f0ec;
+  --ink-hover: #d6d5d0;
+  --on-ink: #161615;
+  --body: #d3d2cd;
+  --muted: #9b9a96;
+  --line: #2b2b29;
+
+  --red-wash: #352120;
+  --red-ink: #f0a9a3;
+  --blue-wash: #1a2c39;
+  --blue-ink: #8cc5ea;
+  --green-wash: #1e2c21;
+  --green-ink: #9cc79f;
+  --yellow-wash: #342b17;
+  --yellow-ink: #e2bf78;
+
+  --lift: 0 2px 8px rgb(0 0 0 / 0.25);
+  --grid-line: rgb(255 255 255 / 0.03);
+  --ambient: rgb(214 170 110 / 0.05);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-body);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--color-yellow-wash);
+    color: var(--color-ink);
+  }
+}
+
+/*
+ * Scroll entry (components/reveal.tsx). Content is at rest by default; only
+ * a visitor who has not asked for reduced motion gets the 12px rise, and
+ * `--index` staggers siblings 80ms apart.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity 600ms var(--ease-out-expo),
+      transform 600ms var(--ease-out-expo);
+    transition-delay: calc(var(--index, 0) * 80ms);
+  }
+
+  .reveal[data-in-view='true'] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .ambient-blob {
+    animation: ambient-drift 28s ease-in-out infinite alternate;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .ambient-blob {
+    animation: none;
+  }
+}
+
+@keyframes ambient-drift {
+  from {
+    transform: translate3d(-12vw, -6vh, 0) scale(1);
+  }
+  to {
+    transform: translate3d(14vw, 10vh, 0) scale(1.15);
+  }
+}
+
+/* A faint warm grain over the whole page, so the bone never reads flat. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.3 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The hairline grid some sections lay under their content. */
+.line-grid {
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}

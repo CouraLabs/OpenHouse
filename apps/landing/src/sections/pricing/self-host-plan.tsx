@@ -1,0 +1,49 @@
+import { GithubLogo } from '@phosphor-icons/react'
+
+import { ButtonLink } from '@/components/button-link.js'
+import { Reveal } from '@/components/reveal.js'
+import { Tag } from '@/components/tag.js'
+import { selfHosted } from '@/lib/content.js'
+
+import { PerkList } from './perk-list.js'
+import { PlanPrice } from './plan-price.js'
+import { TerminalSnippet } from './terminal-snippet.js'
+
+/**
+ * The free self-hosted plan as one wide card: pitch, price, and perks on the
+ * left; the three commands that start it on the right.
+ */
+export function SelfHostPlan() {
+  return (
+    <Reveal>
+      <article className="border-line bg-surface grid gap-10 rounded-xl border p-7 md:grid-cols-2 md:p-10">
+        <div className="flex min-w-0 flex-col gap-7">
+          <div className="flex flex-col gap-3">
+            <Tag tone="green" className="self-start">
+              {selfHosted.badge}
+            </Tag>
+            <h3 className="text-ink font-serif text-3xl leading-[1.1] tracking-[-0.03em]">
+              {selfHosted.name}
+            </h3>
+            <p className="text-sm text-pretty text-muted">
+              {selfHosted.tagline}
+            </p>
+          </div>
+          <PlanPrice price={selfHosted.price} note={selfHosted.priceNote} />
+          <PerkList perks={selfHosted.perks} />
+        </div>
+        <div className="flex min-w-0 flex-col justify-between gap-6">
+          <TerminalSnippet commands={selfHosted.commands} />
+          <ButtonLink
+            href={selfHosted.cta.href}
+            newTab
+            icon={<GithubLogo aria-hidden />}
+            className="self-start"
+          >
+            {selfHosted.cta.label}
+          </ButtonLink>
+        </div>
+      </article>
+    </Reveal>
+  )
+}

@@ -71,6 +71,22 @@ apps/
                                 #   query.ts, router.tsx, i18n.ts, format-money.ts,
                                 #   format-date-only.ts, finance.ts, use-debounced-value.ts
       locales/                  # <locale>.json — every user-facing label (en-US.json today)
+  landing/                      # public marketing single page (Vite + React, no API,
+                                #   port 5174): warm-monochrome light/dark tokens in
+                                #   landing.css, Newsreader/Geist/Geist Mono, Phosphor
+                                #   icons; takes only ThemeProvider from packages/ui
+                                #   (system theme + nav toggle)
+    src/
+      App.tsx                   # section composition, in reading order
+      main.tsx                  # React root under ThemeProvider (packages/ui)
+      lib/                      # content.ts (every word the page shows), links.ts
+                                #   (GitHub + web-app URLs from VITE_APP_URL in .env,
+                                #   documented in .env.example), tones.ts (pastels),
+                                #   use-in-view.ts
+      components/               # landing-local primitives: Reveal, Eyebrow,
+                                #   SectionHeading, ButtonLink, …; preview/ app-slice visuals
+      sections/<section>/       # one directory per page section (nav, hero, features,
+                                #   planners, pricing, open-source, faq, footer)
 packages/
   poco/                         # shared contracts: zod request schemas + wire DTO types,
                                 #   one file per feature. The single source both api
