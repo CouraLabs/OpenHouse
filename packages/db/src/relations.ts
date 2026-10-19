@@ -17,6 +17,7 @@ export const relations = defineRelations(schema, (r) => ({
     categories: r.many.categories(),
     limits: r.many.limits(),
     accounts: r.many.accounts(),
+    creditCardStatements: r.many.creditCardStatements(),
     goals: r.many.goals(),
     receivers: r.many.receivers(),
     transactionLinkers: r.many.transactionLinkers(),
@@ -71,6 +72,20 @@ export const relations = defineRelations(schema, (r) => ({
       optional: false,
     }),
     goals: r.many.goals(),
+    statements: r.many.creditCardStatements(),
+  },
+  creditCardStatements: {
+    tenant: r.one.tenants({
+      from: r.creditCardStatements.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+    account: r.one.accounts({
+      from: r.creditCardStatements.accountId,
+      to: r.accounts.id,
+      optional: false,
+    }),
+    transactions: r.many.transactions(),
   },
   goals: {
     tenant: r.one.tenants({
@@ -158,6 +173,11 @@ export const relations = defineRelations(schema, (r) => ({
     recurring: r.one.recurringTransactions({
       from: r.transactions.recurringId,
       to: r.recurringTransactions.id,
+      optional: true,
+    }),
+    statement: r.one.creditCardStatements({
+      from: r.transactions.statementId,
+      to: r.creditCardStatements.id,
       optional: true,
     }),
     history: r.many.transactionHistory(),

@@ -16,6 +16,8 @@ import { LimitsPage } from '@/features/limits/limits-page.js'
 import { GoalsPage } from '@/features/goals/goals-page.js'
 import { AccountsPage } from '@/features/accounts/accounts-page.js'
 import { TransactionsPage } from '@/features/transactions/transactions-page.js'
+import { BillDetailPage } from '@/features/bills/bill-detail-page.js'
+import { BillsPage } from '@/features/bills/bills-page.js'
 import { ReceiversPage } from '@/features/receivers/receivers-page.js'
 import { TransactionLinkersPage } from '@/features/transaction-linkers/transaction-linkers-page.js'
 import { RecurringTransactionsPage } from '@/features/recurring-transactions/recurring-transactions-page.js'
@@ -134,6 +136,26 @@ const transactionsRoute = createRoute({
   component: TransactionsPage,
 })
 
+/** The tenant's credit card bills. A card's Bills shortcut opens it
+ * filtered to that card through `accountId`. */
+const billsRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'bills',
+  component: BillsPage,
+  validateSearch: (search: Record<string, unknown>): { accountId?: number } => {
+    const accountId = Number(search.accountId)
+
+    return Number.isInteger(accountId) && accountId > 0 ? { accountId } : {}
+  },
+})
+
+/** One bill: its figures and the charges on it. */
+const billDetailRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'bills/$statementId',
+  component: BillDetailPage,
+})
+
 /** The page the tenant's receivers are managed from. */
 const receiversRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
@@ -226,6 +248,8 @@ const routeTree = rootRoute.addChildren([
     goalsRoute,
     accountsRoute,
     transactionsRoute,
+    billsRoute,
+    billDetailRoute,
     receiversRoute,
     transactionLinkersRoute,
     recurringTransactionsRoute,

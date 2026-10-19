@@ -16,19 +16,29 @@ import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type {
   Database,
+  DbOrTx,
   Transaction,
   TransactionHistoryRow,
 } from '@workspace/db'
 import {
   accounts,
   categories,
+  creditCardStatements,
   receivers,
   transactionHistory,
   transactions,
 } from '@workspace/db'
+import {
+  addMoney,
+  compareMoney,
+  isZeroMoney,
+  negateMoney,
+  STATEMENT_CLOSED,
+} from '@workspace/poco'
 import type {
   Currency,
   SearchTransactionsArgs,
+  StatementWarning,
   TransactionBreakdownArgs,
   TransactionFilter,
   TransactionStatus,
@@ -37,14 +47,14 @@ import type {
 
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 import {
-  addMoney,
+  CreditCardStatementRepository,
+  type StatementPlacement,
+} from '../credit-card-statements/credit-card-statement.repository.js'
+import {
   appliedDeltaFor,
   applyTransactionDelta,
-  isZeroMoney,
   lockAccounts,
-  negateMoney,
   retryOnLockConflict,
-  type DbOrTx,
 } from './transaction-ledger.js'
 
 /**
@@ -59,6 +69,10 @@ export type TransactionRow = Transaction & {
   categoryColor: string
   receiverName: string | null
   currency: Currency
+  /** The due date of the card bill the row is on, joined. */
+  statementDueDate: string | null
+  /** Set only on a write's answer: the row landed on a closed bill. */
+  warning?: StatementWarning
 }
 
 /** What a search answers with: the page's rows and how many match in all. */
@@ -111,7 +125,10 @@ export interface TransferWrite {
  */
 @Injectable()
 export class TransactionRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(
+    @InjectDrizzle() private readonly db: Database,
+    private readonly statements: CreditCardStatementRepository
+  ) {}
 
   /**
    * Inserts a transaction and applies its delta to the account, in one
@@ -208,11 +225,26 @@ export class TransactionRepository {
         appliedDeltaFor(write)
       )
 
+      const placement = await this.statements.replaceInTx(
+        tx,
+        tenantId,
+        userId,
+        assignedOf(before),
+        {
+          linkedAccountId: write.linkedAccountId,
+          transactionDt: write.transactionDt,
+          type: write.type,
+          isTransferLeg: before.transferGroupId !== null,
+        }
+      )
+
       const [row] = await tx
         .update(transactions)
         .set({
           ...write,
           balanceOnDt: newBalance,
+          statementId: placement.statementId,
+          statementPinned: placement.statementPinned,
           updateBy: userId,
           updateDt: new Date(),
         })
@@ -231,7 +263,72 @@ export class TransactionRepository {
         await this.updateTransferSibling(tx, tenantId, userId, sibling, write)
       }
 
-      return this.findByIdInTx(tx, tenantId, id) as Promise<TransactionRow>
+      return withWarning(
+        (await this.findByIdInTx(tx, tenantId, id)) as TransactionRow,
+        placement
+      )
+    })
+  }
+
+  /**
+   * Moves a card charge to another bill of the same card by hand and pins
+   * it there: later date edits no longer re-resolve it (a merchant posted
+   * late and the bank billed it a cycle on). The caller checked the bill
+   * belongs to the row's card; the row is locked and its lifecycle checked
+   * here, and the account is locked before the bill, in the ledger's order.
+   * Answers `undefined` when the row or the bill is gone.
+   */
+  async moveToStatement(
+    tenantId: number,
+    id: number,
+    userId: number,
+    statementId: number
+  ): Promise<TransactionRow | undefined> {
+    return this.inLedgerTx(async (tx) => {
+      const locked = await this.lockInTx(tx, tenantId, id)
+
+      if (locked === undefined || locked.status === 'DELETED') {
+        return undefined
+      }
+
+      await lockAccounts(tx, tenantId, [locked.linkedAccountId])
+
+      const target = await this.statements.findForMoveInTx(
+        tx,
+        tenantId,
+        statementId
+      )
+
+      if (
+        target === undefined ||
+        target.statement.accountId !== locked.linkedAccountId
+      ) {
+        return undefined
+      }
+
+      const [row] = await tx
+        .update(transactions)
+        .set({
+          statementId,
+          statementPinned: true,
+          updateBy: userId,
+          updateDt: new Date(),
+        })
+        .where(
+          and(
+            eq(transactions.tenantId, tenantId),
+            eq(transactions.id, id),
+            eq(transactions.status, 'ACTIVE')
+          )
+        )
+        .returning()
+
+      await this.recordHistory(tx, tenantId, id, userId, 'UPDATE', locked, row)
+
+      return withWarning(
+        (await this.findByIdInTx(tx, tenantId, id)) as TransactionRow,
+        { statementId, statementPinned: true, closed: target.closed }
+      )
     })
   }
 
@@ -424,6 +521,10 @@ export class TransactionRepository {
         .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
         .innerJoin(categories, eq(transactions.categoryId, categories.id))
         .leftJoin(receivers, eq(transactions.receiverId, receivers.id))
+        .leftJoin(
+          creditCardStatements,
+          eq(transactions.statementId, creditCardStatements.id)
+        )
         .where(query.where),
     ])
 
@@ -460,6 +561,10 @@ export class TransactionRepository {
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
+      .leftJoin(
+        creditCardStatements,
+        eq(transactions.statementId, creditCardStatements.id)
+      )
       .where(
         and(
           this.filterToSql(tenantId, filter),
@@ -505,6 +610,10 @@ export class TransactionRepository {
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
       .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .leftJoin(
+        creditCardStatements,
+        eq(transactions.statementId, creditCardStatements.id)
+      )
       .where(
         and(
           this.filterToSql(tenantId, filter),
@@ -529,7 +638,7 @@ export class TransactionRepository {
       Array<{ name: string; color: string | null; total: string }>
     >()
 
-    for (const row of totals.sort((a, b) => compareCents(b.total, a.total))) {
+    for (const row of totals.sort((a, b) => compareMoney(b.total, a.total))) {
       const items = groups.get(row.currency) ?? []
 
       items.push({ name: row.name, color: row.color, total: row.total })
@@ -644,6 +753,15 @@ export class TransactionRepository {
       appliedDeltaFor(write)
     )
 
+    // A card row lands on its bill in the same transaction, after the
+    // account is locked — so recurring rules and transfers get bills too.
+    const placement = await this.statements.placeInTx(tx, tenantId, userId, {
+      linkedAccountId: write.linkedAccountId,
+      transactionDt: write.transactionDt,
+      type: write.type,
+      isTransferLeg: write.transferGroupId !== undefined,
+    })
+
     const [row] = await tx
       .insert(transactions)
       .values({
@@ -652,12 +770,16 @@ export class TransactionRepository {
         updateBy: userId,
         ...write,
         balanceOnDt: newBalance,
+        statementId: placement.statementId,
       })
       .returning()
 
     await this.recordHistory(tx, tenantId, row.id, userId, 'CREATE', null, row)
 
-    return (await this.findByIdInTx(tx, tenantId, row.id)) as TransactionRow
+    return withWarning(
+      (await this.findByIdInTx(tx, tenantId, row.id)) as TransactionRow,
+      placement
+    )
   }
 
   /** Records one append-only history row with the full snapshots. */
@@ -703,11 +825,16 @@ export class TransactionRepository {
         categoryColor: sql<string>`coalesce(${categories.color}, '')`,
         receiverName: receivers.name,
         currency: accounts.currency,
+        statementDueDate: creditCardStatements.dueDate,
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
       .innerJoin(categories, eq(transactions.categoryId, categories.id))
       .leftJoin(receivers, eq(transactions.receiverId, receivers.id))
+      .leftJoin(
+        creditCardStatements,
+        eq(transactions.statementId, creditCardStatements.id)
+      )
   }
 
   /**
@@ -904,6 +1031,20 @@ export class TransactionRepository {
       })
     )
 
+    // The mirrored day may move a card side to another bill.
+    const placement = await this.statements.replaceInTx(
+      tx,
+      tenantId,
+      userId,
+      assignedOf(sibling),
+      {
+        linkedAccountId: sibling.linkedAccountId,
+        transactionDt: write.transactionDt,
+        type: sibling.type,
+        isTransferLeg: true,
+      }
+    )
+
     const [row] = await tx
       .update(transactions)
       .set({
@@ -914,6 +1055,8 @@ export class TransactionRepository {
         reviewStatus: write.reviewStatus,
         statusNote: write.statusNote,
         balanceOnDt: newBalance,
+        statementId: placement.statementId,
+        statementPinned: placement.statementPinned,
         updateBy: userId,
         updateDt: new Date(),
       })
@@ -942,13 +1085,24 @@ export class TransactionRepository {
   /** Translates the wire filter into SQL, always inside the tenant. */
   private filterToSql(tenantId: number, filter: TransactionFilter) {
     const conditions = [eq(transactions.tenantId, tenantId)]
+    // Cash mode dates a card charge by its bill's due date — the day the
+    // money leaves the paying account; rows on no bill keep their own day.
+    // Every query running this filter left-joins the bills.
+    const day =
+      filter.creditMode === 'cash'
+        ? sql`coalesce(${creditCardStatements.dueDate}, ${transactions.transactionDt})`
+        : sql`${transactions.transactionDt}`
 
     if (filter.transactionDtFrom !== undefined) {
-      conditions.push(gte(transactions.transactionDt, filter.transactionDtFrom))
+      conditions.push(gte(day, filter.transactionDtFrom))
     }
 
     if (filter.transactionDtTo !== undefined) {
-      conditions.push(lte(transactions.transactionDt, filter.transactionDtTo))
+      conditions.push(lte(day, filter.transactionDtTo))
+    }
+
+    if (filter.statementId !== undefined) {
+      conditions.push(eq(transactions.statementId, filter.statementId))
     }
 
     if (filter.categoryId !== undefined) {
@@ -987,22 +1141,22 @@ function isUniqueViolation(error: unknown): boolean {
   )
 }
 
-/** Orders two positive money strings by their cents, exactly — a sort never
- * rounds a 14-digit total into a float that cannot tell neighbors apart. */
-function compareCents(a: string, b: string): number {
-  const cents = (amount: string): bigint => {
-    const [whole, fraction = ''] = amount.split('.')
-
-    return BigInt(`${whole}${fraction.padEnd(2, '0')}`)
+/** A stored row's bill fields, as the assignment rule reads them. */
+function assignedOf(row: Transaction) {
+  return {
+    linkedAccountId: row.linkedAccountId,
+    transactionDt: row.transactionDt,
+    type: row.type,
+    isTransferLeg: row.transferGroupId !== null,
+    statementId: row.statementId,
+    statementPinned: row.statementPinned,
   }
+}
 
-  if (cents(a) < cents(b)) {
-    return -1
-  }
-
-  if (cents(a) > cents(b)) {
-    return 1
-  }
-
-  return 0
+/** Flags a write's answer when the row landed on a closed bill. */
+function withWarning(
+  row: TransactionRow,
+  placement: StatementPlacement
+): TransactionRow {
+  return placement.closed ? { ...row, warning: STATEMENT_CLOSED } : row
 }

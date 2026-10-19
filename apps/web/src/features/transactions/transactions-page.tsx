@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type {
   CreateTransactionBody,
+  CreditMode,
   SearchTransactionsArgs,
   Transaction,
   TransactionStatus,
@@ -26,6 +27,9 @@ import {
 import { PageHeader } from '@/components/page-header.js'
 import { formatDateOnly } from '@/lib/format-date-only.js'
 import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
+import { ClosedBillDialog } from './closed-bill-dialog.js'
+import { CreditModeToggle } from './credit-mode-toggle.js'
+import { CurrentBillCard } from './current-bill-card.js'
 import { ExpensePieCard } from './expense-pie-card.js'
 import { FilterChips } from './filter-chips.js'
 import { forecastNextMonthExpenses } from './forecast-next-month.js'
@@ -33,6 +37,7 @@ import { GoalGaugesCard } from './goal-gauges-card.js'
 import { LastMonthCard } from './last-month-card.js'
 import { LimitUsageCard } from './limit-usage-card.js'
 import { MonthFilter } from './month-filter.js'
+import { NextDueCard } from './next-due-card.js'
 import { NextMonthCard } from './next-month-card.js'
 import { SummaryCards } from './summary-cards.js'
 import { mainCurrencyFirst } from '@/lib/main-currency-first.js'
@@ -41,8 +46,10 @@ import { TransactionGrid } from './transaction-grid.js'
 import { TransferForm } from './transfer-form.js'
 import { type TransactionsView, ViewToggle } from './view-toggle.js'
 import {
+  useCurrentBills,
   useExpenseBreakdown,
   useGoals,
+  useNextDueBills,
   useLimitUsage,
   useRecurringRules,
 } from './use-dashboard.js'
@@ -108,6 +115,14 @@ export function TransactionsPage() {
   // or the summary and dashboard cards — one or the other, never both.
   const [view, setView] = useState<TransactionsView>('transactions')
 
+  // Which day card charges are read by: the purchase (accrual) or their
+  // bill's due date (cash). Part of every filter, so each mode caches apart.
+  const [creditMode, setCreditMode] = useState<CreditMode>('accrual')
+
+  // A saved card charge that landed on an already-closed bill — the page
+  // asks whether to keep it there or move it to the open one.
+  const [closedNotice, setClosedNotice] = useState<Transaction | null>(null)
+
   const accounts = useActiveAccounts()
   const categories = useActiveCategories()
   const receivers = useActiveReceivers()
@@ -141,12 +156,13 @@ export function TransactionsPage() {
           filter.status === undefined
             ? undefined
             : (filter.status as TransactionStatus),
+        creditMode,
         lifecycle: 'ACTIVE' as const,
       },
       skip: 0,
       limit: 50,
     }),
-    [range.from, range.to, filter]
+    [range.from, range.to, filter, creditMode]
   )
 
   const search = useTransactionsInfinite(args)
@@ -174,11 +190,14 @@ export function TransactionsPage() {
   const lastMonthSummary = useTransactionSummary({
     transactionDtFrom: lastMonthRange.from,
     transactionDtTo: lastMonthRange.to,
+    creditMode,
     lifecycle: 'ACTIVE' as const,
   })
   const goals = useGoals()
   const limitUsage = useLimitUsage()
   const recurringRules = useRecurringRules()
+  const currentBills = useCurrentBills()
+  const nextDueBills = useNextDueBills()
 
   const nextMonthSlices = useMemo(
     () =>
@@ -303,10 +322,14 @@ export function TransactionsPage() {
   // failure leaves the sheet open, holding the values, with the error shown.
   const submitSave = (body: CreateTransactionBody) => {
     save.mutate(editing === null ? body : { ...body, id: editing.id }, {
-      onSuccess: () => {
+      onSuccess: (saved) => {
         setFormOpen(false)
         setEditing(null)
         setSelection(new Set())
+
+        if (saved.warning === 'STATEMENT_CLOSED') {
+          setClosedNotice(saved)
+        }
       },
     })
   }
@@ -384,6 +407,15 @@ export function TransactionsPage() {
                 group: t('transactions.view'),
                 transactions: t('transactions.view-transactions'),
                 metrics: t('transactions.view-metrics'),
+              }}
+            />
+            <CreditModeToggle
+              value={creditMode}
+              onChange={setCreditMode}
+              labels={{
+                group: t('transactions.mode'),
+                accrual: t('transactions.mode-accrual'),
+                cash: t('transactions.mode-cash'),
               }}
             />
             <MonthFilter
@@ -498,6 +530,27 @@ export function TransactionsPage() {
             }}
           />
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <CurrentBillCard
+              title={t('transactions.dashboard-current-bill')}
+              bills={currentBills}
+              today={today}
+              locale={i18n.language}
+              labels={{
+                empty: t('transactions.dashboard-bills-empty'),
+                closesIn: (days) =>
+                  t('transactions.dashboard-closes-in', { count: days }),
+              }}
+            />
+            <NextDueCard
+              title={t('transactions.dashboard-next-due')}
+              bills={nextDueBills}
+              locale={i18n.language}
+              labels={{
+                empty: t('transactions.dashboard-next-due-empty'),
+                dueOn: (due) => t('transactions.dashboard-due-on', { due }),
+                overdue: t('transactions.dashboard-overdue'),
+              }}
+            />
             <ExpensePieCard
               title={t('transactions.dashboard-category-expenses')}
               icon={<PieChart aria-hidden className="size-4" />}
@@ -653,6 +706,10 @@ export function TransactionsPage() {
           setTransferOpen(false)
           transfer.reset()
         }}
+      />
+      <ClosedBillDialog
+        transaction={closedNotice}
+        onClose={() => setClosedNotice(null)}
       />
       <ConfirmDialog
         open={deleting !== null}

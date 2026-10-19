@@ -1,0 +1,106 @@
+import { useTranslation } from 'react-i18next'
+import type { Transaction } from '@workspace/poco'
+import { Button } from '@workspace/ui/components/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@workspace/ui/components/dialog'
+
+import { formatDayLabel } from '@/lib/format-date-only.js'
+import { useMoveToStatement, useStatementSearch } from '@/lib/statements.js'
+
+/**
+ * Asked after a save landed a card charge on a bill that is already
+ * closed: keep it there, or move it to the card's open bill — which pins
+ * it. Without an open bill yet, only keeping is offered.
+ */
+export function ClosedBillDialog({
+  transaction,
+  onClose,
+}: {
+  /** The saved charge, or nothing while the dialog is closed. */
+  transaction: Transaction | null
+  onClose: () => void
+}) {
+  const { t, i18n } = useTranslation()
+  const move = useMoveToStatement()
+  const open = useStatementSearch(
+    {
+      sort: [{ field: 'closeDate', dir: 'asc' }],
+      filter: {
+        accountId: transaction?.linkedAccountId,
+        status: ['Open'],
+      },
+      skip: 0,
+      limit: 1,
+    },
+    { enabled: transaction !== null }
+  )
+  const openBill = open.data?.items[0]
+  const close = () => {
+    move.reset()
+    onClose()
+  }
+
+  return (
+    <Dialog
+      open={transaction !== null}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) close()
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('transactions.closed-bill-title')}</DialogTitle>
+          <DialogDescription>
+            {openBill === undefined
+              ? t('transactions.closed-bill-keep-only', {
+                  due: formatDayLabel(
+                    transaction?.statementDueDate ?? '',
+                    i18n.language
+                  ),
+                })
+              : t('transactions.closed-bill-description', {
+                  due: formatDayLabel(
+                    transaction?.statementDueDate ?? '',
+                    i18n.language
+                  ),
+                  openDue: formatDayLabel(openBill.dueDate, i18n.language),
+                })}
+          </DialogDescription>
+        </DialogHeader>
+        {move.isError ? (
+          <p className="text-sm text-destructive">
+            {move.error instanceof Error
+              ? move.error.message
+              : t('transactions.error')}
+          </p>
+        ) : null}
+        <DialogFooter>
+          <Button variant="outline" onClick={close}>
+            {t('transactions.closed-bill-keep')}
+          </Button>
+          {openBill !== undefined && transaction !== null ? (
+            <Button
+              disabled={move.isPending}
+              onClick={() =>
+                move.mutate(
+                  { id: transaction.id, statementId: openBill.id },
+                  { onSuccess: close }
+                )
+              }
+            >
+              {t('transactions.closed-bill-move', {
+                due: formatDayLabel(openBill.dueDate, i18n.language),
+              })}
+            </Button>
+          ) : null}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

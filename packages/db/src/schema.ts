@@ -352,6 +352,9 @@ export const accounts = pgTable(
     closeDay: smallint(),
     /** The day of the month the credit card bill is due. */
     dueDay: smallint(),
+    /** Whether a purchase on the close day still lands on the closing bill.
+     * Off by default: most banks bill it on the next cycle. */
+    closeDayInclusive: boolean('close_day_inclusive').notNull().default(false),
     /** Whether the account is the tenant's default — the one new
      * transactions start in. At most one account of a tenant carries the
      * flag; the write paths clear the previous holder first. */
@@ -375,6 +378,60 @@ export const accounts = pgTable(
 
 export type Account = typeof accounts.$inferSelect
 export type NewAccount = typeof accounts.$inferInsert
+
+/**
+ * One billing cycle of one credit card — a bill. The period is
+ * `[periodStart, closeDate)`: `closeDate` is the exclusive end (the close
+ * day itself, or the day after it on a `closeDayInclusive` card). The days
+ * are snapshotted when the bill is created, so editing the card's days
+ * later never rewrites a closed bill. Totals and status are not stored:
+ * they are derived from the transactions on read, so they never drift.
+ */
+export const creditCardStatements = pgTable(
+  'credit_card_statements',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    ...tenantEntityColumns(),
+    /** The credit card the bill belongs to. Deleting an account is soft,
+     * so the reference always resolves. */
+    accountId: integer('account_id')
+      .notNull()
+      .references(() => accounts.id),
+    /** The first day of the period, inclusive. */
+    periodStart: date('period_start').notNull(),
+    /** The exclusive end of the period. */
+    closeDate: date('close_date').notNull(),
+    /** The day the bill must be paid by. */
+    dueDate: date('due_date').notNull(),
+    /** When a write first found the bill past its close — an audit stamp
+     * only; the status is derived from the dates, never from this. */
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+  },
+  (table) => [
+    // One ACTIVE bill per card cycle. The partial unique index turns the
+    // get-or-create into an atomic claim: two writes racing to open the
+    // same bill insert one row, and the loser reads it.
+    uniqueIndex('credit_card_statements_account_close_key')
+      .on(table.tenantId, table.accountId, table.closeDate)
+      .where(sql`status = 'ACTIVE'`),
+    index('credit_card_statements_tenant_account_due_idx').on(
+      table.tenantId,
+      table.accountId,
+      table.dueDate
+    ),
+    check(
+      'credit_card_statements_period_order',
+      sql`${table.closeDate} > ${table.periodStart}`
+    ),
+    check(
+      'credit_card_statements_due_after_close',
+      sql`${table.dueDate} >= ${table.closeDate}`
+    ),
+  ]
+)
+
+export type CreditCardStatement = typeof creditCardStatements.$inferSelect
+export type NewCreditCardStatement = typeof creditCardStatements.$inferInsert
 
 /**
  * A goal the tenant saves toward: a target balance on a savings account,
@@ -616,6 +673,14 @@ export const transactions = pgTable(
      * is not a transfer side. The write paths use it to keep the pair in
      * step — deleting or editing one side alone would invent money. */
     transferGroupId: uuid('transfer_group_id'),
+    /** The card bill a charge lands on — set on every card row except the
+     * card side of a payment, and nothing on the other account kinds. */
+    statementId: integer('statement_id').references(
+      () => creditCardStatements.id
+    ),
+    /** Whether the user moved the charge to its bill by hand: date edits
+     * then no longer re-resolve it. */
+    statementPinned: boolean('statement_pinned').notNull().default(false),
   },
   (table) => [
     // Every query that lists or searches transactions starts from the
@@ -632,6 +697,14 @@ export const transactions = pgTable(
     uniqueIndex('transactions_recurring_materialized_key')
       .on(table.tenantId, table.recurringId, table.transactionDt)
       .where(sql`status = 'ACTIVE' and recurring_id is not null`),
+    // A bill's totals sum its transactions.
+    index('transactions_statement_id_idx')
+      .on(table.tenantId, table.statementId)
+      .where(sql`status = 'ACTIVE' and statement_id is not null`),
+    check(
+      'transactions_pinned_needs_statement',
+      sql`not ${table.statementPinned} or ${table.statementId} is not null`
+    ),
   ]
 )
 

@@ -49,9 +49,13 @@ apps/
         clock/                  # Clock (injectable "now"; specs pass a fixed one)
                                 #   + global ClockModule — never `new Date()` in a
                                 #   service whose logic depends on the day
+        card-cycle/             # card-cycle-sync.ts: the abstract CardCycleSync port
+                                #   accounts/ calls when a card's close/due days
+                                #   change and credit-card-statements/ implements
       <feature>/                # a domain feature (auth/, tenants/, settings/, preferences/, accounts/,
                                 #   categories/, limits/, goals/, receivers/, transactions/,
-                                #   recurring-transactions/, transaction-linkers/):
+                                #   recurring-transactions/, transaction-linkers/,
+                                #   credit-card-statements/):
         <feature>.module.ts     #   Nest module — wires the feature's providers; exports
                                 #   a repository when another feature may need its rows
         <feature>.controller.ts #   routes: HTTP shape, status codes, DTO mapping (toWire)
@@ -126,7 +130,12 @@ packages/
    feature's *module* to inject a repository that module exports (limits
    validates its categoryId through `CategoriesModule`'s exported
    `CategoryRepository`). Importing a sibling's service or internals directly
-   is a design smell — extract the shared part instead.
+   is a design smell — extract the shared part instead. A second sanctioned
+   shape is the **port**: an abstract class in `common/` (like
+   `SessionResolver`) that one feature calls and another implements and
+   provides under the abstract token — the caller depends on the
+   abstraction, never on the implementing feature (accounts call
+   `CardCycleSync`; credit-card-statements implements it).
    `poco` depends on nothing in this repo; everything else may depend on it.
 2. **A new API capability is a feature directory**, not a file in an existing
    one. Create `<feature>/` with its module, controller, and service(s); split
@@ -197,6 +206,15 @@ packages/
    i18next locale picks separators and symbol placement) and inputs it through `MoneyField` (packages/ui),
    whose reverse masking (digits typed are cents) is locale-aware. Money never
    crosses a float.
+6f. **Card bills are derived, not stored.** A `credit_card_statements` row
+   is one cycle of one card: `periodStart` inclusive, `closeDate` the
+   exclusive end of the period (the close day itself on a default card, the
+   day after it on a `closeDayInclusive` card), `dueDate` snapshotted at
+   creation. Its totals, carry-over, and status are computed on read from
+   its transactions — never stored, so they cannot drift. `closedAt` is an
+   audit stamp written only by write paths; no logic reads it. The
+   assignment rule is poco's `resolveStatement`, shared by the API and the
+   form; a bill's money is in its card's account currency.
 6e. **Password recovery never needs email.** A one-time reset code — issued
    by an owner for a member, generated in advance as an owner's recovery
    codes, or printed by the server's `reset-code` command — sets a new

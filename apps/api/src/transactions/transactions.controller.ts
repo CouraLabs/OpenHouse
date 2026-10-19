@@ -17,8 +17,10 @@ import type {
   CreateTransactionBody,
   Currency,
   EntityStatus,
+  MoveToStatementBody,
   PagedResults,
   SearchTransactionsArgs,
+  StatementWarning,
   Transaction,
   TransactionBreakdown,
   TransactionBreakdownArgs,
@@ -32,6 +34,7 @@ import type {
 import {
   changeTransactionStatusSchema,
   createTransactionSchema,
+  moveToStatementSchema,
   searchTransactionsSchema,
   transactionBreakdownSchema,
   transferSchema,
@@ -177,6 +180,26 @@ export class TransactionsController {
     )
   }
 
+  /** Moves a card charge to another bill of the same card and pins it
+   * there. Answers the row with a `STATEMENT_CLOSED` warning when that bill
+   * is already closed. */
+  @Patch(':id/statement')
+  async moveToStatement(
+    @CurrentSession() session: Session,
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(moveToStatementSchema))
+    body: MoveToStatementBody
+  ): Promise<Transaction> {
+    return toWire(
+      await this.transactions.moveToStatement(
+        session.tenant.id,
+        session.user.id,
+        id,
+        body
+      )
+    )
+  }
+
   /** Soft-deletes a transaction: the account's balance is reverted in the
    * same database transaction that marks the row DELETED. */
   @Delete(':id')
@@ -217,6 +240,10 @@ function toWire(row: TransactionRowLike): Transaction {
     statusNote: row.statusNote,
     lifecycle: row.status,
     transferGroupId: row.transferGroupId,
+    statementId: row.statementId,
+    statementPinned: row.statementPinned,
+    statementDueDate: row.statementDueDate,
+    warning: row.warning ?? null,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),
   }
@@ -245,6 +272,10 @@ interface TransactionRowLike {
   statusNote: string | null
   status: EntityStatus
   transferGroupId: string | null
+  statementId: number | null
+  statementPinned: boolean
+  statementDueDate: string | null
+  warning?: StatementWarning
   createdDt: Date
   updateDt: Date
 }

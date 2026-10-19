@@ -20,6 +20,7 @@ import type {
 } from '@workspace/poco'
 
 import { api } from '@/lib/api.js'
+import { STATEMENTS_KEY } from '@/lib/statements.js'
 
 /** The key every transaction query and mutation lives under. */
 const TRANSACTIONS_KEY = ['transactions'] as const
@@ -97,6 +98,7 @@ export function useSaveTransaction() {
           }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
+      void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
     },
   })
@@ -111,6 +113,7 @@ export function useDeleteTransaction() {
       api<void>(`/transactions/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
+      void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
     },
   })
@@ -128,16 +131,17 @@ export function useTransfer() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
+      void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
     },
   })
 }
 
 /**
- * Changes a transaction's review status alone. Deliberately invalidates
- * only the transactions: a review-status change never moves money — the
- * API writes no amount, account, or day — so the accounts cannot have
- * changed, unlike the other mutations.
+ * Changes a transaction's review status alone. Deliberately leaves the
+ * accounts alone: a review-status change never moves money — the API
+ * writes no amount, account, or day. A bill's totals do follow it (a
+ * Canceled charge stops counting), so the bills invalidate.
  */
 export function useChangeTransactionStatus() {
   const queryClient = useQueryClient()
@@ -150,6 +154,7 @@ export function useChangeTransactionStatus() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
+      void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
     },
   })
 }

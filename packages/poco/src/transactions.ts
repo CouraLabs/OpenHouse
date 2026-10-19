@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import type { StatementWarning } from './credit-card-statements.js'
 import { type Currency } from './currencies.js'
 import { dateOnlySchema } from './goals.js'
 import { amountSchema } from './limits.js'
@@ -96,6 +97,20 @@ export const changeTransactionStatusSchema = z.object({
 })
 
 /**
+ * How month views date a card charge: by the day it was made (accrual,
+ * the default) or by the due date of the bill it lands on (cash) — when
+ * the money actually leaves the paying account. Rows off a card always
+ * keep their own day.
+ */
+export const creditModes = ['accrual', 'cash'] as const
+
+export const creditModeSchema = z.enum(creditModes, {
+  error: 'Accrual or cash.',
+})
+
+export type CreditMode = (typeof creditModes)[number]
+
+/**
  * What a transaction search filters on. The entity's own lifecycle status
  * is wired as `lifecycle` so it never collides with the transaction's
  * business `status`; without a lifecycle, only ACTIVE rows.
@@ -106,6 +121,10 @@ export const transactionFilterSchema = transactionRangeSchema.extend({
   receiverId: z.number().int().positive().optional(),
   type: transactionTypeSchema.optional(),
   status: transactionStatusSchema.optional(),
+  /** Only the charges on one card bill. */
+  statementId: z.number().int().positive().optional(),
+  /** Which day the date window reads for card charges. */
+  creditMode: creditModeSchema.prefault('accrual'),
   lifecycle: entityStatusSchema.prefault('ACTIVE'),
 })
 
@@ -195,6 +214,17 @@ export type Transaction = {
    * not a transfer side. The UI keeps the pair out of day totals — the two
    * sides together would count the same money twice. */
   transferGroupId: string | null
+  /** The card bill the charge lands on, or nothing off a card (and on the
+   * card side of a payment). */
+  statementId: number | null
+  /** Whether the user moved the charge to its bill by hand — a date edit
+   * then no longer re-resolves it. */
+  statementPinned: boolean
+  /** The due date of the bill, joined. */
+  statementDueDate: string | null
+  /** Set on a write's answer when the charge landed on a bill already
+   * closed, so the form can offer to move it to the open one. */
+  warning: StatementWarning | null
   createdDt: string
   updateDt: string
 }

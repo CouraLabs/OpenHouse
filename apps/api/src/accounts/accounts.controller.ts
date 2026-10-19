@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common'
 import type {
   Account,
@@ -16,6 +17,7 @@ import type {
   AccountType,
   CreateAccountBody,
   Currency,
+  DeleteAccountQuery,
   EntityStatus,
   PagedResults,
   SearchAccountsArgs,
@@ -23,6 +25,7 @@ import type {
 } from '@workspace/poco'
 import {
   createAccountSchema,
+  deleteAccountQuerySchema,
   searchAccountsSchema,
   updateAccountSchema,
 } from '@workspace/poco'
@@ -76,6 +79,9 @@ export class AccountsController {
       type: row.type,
       currency: row.currency,
       isDefault: row.isDefault,
+      closeDay: row.closeDay,
+      dueDay: row.dueDay,
+      closeDayInclusive: row.closeDayInclusive,
     }))
   }
 
@@ -104,9 +110,16 @@ export class AccountsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async softDelete(
     @CurrentSession() session: Session,
-    @Param('id', ParseIntPipe) id: number
+    @Param('id', ParseIntPipe) id: number,
+    @Query(new ZodValidationPipe(deleteAccountQuerySchema))
+    query: DeleteAccountQuery
   ): Promise<void> {
-    await this.accounts.softDelete(session.tenant.id, session.user.id, id)
+    await this.accounts.softDelete(
+      session.tenant.id,
+      session.user.id,
+      id,
+      query.confirmUnpaidBills
+    )
   }
 }
 
@@ -123,6 +136,7 @@ function toWire(row: {
   limit: string | null
   closeDay: number | null
   dueDay: number | null
+  closeDayInclusive: boolean
   isDefault: boolean
   status: EntityStatus
   createdDt: Date
@@ -140,6 +154,7 @@ function toWire(row: {
     limit: row.limit,
     closeDay: row.closeDay,
     dueDay: row.dueDay,
+    closeDayInclusive: row.closeDayInclusive,
     isDefault: row.isDefault,
     status: row.status,
     createdDt: row.createdDt.toISOString(),

@@ -9,6 +9,7 @@ import {
   TransactionRepository,
   type TransactionRow,
 } from './transaction.repository.js'
+import type { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { TransactionService } from './transaction.service.js'
 
 /** The account the account repository finds — ACTIVE Checking unless overridden. */
@@ -25,6 +26,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   limit: null,
   closeDay: null,
   dueDay: null,
+  closeDayInclusive: false,
   isDefault: false,
   status: 'ACTIVE',
   createdBy: null,
@@ -81,6 +83,8 @@ const row = (overrides: Partial<TransactionRow> = {}): TransactionRow => ({
   statusNote: null,
   status: 'ACTIVE',
   transferGroupId: null,
+  statementId: null,
+  statementPinned: false,
   createdBy: 7,
   createdDt: new Date('2026-01-01T00:00:00Z'),
   updateBy: 7,
@@ -90,6 +94,7 @@ const row = (overrides: Partial<TransactionRow> = {}): TransactionRow => ({
   categoryColor: '#1D4ED8',
   receiverName: 'Market',
   currency: 'USD',
+  statementDueDate: null,
   ...overrides,
 })
 
@@ -131,7 +136,8 @@ const service = (
     repo as unknown as TransactionRepository,
     accs as unknown as AccountRepository,
     cats as unknown as CategoryRepository,
-    rcv as unknown as ReceiverRepository
+    rcv as unknown as ReceiverRepository,
+    {} as CreditCardStatementRepository
   )
 
 const createBody = {

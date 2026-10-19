@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type {
+  CreditCardStatement,
   Goal,
   LimitUsage,
   PagedResults,
@@ -9,6 +10,7 @@ import type {
 } from '@workspace/poco'
 
 import { api } from '@/lib/api.js'
+import { useStatementSearch } from '@/lib/statements.js'
 
 /**
  * The dashboard queries the transaction screen's cards read: the expense
@@ -80,5 +82,51 @@ export function useRecurringRules() {
           signal,
         }
       ),
+  })
+}
+
+/**
+ * The cards' current bills: the earliest Open bill of each card — what is
+ * being charged right now.
+ */
+export function useCurrentBills(): CreditCardStatement[] {
+  const open = useStatementSearch({
+    sort: [{ field: 'closeDate', dir: 'asc' }],
+    filter: { status: ['Open'] },
+    skip: 0,
+    limit: 100,
+  })
+
+  return firstPerCard(open.data?.items ?? [])
+}
+
+/**
+ * What each card asks for next: its latest closed bill not yet paid in
+ * full. Only the latest — its amount due already carries every earlier
+ * remainder, so summing older bills would count the same debt twice.
+ */
+export function useNextDueBills(): CreditCardStatement[] {
+  const unpaid = useStatementSearch({
+    sort: [{ field: 'closeDate', dir: 'desc' }],
+    filter: { status: ['Closed', 'PartiallyPaid', 'Overdue'] },
+    skip: 0,
+    limit: 100,
+  })
+
+  return firstPerCard(unpaid.data?.items ?? [])
+}
+
+/** The first bill of each card, in the order the search answered. */
+function firstPerCard(bills: CreditCardStatement[]): CreditCardStatement[] {
+  const seen = new Set<number>()
+
+  return bills.filter((bill) => {
+    if (seen.has(bill.accountId)) {
+      return false
+    }
+
+    seen.add(bill.accountId)
+
+    return true
   })
 }

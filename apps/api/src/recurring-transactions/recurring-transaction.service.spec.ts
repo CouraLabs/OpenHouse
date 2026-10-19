@@ -50,6 +50,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   limit: null,
   closeDay: null,
   dueDay: null,
+  closeDayInclusive: false,
   isDefault: false,
   status: 'ACTIVE',
   createdBy: null,

@@ -34,3 +34,17 @@ export function formatDateOnly(date: Date): string {
 
   return `${year}-${month}-${day}`
 }
+
+/** Formats a `YYYY-MM-DD` wire day for display in a locale — "Dec 5" by
+ * default — on the local day, so it never shifts across a timezone. */
+export function formatDayLabel(
+  value: string,
+  locale: string,
+  options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+): string {
+  const date = parseDateOnly(value)
+
+  return date === undefined
+    ? value
+    : new Intl.DateTimeFormat(locale, options).format(date)
+}

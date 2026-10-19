@@ -13,6 +13,7 @@ import type {
 } from '@workspace/poco'
 
 import { api } from '@/lib/api.js'
+import { STATEMENTS_KEY } from '@/lib/statements.js'
 
 /** The key every account query and mutation lives under. */
 const ACCOUNTS_KEY = ['accounts'] as const
@@ -35,7 +36,9 @@ export function useAccountsSearch(args: SearchAccountsArgs) {
   })
 }
 
-/** Saves an account: creates when the body has no id, updates when it has. */
+/** Saves an account: creates when the body has no id, updates when it has.
+ * A card's new close or due days re-place its open charges on new bills,
+ * so the transactions and the bills invalidate too. */
 export function useSaveAccount() {
   const queryClient = useQueryClient()
 
@@ -52,17 +55,30 @@ export function useSaveAccount() {
           }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
+      void queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
     },
   })
 }
 
-/** Soft-deletes an account: the API marks it DELETED. */
+/** Soft-deletes an account: the API marks it DELETED. A card that still
+ * owes on its bills answers 409 with an `AccountDeleteConflict` until the
+ * call confirms it. */
 export function useDeleteAccount() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: number) =>
-      api<void>(`/accounts/${id}`, { method: 'DELETE' }),
+    mutationFn: ({
+      id,
+      confirmUnpaidBills = false,
+    }: {
+      id: number
+      confirmUnpaidBills?: boolean
+    }) =>
+      api<void>(
+        `/accounts/${id}${confirmUnpaidBills ? '?confirmUnpaidBills=true' : ''}`,
+        { method: 'DELETE' }
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
     },

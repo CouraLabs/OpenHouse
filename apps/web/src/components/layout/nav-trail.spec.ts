@@ -38,6 +38,14 @@ describe('findNavTrail', () => {
     ])
   })
 
+  it('gives a detail page the trail of the item above it', () => {
+    expect(findNavTrail([FINANCIAL_GROUP], '/bills/12')).toEqual([
+      { key: 'nav.financial' },
+      { key: 'nav.subgroup.activity' },
+      { key: 'nav.bills', to: '/bills' },
+    ])
+  })
+
   it('returns undefined for routes outside the menu', () => {
     expect(findNavTrail([FINANCIAL_GROUP], '/settings/general')).toBeUndefined()
   })

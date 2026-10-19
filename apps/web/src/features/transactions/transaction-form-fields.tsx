@@ -27,6 +27,7 @@ import { Textarea } from '@workspace/ui/components/textarea'
 import { TextField } from '@workspace/ui/components/text-field'
 
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
+import { BilledOnLine } from './billed-on-line.js'
 import { inferCategory } from './infer-category.js'
 import { StringPick } from './string-pick.js'
 import {
@@ -262,6 +263,20 @@ export function TransactionFormFields({
             value: String(account.id),
             label: account.name,
           }))}
+      />
+      <BilledOnLine
+        account={(accounts.data ?? []).find(
+          (account) => account.id === accountId
+        )}
+        transactionDt={transactionDt}
+        // A charge pinned to its bill stays there through a date edit, as
+        // long as it stays on the same card.
+        pinnedDueDate={
+          transaction?.statementPinned === true &&
+          transaction.linkedAccountId === accountId
+            ? transaction.statementDueDate
+            : null
+        }
       />
       <StringPick
         id="transaction-category"

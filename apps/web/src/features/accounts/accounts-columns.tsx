@@ -2,7 +2,8 @@ import type { Account } from '@workspace/poco'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Pencil, ReceiptText, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { formatMoney } from '@/lib/format-money.js'
@@ -94,13 +95,21 @@ export function buildAccountsColumns(
               ) : null}
             </span>
             {account.type === 'Credit Card' ? (
-              <span className="text-xs text-muted-foreground">
-                {t('accounts.due-short')}{' '}
-                {String(account.dueDay).padStart(2, '0')}
-                {' · '}
-                {t('accounts.close-short')}{' '}
-                {String(account.closeDay).padStart(2, '0')}
-              </span>
+              account.closeDay === null || account.dueDay === null ? (
+                // A card from before the days were required has no bills
+                // until its owner sets them.
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  {t('accounts.cycle-missing')}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {t('accounts.due-short')}{' '}
+                  {String(account.dueDay).padStart(2, '0')}
+                  {' · '}
+                  {t('accounts.close-short')}{' '}
+                  {String(account.closeDay).padStart(2, '0')}
+                </span>
+              )
             ) : null}
           </div>
         )
@@ -117,7 +126,8 @@ export function buildAccountsColumns(
   ]
 }
 
-/** The actions cell: the edit and delete buttons, one per row. */
+/** The actions cell: a card's bills shortcut, then the edit and delete
+ * buttons, one per row. */
 function AccountActionsCell({
   account,
   actions,
@@ -129,6 +139,18 @@ function AccountActionsCell({
 
   return (
     <div className="flex items-center justify-end gap-1">
+      {account.type === 'Credit Card' ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t('accounts.bills')}
+          title={t('accounts.bills')}
+          nativeButton={false}
+          render={<Link to="/bills" search={{ accountId: account.id }} />}
+        >
+          <ReceiptText />
+        </Button>
+      ) : null}
       <Button
         variant="ghost"
         size="icon-sm"

@@ -19,6 +19,7 @@ import { SettingsModule } from './settings/settings.module.js'
 import { PreferencesModule } from './preferences/preferences.module.js'
 import { ReceiversModule } from './receivers/receivers.module.js'
 import { RecurringTransactionsModule } from './recurring-transactions/recurring-transactions.module.js'
+import { CreditCardStatementsModule } from './credit-card-statements/credit-card-statements.module.js'
 import { TransactionsModule } from './transactions/transactions.module.js'
 import { TransactionLinkersModule } from './transaction-linkers/transaction-linkers.module.js'
 
@@ -71,6 +72,7 @@ const THROTTLE_TTL_MS = 60_000
     GoalsModule,
     ReceiversModule,
     TransactionLinkersModule,
+    CreditCardStatementsModule,
     TransactionsModule,
     RecurringTransactionsModule,
   ],

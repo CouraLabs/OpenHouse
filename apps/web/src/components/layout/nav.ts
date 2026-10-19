@@ -8,6 +8,7 @@ import {
   Link,
   Percent,
   PiggyBank,
+  ReceiptText,
   Repeat,
   Tags,
   Target,
@@ -54,6 +55,7 @@ export const FINANCIAL_GROUP: NavGroup = {
       key: 'nav.subgroup.activity',
       items: [
         { key: 'nav.transactions', to: '/transactions', icon: ArrowLeftRight },
+        { key: 'nav.bills', to: '/bills', icon: ReceiptText },
         {
           key: 'nav.recurring-transactions',
           to: '/recurring-transactions',

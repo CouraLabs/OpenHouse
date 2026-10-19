@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, count, eq, inArray, ne } from 'drizzle-orm'
-import type { Currency, Database, TenantSettingsRow } from '@workspace/db'
+import type {
+  Currency,
+  Database,
+  DbOrTx,
+  TenantSettingsRow,
+} from '@workspace/db'
 import { accounts, goals, limits, tenantSettings } from '@workspace/db'
-
-/** The database or an open transaction — a sign-up writes the settings row
- * inside the transaction that creates the tenant. */
-type DbOrTx = Database | Parameters<Parameters<Database['transaction']>[0]>[0]
 
 /** The fields a settings write carries, beyond the audit stamps. */
 export interface SettingsWrite {

@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, asc, eq } from 'drizzle-orm'
-import type { Database, User } from '@workspace/db'
+import type { Database, DbOrTx, User } from '@workspace/db'
 import { users } from '@workspace/db'
-
-/** The database or an open transaction. */
-type DbOrTx = Database | Parameters<Parameters<Database['transaction']>[0]>[0]
 
 /** A user row without its secrets — what the Users section reads. */
 export type TenantUserRow = Pick<

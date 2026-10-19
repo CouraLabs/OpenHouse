@@ -3,15 +3,13 @@ import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, count, desc, eq, gt, isNull, max, or, sql } from 'drizzle-orm'
 import type {
   Database,
+  DbOrTx,
   NewPasswordResetCode,
   PasswordResetCode,
   ResetCodeKind,
   User,
 } from '@workspace/db'
 import { passwordResetCodes, users } from '@workspace/db'
-
-/** The database or an open transaction. */
-type DbOrTx = Database | Parameters<Parameters<Database['transaction']>[0]>[0]
 
 /** A code is open while it is unused and not yet expired at `now`. */
 function isOpen(now: Date) {

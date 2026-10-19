@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Account, AccountType, CreateAccountBody } from '@workspace/poco'
+import type {
+  Account,
+  AccountDeleteConflict,
+  AccountType,
+  CreateAccountBody,
+} from '@workspace/poco'
 import { accountTypes } from '@workspace/poco'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
@@ -16,6 +21,8 @@ import {
 import { Plus } from 'lucide-react'
 
 import { PageHeader } from '@/components/page-header.js'
+import { ApiError } from '@/lib/api.js'
+import { formatMoney } from '@/lib/format-money.js'
 import { buildAccountsColumns } from './accounts-columns.js'
 import { AccountForm } from './account-form.js'
 import {
@@ -23,6 +30,22 @@ import {
   useDeleteAccount,
   useSaveAccount,
 } from './use-accounts.js'
+
+/** The 409 body deleting a card that still owes answers until it is
+ * confirmed, or nothing for any other failure. */
+function deleteConflictOf(error: unknown): AccountDeleteConflict | null {
+  if (
+    error instanceof ApiError &&
+    error.status === 409 &&
+    typeof error.body === 'object' &&
+    error.body !== null &&
+    'unpaidBills' in error.body
+  ) {
+    return error.body as AccountDeleteConflict
+  }
+
+  return null
+}
 
 /** The page the tenant's accounts are managed from: the form above the
  * table, the table below, and the delete confirmation in between. */
@@ -71,11 +94,15 @@ export function AccountsPage() {
       ? save.error.message
       : t('accounts.error')
     : undefined
-  const deleteError = remove.isError
-    ? remove.error instanceof Error
-      ? remove.error.message
-      : t('accounts.error')
-    : undefined
+  // A card that still owes answers 409 with what it owes: that is a
+  // question for the user, not an error.
+  const deleteConflict = deleteConflictOf(remove.error)
+  const deleteError =
+    remove.isError && deleteConflict === null
+      ? remove.error instanceof Error
+        ? remove.error.message
+        : t('accounts.error')
+      : undefined
 
   // A new sort is a new first page.
   const resetToFirstPage = () => {
@@ -119,9 +146,15 @@ export function AccountsPage() {
       return
     }
 
-    remove.mutate(deleting.id, {
-      onSuccess: () => setDeleting(null),
-    })
+    remove.mutate(
+      { id: deleting.id, confirmUnpaidBills: deleteConflict !== null },
+      {
+        onSuccess: () => {
+          setDeleting(null)
+          remove.reset()
+        },
+      }
+    )
   }
 
   // The page's actions, on the header line: the filter and the insert.
@@ -213,9 +246,21 @@ export function AccountsPage() {
         open={deleting !== null}
         destructive
         title={t('accounts.delete-title')}
-        description={t('accounts.delete-description', {
-          name: deleting === null ? '' : deleting.name,
-        })}
+        description={
+          deleteConflict === null
+            ? t('accounts.delete-description', {
+                name: deleting === null ? '' : deleting.name,
+              })
+            : t('accounts.delete-unpaid-description', {
+                name: deleting === null ? '' : deleting.name,
+                count: deleteConflict.unpaidBills,
+                amount: formatMoney(
+                  deleteConflict.amountDue,
+                  i18n.language,
+                  deleteConflict.currency
+                ),
+              })
+        }
         confirmLabel={t('accounts.delete-confirm')}
         pendingLabel={t('accounts.deleting')}
         cancelLabel={t('accounts.cancel')}

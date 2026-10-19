@@ -1,5 +1,4 @@
-import { asc, desc, type SQL } from 'drizzle-orm'
-import type { PgColumn } from 'drizzle-orm/pg-core'
+import { asc, desc, type SQL, type SQLWrapper } from 'drizzle-orm'
 
 import type { FetchArgs } from '@workspace/poco'
 
@@ -17,10 +16,11 @@ export interface PagedQuery {
 
 /**
  * The columns a feature allows its clients to sort by, by the wire name the
- * sort clause carries. A field missing here is never user input reaching a
- * column — the sort clause for it is dropped.
+ * sort clause carries — a table column, or a derived one a query selects
+ * (a bill's computed total). A field missing here is never user input
+ * reaching a column — the sort clause for it is dropped.
  */
-export type SortableColumns = Record<string, PgColumn>
+export type SortableColumns = Record<string, SQLWrapper>
 
 /**
  * Translates the shared `FetchArgs` envelope into Drizzle query pieces. This

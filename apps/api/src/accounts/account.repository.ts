@@ -1,7 +1,7 @@
 import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Account, Database } from '@workspace/db'
+import type { Account, Database, DbOrTx } from '@workspace/db'
 import { accounts, transactions } from '@workspace/db'
 import type { SearchAccountsArgs } from '@workspace/poco'
 
@@ -25,11 +25,9 @@ export interface AccountWrite {
   limit: string | null
   closeDay: number | null
   dueDay: number | null
+  closeDayInclusive: boolean
   isDefault: boolean
 }
-
-/** The handle a write runs on: the pool, or one transaction of it. */
-type DbOrTx = Database | Parameters<Parameters<Database['transaction']>[0]>[0]
 
 /**
  * The account rows, reached only through the tenant of the session. Every
@@ -119,14 +117,20 @@ export class AccountRepository {
    * A default account takes the flag from the previous holder first, so the
    * tenant never holds two defaults — both writes in one database
    * transaction, under the one-default unique index.
+   *
+   * `beforeWrite` runs first inside the same transaction — a card's bills
+   * follow its new days there, so the days and the bills commit together.
    */
   async update(
     tenantId: number,
     id: number,
     userId: number,
-    data: AccountWrite
+    data: AccountWrite,
+    beforeWrite?: (tx: DbOrTx) => Promise<void>
   ): Promise<Account | undefined> {
     return this.db.transaction(async (tx) => {
+      await beforeWrite?.(tx)
+
       if (data.isDefault) {
         await this.clearDefaultInTx(tx, tenantId, id)
       }
@@ -146,6 +150,7 @@ export class AccountRepository {
           limit: data.limit,
           closeDay: data.closeDay,
           dueDay: data.dueDay,
+          closeDayInclusive: data.closeDayInclusive,
           isDefault: data.isDefault,
           updateBy: userId,
           updateDt: new Date(),

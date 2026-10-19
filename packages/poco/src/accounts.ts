@@ -86,6 +86,9 @@ export const createAccountSchema = z
     limit: amountSchema.nullish(),
     closeDay: z.number().int().min(1).max(31).nullish(),
     dueDay: z.number().int().min(1).max(31).nullish(),
+    /** Whether a purchase on the close day still lands on the closing bill
+     * (Credit Card only). Off by default: most banks bill it next cycle. */
+    closeDayInclusive: z.boolean().prefault(false),
     /** Whether the account is the tenant's default — the one new
      * transactions start in. Only one account carries the flag; the API
      * clears the previous holder. */
@@ -157,6 +160,13 @@ export const createAccountSchema = z
         })
       }
     } else {
+      if (account.closeDayInclusive) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['closeDayInclusive'],
+          message: 'Only a Credit Card has this.',
+        })
+      }
       // Card-only fields must be empty on the other types.
       for (const field of ['limit', 'closeDay', 'dueDay'] as const) {
         if (account[field] !== undefined && account[field] !== null) {
@@ -203,6 +213,11 @@ export type AccountRef = {
   /** Whether the account is the tenant's default — the one a new
    * transaction starts in. */
   isDefault: boolean
+  /** A card's cycle, so the transaction form previews the bill a purchase
+   * lands on; nothing on the other kinds. */
+  closeDay: number | null
+  dueDay: number | null
+  closeDayInclusive: boolean
 }
 
 /**
@@ -222,8 +237,33 @@ export type Account = {
   limit: string | null
   closeDay: number | null
   dueDay: number | null
+  closeDayInclusive: boolean
   isDefault: boolean
   status: EntityStatus
   createdDt: string
   updateDt: string
+}
+
+/**
+ * The query `DELETE accounts/:id` accepts. Deleting a card that still owes
+ * on its bills answers 409 with an `AccountDeleteConflict` until the query
+ * confirms it; the bills stay readable in history either way.
+ */
+export const deleteAccountQuerySchema = z.object({
+  confirmUnpaidBills: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
+})
+
+export type DeleteAccountQuery = z.infer<typeof deleteAccountQuerySchema>
+
+/** The 409 body of a card deletion that was not confirmed. */
+export interface AccountDeleteConflict {
+  message: string
+  /** The closed bills not yet paid in full. */
+  unpaidBills: number
+  /** What the card's latest bill still asks for, in the card's currency. */
+  amountDue: string
+  currency: Currency
 }

@@ -25,6 +25,7 @@ import { TextField } from '@workspace/ui/components/text-field'
 
 import { useMainCurrency } from '@/lib/settings.js'
 import { AccountAdvancedFields } from './account-advanced-fields.js'
+import { CardCycleFields } from './card-cycle-fields.js'
 
 /**
  * The fields the account form holds. The rules come straight from the
@@ -63,6 +64,7 @@ const newAccount = (mainCurrency: Currency): AccountFormValues => ({
   limit: null,
   closeDay: null,
   dueDay: null,
+  closeDayInclusive: false,
   isDefault: false,
 })
 
@@ -74,9 +76,6 @@ const AGENCY_LESS_TYPES: readonly AccountType[] = ['Wallet', 'Credit Card']
 
 /** The types that carry no bank account number, so no number field either. */
 const NUMBER_LESS_TYPES: readonly AccountType[] = ['Wallet', 'Credit Card']
-
-/** The days of the month a close or due date can fall on. */
-const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, index) => index + 1)
 
 /**
  * The insert and edit form of the accounts page. Card-only fields render
@@ -125,6 +124,7 @@ export function AccountForm({
             limit: account.limit,
             closeDay: account.closeDay,
             dueDay: account.dueDay,
+            closeDayInclusive: account.closeDayInclusive,
             isDefault: account.isDefault,
           },
   })
@@ -135,6 +135,7 @@ export function AccountForm({
   const limit = watch('limit')
   const closeDay = watch('closeDay')
   const dueDay = watch('dueDay')
+  const closeDayInclusive = watch('closeDayInclusive') ?? false
   const isDefault = watch('isDefault')
   const spreadPct = watch('spreadPct')
   const isCard = type === 'Credit Card'
@@ -223,6 +224,7 @@ export function AccountForm({
                 for (const field of CARD_ONLY_FIELDS) {
                   setValue(field, null)
                 }
+                setValue('closeDayInclusive', false)
               }
               if (AGENCY_LESS_TYPES.includes(nextType)) {
                 setValue('agency', null)
@@ -334,84 +336,21 @@ export function AccountForm({
               }
               error={errors.limit}
             />
-            <Field data-invalid={errors.closeDay !== undefined}>
-              <FieldLabel htmlFor="account-close-day">
-                {t('accounts.close-date')}
-              </FieldLabel>
-              <Select
-                value={closeDay == null ? null : String(closeDay)}
-                onValueChange={(value) =>
-                  setValue('closeDay', value === null ? null : Number(value), {
-                    shouldValidate: true,
-                  })
-                }
-              >
-                <SelectTrigger
-                  id="account-close-day"
-                  className="w-full"
-                  size="sm"
-                  aria-invalid={errors.closeDay !== undefined}
-                >
-                  {/* The selected label renders explicitly — a value set while
-                      the popup was closed is not derived from the items alone. */}
-                  <SelectValue placeholder={t('accounts.day-placeholder')}>
-                    {closeDay != null
-                      ? String(closeDay).padStart(2, '0')
-                      : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS_OF_MONTH.map((day) => (
-                    <SelectItem key={day} value={String(day)}>
-                      {String(day).padStart(2, '0')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError
-                errors={
-                  errors.closeDay !== undefined ? [errors.closeDay] : undefined
-                }
-              />
-            </Field>
-            <Field data-invalid={errors.dueDay !== undefined}>
-              <FieldLabel htmlFor="account-due-day">
-                {t('accounts.due-date')}
-              </FieldLabel>
-              <Select
-                value={dueDay == null ? null : String(dueDay)}
-                onValueChange={(value) =>
-                  setValue('dueDay', value === null ? null : Number(value), {
-                    shouldValidate: true,
-                  })
-                }
-              >
-                <SelectTrigger
-                  id="account-due-day"
-                  className="w-full"
-                  size="sm"
-                  aria-invalid={errors.dueDay !== undefined}
-                >
-                  <SelectValue placeholder={t('accounts.day-placeholder')}>
-                    {dueDay != null
-                      ? String(dueDay).padStart(2, '0')
-                      : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS_OF_MONTH.map((day) => (
-                    <SelectItem key={day} value={String(day)}>
-                      {String(day).padStart(2, '0')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError
-                errors={
-                  errors.dueDay !== undefined ? [errors.dueDay] : undefined
-                }
-              />
-            </Field>
+            <CardCycleFields
+              closeDay={closeDay}
+              dueDay={dueDay}
+              closeDayInclusive={closeDayInclusive}
+              onCloseDayChange={(day) =>
+                setValue('closeDay', day, { shouldValidate: true })
+              }
+              onDueDayChange={(day) =>
+                setValue('dueDay', day, { shouldValidate: true })
+              }
+              onCloseDayInclusiveChange={(inclusive) =>
+                setValue('closeDayInclusive', inclusive)
+              }
+              errors={{ closeDay: errors.closeDay, dueDay: errors.dueDay }}
+            />
           </>
         ) : null}
       </div>

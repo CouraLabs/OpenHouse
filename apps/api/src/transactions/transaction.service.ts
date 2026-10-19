@@ -7,6 +7,7 @@ import type { Account } from '@workspace/db'
 import type {
   ChangeTransactionStatusBody,
   CreateTransactionBody,
+  MoveToStatementBody,
   SearchTransactionsArgs,
   TransactionBreakdownArgs,
   TransactionFilter,
@@ -16,6 +17,7 @@ import type {
 
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
+import { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
 import {
   TransactionRepository,
@@ -38,7 +40,8 @@ export class TransactionService {
     private readonly repository: TransactionRepository,
     private readonly accounts: AccountRepository,
     private readonly categories: CategoryRepository,
-    private readonly receivers: ReceiverRepository
+    private readonly receivers: ReceiverRepository,
+    private readonly statements: CreditCardStatementRepository
   ) {}
 
   /** Creates a transaction, rejecting references the tenant cannot use. */
@@ -194,6 +197,52 @@ export class TransactionService {
     }
 
     return updated
+  }
+
+  /**
+   * Moves a card charge to another bill of the same card and pins it there.
+   * Only a row already on a bill can move — a charge off a card, or the
+   * card side of a payment, is on none — and only to an ACTIVE bill of its
+   * own card.
+   */
+  async moveToStatement(
+    tenantId: number,
+    userId: number,
+    id: number,
+    body: MoveToStatementBody
+  ): Promise<TransactionRow> {
+    const row = await this.find(tenantId, id)
+
+    if (row.status === 'DELETED') {
+      throw new NotFoundException(`No transaction with id ${id}.`)
+    }
+
+    if (row.statementId === null) {
+      throw new ConflictException('Only a card charge is on a bill.')
+    }
+
+    const statement = await this.statements.findById(tenantId, body.statementId)
+
+    if (statement === undefined || statement.status === 'DELETED') {
+      throw new NotFoundException(`No bill with id ${body.statementId}.`)
+    }
+
+    if (statement.accountId !== row.linkedAccountId) {
+      throw new ConflictException('Pick a bill of the same card.')
+    }
+
+    const moved = await this.repository.moveToStatement(
+      tenantId,
+      id,
+      userId,
+      body.statementId
+    )
+
+    if (moved === undefined) {
+      throw new NotFoundException(`No transaction with id ${id}.`)
+    }
+
+    return moved
   }
 
   /** Soft-deletes a transaction: its delta is reverted from the account in
