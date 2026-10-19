@@ -32,7 +32,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   tenantId: 1,
   name: 'Rainy day',
   agency: '1234',
-  number: 98765,
+  number: '98765',
   type: 'Savings',
   balance: '100.00',
   currency: 'USD',

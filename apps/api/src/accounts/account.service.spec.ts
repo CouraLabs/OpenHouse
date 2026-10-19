@@ -12,7 +12,7 @@ const row = (overrides: Partial<Account> = {}): Account => ({
   tenantId: 1,
   name: 'Everyday',
   agency: '1234',
-  number: 9876,
+  number: '9876',
   type: 'Checking',
   balance: '12.34',
   currency: 'USD',
@@ -45,7 +45,7 @@ describe('AccountService', () => {
 
     await service.create(1, 7, {
       name: 'Everyday',
-      number: 9876,
+      number: '9876',
       type: 'Checking',
       balance: '12.34',
       currency: 'USD',
@@ -55,7 +55,7 @@ describe('AccountService', () => {
     expect(repo.insert).toHaveBeenCalledWith(1, 7, {
       name: 'Everyday',
       agency: null,
-      number: 9876,
+      number: '9876',
       type: 'Checking',
       balance: '12.34',
       currency: 'USD',
@@ -100,7 +100,7 @@ describe('AccountService', () => {
     const updated = await service.update(1, 7, {
       id: 1,
       name: 'Everyday',
-      number: 9876,
+      number: '9876',
       type: 'Checking',
       balance: '99.00',
       currency: 'USD',
@@ -113,7 +113,7 @@ describe('AccountService', () => {
     expect(repo.update).toHaveBeenCalledWith(1, 1, 7, {
       name: 'Everyday',
       agency: null,
-      number: 9876,
+      number: '9876',
       type: 'Checking',
       balance: '99.00',
       currency: 'USD',
@@ -133,7 +133,7 @@ describe('AccountService', () => {
       service.update(1, 7, {
         id: 1,
         name: 'Everyday',
-        number: 9876,
+        number: '9876',
         type: 'Checking',
         balance: '99.00',
         currency: 'USD',
@@ -188,7 +188,7 @@ describe('createAccountSchema', () => {
   const bankBody = {
     name: 'Everyday',
     agency: '1234',
-    number: 9876,
+    number: '9876',
     type: 'Checking',
     balance: '12.34',
     currency: 'USD',
@@ -197,6 +197,34 @@ describe('createAccountSchema', () => {
 
   it('accepts a bank account carrying its agency and number', () => {
     expect(createAccountSchema.safeParse(bankBody).success).toBe(true)
+  })
+
+  it('keeps an account number exactly as typed — leading zeros and check digit', () => {
+    const parsed = createAccountSchema.parse({
+      ...bankBody,
+      number: '00012345-6',
+    })
+    expect(parsed.number).toBe('00012345-6')
+  })
+
+  it('accepts an IBAN-length number with letters', () => {
+    const parsed = createAccountSchema.safeParse({
+      ...bankBody,
+      number: 'GB82 WEST 1234 5698 7654 32',
+    })
+    expect(parsed.success).toBe(true)
+  })
+
+  it('rejects a number longer than 34 characters or with symbols', () => {
+    for (const number of ['1'.repeat(35), '12345/6']) {
+      const parsed = createAccountSchema.safeParse({ ...bankBody, number })
+      expect(parsed.success).toBe(false)
+    }
+  })
+
+  it('rejects a Checking whose number is only spaces', () => {
+    const parsed = createAccountSchema.safeParse({ ...bankBody, number: '  ' })
+    expect(parsed.success).toBe(false)
   })
 
   it('rejects a Savings without a number', () => {
@@ -228,7 +256,7 @@ describe('createAccountSchema', () => {
     const parsed = createAccountSchema.safeParse({
       name: 'Cash',
       agency: null,
-      number: 9876,
+      number: '9876',
       type: 'Wallet',
       balance: '12.34',
       currency: 'USD',

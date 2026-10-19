@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
+import type { Account } from '@workspace/db'
 import type {
   ChangeTransactionStatusBody,
   CreateTransactionBody,
@@ -26,9 +27,10 @@ import {
  * The rules of transactions: every write moves the linked account's
  * balance in the same database transaction as the row, every change is
  * recorded as a full-snapshot history row, a deleted transaction is a
- * status change, and a transfer moves money between two ACTIVE accounts
- * of the same currency. The tenant and the user always arrive from the
- * caller — this service never reads a request.
+ * status change, a transfer moves money between two ACTIVE accounts of the
+ * same currency, and an edit never moves a transaction into another
+ * currency. The tenant and the user always arrive from the caller — this
+ * service never reads a request.
  */
 @Injectable()
 export class TransactionService {
@@ -127,7 +129,17 @@ export class TransactionService {
       )
     }
 
-    await this.assertReferencesUsable(tenantId, body)
+    const account = await this.assertReferencesUsable(tenantId, body)
+
+    // A transaction has no currency of its own — it carries its account's.
+    // Moving it to an account of another currency would keep the digits and
+    // silently change the money (R$ 500 becoming US$ 500). Converting is out
+    // of scope: it would need an exchange rate stored on the transaction.
+    if (account.currency !== row.currency) {
+      throw new ConflictException(
+        'Move the transaction to an account of the same currency.'
+      )
+    }
 
     // As in create: the wire's `status` names out before the spread.
     const { status, id: _updateId, ...rest } = body
@@ -249,11 +261,11 @@ export class TransactionService {
   }
 
   /** Rejects an account, category, or — when set — receiver the tenant
-   * cannot use. */
+   * cannot use, and answers the account. */
   private async assertReferencesUsable(
     tenantId: number,
     body: CreateTransactionBody | UpdateTransactionBody
-  ): Promise<void> {
+  ): Promise<Account> {
     const account = await this.accounts.findById(tenantId, body.linkedAccountId)
 
     if (account === undefined || account.status === 'DELETED') {
@@ -273,5 +285,7 @@ export class TransactionService {
         throw new NotFoundException(`No receiver with id ${body.receiverId}.`)
       }
     }
+
+    return account
   }
 }

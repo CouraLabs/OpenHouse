@@ -289,10 +289,19 @@ export function TransactionForm({
               )
             }
             error={errors.linkedAccountId?.message}
-            options={(accounts.data ?? []).map((account) => ({
-              value: String(account.id),
-              label: account.name,
-            }))}
+            options={(accounts.data ?? [])
+              // A transaction carries its account's currency: an edit may
+              // move it only to an account of the same currency, or the
+              // same digits would silently mean other money.
+              .filter(
+                (account) =>
+                  transaction === null ||
+                  account.currency === transaction.currency
+              )
+              .map((account) => ({
+                value: String(account.id),
+                label: account.name,
+              }))}
           />
           <StringPick
             id="transaction-category"

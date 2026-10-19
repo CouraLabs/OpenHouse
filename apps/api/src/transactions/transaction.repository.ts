@@ -38,9 +38,12 @@ import type {
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 import {
   addMoney,
+  appliedDeltaFor,
   applyTransactionDelta,
-  deltaFor,
+  isZeroMoney,
+  lockAccounts,
   negateMoney,
+  retryOnLockConflict,
   type DbOrTx,
 } from './transaction-ledger.js'
 
@@ -100,7 +103,8 @@ export interface TransferWrite {
  * decides who is asking.
  *
  * Every write is also a ledger write: the linked account's balance moves
- * with the transaction, both inside one database transaction, and a
+ * with the transaction — except while it is Canceled, money that did not
+ * move — both inside one database transaction, and a
  * `transaction_history` row records the full before/after snapshot. The
  * audit trail stamps the acting user; a system write (the recurring cron)
  * leaves it null.
@@ -118,7 +122,7 @@ export class TransactionRepository {
     userId: number,
     write: TransactionWrite
   ): Promise<TransactionRow> {
-    return this.db.transaction(async (tx) =>
+    return this.inLedgerTx(async (tx) =>
       this.insertInTx(tx, tenantId, userId, write)
     )
   }
@@ -135,7 +139,7 @@ export class TransactionRepository {
     tenantId: number,
     write: TransactionWrite
   ): Promise<TransactionRow | undefined> {
-    return this.db.transaction(async (tx) => {
+    return this.inLedgerTx(async (tx) => {
       try {
         return await this.insertInTx(tx, tenantId, null, write)
       } catch (error) {
@@ -151,13 +155,18 @@ export class TransactionRepository {
   /**
    * Updates a transaction: reverts the old delta from its account, applies
    * the new one (which may be a different account), and records the history.
+   * A Canceled row applied nothing, so nothing is reverted for it, and a
+   * write saving `Canceled` applies nothing; `balanceOnDt` then carries the
+   * account's balance as the edit found it.
    *
-   * The row is locked `FOR UPDATE` and its lifecycle checked inside the
-   * database transaction, so a soft delete racing the update serializes —
-   * whichever ran first wins, and the loser answers `undefined` instead of
-   * reverting the same delta twice. The other side of a transfer is updated
-   * in the same transaction with the fields the pair shares, so editing one
-   * side never leaves the books unbalanced.
+   * The row (and a transfer's other side) is locked `FOR UPDATE` and its
+   * lifecycle checked inside the database transaction, so a soft delete
+   * racing the update serializes — whichever ran first wins, and the loser
+   * answers `undefined` instead of reverting the same delta twice. Every
+   * account the write touches is then locked in one global order before any
+   * delta moves. The other side of a transfer is updated in the same
+   * transaction with the fields the pair shares, so editing one side never
+   * leaves the books unbalanced.
    */
   async updateWithBalance(
     tenantId: number,
@@ -165,7 +174,7 @@ export class TransactionRepository {
     userId: number,
     write: TransactionWrite
   ): Promise<TransactionRow | undefined> {
-    return this.db.transaction(async (tx) => {
+    return this.inLedgerTx(async (tx) => {
       const locked = await this.lockInTx(tx, tenantId, id)
 
       if (locked === undefined || locked.status === 'DELETED') {
@@ -177,19 +186,26 @@ export class TransactionRepository {
         tenantId,
         id
       )) as TransactionRow
+      const sibling = await this.findActiveSiblingInTx(tx, tenantId, before)
+
+      await lockAccounts(tx, tenantId, [
+        before.linkedAccountId,
+        write.linkedAccountId,
+        ...(sibling === undefined ? [] : [sibling.linkedAccountId]),
+      ])
 
       await applyTransactionDelta(
         tx,
         tenantId,
         before.linkedAccountId,
-        negateMoney(deltaFor(before.type, before.amount))
+        negateMoney(appliedDeltaFor(before))
       )
 
       const newBalance = await applyTransactionDelta(
         tx,
         tenantId,
         write.linkedAccountId,
-        deltaFor(write.type, write.amount)
+        appliedDeltaFor(write)
       )
 
       const [row] = await tx
@@ -211,15 +227,8 @@ export class TransactionRepository {
 
       await this.recordHistory(tx, tenantId, id, userId, 'UPDATE', before, row)
 
-      if (before.transferGroupId !== null) {
-        await this.updateTransferSibling(
-          tx,
-          tenantId,
-          userId,
-          before.transferGroupId,
-          id,
-          write
-        )
+      if (sibling !== undefined) {
+        await this.updateTransferSibling(tx, tenantId, userId, sibling, write)
       }
 
       return this.findByIdInTx(tx, tenantId, id) as Promise<TransactionRow>
@@ -228,14 +237,18 @@ export class TransactionRepository {
 
   /**
    * Changes only a transaction's review status: no amount, account, or day
-   * is written, so no delta is reverted or re-applied and `balanceOnDt`
-   * stays as it was — a review-status change never moves money.
+   * is written. Canceled is the one status that moves money — a canceled
+   * transaction is money that did not move — so cancelling reverts the
+   * row's delta from its account and un-cancelling re-applies it, while
+   * Checked ↔ Verify leaves the balance alone. `balanceOnDt` keeps the
+   * value stamped when the amount last applied: a status change never
+   * rewrites it, so a Canceled row shows the balance it once left behind.
    *
    * The row is locked `FOR UPDATE` and its lifecycle checked inside the
    * database transaction, as in `updateWithBalance`. The other side of a
-   * transfer is mirrored in the same transaction: the summary and the
-   * breakdown exclude Canceled rows, so flipping one side alone would count
-   * the pair's money on one screen and drop it on the other.
+   * transfer is mirrored in the same transaction, both deltas reverted or
+   * re-applied together: flipping one side alone would move the pair's
+   * money into one account and out of none.
    */
   async updateStatus(
     tenantId: number,
@@ -243,7 +256,7 @@ export class TransactionRepository {
     userId: number,
     reviewStatus: TransactionStatus
   ): Promise<TransactionRow | undefined> {
-    return this.db.transaction(async (tx) => {
+    return this.inLedgerTx(async (tx) => {
       const locked = await this.lockInTx(tx, tenantId, id)
 
       if (locked === undefined || locked.status === 'DELETED') {
@@ -255,58 +268,17 @@ export class TransactionRepository {
         tenantId,
         id
       )) as TransactionRow
+      const sibling = await this.findActiveSiblingInTx(tx, tenantId, before)
 
-      const [row] = await tx
-        .update(transactions)
-        .set({ reviewStatus, updateBy: userId, updateDt: new Date() })
-        .where(
-          and(
-            eq(transactions.tenantId, tenantId),
-            eq(transactions.id, id),
-            eq(transactions.status, 'ACTIVE')
-          )
-        )
-        .returning()
+      await lockAccounts(tx, tenantId, [
+        before.linkedAccountId,
+        ...(sibling === undefined ? [] : [sibling.linkedAccountId]),
+      ])
 
-      await this.recordHistory(tx, tenantId, id, userId, 'UPDATE', before, row)
+      await this.updateStatusInTx(tx, tenantId, userId, before, reviewStatus)
 
-      if (before.transferGroupId !== null) {
-        const sibling = await this.findTransferSiblingInTx(
-          tx,
-          tenantId,
-          before.transferGroupId,
-          id
-        )
-
-        if (sibling !== undefined && sibling.status === 'ACTIVE') {
-          const [siblingRow] = await tx
-            .update(transactions)
-            .set({
-              reviewStatus,
-              updateBy: userId,
-              updateDt: new Date(),
-            })
-            .where(
-              and(
-                eq(transactions.tenantId, tenantId),
-                eq(transactions.id, sibling.id),
-                eq(transactions.status, 'ACTIVE')
-              )
-            )
-            .returning()
-
-          if (siblingRow !== undefined) {
-            await this.recordHistory(
-              tx,
-              tenantId,
-              sibling.id,
-              userId,
-              'UPDATE',
-              sibling,
-              siblingRow
-            )
-          }
-        }
+      if (sibling !== undefined) {
+        await this.updateStatusInTx(tx, tenantId, userId, sibling, reviewStatus)
       }
 
       return this.findByIdInTx(tx, tenantId, id) as Promise<TransactionRow>
@@ -315,7 +287,8 @@ export class TransactionRepository {
 
   /**
    * Soft-deletes a transaction: reverts its delta from the account, marks
-   * the row DELETED, and records the history. A transfer side takes its
+   * the row DELETED, and records the history. A Canceled row applied
+   * nothing, so deleting it reverts nothing. A transfer side takes its
    * other side with it — deleting one side alone would give money back to
    * one account while the other keeps it, inventing money.
    */
@@ -324,7 +297,7 @@ export class TransactionRepository {
     id: number,
     userId: number
   ): Promise<Transaction | undefined> {
-    return this.db.transaction(async (tx) => {
+    return this.inLedgerTx(async (tx) => {
       const locked = await this.lockInTx(tx, tenantId, id)
 
       if (locked === undefined) {
@@ -341,19 +314,17 @@ export class TransactionRepository {
         return before
       }
 
+      const sibling = await this.findActiveSiblingInTx(tx, tenantId, before)
+
+      await lockAccounts(tx, tenantId, [
+        before.linkedAccountId,
+        ...(sibling === undefined ? [] : [sibling.linkedAccountId]),
+      ])
+
       await this.softDeleteInTx(tx, tenantId, userId, before)
 
-      if (before.transferGroupId !== null) {
-        const sibling = await this.findTransferSiblingInTx(
-          tx,
-          tenantId,
-          before.transferGroupId,
-          before.id
-        )
-
-        if (sibling !== undefined && sibling.status === 'ACTIVE') {
-          await this.softDeleteInTx(tx, tenantId, userId, sibling)
-        }
+      if (sibling !== undefined) {
+        await this.softDeleteInTx(tx, tenantId, userId, sibling)
       }
 
       return this.findByIdInTx(tx, tenantId, id)
@@ -364,15 +335,19 @@ export class TransactionRepository {
    * Writes both sides of a transfer — an Expense on the source and an
    * Income on the destination — in one database transaction, so the money
    * never vanishes between two rows. Both rows carry the same
-   * `transferGroupId`, the link every later write keeps the pair by.
+   * `transferGroupId`, the link every later write keeps the pair by. Both
+   * accounts are locked in the global order first, so a transfer A→B racing
+   * one B→A never deadlocks.
    */
   async insertTransfer(
     tenantId: number,
     userId: number,
     write: TransferWrite
   ): Promise<[TransactionRow, TransactionRow]> {
-    return this.db.transaction(async (tx) => {
+    return this.inLedgerTx(async (tx) => {
       const transferGroupId = randomUUID()
+
+      await lockAccounts(tx, tenantId, [write.fromAccountId, write.toAccountId])
 
       const from = await this.insertInTx(tx, tenantId, userId, {
         name: 'TRANSFER_OUT',
@@ -644,7 +619,8 @@ export class TransactionRepository {
   /**
    * The one insert path every write shares: read the account `FOR UPDATE`,
    * apply the delta, insert the row with the resulting balance stamped, and
-   * record the CREATE history — all inside the caller's transaction.
+   * record the CREATE history — all inside the caller's transaction. A row
+   * created Canceled applies nothing and stamps the balance as it found it.
    */
   private async insertInTx(
     tx: DbOrTx,
@@ -656,7 +632,7 @@ export class TransactionRepository {
       tx,
       tenantId,
       write.linkedAccountId,
-      deltaFor(write.type, write.amount)
+      appliedDeltaFor(write)
     )
 
     const [row] = await tx
@@ -725,46 +701,129 @@ export class TransactionRepository {
       .leftJoin(receivers, eq(transactions.receiverId, receivers.id))
   }
 
-  /** Reads one row of the tenant locked `FOR UPDATE`, so two writes to the
-   * same row serialize instead of both reading the same lifecycle status. */
+  /**
+   * Reads one row of the tenant locked `FOR UPDATE`, so two writes to the
+   * same row serialize instead of both reading the same lifecycle status.
+   * A transfer side locks its other side with it, both in id order: two
+   * writes starting from opposite sides of one pair would otherwise each
+   * hold one row while waiting for the other. The group id is read first
+   * without a lock — it never changes once written.
+   */
   private async lockInTx(
     tx: DbOrTx,
     tenantId: number,
     id: number
   ): Promise<Transaction | undefined> {
-    const [row] = await tx
-      .select()
+    const [target] = await tx
+      .select({ transferGroupId: transactions.transferGroupId })
       .from(transactions)
       .where(and(eq(transactions.tenantId, tenantId), eq(transactions.id, id)))
-      .for('update')
 
-    return row
-  }
+    if (target === undefined) {
+      return undefined
+    }
 
-  /** Reads the other side of a transfer by the group id the pair shares. */
-  private async findTransferSiblingInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    transferGroupId: string,
-    notId: number
-  ): Promise<Transaction | undefined> {
-    const [row] = await tx
+    const rows = await tx
       .select()
       .from(transactions)
       .where(
         and(
           eq(transactions.tenantId, tenantId),
-          eq(transactions.transferGroupId, transferGroupId),
-          ne(transactions.id, notId)
+          target.transferGroupId === null
+            ? eq(transactions.id, id)
+            : eq(transactions.transferGroupId, target.transferGroupId)
+        )
+      )
+      .orderBy(asc(transactions.id))
+      .for('update')
+
+    return rows.find((row) => row.id === id)
+  }
+
+  /** Reads the ACTIVE other side of a transfer by the group id the pair
+   * shares — nothing for a plain transaction or a side already deleted. */
+  private async findActiveSiblingInTx(
+    tx: DbOrTx,
+    tenantId: number,
+    row: Transaction
+  ): Promise<Transaction | undefined> {
+    if (row.transferGroupId === null) {
+      return undefined
+    }
+
+    const [sibling] = await tx
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.transferGroupId, row.transferGroupId),
+          ne(transactions.id, row.id),
+          eq(transactions.status, 'ACTIVE')
         )
       )
 
-    return row
+    return sibling
   }
 
-  /** Reverts one row's delta, marks it DELETED, and records the history —
-   * the body every soft delete shares. The `where` re-checks the lifecycle
-   * so a row a concurrent write deleted is left alone. */
+  /**
+   * Runs one ledger write in a database transaction of its own, retried
+   * when Postgres aborts it for a deadlock or a serialization failure. The
+   * ordered locks make those rare; the retry is the safety net.
+   */
+  private inLedgerTx<T>(run: (tx: DbOrTx) => Promise<T>): Promise<T> {
+    return retryOnLockConflict(() => this.db.transaction(run))
+  }
+
+  /** Writes one row's review status and moves its account by the difference
+   * between the delta the new status applies and the one the old applied —
+   * nonzero only into or out of Canceled. The caller holds the row and
+   * account locks. */
+  private async updateStatusInTx(
+    tx: DbOrTx,
+    tenantId: number,
+    userId: number,
+    before: Transaction,
+    reviewStatus: TransactionStatus
+  ): Promise<void> {
+    const shift = addMoney(
+      appliedDeltaFor({ ...before, reviewStatus }),
+      negateMoney(appliedDeltaFor(before))
+    )
+
+    if (!isZeroMoney(shift)) {
+      await applyTransactionDelta(tx, tenantId, before.linkedAccountId, shift)
+    }
+
+    const [row] = await tx
+      .update(transactions)
+      .set({ reviewStatus, updateBy: userId, updateDt: new Date() })
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.id, before.id),
+          eq(transactions.status, 'ACTIVE')
+        )
+      )
+      .returning()
+
+    if (row !== undefined) {
+      await this.recordHistory(
+        tx,
+        tenantId,
+        before.id,
+        userId,
+        'UPDATE',
+        before,
+        row
+      )
+    }
+  }
+
+  /** Reverts one row's applied delta (none for a Canceled row), marks it
+   * DELETED, and records the history — the body every soft delete shares.
+   * The `where` re-checks the lifecycle so a row a concurrent write deleted
+   * is left alone. */
   private async softDeleteInTx(
     tx: DbOrTx,
     tenantId: number,
@@ -775,7 +834,7 @@ export class TransactionRepository {
       tx,
       tenantId,
       before.linkedAccountId,
-      negateMoney(deltaFor(before.type, before.amount))
+      negateMoney(appliedDeltaFor(before))
     )
 
     const [row] = await tx
@@ -808,39 +867,32 @@ export class TransactionRepository {
    * the fields the pair shares — amount, day, category, note, review
    * status — are mirrored, each side's own account and direction kept. The
    * mirrored amounts keep the books balanced: the money moved by the pair
-   * stays the same both sides.
+   * stays the same both sides, and a Canceled pair moves none on either.
+   * The caller holds the sibling's row and account locks.
    */
   private async updateTransferSibling(
     tx: DbOrTx,
     tenantId: number,
     userId: number,
-    transferGroupId: string,
-    updatedId: number,
+    sibling: Transaction,
     write: TransactionWrite
   ): Promise<void> {
-    const sibling = await this.findTransferSiblingInTx(
-      tx,
-      tenantId,
-      transferGroupId,
-      updatedId
-    )
-
-    if (sibling === undefined || sibling.status !== 'ACTIVE') {
-      return
-    }
-
     await applyTransactionDelta(
       tx,
       tenantId,
       sibling.linkedAccountId,
-      negateMoney(deltaFor(sibling.type, sibling.amount))
+      negateMoney(appliedDeltaFor(sibling))
     )
 
     const newBalance = await applyTransactionDelta(
       tx,
       tenantId,
       sibling.linkedAccountId,
-      deltaFor(sibling.type, write.amount)
+      appliedDeltaFor({
+        type: sibling.type,
+        amount: write.amount,
+        reviewStatus: write.reviewStatus,
+      })
     )
 
     const [row] = await tx

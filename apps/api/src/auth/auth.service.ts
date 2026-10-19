@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common'
 import bcrypt from 'bcrypt'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { Database, Tenant, User, UserRole } from '@workspace/db'
 import { tenants, tenantCodes, users } from '@workspace/db'
 import type { SessionResponse } from '@workspace/poco'
@@ -73,7 +73,7 @@ export class AuthService {
           .insert(users)
           .values({
             tenantId: tenant.id,
-            email: body.email,
+            email: normalizeEmail(body.email),
             name: body.name,
             password: passwordHash,
             role: 'owner',
@@ -82,7 +82,7 @@ export class AuthService {
 
         return { tenant, user }
       } catch (error) {
-        throw this.conflictFor(error, body.email)
+        throw this.conflictFor(error)
       }
     })
 
@@ -133,7 +133,7 @@ export class AuthService {
           .insert(users)
           .values({
             tenantId: code.tenantId,
-            email: body.email,
+            email: normalizeEmail(body.email),
             name: body.name,
             password: passwordHash,
             role: 'user',
@@ -142,7 +142,7 @@ export class AuthService {
 
         return user
       } catch (error) {
-        throw this.conflictFor(error, body.email)
+        throw this.conflictFor(error)
       }
     })
 
@@ -158,15 +158,19 @@ export class AuthService {
    * Checks the credentials and starts a session. The message is the same
    * whether the email is unknown or the password is wrong, so the endpoint
    * cannot be used to discover which emails have signed up.
+   *
+   * An email is unique across every tenant (`users_email_key` on
+   * `lower(email)`), so the lookup finds at most one row — the tenant the
+   * session acts on is that user's, never whichever row came first.
    */
   async signIn(body: {
     email: string
     password: string
   }): Promise<SessionResponse> {
-    const [user] = await this.db.query.users.findMany({
-      where: { email: body.email },
-      limit: 1,
-    })
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(sql`lower(${users.email})`, normalizeEmail(body.email)))
 
     const passwordMatches =
       user !== undefined && (await bcrypt.compare(body.password, user.password))
@@ -297,19 +301,43 @@ export class AuthService {
 
   /**
    * Maps the unique-constraint violations of a sign-up to the response the
-   * web app can act on.
+   * web app can act on. Saying an email is taken reveals it is registered —
+   * the accepted trade-off for a household app; the sign-up throttle limits
+   * enumeration.
    */
-  private conflictFor(error: unknown, email: string): Error {
-    const message = error instanceof Error ? error.message : String(error)
-    if (message.includes('users_tenant_id_email_key')) {
-      return new ConflictException(
-        `The email ${email} is already in this tenant.`
-      )
+  private conflictFor(error: unknown): Error {
+    const constraint = violatedConstraint(error)
+    if (constraint === 'users_email_key') {
+      return new ConflictException('This email already has an account.')
     }
-    if (message.includes('tenants_name_key')) {
+    if (constraint === 'tenants_name_key') {
       return new ConflictException('This tenant name is already taken.')
     }
 
     return error instanceof Error ? error : new Error(String(error))
   }
+}
+
+/** The one spelling an email is stored and looked up in. The poco schemas
+ * already normalize a body; this keeps every write and read agreeing even
+ * for a caller that skipped them. */
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+/**
+ * Names the constraint a unique violation (`23505`) broke, or nothing. The
+ * driver error rides as the `cause` of drizzle's `DrizzleQueryError`, whose
+ * own message is only the failed SQL — so the constraint is read off the
+ * error or its cause, never off a message.
+ */
+function violatedConstraint(error: unknown): string | undefined {
+  for (const candidate of [error, (error as { cause?: unknown })?.cause]) {
+    const pgError = candidate as { code?: string; constraint?: string } | null
+    if (pgError?.code === '23505') {
+      return pgError.constraint
+    }
+  }
+
+  return undefined
 }

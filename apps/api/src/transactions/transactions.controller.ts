@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Put,
+  UseFilters,
 } from '@nestjs/common'
 import type {
   ChangeTransactionStatusBody,
@@ -40,15 +41,18 @@ import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
+import { LedgerConflictFilter } from './ledger-conflict.filter.js'
 import { TransactionService } from './transaction.service.js'
 
 /**
  * The transaction routes. Everything here reads the tenant and the user
  * from the session, so a client can only ever see or act on its own tenant
  * — the request names no tenant anywhere. Every signed-in role manages
- * transactions.
+ * transactions. A ledger write that keeps colliding with concurrent writes
+ * on the same accounts answers 409, never 500.
  */
 @Controller('transactions')
+@UseFilters(LedgerConflictFilter)
 export class TransactionsController {
   constructor(private readonly transactions: TransactionService) {}
 

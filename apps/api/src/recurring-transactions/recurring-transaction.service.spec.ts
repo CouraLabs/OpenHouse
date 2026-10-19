@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common'
+import { ConflictException, NotFoundException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import type { Account, Category, Receiver } from '@workspace/db'
 
@@ -42,7 +42,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   tenantId: 1,
   name: 'Everyday',
   agency: null,
-  number: 123,
+  number: '123',
   type: 'Checking',
   balance: '100.00',
   currency: 'USD',
@@ -104,7 +104,7 @@ const service = (
   repo = repository(),
   rcv = receiver(),
   cat = category(),
-  acc = account()
+  acc: Account | Account[] = account()
 ) =>
   new RecurringTransactionService(
     repo as unknown as RecurringTransactionRepository,
@@ -120,7 +120,7 @@ const service = (
     } as unknown as CategoryRepository,
     {
       findById: vi.fn(async (_t: number, id: number) =>
-        acc.id === id ? acc : undefined
+        [acc].flat().find((candidate) => candidate.id === id)
       ),
     } as unknown as AccountRepository
   )
@@ -175,6 +175,41 @@ describe('RecurringTransactionService', () => {
     })
 
     expect(updated.amount).toBe('109.90')
+  })
+
+  it('rejects moving a rule to an account of another currency', async () => {
+    const repo = repository()
+    repo.findById.mockResolvedValue(row)
+    const accounts = [account(), account({ id: 11, currency: 'BRL' })]
+
+    await expect(
+      service(repo, receiver(), category(), accounts).update(1, 7, {
+        ...createBody,
+        id: 1,
+        linkedAccountId: 11,
+      })
+    ).rejects.toThrow(ConflictException)
+    expect(repo.update).not.toHaveBeenCalled()
+  })
+
+  it('moves a rule to another account of the same currency', async () => {
+    const repo = repository()
+    repo.findById.mockResolvedValue(row)
+    repo.update.mockResolvedValue({ ...row, linkedAccountId: 11 })
+    const accounts = [account(), account({ id: 11, name: 'Reserve' })]
+
+    await service(repo, receiver(), category(), accounts).update(1, 7, {
+      ...createBody,
+      id: 1,
+      linkedAccountId: 11,
+    })
+
+    expect(repo.update).toHaveBeenCalledWith(
+      1,
+      1,
+      7,
+      expect.objectContaining({ linkedAccountId: 11 })
+    )
   })
 
   it('soft-deletes a rule: a status change, not a row removal', async () => {

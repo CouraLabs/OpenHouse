@@ -17,7 +17,7 @@ export interface AccountSearch {
 export interface AccountWrite {
   name: string
   agency: string | null
-  number: number | null
+  number: string | null
   type: Account['type']
   balance: string
   currency: Account['currency']

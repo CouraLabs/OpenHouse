@@ -195,10 +195,11 @@ export function AccountForm({
             label={t('accounts.number')}
             labelFor="account-number"
             placeholder={t('accounts.number-placeholder')}
-            inputMode="numeric"
             required
             error={errors.number}
-            {...register('number', { valueAsNumber: true })}
+            {...register('number', {
+              setValueAs: (value) => (value === '' ? null : value),
+            })}
           />
         ) : null}
         <Field data-invalid={errors.type !== undefined}>

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import type { Account } from '@workspace/db'
 import type {
   CreateRecurringTransactionBody,
   SearchRecurringTransactionsArgs,
@@ -16,7 +21,8 @@ import {
 
 /**
  * The rules of recurring rules: every reference must point at a row the
- * tenant owns and has not deleted, a deleted rule is a status change, and
+ * tenant owns and has not deleted, an edit keeps the rule in its account's
+ * currency, a deleted rule is a status change, and
  * the audit trail records the user the session acted as. The tenant and
  * the user always arrive from the caller — this service never reads a
  * request.
@@ -79,7 +85,24 @@ export class RecurringTransactionService {
       )
     }
 
-    await this.assertReferencesUsable(tenantId, body)
+    const account = await this.assertReferencesUsable(tenantId, body)
+
+    // A rule's amount is in its account's currency: moving it to an account
+    // of another currency would make every future transaction it generates
+    // silently mean other money. Converting is out of scope — it would need
+    // an exchange rate stored on the rule.
+    if (account.id !== row.linkedAccountId) {
+      const previous = await this.accounts.findById(
+        tenantId,
+        row.linkedAccountId
+      )
+
+      if (previous !== undefined && previous.currency !== account.currency) {
+        throw new ConflictException(
+          'Move the recurring transaction to an account of the same currency.'
+        )
+      }
+    }
 
     const updated = await this.repository.update(tenantId, body.id, userId, {
       receiverId: body.receiverId,
@@ -112,11 +135,11 @@ export class RecurringTransactionService {
   }
 
   /** Rejects a receiver, category, or account that is missing or no longer
-   * ACTIVE. */
+   * ACTIVE, and answers the account. */
   private async assertReferencesUsable(
     tenantId: number,
     body: CreateRecurringTransactionBody | UpdateRecurringTransactionBody
-  ): Promise<void> {
+  ): Promise<Account> {
     const receiver = await this.receivers.findById(tenantId, body.receiverId)
 
     if (receiver === undefined || receiver.status === 'DELETED') {
@@ -134,5 +157,7 @@ export class RecurringTransactionService {
     if (account === undefined || account.status === 'DELETED') {
       throw new NotFoundException(`No account with id ${body.linkedAccountId}.`)
     }
+
+    return account
   }
 }

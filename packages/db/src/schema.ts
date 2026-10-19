@@ -103,9 +103,11 @@ export const users = pgTable(
   },
   (table) => [
     // Every query that resolves a session starts from the tenant, so the
-    // column is indexed. Uniqueness of an email is per tenant: two tenants
-    // may each have someone@example.com.
-    uniqueIndex('users_tenant_id_email_key').on(table.tenantId, table.email),
+    // column is indexed. An email is unique across every tenant — one
+    // email is one user in one tenant — so sign-in, which names no tenant,
+    // always finds exactly one row. Emails are stored lowercase-trimmed; the
+    // index on `lower(email)` holds even against a write that forgets to.
+    uniqueIndex('users_email_key').on(sql`lower(${table.email})`),
     index('users_tenant_id_idx').on(table.tenantId),
   ]
 )
@@ -242,8 +244,10 @@ export const accounts = pgTable(
     name: varchar({ length: 255 }).notNull(),
     /** The bank or branch the account sits at; a credit card has none. */
     agency: varchar({ length: 255 }),
-    /** The bank account's number; a wallet or a card has none. */
-    number: integer(),
+    /** The bank account's number; a wallet or a card has none. An
+     * identifier, not a quantity: text keeps leading zeros and check digits
+     * (`00012345-6`), and 34 characters fit an IBAN. */
+    number: varchar({ length: 34 }),
     /** The kind of account, which decides which other fields apply. */
     type: text().$type<AccountType>().notNull(),
     /** The current balance, carried as a string like "12.34". */

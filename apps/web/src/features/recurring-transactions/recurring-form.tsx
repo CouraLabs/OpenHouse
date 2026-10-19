@@ -123,6 +123,17 @@ export function RecurringForm({
   const categories = useActiveCategories()
   const accounts = useActiveAccounts()
 
+  // A rule's amount is in its account's currency: an edit may move it only
+  // to an account of the same currency, so the picker offers no other.
+  const ruleCurrency =
+    rule === null
+      ? undefined
+      : accounts.data?.find((account) => account.id === rule.linkedAccountId)
+          ?.currency
+  const accountOptions = (accounts.data ?? []).filter(
+    (account) => ruleCurrency === undefined || account.currency === ruleCurrency
+  )
+
   // The triggers' labels are rendered explicitly: a prefilled value set
   // while the popup is closed would otherwise fall back to the placeholder.
   const findLabel = <T extends { id: number; name: string }>(
@@ -231,7 +242,7 @@ export function RecurringForm({
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {(accounts.data ?? []).map((account) => (
+              {accountOptions.map((account) => (
                 <SelectItem key={account.id} value={account.id}>
                   {account.name}
                 </SelectItem>

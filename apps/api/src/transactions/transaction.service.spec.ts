@@ -1,11 +1,14 @@
 import { ConflictException, NotFoundException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
-import type { Account, Category, Receiver, Transaction } from '@workspace/db'
+import type { Account, Category, Receiver } from '@workspace/db'
 
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
-import { TransactionRepository } from './transaction.repository.js'
+import {
+  TransactionRepository,
+  type TransactionRow,
+} from './transaction.repository.js'
 import { TransactionService } from './transaction.service.js'
 
 /** The account the account repository finds — ACTIVE Checking unless overridden. */
@@ -14,7 +17,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   tenantId: 1,
   name: 'Everyday',
   agency: null,
-  number: 123,
+  number: '123',
   type: 'Checking',
   balance: '100.00',
   currency: 'USD',
@@ -58,8 +61,8 @@ const receiver = (overrides: Partial<Receiver> = {}): Receiver => ({
   ...overrides,
 })
 
-/** A transaction row the repository hands back. */
-const row = (overrides: Partial<Transaction> = {}): Transaction => ({
+/** A transaction row the repository hands back, joined fields included. */
+const row = (overrides: Partial<TransactionRow> = {}): TransactionRow => ({
   id: 1,
   tenantId: 1,
   name: 'Groceries',
@@ -81,6 +84,11 @@ const row = (overrides: Partial<Transaction> = {}): Transaction => ({
   createdDt: new Date('2026-01-01T00:00:00Z'),
   updateBy: 7,
   updateDt: new Date('2026-01-01T00:00:00Z'),
+  accountName: 'Everyday',
+  categoryName: 'Groceries',
+  categoryColor: '#1D4ED8',
+  receiverName: 'Market',
+  currency: 'USD',
   ...overrides,
 })
 
@@ -93,7 +101,7 @@ const repository = () => ({
   softDeleteWithBalance: vi.fn(),
   search: vi.fn(),
   summary: vi.fn(),
-  findById: vi.fn(async (): Promise<Transaction | undefined> => row()),
+  findById: vi.fn(async (): Promise<TransactionRow | undefined> => row()),
   findHistory: vi.fn(),
 })
 
@@ -225,6 +233,47 @@ describe('TransactionService', () => {
       1,
       7,
       expect.objectContaining({ recurringId: 9, reviewStatus: 'Verify' })
+    )
+  })
+
+  it('rejects moving a transaction to an account of another currency', async () => {
+    const repo = repository()
+    repo.findById.mockResolvedValue(row({ currency: 'BRL' }))
+    const accs = accounts()
+    accs.findById.mockResolvedValue(account({ id: 11, currency: 'USD' }))
+
+    await expect(
+      service(repo, accs).update(1, 7, {
+        ...createBody,
+        id: 1,
+        linkedAccountId: 11,
+      })
+    ).rejects.toThrow(
+      new ConflictException(
+        'Move the transaction to an account of the same currency.'
+      )
+    )
+    expect(repo.updateWithBalance).not.toHaveBeenCalled()
+  })
+
+  it('moves a transaction to another account of the same currency', async () => {
+    const repo = repository()
+    repo.findById.mockResolvedValue(row({ currency: 'BRL' }))
+    repo.updateWithBalance.mockResolvedValue(row({ linkedAccountId: 11 }))
+    const accs = accounts()
+    accs.findById.mockResolvedValue(account({ id: 11, currency: 'BRL' }))
+
+    await service(repo, accs).update(1, 7, {
+      ...createBody,
+      id: 1,
+      linkedAccountId: 11,
+    })
+
+    expect(repo.updateWithBalance).toHaveBeenCalledWith(
+      1,
+      1,
+      7,
+      expect.objectContaining({ linkedAccountId: 11 })
     )
   })
 

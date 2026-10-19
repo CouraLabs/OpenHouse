@@ -115,7 +115,7 @@ function toWire(row: {
   id: number
   name: string
   agency: string | null
-  number: number | null
+  number: string | null
   type: AccountType
   balance: string
   currency: Currency

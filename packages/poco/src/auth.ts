@@ -10,6 +10,13 @@ import { z } from 'zod'
 const password = z.string().min(8).max(72)
 
 /**
+ * The email rule every sign-up and sign-in body shares. An email is one user
+ * across every tenant, so it is normalized — trimmed and lowercased — before
+ * it is checked: `Ana@Example.com ` signs in as `ana@example.com`.
+ */
+const email = z.string().trim().toLowerCase().email().max(320)
+
+/**
  * The exclusivity rule a body must satisfy: exactly one of a new tenant name
  * or an invite code. Exported so consumers that hold both fields as plain
  * strings — the web form, whose fields are never `undefined` — apply the
@@ -29,7 +36,7 @@ export const signUpSchema = z
     /** The invite code of the tenant to join. When a tenant name is sent, it must be empty. */
     tenantCode: z.string().min(1).max(120).optional(),
     name: z.string().min(1).max(120),
-    email: z.string().email().max(320),
+    email,
     password,
   })
   .refine(hasExactlyOneTenantField, {
@@ -37,7 +44,7 @@ export const signUpSchema = z
   })
 
 export const signInSchema = z.object({
-  email: z.string().email().max(320),
+  email,
   password,
   /** Extends the refresh cookie to the remembered lifetime when true. */
   rememberMe: z.boolean().optional().default(false),

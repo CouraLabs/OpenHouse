@@ -44,18 +44,23 @@ export const balanceSchema = z
  * else, and the agency and the number on the account kinds that have no bank
  * behind them. A close or due date is a day of the month alone — a card
  * closes on the 15th, whatever the month — so no month rides along. The
- * `number` is bounded to what the `integer` column stores — anything larger
- * would 500 at insert instead of rejecting here.
+ * `number` is an identifier, not a quantity: kept as typed — leading zeros,
+ * a check digit after a hyphen — and bounded to the `varchar(34)` column,
+ * wide enough for an IBAN.
  */
 export const createAccountSchema = z
   .object({
     name: z.string().min(1, 'Enter a name.').max(255),
     agency: z.string().max(255).nullish(),
     number: z
-      .number({ error: 'Enter an account number.' })
-      .int('Enter a whole number.')
-      .positive('Enter an account number.')
-      .max(2_147_483_647, 'Keep the number under 2147483647.')
+      .string()
+      .trim()
+      .min(1, 'Enter an account number.')
+      .max(34, 'Keep the number to 34 characters.')
+      .regex(
+        /^[0-9A-Za-z\- ]+$/,
+        'Use only letters, digits, hyphens, and spaces.'
+      )
       .nullish(),
     type: accountTypeSchema,
     balance: balanceSchema,
@@ -92,7 +97,11 @@ export const createAccountSchema = z
     }
     if (account.type === 'Wallet' || account.type === 'Credit Card') {
       // Neither a wallet nor a card sits at a bank branch.
-      if (account.agency !== undefined && account.agency !== null && account.agency !== '') {
+      if (
+        account.agency !== undefined &&
+        account.agency !== null &&
+        account.agency !== ''
+      ) {
         ctx.addIssue({
           code: 'custom',
           path: ['agency'],
@@ -187,7 +196,7 @@ export type Account = {
   id: number
   name: string
   agency: string | null
-  number: number | null
+  number: string | null
   type: AccountType
   balance: string
   currency: Currency
