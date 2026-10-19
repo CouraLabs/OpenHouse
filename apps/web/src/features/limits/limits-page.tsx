@@ -1,12 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type {
-  CreateLimitBody,
-  Currency,
-  Limit,
-  LimitType,
-} from '@workspace/poco'
-import { currencies, limitTypes } from '@workspace/poco'
+import type { CreateLimitBody, Limit, LimitType } from '@workspace/poco'
+import { limitTypes } from '@workspace/poco'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
@@ -64,10 +59,6 @@ export function LimitsPage() {
             : Number(filter.categoryId),
         type:
           filter.type === undefined ? undefined : (filter.type as LimitType),
-        currency:
-          filter.currency === undefined
-            ? undefined
-            : (filter.currency as Currency),
         status: 'ACTIVE' as const,
       },
       skip: pagination.pageIndex * pagination.pageSize,
@@ -153,16 +144,6 @@ export function LimitsPage() {
             options: limitTypes.map((value) => ({
               value,
               label: t(`limits.type-${value.toLowerCase()}`),
-            })),
-          },
-          {
-            key: 'currency',
-            label: t('limits.currency'),
-            type: 'select',
-            placeholder: t('limits.filter-currency-placeholder'),
-            options: currencies.map((value) => ({
-              value,
-              label: value,
             })),
           },
           {

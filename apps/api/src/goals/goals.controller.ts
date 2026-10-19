@@ -104,6 +104,7 @@ function toWire(row: {
   targetBalance: string
   targetDt: string | null
   currency: Currency
+  accountCurrency: Currency
   status: EntityStatus
   createdDt: Date
   updateDt: Date
@@ -118,6 +119,7 @@ function toWire(row: {
     targetBalance: row.targetBalance,
     targetDt: row.targetDt,
     currency: row.currency,
+    accountCurrency: row.accountCurrency,
     status: row.status,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),

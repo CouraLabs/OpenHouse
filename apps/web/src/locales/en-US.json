@@ -98,9 +98,8 @@
     "filter-type-placeholder": "Any type",
     "filter-category-placeholder": "Any category",
     "amount": "Amount",
+    "amount-in": "Amount ({{currency}})",
     "amount-placeholder": "0.00",
-    "currency": "Currency",
-    "filter-currency-placeholder": "Any currency",
     "save": "Save",
     "saving": "Saving…",
     "cancel": "Cancel",
@@ -125,12 +124,16 @@
     "name": "Name",
     "name-placeholder": "Emergency fund",
     "account": "Account",
+    "account-other-currencies_one": "{{count}} Savings account in another currency is not listed: goals use your main currency ({{currency}}).",
+    "account-other-currencies_other": "{{count}} Savings accounts in other currencies are not listed: goals use your main currency ({{currency}}).",
+    "currency-mismatch": "Currency mismatch",
+    "currency-mismatch-hint": "The account is in {{account}}, but goals use your main currency ({{currency}}). This goal no longer tracks it.",
     "account-placeholder": "Pick a savings account…",
-    "currency": "Currency",
-    "currency-placeholder": "Pick…",
     "balance": "Balance",
+    "balance-in": "Balance ({{currency}})",
     "balance-date": "Balance date",
     "target-balance": "Target balance",
+    "target-balance-in": "Target balance ({{currency}})",
     "target-date": "Target date",
     "progress": "Progress",
     "progress-aria": "Progress of {{name}} toward its target",
@@ -138,7 +141,6 @@
     "today": "Today",
     "amount-placeholder": "0.00",
     "filter-account-placeholder": "Any account",
-    "filter-currency-placeholder": "Any currency",
     "save": "Save",
     "saving": "Saving…",
     "cancel": "Cancel",
@@ -165,6 +167,12 @@
     "account": "Account",
     "currency": "Currency",
     "currency-placeholder": "Pick a currency…",
+    "advanced": "Advanced",
+    "spread": "Spread on currency conversion (%)",
+    "spread-placeholder": "0.00",
+    "spread-hint": "What the bank or card adds on top of the market rate when it converts a foreign amount.",
+    "spread-high": "Above {{pct}}% — is that a typo?",
+    "spread-short": "Spread",
     "type-placeholder": "Pick a type…",
     "agency": "Agency",
     "agency-placeholder": "1234",
@@ -515,6 +523,8 @@
     "dashboard-other": "Other",
     "dashboard-goal-aria": "{{name}} progress toward the target",
     "dashboard-limit-aria": "{{name}} usage against the limit",
+    "dashboard-limit-excluded_one": "{{count}} expense in another currency not counted",
+    "dashboard-limit-excluded_other": "{{count}} expenses in other currencies not counted",
     "view": "View",
     "view-transactions": "Transactions",
     "view-metrics": "Metrics",
@@ -723,7 +733,7 @@
     },
     "general": {
       "title": "General",
-      "description": "The time zone decides what \"today\" is for recurring transactions and new entries. The main currency is the default for new accounts, limits, and goals. Changing either never shifts or converts what is already recorded.",
+      "description": "The time zone decides what \"today\" is for recurring transactions and new entries. The main currency is what limits and goals are counted in, and the default for new accounts. Changing the zone never shifts what is recorded; changing the currency never converts amounts.",
       "timezone": "Time zone",
       "timezone-placeholder": "Search a city or region",
       "timezone-empty": "No time zone matches.",
@@ -764,7 +774,8 @@
       "rows-per-page": "Rows per page",
       "page-of": "Page {{page}} of {{count}}",
       "previous-page": "Previous page",
-      "next-page": "Next page"
+      "next-page": "Next page",
+      "reset-password": "Reset password"
     },
     "invite": {
       "title": "Add user",
@@ -778,9 +789,6 @@
       "done": "Done",
       "code": "Invite code",
       "link": "Sign-up link",
-      "copy": "Copy link",
-      "copied": "Copied",
-      "share": "Share",
       "share-title": "Join our household on OpenHouse",
       "pending-title": "Pending invitations",
       "pending-empty": "No invitations are waiting.",
@@ -798,6 +806,83 @@
       "change": "Change password",
       "changing": "Changing…",
       "changed": "Password changed. Other sessions were signed out."
+    },
+    "share": {
+      "copy": "Copy link",
+      "copied": "Copied",
+      "share": "Share"
+    },
+    "currency-change": {
+      "title": "Switch the main currency to {{currency}}?",
+      "description": "Your {{limits}} and {{goals}} will be read as {{currency}}. Amounts are not converted.",
+      "limits_one": "{{count}} limit",
+      "limits_other": "{{count}} limits",
+      "goals_one": "{{count}} goal",
+      "goals_other": "{{count}} goals",
+      "off-currency_one": "{{count}} goal linked to an account in another currency will stop tracking it.",
+      "off-currency_other": "{{count}} goals linked to accounts in other currencies will stop tracking them.",
+      "confirm": "Switch currency"
+    },
+    "reset-code": {
+      "title": "Reset {{name}}'s password",
+      "description": "A one-time code lets {{name}} set a new password. Their current password keeps working until the code is used. Nothing is emailed.",
+      "issued": "Share this code with {{name}}. It is shown only once and works once, until {{time}}.",
+      "generate": "Generate reset code",
+      "generating": "Generating…",
+      "done": "Done",
+      "code": "Reset code",
+      "link": "Reset link",
+      "share-title": "Your OpenHouse password reset code"
+    },
+    "recovery": {
+      "title": "Recovery codes",
+      "description": "If you forget your password, one of these codes sets a new one. Each works once. Keep them somewhere safe, away from this device.",
+      "none": "You have no recovery codes yet.",
+      "remaining_one": "{{count}} code left from the set generated on {{date}}.",
+      "remaining_other": "{{count}} codes left from the set generated on {{date}}.",
+      "generate": "Generate recovery codes",
+      "regenerate": "Generate a new set",
+      "generating": "Generating…",
+      "regenerate-title": "Replace your recovery codes?",
+      "regenerate-description": "The codes you have now stop working at once.",
+      "regenerate-confirm": "Generate new codes",
+      "shown-once": "Save these now — they are shown only once.",
+      "copy": "Copy codes",
+      "download": "Download",
+      "print": "Print",
+      "sheet-heading": "OpenHouse recovery codes",
+      "sheet-note": "Each code resets your password once. Keep this sheet somewhere safe."
     }
+  },
+  "security": {
+    "recovery-prompt": {
+      "title": "Save recovery codes",
+      "description": "Save recovery codes so you can get back in if you forget your password.",
+      "action": "Get codes",
+      "dismiss": "Not now"
+    },
+    "server-reset": {
+      "title": "A reset code was issued from the server",
+      "description": "A reset code for your account was issued from the server on {{date}}. If you did not ask for it, change your password.",
+      "dismiss": "Got it"
+    }
+  },
+  "sign-in": {
+    "forgot": "Forgot your password?",
+    "forgot-hint": "Ask the owner of your household for a reset code."
+  },
+  "reset-password": {
+    "title": "Reset your password",
+    "subtitle": "Enter the reset code you were given and choose a new password. Nothing is emailed.",
+    "code": "Reset code",
+    "code-required": "Enter your reset code.",
+    "new-password": "New password",
+    "confirm-password": "Confirm new password",
+    "mismatch": "The passwords do not match.",
+    "submit": "Set new password",
+    "submitting": "Setting…",
+    "hint-member": "A member gets a code from the owner of their household.",
+    "hint-owner": "An owner uses one of their recovery codes.",
+    "back": "Back to sign in"
   }
 }

@@ -81,3 +81,27 @@ export async function balanceOf(agent: Agent, id: number): Promise<string> {
 
   return response.body.balance
 }
+
+/** Signs a member up into the owner's tenant and answers their agent. */
+export async function joinAsMember(
+  app: INestApplication<App>,
+  owner: Agent,
+  email = uniqueEmail()
+): Promise<{ agent: Agent; id: number; email: string }> {
+  const invite = await owner
+    .post('/tenants/invite-codes')
+    .send({ expiresInDays: 7 })
+    .expect(201)
+  const agent = request.agent(app.getHttpServer())
+  const joined = await agent
+    .post('/auth/sign-up')
+    .send({
+      tenantCode: invite.body.code,
+      name: 'Bia',
+      email,
+      password: 'password-m',
+    })
+    .expect(201)
+
+  return { agent, id: joined.body.user.id, email }
+}

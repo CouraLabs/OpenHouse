@@ -2,20 +2,22 @@ import type { TenantUser } from '@workspace/poco'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
-import { RotateCcw, UserMinus } from 'lucide-react'
+import { KeyRound, RotateCcw, UserMinus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 /** What the actions column can do to a row, reported upward. */
 export interface UserRowActions {
   onRemove: (user: TenantUser) => void
   onReactivate: (user: TenantUser) => void
+  onResetPassword: (user: TenantUser) => void
 }
 
 /**
  * The columns the users table shows: name, email, role, status, the day
  * they joined, and the row actions. The acting owner's own row carries no
- * remove action — an owner cannot remove themself. Called during the
- * page's render, so the labels arrive translated.
+ * actions — an owner cannot remove themself, and recovers their own
+ * password with recovery codes. Called during the page's render, so the
+ * labels arrive translated.
  */
 export function buildUserColumns(
   t: (key: string) => string,
@@ -75,7 +77,9 @@ export function buildUserColumns(
   ]
 }
 
-/** The actions cell: remove an active user, reactivate a removed one. */
+/** The actions cell: reset an active member's password or remove them;
+ * reactivate a removed user. Owners get no reset — they hold recovery
+ * codes, and the API refuses it. */
 function UserActionsCell({
   user,
   actions,
@@ -87,6 +91,17 @@ function UserActionsCell({
 
   return (
     <div className="flex items-center justify-end gap-1">
+      {user.isActive && user.role === 'user' ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t('settings.users.reset-password')}
+          title={t('settings.users.reset-password')}
+          onClick={() => actions.onResetPassword(user)}
+        >
+          <KeyRound />
+        </Button>
+      ) : null}
       {user.isActive ? (
         <Button
           variant="ghost"

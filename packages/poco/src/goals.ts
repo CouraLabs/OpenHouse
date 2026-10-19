@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { currencySchema, type Currency } from './currencies.js'
+import type { Currency } from './currencies.js'
 import {
   entityStatusSchema,
   fetchArgsSchema,
@@ -31,7 +31,6 @@ export const createGoalSchema = z.object({
   balanceDt: dateOnlySchema,
   targetBalance: amountSchema,
   targetDt: dateOnlySchema.nullish(),
-  currency: currencySchema,
 })
 
 /** The body updating a goal accepts: the same fields, plus which row. */
@@ -42,7 +41,6 @@ export const updateGoalSchema = createGoalSchema.extend({
 /** What a goal search filters on. Without a status, only ACTIVE rows. */
 export const goalFilterSchema = z.object({
   linkedAccountId: z.number().int().positive().optional(),
-  currency: currencySchema.optional(),
   status: entityStatusSchema.default('ACTIVE'),
 })
 
@@ -61,6 +59,11 @@ export type SearchGoalsArgs = z.infer<typeof searchGoalsSchema>
  * `accountName` comes joined from the `accounts` table on every read, so
  * the UI never has to resolve a `linkedAccountId` — and the name survives
  * even when the account was deleted.
+ *
+ * A goal stores no currency: it is denominated in the tenant's main
+ * currency, which the API fills into `currency`. `accountCurrency` is the
+ * linked account's, joined — when the two differ (the main currency changed
+ * after the goal was set), the goal no longer tracks its account.
  */
 export type Goal = {
   id: number
@@ -72,6 +75,7 @@ export type Goal = {
   targetBalance: string
   targetDt: string | null
   currency: Currency
+  accountCurrency: Currency
   status: EntityStatus
   createdDt: string
   updateDt: string

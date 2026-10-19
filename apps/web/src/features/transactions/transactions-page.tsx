@@ -553,7 +553,10 @@ export function TransactionsPage() {
               ariaLabelFor={(goal) =>
                 t('transactions.dashboard-goal-aria', { name: goal.name })
               }
-              labels={{ empty: t('transactions.dashboard-goals-empty') }}
+              labels={{
+                empty: t('transactions.dashboard-goals-empty'),
+                currencyMismatch: t('goals.currency-mismatch'),
+              }}
             />
             <LimitUsageCard
               title={t('transactions.dashboard-limits')}
@@ -565,6 +568,10 @@ export function TransactionsPage() {
                 aria: (limit) =>
                   t('transactions.dashboard-limit-aria', {
                     name: limit.categoryName,
+                  }),
+                excluded: (limit) =>
+                  t('transactions.dashboard-limit-excluded', {
+                    count: limit.excludedCount,
                   }),
               }}
             />

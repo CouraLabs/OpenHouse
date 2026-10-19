@@ -16,6 +16,7 @@ const row = (overrides: Partial<Account> = {}): Account => ({
   type: 'Checking',
   balance: '12.34',
   currency: 'USD',
+  spreadPct: '0.00',
   limit: null,
   closeDay: null,
   dueDay: null,
@@ -49,6 +50,7 @@ describe('AccountService', () => {
       type: 'Checking',
       balance: '12.34',
       currency: 'USD',
+      spreadPct: '0',
       isDefault: false,
     })
 
@@ -59,6 +61,7 @@ describe('AccountService', () => {
       type: 'Checking',
       balance: '12.34',
       currency: 'USD',
+      spreadPct: '0',
       limit: null,
       closeDay: null,
       dueDay: null,
@@ -104,6 +107,7 @@ describe('AccountService', () => {
       type: 'Checking',
       balance: '99.00',
       currency: 'USD',
+      spreadPct: '0',
       isDefault: false,
     })
 
@@ -117,6 +121,7 @@ describe('AccountService', () => {
       type: 'Checking',
       balance: '99.00',
       currency: 'USD',
+      spreadPct: '0',
       limit: null,
       closeDay: null,
       dueDay: null,
@@ -137,6 +142,7 @@ describe('AccountService', () => {
         type: 'Checking',
         balance: '99.00',
         currency: 'USD',
+        spreadPct: '0',
         isDefault: false,
       })
     ).rejects.toThrow(NotFoundException)
@@ -155,6 +161,7 @@ describe('AccountService', () => {
       type: 'Wallet',
       balance: '12.34',
       currency: 'USD',
+      spreadPct: '0',
       isDefault: false,
     })
 
@@ -165,6 +172,7 @@ describe('AccountService', () => {
       type: 'Wallet',
       balance: '12.34',
       currency: 'USD',
+      spreadPct: '0',
       limit: null,
       closeDay: null,
       dueDay: null,
@@ -247,6 +255,7 @@ describe('createAccountSchema', () => {
       type: 'Wallet',
       balance: '12.34',
       currency: 'USD',
+      spreadPct: '0',
       isDefault: false,
     })
     expect(parsed.success).toBe(true)
@@ -260,6 +269,7 @@ describe('createAccountSchema', () => {
       type: 'Wallet',
       balance: '12.34',
       currency: 'USD',
+      spreadPct: '0',
       isDefault: false,
     })
     expect(parsed.success).toBe(false)

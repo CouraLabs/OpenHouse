@@ -119,6 +119,7 @@ function toWire(row: {
   type: AccountType
   balance: string
   currency: Currency
+  spreadPct: string
   limit: string | null
   closeDay: number | null
   dueDay: number | null
@@ -135,6 +136,7 @@ function toWire(row: {
     type: row.type,
     balance: row.balance,
     currency: row.currency,
+    spreadPct: row.spreadPct,
     limit: row.limit,
     closeDay: row.closeDay,
     dueDay: row.dueDay,

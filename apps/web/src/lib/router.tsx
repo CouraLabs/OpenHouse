@@ -10,6 +10,7 @@ import {
 import { currentSession } from '@/lib/query.js'
 import { SignInPage } from '@/features/sign-in/sign-in-page.js'
 import { SignUpPage } from '@/features/sign-up/sign-up-page.js'
+import { ResetPasswordPage } from '@/features/reset-password/reset-password-page.js'
 import { CategoriesPage } from '@/features/categories/categories-page.js'
 import { LimitsPage } from '@/features/limits/limits-page.js'
 import { GoalsPage } from '@/features/goals/goals-page.js'
@@ -63,6 +64,15 @@ const signUpRoute = createRoute({
       throw redirect({ to: '/' })
     }
   },
+})
+
+/** The route a forgotten password is reset from with a one-time code. A
+ * reset link carries the code in its fragment, `#code=`, which prefills the
+ * form. Open to a signed-in browser too: redeeming replaces its session. */
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  component: ResetPasswordPage,
 })
 
 /**
@@ -208,6 +218,7 @@ const settingsSectionRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
+  resetPasswordRoute,
   mainLayoutRoute.addChildren([
     indexRoute,
     categoriesRoute,

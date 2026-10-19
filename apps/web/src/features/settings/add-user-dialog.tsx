@@ -18,8 +18,8 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 
-import { InviteShare } from './invite-share.js'
-import { useCreateInviteCode } from './use-invite-codes.js'
+import { CodeShare } from './code-share.js'
+import { inviteLinkFor, useCreateInviteCode } from './use-invite-codes.js'
 
 /** The lifetimes an invite can be given; `never` sends no expiry. */
 const EXPIRY_CHOICES = ['1', '7', 'never'] as const
@@ -99,7 +99,15 @@ export function AddUserDialog({ open, onClose }: AddUserDialogProps) {
             </Select>
           </Field>
         ) : (
-          <InviteShare code={create.data.code} />
+          <CodeShare
+            code={create.data.code}
+            link={inviteLinkFor(create.data.code)}
+            labels={{
+              code: t('settings.invite.code'),
+              link: t('settings.invite.link'),
+              shareTitle: t('settings.invite.share-title'),
+            }}
+          />
         )}
         {create.isError ? (
           <p className="text-sm text-destructive">

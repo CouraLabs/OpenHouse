@@ -1,4 +1,5 @@
 import type { Goal } from '@workspace/poco'
+import { Badge } from '@workspace/ui/components/badge'
 import { GaugeBar } from '@workspace/ui/components/gauge-bar'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
@@ -15,7 +16,9 @@ export interface GoalRowActions {
 }
 
 /** The columns the goals grid shows: the id, the name, the linked account's
- * name (joined on by the API — never a bare `linkedAccountId`), the gauge
+ * name (joined on by the API — never a bare `linkedAccountId`) with a
+ * mismatch badge when the account is no longer in the main currency the
+ * goal is denominated in, the gauge
  * from the balance toward the target, the deadline, and the row actions.
  * The caller owns what edit and delete do; the columns only route the
  * events. Called during the page's render, so the labels arrive translated. */
@@ -38,6 +41,26 @@ export function buildGoalColumns(
     {
       accessorKey: 'accountName',
       header: t('goals.account'),
+      cell: (context) => {
+        const goal = context.row.original
+
+        return (
+          <span className="flex items-center gap-2">
+            <span className="truncate">{goal.accountName}</span>
+            {goal.accountCurrency !== goal.currency ? (
+              <Badge
+                variant="outline"
+                title={t('goals.currency-mismatch-hint', {
+                  account: goal.accountCurrency,
+                  currency: goal.currency,
+                })}
+              >
+                {t('goals.currency-mismatch')}
+              </Badge>
+            ) : null}
+          </span>
+        )
+      },
     },
     {
       id: 'progress',

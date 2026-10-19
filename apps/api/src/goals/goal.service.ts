@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
+import type { Currency } from '@workspace/db'
 import type {
   CreateGoalBody,
   SearchGoalsArgs,
@@ -11,15 +12,21 @@ import type {
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { SettingsRepository } from '../settings/settings.repository.js'
 import {
   GoalRepository,
   type GoalRow,
   type GoalSearch,
 } from './goal.repository.js'
 
+/** A goal row denominated: the tenant's main currency, which every goal is
+ * in, filled in for the wire. */
+export type GoalView = GoalRow & { currency: Currency }
+
 /**
  * The rules of goals: a goal must point at a Savings account the tenant owns
- * and has not deleted, a deleted goal is a status change, and the audit
+ * and has not deleted, in the tenant's main currency — goals store no
+ * currency of their own — a deleted goal is a status change, and the audit
  * trail records the user the session acted as. The tenant and the user
  * always arrive from the caller — this service never reads a request.
  */
@@ -27,7 +34,8 @@ import {
 export class GoalService {
   constructor(
     private readonly repository: GoalRepository,
-    private readonly accounts: AccountRepository
+    private readonly accounts: AccountRepository,
+    private readonly settings: SettingsRepository
   ) {}
 
   /** Creates a goal for the tenant, rejecting an account it cannot use. */
@@ -35,33 +43,51 @@ export class GoalService {
     tenantId: number,
     userId: number,
     body: CreateGoalBody
-  ): Promise<GoalRow> {
+  ): Promise<GoalView> {
+    const mainCurrency = await this.mainCurrencyOf(tenantId)
     await this.assertSavingsAccountUsable(
       tenantId,
       body.linkedAccountId,
-      body.currency
+      mainCurrency
     )
 
-    return this.repository.insert(tenantId, userId, {
+    const row = await this.repository.insert(tenantId, userId, {
       ...body,
       targetDt: body.targetDt ?? null,
     })
+
+    return { ...row, currency: mainCurrency }
   }
 
   /** Runs the tenant's paged search. */
-  async search(tenantId: number, args: SearchGoalsArgs): Promise<GoalSearch> {
-    return this.repository.search(tenantId, args)
+  async search(
+    tenantId: number,
+    args: SearchGoalsArgs
+  ): Promise<{ rows: GoalView[]; total: number }> {
+    const [{ rows, total }, mainCurrency]: [GoalSearch, Currency] =
+      await Promise.all([
+        this.repository.search(tenantId, args),
+        this.mainCurrencyOf(tenantId),
+      ])
+
+    return {
+      rows: rows.map((row) => ({ ...row, currency: mainCurrency })),
+      total,
+    }
   }
 
   /** Reads one goal — deleted included; the caller decides what to show. */
-  async find(tenantId: number, id: number): Promise<GoalRow> {
-    const row = await this.repository.findById(tenantId, id)
+  async find(tenantId: number, id: number): Promise<GoalView> {
+    const [row, mainCurrency] = await Promise.all([
+      this.repository.findById(tenantId, id),
+      this.mainCurrencyOf(tenantId),
+    ])
 
     if (row === undefined) {
       throw new NotFoundException(`No goal with id ${id}.`)
     }
 
-    return row
+    return { ...row, currency: mainCurrency }
   }
 
   /** Updates a goal, rejecting an account it cannot use. A deleted goal
@@ -70,7 +96,7 @@ export class GoalService {
     tenantId: number,
     userId: number,
     body: UpdateGoalBody
-  ): Promise<GoalRow> {
+  ): Promise<GoalView> {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
@@ -80,7 +106,7 @@ export class GoalService {
     await this.assertSavingsAccountUsable(
       tenantId,
       body.linkedAccountId,
-      body.currency
+      row.currency
     )
 
     const updated = await this.repository.update(tenantId, body.id, userId, {
@@ -90,14 +116,13 @@ export class GoalService {
       balanceDt: body.balanceDt,
       targetBalance: body.targetBalance,
       targetDt: body.targetDt ?? null,
-      currency: body.currency,
     })
 
     if (updated === undefined) {
       throw new NotFoundException(`No goal with id ${body.id}.`)
     }
 
-    return updated
+    return { ...updated, currency: row.currency }
   }
 
   /** Soft-deletes a goal. Deleting an already-deleted row is a no-op. */
@@ -110,17 +135,28 @@ export class GoalService {
     await this.repository.softDelete(tenantId, id, userId)
   }
 
+  /** The tenant's main currency — what every goal is denominated in. */
+  private async mainCurrencyOf(tenantId: number): Promise<Currency> {
+    const settings = await this.settings.findByTenant(tenantId)
+
+    if (settings === undefined) {
+      throw new NotFoundException('Settings not found.')
+    }
+
+    return settings.mainCurrency
+  }
+
   /**
    * Rejects a linked account that is missing, no longer ACTIVE, or not a
-   * Savings account — only Savings can back a goal — and a currency that
-   * does not match the account's: the goal tracks a balance the account
-   * already denominates, so comparing progress across currencies would
-   * answer nonsense.
+   * Savings account — only Savings can back a goal — and an account outside
+   * the main currency: the goal tracks a balance the account denominates,
+   * and until exchange rates exist, progress cannot be compared across
+   * currencies.
    */
   private async assertSavingsAccountUsable(
     tenantId: number,
     accountId: number,
-    currency: string
+    mainCurrency: Currency
   ): Promise<void> {
     const account = await this.accounts.findById(tenantId, accountId)
 
@@ -132,9 +168,9 @@ export class GoalService {
       throw new BadRequestException('Only a Savings account can back a goal.')
     }
 
-    if (account.currency !== currency) {
+    if (account.currency !== mainCurrency) {
       throw new ConflictException(
-        "The goal must be denominated in the account's currency."
+        `This account is in ${account.currency}; goals use your main currency (${mainCurrency}).`
       )
     }
   }

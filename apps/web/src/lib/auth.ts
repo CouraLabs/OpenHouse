@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import type {
   ChangePasswordBody,
+  ResetPasswordBody,
   SessionResponse,
   SignInBody,
   SignUpBody,
@@ -91,6 +92,25 @@ export function useChangePassword() {
   return useMutation({
     mutationFn: (input: ChangePasswordBody) =>
       api<SessionResponse>('/auth/password/change', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: (session) => {
+      queryClient.setQueryData(SESSION_QUERY_KEY, session)
+    },
+  })
+}
+
+/**
+ * Redeems a reset code for a new password. The API signs out every other
+ * session of the user and answers a fresh one for this browser.
+ */
+export function useResetPassword() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: ResetPasswordBody) =>
+      api<SessionResponse>('/auth/password/reset', {
         method: 'POST',
         body: JSON.stringify(input),
       }),

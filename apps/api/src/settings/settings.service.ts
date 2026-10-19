@@ -1,6 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import type { TenantSettingsRow } from '@workspace/db'
-import type { TenantSettings, UpdateSettingsBody } from '@workspace/poco'
+import type {
+  CurrencyChangeConflict,
+  TenantSettings,
+  UpdateSettingsBody,
+} from '@workspace/poco'
 
 import { SettingsRepository } from './settings.repository.js'
 
@@ -31,12 +39,45 @@ export class SettingsService {
     return toWireSettings(row)
   }
 
+  /**
+   * Saves the settings. Limits and goals are denominated in the main
+   * currency, so changing it re-denominates them without converting any
+   * amount: unless the body confirms it, a change that would touch any of
+   * them answers 409 with their counts, for the owner to confirm.
+   */
   async update(
     tenantId: number,
     userId: number,
     body: UpdateSettingsBody
   ): Promise<TenantSettings> {
-    const row = await this.settings.update(tenantId, userId, body)
+    const current = await this.settings.findByTenant(tenantId)
+    if (current === undefined) {
+      throw new NotFoundException('Settings not found.')
+    }
+
+    if (
+      body.mainCurrency !== current.mainCurrency &&
+      body.confirmCurrencyChange !== true
+    ) {
+      const affected = await this.settings.countDenominated(
+        tenantId,
+        body.mainCurrency
+      )
+
+      if (affected.limits > 0 || affected.goals > 0) {
+        const conflict: CurrencyChangeConflict = {
+          message: `Your limits and goals will be read as ${body.mainCurrency}. Amounts are not converted.`,
+          ...affected,
+        }
+
+        throw new ConflictException(conflict)
+      }
+    }
+
+    const row = await this.settings.update(tenantId, userId, {
+      timezone: body.timezone,
+      mainCurrency: body.mainCurrency,
+    })
     if (row === undefined) {
       throw new NotFoundException('Settings not found.')
     }

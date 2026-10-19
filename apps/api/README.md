@@ -46,6 +46,28 @@ Each script is also a `turbo` task, so the root command runs it here and in the 
 | `test:e2e` | `vitest run --config ./vitest.config.e2e.ts` |
 | `lint` | `biome lint .` |
 | `format` | `prettier --write "**/*.ts"` |
+| `reset-code` | `node dist/reset-code.js` (needs a build; see below) |
+
+## Password reset from the server
+
+Password recovery needs no email. A member asks the household's owner for a
+reset code (**Settings → Users → Reset password**), and an owner uses one of
+the recovery codes from **Settings → Security**. An owner who lost both the
+password and the recovery codes recovers with this command, which needs server
+access and has no HTTP route:
+
+```bash
+# Docker deployment
+docker compose exec api npm run reset-code -- --email owner@example.com
+
+# from a checkout, after `npm run build`
+npm run reset-code -- --email owner@example.com
+```
+
+It prints a one-time code, valid for 30 minutes, to enter on `/reset-password`
+with a new password. The code is recorded with kind `server` in
+`password_reset_codes` (only its hash), which is the audit entry. The user also
+sees a notice that a code was issued from the server the next time they sign in.
 
 ## Compile and run the project
 

@@ -21,6 +21,7 @@ export interface AccountWrite {
   type: Account['type']
   balance: string
   currency: Account['currency']
+  spreadPct: string
   limit: string | null
   closeDay: number | null
   dueDay: number | null
@@ -139,6 +140,9 @@ export class AccountRepository {
           type: data.type,
           balance: data.balance,
           currency: data.currency,
+          // Editable at any time, unlike the currency: the spread only
+          // affects future conversions; the audit stamps record the change.
+          spreadPct: data.spreadPct,
           limit: data.limit,
           closeDay: data.closeDay,
           dueDay: data.dueDay,

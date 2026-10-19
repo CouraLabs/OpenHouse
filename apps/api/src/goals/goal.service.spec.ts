@@ -1,8 +1,13 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
-import type { Account, Goal } from '@workspace/db'
+import type { Account, Currency, Goal } from '@workspace/db'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { SettingsRepository } from '../settings/settings.repository.js'
 import { GoalRepository } from './goal.repository.js'
 import { GoalService } from './goal.service.js'
 
@@ -16,7 +21,6 @@ const row = (overrides: Partial<Goal> = {}): Goal => ({
   balanceDt: '2026-01-31',
   targetBalance: '1000.00',
   targetDt: '2026-12-31',
-  currency: 'USD',
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -36,6 +40,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   type: 'Savings',
   balance: '100.00',
   currency: 'USD',
+  spreadPct: '0.00',
   limit: null,
   closeDay: null,
   dueDay: null,
@@ -62,6 +67,19 @@ const accounts = () => ({
   findById: vi.fn(async (): Promise<Account | undefined> => account()),
 })
 
+/** A settings repository whose tenant runs on `mainCurrency`. */
+const settingsIn = (mainCurrency: Currency) =>
+  ({
+    findByTenant: vi.fn(async () => ({
+      tenantId: 1,
+      timezone: 'UTC',
+      mainCurrency,
+      timezoneConfirmed: true,
+      updateBy: null,
+      updateDt: new Date('2026-01-01T00:00:00Z'),
+    })),
+  }) as unknown as SettingsRepository
+
 const body = {
   name: 'Emergency fund',
   linkedAccountId: 5,
@@ -69,7 +87,6 @@ const body = {
   balanceDt: '2026-01-31',
   targetBalance: '1000.00',
   targetDt: '2026-12-31',
-  currency: 'USD',
 } as const
 
 describe('GoalService', () => {
@@ -79,13 +96,35 @@ describe('GoalService', () => {
     repo.insert.mockResolvedValue({ ...row(), accountName: 'Rainy day' })
     const service = new GoalService(
       repo as unknown as GoalRepository,
-      bank as unknown as AccountRepository
+      bank as unknown as AccountRepository,
+      settingsIn('USD')
     )
 
     const created = await service.create(1, 7, body)
 
     expect(created.accountName).toBe('Rainy day')
+    // The goal stores no currency: the wire reads the main currency.
+    expect(created.currency).toBe('USD')
     expect(repo.insert).toHaveBeenCalledWith(1, 7, body)
+  })
+
+  it('rejects an account outside the main currency with 409', async () => {
+    const repo = repository()
+    const bank = accounts()
+    bank.findById.mockResolvedValue(account({ currency: 'USD' }))
+    const service = new GoalService(
+      repo as unknown as GoalRepository,
+      bank as unknown as AccountRepository,
+      settingsIn('BRL')
+    )
+
+    const attempt = service.create(1, 7, body)
+
+    await expect(attempt).rejects.toThrow(ConflictException)
+    await expect(attempt).rejects.toThrow(
+      'This account is in USD; goals use your main currency (BRL).'
+    )
+    expect(repo.insert).not.toHaveBeenCalled()
   })
 
   it('rejects a create whose account the tenant does not hold', async () => {
@@ -94,7 +133,8 @@ describe('GoalService', () => {
     bank.findById.mockResolvedValue(undefined)
     const service = new GoalService(
       repo as unknown as GoalRepository,
-      bank as unknown as AccountRepository
+      bank as unknown as AccountRepository,
+      settingsIn('USD')
     )
 
     await expect(service.create(1, 7, body)).rejects.toThrow(NotFoundException)
@@ -107,7 +147,8 @@ describe('GoalService', () => {
     bank.findById.mockResolvedValue(account({ status: 'DELETED' }))
     const service = new GoalService(
       repo as unknown as GoalRepository,
-      bank as unknown as AccountRepository
+      bank as unknown as AccountRepository,
+      settingsIn('USD')
     )
 
     await expect(service.create(1, 7, body)).rejects.toThrow(NotFoundException)
@@ -120,7 +161,8 @@ describe('GoalService', () => {
     bank.findById.mockResolvedValue(account({ type: 'Checking' }))
     const service = new GoalService(
       repo as unknown as GoalRepository,
-      bank as unknown as AccountRepository
+      bank as unknown as AccountRepository,
+      settingsIn('USD')
     )
 
     await expect(service.create(1, 7, body)).rejects.toThrow(
@@ -139,7 +181,8 @@ describe('GoalService', () => {
     })
     const service = new GoalService(
       repo as unknown as GoalRepository,
-      bank as unknown as AccountRepository
+      bank as unknown as AccountRepository,
+      settingsIn('USD')
     )
 
     const updated = await service.update(1, 7, { ...body, id: 1 })
@@ -160,7 +203,8 @@ describe('GoalService', () => {
     })
     const service = new GoalService(
       repo as unknown as GoalRepository,
-      bank as unknown as AccountRepository
+      bank as unknown as AccountRepository,
+      settingsIn('USD')
     )
 
     await expect(service.update(1, 7, { ...body, id: 1 })).rejects.toThrow(
@@ -175,7 +219,8 @@ describe('GoalService', () => {
     repo.findById.mockResolvedValue(undefined)
     const service = new GoalService(
       repo as unknown as GoalRepository,
-      bank as unknown as AccountRepository
+      bank as unknown as AccountRepository,
+      settingsIn('USD')
     )
 
     await expect(service.find(1, 999)).rejects.toThrow(NotFoundException)
@@ -187,7 +232,8 @@ describe('GoalService', () => {
     repo.findById.mockResolvedValue({ ...row(), accountName: 'Rainy day' })
     const service = new GoalService(
       repo as unknown as GoalRepository,
-      bank as unknown as AccountRepository
+      bank as unknown as AccountRepository,
+      settingsIn('USD')
     )
 
     await service.softDelete(1, 7, 1)

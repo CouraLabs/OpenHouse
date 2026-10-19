@@ -2,17 +2,26 @@ import { queryClient, SESSION_QUERY_KEY } from './query.js'
 
 /**
  * The error the API answers with. `message` is what a user reads; `issues`
- * is the field-level detail a validation rejection carries.
+ * is the field-level detail a validation rejection carries; `body` is the
+ * whole response body, for a rejection that carries more than a message (a
+ * main-currency change answers 409 with what it would re-denominate).
  */
 export class ApiError extends Error {
   readonly status: number
   readonly issues?: Array<{ path: string[]; message: string }>
+  readonly body?: unknown
 
-  constructor(status: number, message: string, issues?: ApiError['issues']) {
+  constructor(
+    status: number,
+    message: string,
+    issues?: ApiError['issues'],
+    body?: unknown
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.issues = issues
+    this.body = body
   }
 }
 
@@ -26,14 +35,23 @@ export class ApiError extends Error {
 const REFRESHABLE_STATUSES = new Set([401])
 
 /**
- * The auth routes a refresh never replays: signing in or up while the
- * cookies are stale would loop, and `/auth/refresh` replaying itself would
+ * The auth routes a refresh never replays: signing in or up — or redeeming
+ * a reset code — while the cookies are stale would loop, and `/auth/refresh` replaying itself would
  * too. `/auth/me` is deliberately not here — it is the first call of every
  * load, and its 401 is the exact case the refresh cookie exists for: the
  * access token expired while the page was closed, and the refresh replays
  * the bootstrap instead of bouncing the user to sign-in.
  */
-const AUTH_PATHS = new Set(['/auth/sign-in', '/auth/sign-up', '/auth/refresh'])
+const AUTH_PATHS = new Set([
+  '/auth/sign-in',
+  '/auth/sign-up',
+  '/auth/refresh',
+  '/auth/password/reset',
+])
+
+/** The pages a signed-out browser may open — an ended session never
+ * redirects away from them. */
+const PUBLIC_PATHS = new Set(['/sign-in', '/sign-up', '/reset-password'])
 
 /** The refresh attempt already in flight, so a burst of 401s shares one. */
 let refreshInFlight: Promise<boolean> | null = null
@@ -82,12 +100,14 @@ async function exchange(): Promise<boolean> {
 /**
  * Records that the session is over and sends the user to sign in. A reload
  * is deliberate: the session died, so every cached page, query and in-flight
- * mutation is stale and a fresh start clears them all at once.
+ * mutation is stale and a fresh start clears them all at once. A page open
+ * to a signed-out browser stays put: a reset link opened on a new device
+ * must keep its code, and sign-up must load without a session.
  */
 function endSession(): void {
   queryClient.setQueryData(SESSION_QUERY_KEY, null)
 
-  if (window.location.pathname !== '/sign-in') {
+  if (!PUBLIC_PATHS.has(window.location.pathname)) {
     window.location.assign('/sign-in')
   }
 }
@@ -132,7 +152,8 @@ async function toError(response: Response): Promise<ApiError> {
   return new ApiError(
     response.status,
     body?.message ?? `The request failed with ${response.status}.`,
-    body?.issues
+    body?.issues,
+    body ?? undefined
   )
 }
 

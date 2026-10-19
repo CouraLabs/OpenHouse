@@ -330,8 +330,9 @@ export class AuthService {
     }
   }
 
-  /** Reads the tenant and settings of a user and shapes their session. */
-  private async sessionFor(user: User): Promise<SessionResponse> {
+  /** Reads the tenant and settings of a user and shapes their session — a
+   * user a password reset just signed back in, for one. */
+  async sessionFor(user: User): Promise<SessionResponse> {
     const [[tenant], settings] = await Promise.all([
       this.db.query.tenants.findMany({
         where: { id: user.tenantId },

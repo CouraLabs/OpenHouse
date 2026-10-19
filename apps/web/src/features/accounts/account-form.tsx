@@ -24,6 +24,7 @@ import {
 import { TextField } from '@workspace/ui/components/text-field'
 
 import { useMainCurrency } from '@/lib/settings.js'
+import { AccountAdvancedFields } from './account-advanced-fields.js'
 
 /**
  * The fields the account form holds. The rules come straight from the
@@ -58,6 +59,7 @@ const newAccount = (mainCurrency: Currency): AccountFormValues => ({
   type: 'Checking',
   balance: '',
   currency: mainCurrency,
+  spreadPct: '0',
   limit: null,
   closeDay: null,
   dueDay: null,
@@ -119,6 +121,7 @@ export function AccountForm({
             type: account.type,
             balance: account.balance,
             currency: account.currency,
+            spreadPct: account.spreadPct,
             limit: account.limit,
             closeDay: account.closeDay,
             dueDay: account.dueDay,
@@ -133,6 +136,7 @@ export function AccountForm({
   const closeDay = watch('closeDay')
   const dueDay = watch('dueDay')
   const isDefault = watch('isDefault')
+  const spreadPct = watch('spreadPct')
   const isCard = type === 'Credit Card'
   const hasAgency = !AGENCY_LESS_TYPES.includes(type)
   const hasNumber = !NUMBER_LESS_TYPES.includes(type)
@@ -411,6 +415,11 @@ export function AccountForm({
           </>
         ) : null}
       </div>
+      <AccountAdvancedFields
+        spreadPct={spreadPct}
+        spreadPctInput={register('spreadPct')}
+        error={errors.spreadPct}
+      />
       {error !== undefined ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : null}

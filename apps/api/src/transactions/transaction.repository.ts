@@ -541,8 +541,9 @@ export class TransactionRepository {
 
   /**
    * Totals the tenant's expenses between two `YYYY-MM-DD` days, grouped by
-   * the category and the currency — the raw material a limit's usage sums
-   * from, so the limits feature never re-derives what a transaction is.
+   * the category and the account's currency, with how many expenses each
+   * total sums — the raw material a limit's usage sums from, so the limits
+   * feature never re-derives what a transaction is.
    * Transfer rows and Canceled review statuses never count, as in
    * `summary`.
    */
@@ -550,12 +551,20 @@ export class TransactionRepository {
     tenantId: number,
     from: string,
     to: string
-  ): Promise<Array<{ categoryId: number; currency: Currency; total: string }>> {
+  ): Promise<
+    Array<{
+      categoryId: number
+      currency: Currency
+      total: string
+      count: number
+    }>
+  > {
     return this.db
       .select({
         categoryId: transactions.categoryId,
         currency: accounts.currency,
         total: sql<string>`coalesce(sum(${transactions.amount}), 0)`,
+        count: count(),
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))

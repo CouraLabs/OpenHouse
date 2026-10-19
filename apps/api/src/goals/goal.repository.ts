@@ -1,15 +1,22 @@
-import { and, asc, count, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, asc, count, eq, getTableColumns } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Goal, Database } from '@workspace/db'
+import type { Currency, Database, Goal } from '@workspace/db'
 import { accounts, goals } from '@workspace/db'
 import type { SearchGoalsArgs } from '@workspace/poco'
 
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 
-/** A goal row with the linked account's name joined on — what every read
- * answers. */
-export type GoalRow = Goal & { accountName: string }
+/** A goal row with the linked account's name and currency joined on — what
+ * every read answers. */
+export type GoalRow = Goal & { accountName: string; accountCurrency: Currency }
+
+/** The linked account's columns every read joins on. The FK guarantees the
+ * account exists — deleting one is soft — so the join is inner. */
+const ACCOUNT_COLUMNS = {
+  accountName: accounts.name,
+  accountCurrency: accounts.currency,
+}
 
 /** What a search answers with: the page's rows and how many match in all. */
 export interface GoalSearch {
@@ -25,7 +32,6 @@ export interface GoalWrite {
   balanceDt: string
   targetBalance: string
   targetDt: string | null
-  currency: Goal['currency']
 }
 
 /**
@@ -66,7 +72,6 @@ export class GoalRepository {
       targetBalance: goals.targetBalance,
       balanceDt: goals.balanceDt,
       targetDt: goals.targetDt,
-      currency: goals.currency,
       accountName: accounts.name,
       createdDt: goals.createdDt,
       updateDt: goals.updateDt,
@@ -76,12 +81,10 @@ export class GoalRepository {
       this.db
         .select({
           ...getTableColumns(goals),
-          // The FK guarantees the account exists, so the name cannot really
-          // be null — coalesce only tells the types what the join cannot.
-          accountName: sql<string>`coalesce(${accounts.name}, '')`,
+          ...ACCOUNT_COLUMNS,
         })
         .from(goals)
-        .leftJoin(accounts, eq(goals.linkedAccountId, accounts.id))
+        .innerJoin(accounts, eq(goals.linkedAccountId, accounts.id))
         .where(query.where)
         // The id is the tie-breaker: rows the sort clauses leave equal keep
         // one order, so a page never shuffles its neighbors.
@@ -91,7 +94,7 @@ export class GoalRepository {
       this.db
         .select({ value: count() })
         .from(goals)
-        .leftJoin(accounts, eq(goals.linkedAccountId, accounts.id))
+        .innerJoin(accounts, eq(goals.linkedAccountId, accounts.id))
         .where(query.where),
     ])
 
@@ -103,10 +106,10 @@ export class GoalRepository {
     const [row] = await this.db
       .select({
         ...getTableColumns(goals),
-        accountName: sql<string>`coalesce(${accounts.name}, '')`,
+        ...ACCOUNT_COLUMNS,
       })
       .from(goals)
-      .leftJoin(accounts, eq(goals.linkedAccountId, accounts.id))
+      .innerJoin(accounts, eq(goals.linkedAccountId, accounts.id))
       .where(and(eq(goals.tenantId, tenantId), eq(goals.id, id)))
 
     return row
@@ -129,7 +132,6 @@ export class GoalRepository {
         balanceDt: data.balanceDt,
         targetBalance: data.targetBalance,
         targetDt: data.targetDt,
-        currency: data.currency,
         updateBy: userId,
         updateDt: new Date(),
       })
@@ -168,10 +170,6 @@ export class GoalRepository {
 
     if (args.filter.linkedAccountId !== undefined) {
       conditions.push(eq(goals.linkedAccountId, args.filter.linkedAccountId))
-    }
-
-    if (args.filter.currency !== undefined) {
-      conditions.push(eq(goals.currency, args.filter.currency))
     }
 
     conditions.push(eq(goals.status, args.filter.status))

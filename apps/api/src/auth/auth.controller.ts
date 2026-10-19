@@ -24,13 +24,16 @@ import {
 } from '../common/session/session.js'
 import {
   changePasswordSchema,
+  resetPasswordSchema,
   signInSchema,
   signUpSchema,
   type ChangePasswordBody,
+  type ResetPasswordBody,
   type SignInBody,
   type SignUpBody,
 } from '@workspace/poco'
 import { PasswordChangeLimiter } from './password-change-limiter.js'
+import { PasswordResetService } from './password-reset.service.js'
 import { TokenService } from './token.service.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
@@ -40,6 +43,14 @@ import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
  * for a typo or two.
  */
 const CREDENTIAL_THROTTLE = { default: { limit: 10, ttl: 60_000 } }
+
+/**
+ * The attempts one IP may make at redeeming a reset code per 15 minutes,
+ * when the limits are enforced. A code is the whole credential, so the
+ * route is tighter than sign-in; a failing code prefix is also blocked on
+ * its own, in every environment.
+ */
+const RESET_THROTTLE = { default: { limit: 5, ttl: 15 * 60_000 } }
 
 /**
  * The routes a browser session goes through: sign up, sign in, refresh, sign
@@ -52,7 +63,8 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly tokens: TokenService,
-    private readonly passwordChanges: PasswordChangeLimiter
+    private readonly passwordChanges: PasswordChangeLimiter,
+    private readonly passwordResets: PasswordResetService
   ) {}
 
   /** Creates the tenant and its owner in one transaction, then signs in. */
@@ -180,6 +192,25 @@ export class AuthController {
       this.tokens.verifyRefreshToken(presented)?.rem === true
 
     return this.establish(response, changed, remembered)
+  }
+
+  /**
+   * Redeems a reset code — owner-issued, a recovery code, or one the server
+   * printed — for a new password, then signs the user in. Every session the
+   * user had is signed out; wrong, expired, and used codes answer the same
+   * 400.
+   */
+  @Public()
+  @HttpCode(200)
+  @Throttle(RESET_THROTTLE)
+  @Post('password/reset')
+  async resetPassword(
+    @Body(new ZodValidationPipe(resetPasswordSchema)) body: ResetPasswordBody,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<SessionResponse> {
+    const user = await this.passwordResets.redeem(body.code, body.newPassword)
+
+    return this.establish(response, await this.auth.sessionFor(user), false)
   }
 
   /**

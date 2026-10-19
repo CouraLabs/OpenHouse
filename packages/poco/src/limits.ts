@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { currencySchema, type Currency } from './currencies.js'
+import type { Currency } from './currencies.js'
 import {
   entityStatusSchema,
   fetchArgsSchema,
@@ -38,7 +38,6 @@ export const createLimitSchema = z.object({
     .positive('Pick a category.'),
   amount: amountSchema,
   type: limitTypeSchema,
-  currency: currencySchema,
 })
 
 /** The body updating a limit accepts: the same fields, plus which row. */
@@ -50,7 +49,6 @@ export const updateLimitSchema = createLimitSchema.extend({
 export const limitFilterSchema = z.object({
   categoryId: z.number().int().positive().optional(),
   type: limitTypeSchema.optional(),
-  currency: currencySchema.optional(),
   status: entityStatusSchema.default('ACTIVE'),
 })
 
@@ -66,8 +64,10 @@ export type SearchLimitsArgs = z.infer<typeof searchLimitsSchema>
 /**
  * One limit with what the tenant has already spent against it in the period
  * the limit covers — the pair a usage gauge renders. The `spent` total is
- * the sum of the period's expense transactions in the limit's category and
- * currency; transfer sides and Canceled transactions never count.
+ * the sum of the period's expense transactions in the limit's category from
+ * accounts in the main currency; transfer sides and Canceled transactions
+ * never count. Expenses from accounts in other currencies are not converted
+ * yet: `excludedCount` says how many were left out.
  */
 export type LimitUsage = {
   id: number
@@ -80,13 +80,15 @@ export type LimitUsage = {
   createdDt: string
   updateDt: string
   spent: string
+  excludedCount: number
 }
 
 /**
  * What the limit routes return: the wire shape, dates as ISO strings. The
  * `categoryName` comes joined from the `categories` table on every read, so
  * the UI never has to resolve a `categoryId` — and the name survives even
- * when the category was deleted.
+ * when the category was deleted. A limit stores no currency: `currency` is
+ * the tenant's main currency, filled in by the API.
  */
 export type Limit = {
   id: number

@@ -16,7 +16,6 @@ const row = (overrides: Partial<Limit> = {}): Limit => ({
   categoryId: 3,
   amount: '12.34',
   type: 'Monthly',
-  currency: 'USD',
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -59,9 +58,13 @@ const transactions = {
   expenseTotalsByCategory: vi.fn(async () => []),
 } as unknown as TransactionRepository
 
-/** A settings stub — the tenant keeps its calendar in São Paulo (UTC-3). */
+/** A settings stub — the tenant keeps its calendar in São Paulo (UTC-3)
+ * and its limits in BRL. */
 const settings = {
-  findByTenant: vi.fn(async () => ({ timezone: 'America/Sao_Paulo' })),
+  findByTenant: vi.fn(async () => ({
+    timezone: 'America/Sao_Paulo',
+    mainCurrency: 'BRL',
+  })),
 } as unknown as SettingsRepository
 
 /** October 1st, 02:00 UTC — still September 30th in the tenant's zone. */
@@ -84,15 +87,15 @@ describe('LimitService', () => {
       categoryId: 3,
       amount: '12.34',
       type: 'Monthly',
-      currency: 'USD',
     })
 
     expect(created.categoryName).toBe('Office')
+    // The limit stores no currency: the wire reads the main currency.
+    expect(created.currency).toBe('BRL')
     expect(repo.insert).toHaveBeenCalledWith(1, 7, {
       categoryId: 3,
       amount: '12.34',
       type: 'Monthly',
-      currency: 'USD',
     })
   })
 
@@ -113,7 +116,6 @@ describe('LimitService', () => {
         categoryId: 999,
         amount: '12.34',
         type: 'Monthly',
-        currency: 'USD',
       })
     ).rejects.toThrow(NotFoundException)
     expect(repo.insert).not.toHaveBeenCalled()
@@ -136,7 +138,6 @@ describe('LimitService', () => {
         categoryId: 3,
         amount: '12.34',
         type: 'Monthly',
-        currency: 'USD',
       })
     ).rejects.toThrow(NotFoundException)
     expect(repo.insert).not.toHaveBeenCalled()
@@ -163,7 +164,6 @@ describe('LimitService', () => {
       categoryId: 3,
       amount: '99.00',
       type: 'Monthly',
-      currency: 'USD',
     })
 
     expect(updated.amount).toBe('99.00')
@@ -173,7 +173,6 @@ describe('LimitService', () => {
       categoryId: 3,
       amount: '99.00',
       type: 'Monthly',
-      currency: 'USD',
     })
   })
 
@@ -199,7 +198,6 @@ describe('LimitService', () => {
         categoryId: 3,
         amount: '99.00',
         type: 'Monthly',
-        currency: 'USD',
       })
     ).rejects.toThrow(NotFoundException)
     expect(repo.update).not.toHaveBeenCalled()
@@ -241,7 +239,7 @@ describe('LimitService', () => {
     const repo = repository()
     const listActive = vi.fn(async () => [{ ...row(), categoryName: 'Office' }])
     const expenseTotalsByCategory = vi.fn(async () => [
-      { categoryId: 3, currency: 'USD', total: '5.00' },
+      { categoryId: 3, currency: 'BRL', total: '5.00', count: 1 },
     ])
     const service = new LimitService(
       { ...repo, listActive } as unknown as LimitRepository,
@@ -260,5 +258,59 @@ describe('LimitService', () => {
       '2026-09-30'
     )
     expect(usage[0]?.spent).toBe('5.00')
+  })
+
+  it('counts only main-currency expenses and reports the others as excluded', async () => {
+    const repo = repository()
+    const listActive = vi.fn(async () => [{ ...row(), categoryName: 'Office' }])
+    const expenseTotalsByCategory = vi.fn(async () => [
+      { categoryId: 3, currency: 'BRL', total: '40.00', count: 3 },
+      { categoryId: 3, currency: 'USD', total: '15.00', count: 2 },
+      { categoryId: 3, currency: 'EUR', total: '9.00', count: 1 },
+      { categoryId: 8, currency: 'USD', total: '7.00', count: 4 },
+    ])
+    const service = new LimitService(
+      { ...repo, listActive } as unknown as LimitRepository,
+      categories() as unknown as CategoryRepository,
+      { expenseTotalsByCategory } as unknown as TransactionRepository,
+      settings,
+      clock
+    )
+
+    const [usage] = await service.usage(1)
+
+    expect(usage?.currency).toBe('BRL')
+    expect(usage?.spent).toBe('40.00')
+    // Two USD and one EUR expense in the category; category 8 is not its.
+    expect(usage?.excludedCount).toBe(3)
+  })
+
+  it('keeps the totals of each period apart for limits on one category', async () => {
+    const repo = repository()
+    const listActive = vi.fn(async () => [
+      { ...row({ id: 1, type: 'Monthly' }), categoryName: 'Office' },
+      { ...row({ id: 2, type: 'Yearly' }), categoryName: 'Office' },
+    ])
+    const expenseTotalsByCategory = vi.fn(
+      async (_tenantId: number, from: string) => [
+        {
+          categoryId: 3,
+          currency: 'BRL',
+          total: from === '2026-09-01' ? '10.00' : '120.00',
+          count: 1,
+        },
+      ]
+    )
+    const service = new LimitService(
+      { ...repo, listActive } as unknown as LimitRepository,
+      categories() as unknown as CategoryRepository,
+      { expenseTotalsByCategory } as unknown as TransactionRepository,
+      settings,
+      clock
+    )
+
+    const usage = await service.usage(1)
+
+    expect(usage.map((limit) => limit.spent)).toEqual(['10.00', '120.00'])
   })
 })

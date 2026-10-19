@@ -2,13 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type {
-  CreateLimitBody,
-  Currency,
-  Limit,
-  LimitType,
-} from '@workspace/poco'
-import { createLimitSchema, currencies, limitTypes } from '@workspace/poco'
+import type { CreateLimitBody, Limit, LimitType } from '@workspace/poco'
+import { createLimitSchema, limitTypes } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
@@ -19,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@workspace/ui/components/select'
-import { CurrencySelect } from '@workspace/ui/components/currency-select'
 
 import { useMainCurrency } from '@/lib/settings.js'
 import { useActiveCategories } from './use-limits.js'
@@ -46,20 +40,19 @@ interface LimitFormProps {
   isSaving?: boolean
 }
 
-/** The default values of a new limit: nothing typed, and the tenant's main
- * currency preselected. */
-const newLimit = (mainCurrency: Currency): LimitFormValues => ({
+/** The default values of a new limit: nothing chosen, nothing typed. */
+const newLimit = (): LimitFormValues => ({
   categoryId: undefined as unknown as number,
   amount: '',
   type: 'Daily',
-  currency: mainCurrency,
 })
 
 /**
  * The insert and edit form of the limits page: a category dropdown, the
- * type as a radio group, and the amount with reverse input masking. It
- * renders above the table; the page decides when it is open and what a
- * submit saves.
+ * period, and the amount with reverse input masking. A limit has no
+ * currency of its own — it is in the tenant's main currency, which the
+ * amount's label names. It renders above the table; the page decides when
+ * it is open and what a submit saves.
  */
 export function LimitForm({
   limit,
@@ -81,19 +74,17 @@ export function LimitForm({
     // remounts it with that row's values.
     defaultValues:
       limit === null
-        ? newLimit(mainCurrency)
+        ? newLimit()
         : {
             categoryId: limit.categoryId,
             amount: limit.amount,
             type: limit.type,
-            currency: limit.currency,
           },
   })
 
   const categoryId = watch('categoryId')
   const type = watch('type')
   const amount = watch('amount')
-  const currency = watch('currency')
   const categories = useActiveCategories()
   // The trigger's label is rendered here, not derived by base-ui from
   // `items`: a prefilled value set while the popup is closed would
@@ -111,7 +102,7 @@ export function LimitForm({
       <p className="text-sm font-medium">
         {limit === null ? t('limits.new') : t('limits.edit-title')}
       </p>
-      {/* One row of at most four: what the cap is, and what it costs. */}
+      {/* One row: what the cap is, and what it costs. */}
       <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
         <Field data-invalid={errors.categoryId !== undefined}>
           <FieldLabel htmlFor="limit-category">
@@ -199,7 +190,7 @@ export function LimitForm({
         <MoneyField
           locale={i18n.language}
           className="h-8"
-          label={t('limits.amount')}
+          label={t('limits.amount-in', { currency: mainCurrency })}
           labelFor="limit-amount"
           placeholder={t('limits.amount-placeholder')}
           value={amount}
@@ -209,34 +200,6 @@ export function LimitForm({
           error={errors.amount}
           required
         />
-        <Field data-invalid={errors.currency !== undefined}>
-          <FieldLabel htmlFor="limit-currency">
-            {t('limits.currency')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
-          </FieldLabel>
-          <CurrencySelect
-            id="limit-currency"
-            value={currency}
-            onValueChange={(value) =>
-              setValue('currency', value as Currency, { shouldValidate: true })
-            }
-            codes={currencies}
-            labels={{
-              USD: t('currency.USD'),
-              BRL: t('currency.BRL'),
-              EUR: t('currency.EUR'),
-            }}
-            placeholder={t('limits.currency-placeholder')}
-            invalid={errors.currency !== undefined}
-          />
-          <FieldError
-            errors={
-              errors.currency !== undefined ? [errors.currency] : undefined
-            }
-          />
-        </Field>
       </div>
       {error !== undefined ? (
         <p className="text-sm text-destructive">{error}</p>

@@ -242,7 +242,18 @@ cat openhouse-2026-10-19.sql | docker compose exec -T db psql -U postgres openho
 
 In production, every route allows 300 requests per minute per client
 (`THROTTLE_LIMIT` / `THROTTLE_TTL_MS`). Sign-in and sign-up allow 10 attempts
-per minute, and password changes allow 5 per 15 minutes per user.
+per minute, and password changes allow 5 per 15 minutes per user. Redeeming a
+password reset code allows 5 attempts per 15 minutes per client, and a code
+prefix that fails 10 times is blocked for an hour.
+
+### Forgotten passwords
+
+Nothing is emailed. Members get a reset code from the owner; owners use their
+recovery codes. If an owner lost both, issue a code from the server:
+
+```sh
+docker compose exec api npm run reset-code -- --email owner@example.com
+```
 
 ### Deploying without Docker
 

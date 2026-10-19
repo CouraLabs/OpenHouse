@@ -6,6 +6,7 @@ import { useSession } from '@/lib/auth.js'
 import { ChangePasswordForm } from './change-password-form.js'
 import { GeneralSettingsForm } from './general-settings-form.js'
 import { PreferencesForm } from './preferences-form.js'
+import { RecoveryCodesSection } from './recovery-codes-section.js'
 import { SettingsNav } from './settings-nav.js'
 import { sectionsFor, type SettingsSection } from './settings-sections.js'
 import { UsersSection } from './users-section.js'
@@ -13,15 +14,17 @@ import { UsersSection } from './users-section.js'
 /**
  * The Settings page, laid out as an account page: the sections the role
  * may open in a side navigation, the selected one beside it. An owner sees
- * General (time zone, main currency), Users, Preferences, and Security; a
- * member sees Preferences and Security. Each section has its own URL,
+ * General (time zone, main currency), Users, Preferences, and Security
+ * (password and recovery codes); a member sees Preferences and Security
+ * (password only). Each section has its own URL,
  * `/settings/<section>`; `/settings` opens the first one the role may see.
  */
 export function SettingsPage() {
   const { t } = useTranslation()
   const session = useSession()
   const params = useParams({ strict: false }) as { section?: SettingsSection }
-  const sections = sectionsFor(session.data?.user.role ?? 'user')
+  const role = session.data?.user.role ?? 'user'
+  const sections = sectionsFor(role)
   const active =
     params.section !== undefined && sections.includes(params.section)
       ? params.section
@@ -41,7 +44,13 @@ export function SettingsPage() {
           {active === 'general' ? <GeneralSettingsForm /> : null}
           {active === 'users' ? <UsersSection /> : null}
           {active === 'preferences' ? <PreferencesForm /> : null}
-          {active === 'security' ? <ChangePasswordForm /> : null}
+          {active === 'security' ? (
+            <div className="flex flex-col gap-6">
+              <ChangePasswordForm />
+              {/* Members recover through their owner's reset code. */}
+              {role === 'owner' ? <RecoveryCodesSection /> : null}
+            </div>
+          ) : null}
         </section>
       </div>
     </main>

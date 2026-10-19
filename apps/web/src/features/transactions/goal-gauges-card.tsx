@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@workspace/ui/components/card'
+import { Badge } from '@workspace/ui/components/badge'
 import { GaugeBar } from '@workspace/ui/components/gauge-bar'
 
 import { formatMoney } from '@/lib/format-money.js'
@@ -31,8 +32,8 @@ export function GoalGaugesCard({
   /** Names one goal's gauge for assistive technology — translated by the
    * page, which owns the wording. */
   ariaLabelFor: (goal: Goal) => string
-  /** The label the card cannot derive, translated by the page. */
-  labels: { empty: string }
+  /** The labels the card cannot derive, translated by the page. */
+  labels: { empty: string; currencyMismatch: string }
 }) {
   const targeted = goals.filter((goal) => goal.targetBalance !== '0.00')
 
@@ -50,7 +51,14 @@ export function GoalGaugesCard({
         ) : (
           targeted.map((goal) => (
             <div key={goal.id} className="flex flex-col gap-1">
-              <span className="truncate text-sm">{goal.name}</span>
+              <span className="flex items-center gap-2 text-sm">
+                <span className="truncate">{goal.name}</span>
+                {/* The main currency changed after the goal was set: its
+                    account is in another currency, so it no longer tracks. */}
+                {goal.accountCurrency !== goal.currency ? (
+                  <Badge variant="outline">{labels.currencyMismatch}</Badge>
+                ) : null}
+              </span>
               <GaugeBar
                 value={Number(goal.balance)}
                 max={Number(goal.targetBalance)}

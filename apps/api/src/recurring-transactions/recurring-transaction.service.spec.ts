@@ -46,6 +46,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   type: 'Checking',
   balance: '100.00',
   currency: 'USD',
+  spreadPct: '0.00',
   limit: null,
   closeDay: null,
   dueDay: null,

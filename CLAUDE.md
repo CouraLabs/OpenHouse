@@ -33,6 +33,8 @@ apps/
   api/
     src/
       main.ts                   # bootstrap only: middleware, CORS, shutdown hooks
+      reset-code.ts             # bootstrap only: the server's `reset-code` command
+                                #   (a Nest application context, no HTTP)
       app.module.ts             # composition root: wires modules and global guards
       app.controller.ts|spec    # health/root route (app.service.ts backs it)
       config/                   # environment: env.ts validation, env.spec.ts
@@ -58,7 +60,8 @@ apps/
         <entity>.service.ts     #   business rules; may be split per concern
                                 #   (invite-code.service.ts, recurring-run.service.ts)
         <concern>.ts            #   pure domain logic with no Nest/DB deps
-                                #   (limit-period.ts; transaction-ledger.ts pairs its
+                                #   (limit-period.ts, auth/reset-code.ts;
+                                #   transaction-ledger.ts pairs its
                                 #   money math with the row-locked balance writes)
         *.spec.ts               #   Vitest specs next to the code
     test/                       # e2e specs (*.e2e-spec.ts)
@@ -74,6 +77,8 @@ apps/
                                 #   breadcrumbs, theme/locale switchers
         page-header.tsx         # shared page title block (candidate for packages/ui)
       lib/                      # transport and shared client logic: api.ts, auth.ts,
+                                #   account-security.ts (recovery codes left, server
+                                #   reset notices — read by the shell and Settings),
                                 #   settings.ts (tenant settings from the session:
                                 #   useMainCurrency, useTenantToday, useSaveSettings),
                                 #   query.ts, router.tsx, i18n.ts, format-money.ts,
@@ -87,13 +92,19 @@ apps/
                                 #   (system theme + nav toggle)
     src/
       App.tsx                   # section composition, in reading order
-      main.tsx                  # React root under ThemeProvider (packages/ui)
-      lib/                      # content.ts (every word the page shows), links.ts
-                                #   (GitHub + web-app URLs from VITE_APP_URL in .env,
-                                #   documented in .env.example), tones.ts (pastels),
-                                #   use-in-view.ts
+      main.tsx                  # React root under ThemeProvider (packages/ui) and
+                                #   LocaleProvider
+      lib/                      # content.ts (the `Content` type: every word the page
+                                #   shows), locale.ts (locales, stored pick → browser
+                                #   language → en-US), use-locale.ts (useContent()),
+                                #   links.ts (GitHub + web-app URLs from VITE_APP_URL in
+                                #   .env, documented in .env.example), tones.ts
+                                #   (pastels), use-in-view.ts
+      locales/                  # <locale>.ts — one typed `Content` per locale (en-US,
+                                #   pt-BR); sections read words only via useContent()
       components/               # landing-local primitives: Reveal, Eyebrow,
-                                #   SectionHeading, ButtonLink, …; preview/ app-slice visuals
+                                #   SectionHeading, ButtonLink, LocaleProvider, …;
+                                #   preview/ app-slice visuals
       sections/<section>/       # one directory per page section (nav, hero, features,
                                 #   planners, pricing, open-source, faq, footer)
 packages/
@@ -164,6 +175,20 @@ packages/
    tenant against its own calendar day, and web forms default dates through
    `useTenantToday()`. `date` columns are calendar days and never shift when
    the zone changes.
+6d. **Currency lives on the account.** `accounts.currency` is the only
+   currency column for money that moves, and it never changes after
+   creation. Anything that moves money (transactions, recurring rules, card
+   bills, installments) inherits it from its account. Anything not tied to
+   an account (limits, goals) is denominated in the tenant's **main
+   currency** from `tenant_settings`; no other table declares a currency.
+   Wire rows still carry a read-only `currency`, joined or filled in by the
+   API, so the web never derives it. Until exchange rates exist, nothing is
+   converted: a goal's account must be in the main currency, a limit counts
+   only main-currency accounts (`excludedCount` reports the rest), and
+   changing the main currency re-denominates limits and goals — the API
+   answers 409 with their counts until the body confirms it.
+   `accounts.spreadPct` is stored for the future exchange-rate integration
+   and read by no calculation yet.
 6b. **Money is a string end to end.** A `numeric` column maps to a string
    (`"12.34"`); poco validates the decimal shape with a regex; the web formats
    for display through `lib/format-money.ts` (the row's `Currency` from poco
@@ -172,6 +197,13 @@ packages/
    i18next locale picks separators and symbol placement) and inputs it through `MoneyField` (packages/ui),
    whose reverse masking (digits typed are cents) is locale-aware. Money never
    crosses a float.
+6e. **Password recovery never needs email.** A one-time reset code — issued
+   by an owner for a member, generated in advance as an owner's recovery
+   codes, or printed by the server's `reset-code` command — sets a new
+   password through `POST auth/password/reset`. Only the SHA-256 of the
+   normalized code is stored; the plaintext is shown once. Redeeming clears
+   the refresh hash (every session signs out); wrong, expired, and used
+   codes answer one generic 400.
 7. **Environment is read only in `config/`.** Feature code receives values via
    injection or module factories, never by calling `env.ts` helpers from deep
    inside a feature (the session guard is the sanctioned exception, as

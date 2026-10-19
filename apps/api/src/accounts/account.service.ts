@@ -115,6 +115,7 @@ function toWrite(body: CreateAccountBody): AccountWrite {
     type: body.type,
     balance: body.balance,
     currency: body.currency,
+    spreadPct: body.spreadPct,
     limit: body.limit ?? null,
     closeDay: body.closeDay ?? null,
     dueDay: body.dueDay ?? null,

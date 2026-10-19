@@ -11,6 +11,7 @@ import { useSession } from '@/lib/auth.js'
 import { useTenantSettings } from '@/lib/settings.js'
 import { AddUserDialog } from './add-user-dialog.js'
 import { PendingInvites } from './pending-invites.js'
+import { ResetCodeDialog } from './reset-code-dialog.js'
 import {
   isPendingInvite,
   useInviteCodes,
@@ -23,9 +24,10 @@ import { buildUserColumns } from './users-columns.js'
 const NO_SORTING: SortingState = []
 
 /**
- * The owner's Users section: the tenant's users with remove and reactivate,
- * the Add user dialog that issues an invite, and the invitations still
- * pending. Removing confirms first; nothing a removed user created is lost.
+ * The owner's Users section: the tenant's users with reset password,
+ * remove, and reactivate, the Add user dialog that issues an invite, and
+ * the invitations still pending. Removing confirms first; nothing a removed
+ * user created is lost.
  */
 export function UsersSection() {
   const { t, i18n } = useTranslation()
@@ -42,6 +44,7 @@ export function UsersSection() {
   })
   const [adding, setAdding] = useState(false)
   const [removing, setRemoving] = useState<TenantUser | null>(null)
+  const [resetting, setResetting] = useState<TenantUser | null>(null)
 
   const columns = useMemo(
     () =>
@@ -56,6 +59,7 @@ export function UsersSection() {
           },
           onReactivate: (user) =>
             setActive.mutate({ id: user.id, active: true }),
+          onResetPassword: setResetting,
         }
       ),
     [
@@ -139,6 +143,7 @@ export function UsersSection() {
         isRevoking={revoke.isPending}
       />
       <AddUserDialog open={adding} onClose={() => setAdding(false)} />
+      <ResetCodeDialog user={resetting} onClose={() => setResetting(null)} />
       <ConfirmDialog
         open={removing !== null}
         destructive

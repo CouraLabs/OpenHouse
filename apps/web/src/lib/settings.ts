@@ -57,7 +57,8 @@ export function useTenantToday(): string {
 }
 
 /** Saves the tenant's settings (owner only) and refreshes the session that
- * carries them. */
+ * carries them. Every other query is refetched too: the main currency
+ * denominates limits and goals, and the zone moves what "today" is. */
 export function useSaveSettings() {
   const queryClient = useQueryClient()
 
@@ -72,7 +73,7 @@ export function useSaveSettings() {
         SESSION_QUERY_KEY,
         (session) => (session == null ? session : { ...session, settings })
       )
-      void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+      void queryClient.invalidateQueries()
     },
   })
 }

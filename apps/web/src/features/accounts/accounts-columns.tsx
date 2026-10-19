@@ -15,7 +15,8 @@ export interface AccountRowActions {
 
 /**
  * The columns the accounts grid shows: the id, the account — its name with
- * the type beside it, and the agency/number pair beneath — and the balance
+ * the type beside it, and the agency/number pair beneath, joined by the
+ * conversion spread when the account has one — and the balance
  * with, for a credit card, the free credit and the due/close days beneath.
  * The caller owns what edit and delete do; the columns only route the
  * events. Called during the page's render, so the labels arrive translated.
@@ -25,6 +26,11 @@ export function buildAccountsColumns(
   locale: string,
   actions: AccountRowActions
 ): Array<DataTableColumn<Account>> {
+  const percent = new Intl.NumberFormat(locale, {
+    style: 'percent',
+    maximumFractionDigits: 2,
+  })
+
   return [
     {
       id: 'id',
@@ -50,7 +56,15 @@ export function buildAccountsColumns(
               ) : null}
             </span>
             <span className="text-xs text-muted-foreground">
-              {[account.agency, account.number].filter(Boolean).join(' / ')}
+              {[
+                [account.agency, account.number].filter(Boolean).join(' / '),
+                // Shown only when set: most accounts never convert.
+                Number(account.spreadPct) > 0
+                  ? `${t('accounts.spread-short')} ${percent.format(Number(account.spreadPct) / 100)}`
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </span>
           </div>
         )

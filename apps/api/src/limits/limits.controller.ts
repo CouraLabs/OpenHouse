@@ -30,8 +30,7 @@ import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
-import type { LimitRow } from './limit.repository.js'
-import { LimitService } from './limit.service.js'
+import { LimitService, type LimitUsageView } from './limit.service.js'
 
 /**
  * The limit routes. Everything here reads the tenant and the user from the
@@ -130,9 +129,10 @@ function toWire(row: {
 }
 
 /** Maps a usage row onto the wire shape: the limit plus what it spent. */
-function toUsageWire(row: LimitRow & { spent: string }): LimitUsage {
+function toUsageWire(row: LimitUsageView): LimitUsage {
   return {
     ...toWire(row),
     spent: row.spent,
+    excludedCount: row.excludedCount,
   }
 }

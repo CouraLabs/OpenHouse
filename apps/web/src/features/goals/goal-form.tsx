@@ -2,13 +2,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type { CreateGoalBody, Currency, Goal } from '@workspace/poco'
-import { createGoalSchema, currencies } from '@workspace/poco'
+import type { CreateGoalBody, Goal } from '@workspace/poco'
+import { createGoalSchema } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { DatePicker } from '@workspace/ui/components/date-picker'
-import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
-import { CurrencySelect } from '@workspace/ui/components/currency-select'
 import {
   Select,
   SelectContent,
@@ -32,19 +36,18 @@ const goalFormSchema = createGoalSchema
 type GoalFormValues = z.infer<typeof goalFormSchema>
 
 /**
- * The default values of a new goal: nothing chosen, nothing typed, the
- * tenant's main currency preselected. Built when the form opens, not at
- * module load — the balance day is the tenant's today when the user opens
- * the form, however long the tab has been alive.
+ * The default values of a new goal: nothing chosen, nothing typed. Built
+ * when the form opens, not at module load — the balance day is the
+ * tenant's today when the user opens the form, however long the tab has
+ * been alive.
  */
-const newGoal = (today: string, mainCurrency: Currency): GoalFormValues => ({
+const newGoal = (today: string): GoalFormValues => ({
   name: '',
   linkedAccountId: undefined as unknown as number,
   balance: '',
   balanceDt: today,
   targetBalance: '',
   targetDt: undefined,
-  currency: mainCurrency,
 })
 
 /** The props `GoalForm` takes. */
@@ -62,9 +65,11 @@ interface GoalFormProps {
 
 /**
  * The insert and edit form of the goals page: a name, a dropdown of the
- * tenant's Savings accounts only, the currency, the balance with the day it
- * was taken, and the target balance with its optional deadline. It renders
- * above the table; the page decides when it is open and what a submit saves.
+ * tenant's Savings accounts in the main currency, the balance with the day
+ * it was taken, and the target balance with its optional deadline. A goal
+ * has no currency of its own — it is in the tenant's main currency, which
+ * the amounts' labels name. It renders above the table; the page decides
+ * when it is open and what a submit saves.
  */
 export function GoalForm({
   goal,
@@ -88,7 +93,7 @@ export function GoalForm({
     // remounts it with that row's values.
     defaultValues:
       goal === null
-        ? newGoal(today, mainCurrency)
+        ? newGoal(today)
         : {
             name: goal.name,
             linkedAccountId: goal.linkedAccountId,
@@ -96,21 +101,25 @@ export function GoalForm({
             balanceDt: goal.balanceDt,
             targetBalance: goal.targetBalance,
             targetDt: goal.targetDt,
-            currency: goal.currency,
           },
   })
 
   const linkedAccountId = watch('linkedAccountId')
   const balanceDt = watch('balanceDt')
   const targetDt = watch('targetDt')
-  const currency = watch('currency')
   const balance = watch('balance')
   const targetBalance = watch('targetBalance')
   const accounts = useActiveAccounts()
-  // A goal tracks a Savings account: the dropdown offers only those.
-  const savings = (accounts.data ?? []).filter(
+  // A goal tracks a Savings account in the main currency — until exchange
+  // rates exist, progress is never compared across currencies, the same
+  // rule the API enforces. The dropdown offers only those.
+  const allSavings = (accounts.data ?? []).filter(
     (account) => account.type === 'Savings'
   )
+  const savings = allSavings.filter(
+    (account) => account.currency === mainCurrency
+  )
+  const otherCurrencySavings = allSavings.length - savings.length
   // The trigger's label is rendered here, not derived by base-ui from
   // `items`: a prefilled value set while the popup is closed would
   // otherwise fall back to the placeholder.
@@ -152,22 +161,11 @@ export function GoalForm({
           </FieldLabel>
           <Select
             value={linkedAccountId}
-            onValueChange={(value) => {
+            onValueChange={(value) =>
               setValue('linkedAccountId', value as number, {
                 shouldValidate: true,
               })
-
-              // A goal tracks the account's money: the currency follows
-              // the account, so progress is never compared across
-              // currencies — the same rule the API enforces.
-              const account = savings.find((item) => item.id === value)
-
-              if (account !== undefined) {
-                setValue('currency', account.currency, {
-                  shouldValidate: true,
-                })
-              }
-            }}
+            }
             items={savings.map((account) => ({
               label: account.name,
               value: account.id,
@@ -199,39 +197,19 @@ export function GoalForm({
                 : undefined
             }
           />
-        </Field>
-        <Field data-invalid={errors.currency !== undefined}>
-          <FieldLabel htmlFor="goal-currency">
-            {t('goals.currency')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
-          </FieldLabel>
-          <CurrencySelect
-            id="goal-currency"
-            value={currency}
-            onValueChange={(value) =>
-              setValue('currency', value as Currency, { shouldValidate: true })
-            }
-            codes={currencies}
-            labels={{
-              USD: t('currency.USD'),
-              BRL: t('currency.BRL'),
-              EUR: t('currency.EUR'),
-            }}
-            placeholder={t('goals.currency-placeholder')}
-            invalid={errors.currency !== undefined}
-          />
-          <FieldError
-            errors={
-              errors.currency !== undefined ? [errors.currency] : undefined
-            }
-          />
+          {otherCurrencySavings > 0 ? (
+            <FieldDescription>
+              {t('goals.account-other-currencies', {
+                count: otherCurrencySavings,
+                currency: mainCurrency,
+              })}
+            </FieldDescription>
+          ) : null}
         </Field>
         <MoneyField
           locale={i18n.language}
           className="h-8"
-          label={t('goals.balance')}
+          label={t('goals.balance-in', { currency: mainCurrency })}
           labelFor="goal-balance"
           placeholder={t('goals.amount-placeholder')}
           value={balance}
@@ -272,7 +250,7 @@ export function GoalForm({
         <MoneyField
           locale={i18n.language}
           className="h-8"
-          label={t('goals.target-balance')}
+          label={t('goals.target-balance-in', { currency: mainCurrency })}
           labelFor="goal-target-balance"
           placeholder={t('goals.amount-placeholder')}
           value={targetBalance}

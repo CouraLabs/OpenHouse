@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import { eq, inArray } from 'drizzle-orm'
+import { and, count, eq, inArray, ne } from 'drizzle-orm'
 import type { Currency, Database, TenantSettingsRow } from '@workspace/db'
-import { tenantSettings } from '@workspace/db'
+import { accounts, goals, limits, tenantSettings } from '@workspace/db'
 
 /** The database or an open transaction — a sign-up writes the settings row
  * inside the transaction that creates the tenant. */
@@ -72,6 +72,46 @@ export class SettingsRepository {
       .returning()
 
     return row
+  }
+
+  /**
+   * Counts what the main currency denominates — the tenant's ACTIVE limits
+   * and goals — and, of the goals, those whose account is not in
+   * `currency`. Read here rather than through the limits and goals
+   * features: both read the main currency through this module, so
+   * importing theirs back would close a module cycle.
+   */
+  async countDenominated(
+    tenantId: number,
+    currency: Currency
+  ): Promise<{ limits: number; goals: number; goalsOffCurrency: number }> {
+    const [[limitCount], [goalCount], [offCurrency]] = await Promise.all([
+      this.db
+        .select({ value: count() })
+        .from(limits)
+        .where(and(eq(limits.tenantId, tenantId), eq(limits.status, 'ACTIVE'))),
+      this.db
+        .select({ value: count() })
+        .from(goals)
+        .where(and(eq(goals.tenantId, tenantId), eq(goals.status, 'ACTIVE'))),
+      this.db
+        .select({ value: count() })
+        .from(goals)
+        .innerJoin(accounts, eq(goals.linkedAccountId, accounts.id))
+        .where(
+          and(
+            eq(goals.tenantId, tenantId),
+            eq(goals.status, 'ACTIVE'),
+            ne(accounts.currency, currency)
+          )
+        ),
+    ])
+
+    return {
+      limits: limitCount.value,
+      goals: goalCount.value,
+      goalsOffCurrency: offCurrency.value,
+    }
   }
 
   /** Saves the settings an owner submitted; saving confirms the zone. */

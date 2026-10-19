@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -138,6 +139,54 @@ export const tenantCodes = pgTable('tenant_codes', {
 })
 
 /**
+ * How a password reset code came to be: an owner issued it for a member, the
+ * owner generated it in advance as a recovery code, or the server command
+ * printed it. The wire spelling lives in `@workspace/poco`
+ * (`resetCodeKinds`) — keep the two in step.
+ */
+export const resetCodeKinds = ['owner_issued', 'recovery', 'server'] as const
+
+export type ResetCodeKind = (typeof resetCodeKinds)[number]
+
+/**
+ * A one-time code that sets a new password without email. Only the SHA-256
+ * of the normalized code (uppercase, no hyphen) is stored — the plaintext is
+ * shown once and never reaches the database. Invalidating an unused code
+ * expires it now, so the row stays as the audit trail of what was issued.
+ */
+export const passwordResetCodes = pgTable(
+  'password_reset_codes',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    /** The user the code sets a new password for. */
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    /** The SHA-256 (hex) of the normalized code. */
+    codeHash: text('code_hash').notNull(),
+    kind: text().$type<ResetCodeKind>().notNull(),
+    /** The owner who issued an `owner_issued` code; nothing otherwise. */
+    issuedBy: integer('issued_by'),
+    /** When the code stops working; nothing for a recovery code, which
+     * works until used or replaced by a new set. */
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    /** When the code was redeemed, or nothing while it is still open. */
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    /** When the user acknowledged a `server` code's notice, or nothing
+     * while it is still shown to them. */
+    noticeSeenAt: timestamp('notice_seen_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Redeeming looks a code up by its hash alone — the code names no user.
+    uniqueIndex('password_reset_codes_code_hash_key').on(table.codeHash),
+    index('password_reset_codes_user_id_idx').on(table.userId),
+  ]
+)
+
+/**
  * The tenant's global settings, one row per tenant, created with it. Typed
  * columns rather than key/value pairs: every setting is checked by poco and
  * by the database, and a new setting is a new column by migration.
@@ -152,7 +201,8 @@ export const tenantSettings = pgTable('tenant_settings', {
     .references(() => tenants.id),
   /** The IANA time zone that decides what "today" is for the tenant. */
   timezone: text().notNull(),
-  /** The currency new accounts, limits, and goals default to. */
+  /** The currency limits and goals are denominated in, and new accounts
+   * default to. Changing it re-denominates them without converting. */
   mainCurrency: text('main_currency').$type<Currency>().notNull(),
   /** False while a migrated tenant still runs on the `UTC` placeholder. */
   timezoneConfirmed: boolean('timezone_confirmed').notNull().default(false),
@@ -196,6 +246,8 @@ export type NewUser = typeof users.$inferInsert
 export type TenantCode = typeof tenantCodes.$inferSelect
 export type NewTenantCode = typeof tenantCodes.$inferInsert
 export type TenantSettingsRow = typeof tenantSettings.$inferSelect
+export type PasswordResetCode = typeof passwordResetCodes.$inferSelect
+export type NewPasswordResetCode = typeof passwordResetCodes.$inferInsert
 export type Category = typeof categories.$inferSelect
 export type NewCategory = typeof categories.$inferInsert
 export type UserRole = (typeof userRoles)[number]
@@ -233,10 +285,10 @@ export const limits = pgTable(
       .references(() => categories.id),
     /** The capped amount, carried as a string like "12.34". */
     amount: numeric({ precision: 16, scale: 2 }).notNull(),
-    /** The period the amount covers. */
+    /** The period the amount covers. The amount is denominated in the
+     * tenant's main currency (`tenant_settings.mainCurrency`) — currency
+     * lives on accounts only. */
     type: text().$type<LimitType>().notNull(),
-    /** The currency the amount is denominated in. */
-    currency: text().$type<Currency>().notNull(),
   },
   (table) => [
     // Every query that lists or searches limits starts from the tenant.
@@ -284,8 +336,15 @@ export const accounts = pgTable(
     type: text().$type<AccountType>().notNull(),
     /** The current balance, carried as a string like "12.34". */
     balance: numeric({ precision: 16, scale: 2 }).notNull(),
-    /** The currency the account's money is denominated in. */
+    /** The currency the account's money is denominated in — the only
+     * currency column for money that moves. Never changes after creation. */
     currency: text().$type<Currency>().notNull(),
+    /** The markup, in percent, the bank or card applies on top of the market
+     * rate when it converts a foreign amount (`"4.00"` is 4%). Stored now
+     * for the exchange-rate integration; no calculation reads it yet. */
+    spreadPct: numeric('spread_pct', { precision: 5, scale: 2 })
+      .notNull()
+      .default('0.00'),
     /** The credit card's limit; `limit` is a reserved SQL word, safe here
      * because drizzle quotes identifiers. */
     limit: numeric({ precision: 16, scale: 2 }),
@@ -306,6 +365,11 @@ export const accounts = pgTable(
     uniqueIndex('accounts_one_default_per_tenant_key')
       .on(table.tenantId)
       .where(sql`is_default`),
+    // A spread is a percentage: poco checks the shape, the database the range.
+    check(
+      'accounts_spread_pct_range',
+      sql`${table.spreadPct} >= 0 and ${table.spreadPct} <= 100`
+    ),
   ]
 )
 
@@ -340,10 +404,10 @@ export const goals = pgTable(
       precision: 16,
       scale: 2,
     }).notNull(),
-    /** The day the goal should be reached, or nothing while it has no deadline. */
+    /** The day the goal should be reached, or nothing while it has no
+     * deadline. The balances are denominated in the tenant's main currency
+     * (`tenant_settings.mainCurrency`) — currency lives on accounts only. */
     targetDt: date('target_dt'),
-    /** The currency the balances are denominated in. */
-    currency: text().$type<Currency>().notNull(),
   },
   (table) => [
     // Every query that lists or searches goals starts from the tenant.

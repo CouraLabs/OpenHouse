@@ -29,7 +29,12 @@ export function LimitUsageCard({
   usage: LimitUsage[]
   locale: string
   /** The labels the card cannot derive, translated by the page. */
-  labels: { empty: string; aria: (limit: LimitUsage) => string }
+  labels: {
+    empty: string
+    aria: (limit: LimitUsage) => string
+    /** Names the expenses in other currencies the total left out. */
+    excluded: (limit: LimitUsage) => string
+  }
 }) {
   return (
     <Card className="gap-2">
@@ -60,6 +65,11 @@ export function LimitUsageCard({
                 colorFor={colorFor}
                 aria-label={labels.aria(limit)}
               />
+              {limit.excludedCount > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  {labels.excluded(limit)}
+                </span>
+              ) : null}
             </div>
           ))
         )}

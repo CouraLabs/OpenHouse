@@ -21,7 +21,6 @@ export interface LimitWrite {
   categoryId: number
   amount: string
   type: Limit['type']
-  currency: Limit['currency']
 }
 
 /**
@@ -58,7 +57,6 @@ export class LimitRepository {
     const query = buildPagedQuery(args, this.filterToSql(tenantId, args), {
       type: limits.type,
       amount: limits.amount,
-      currency: limits.currency,
       categoryName: categories.name,
       createdDt: limits.createdDt,
       updateDt: limits.updateDt,
@@ -132,7 +130,6 @@ export class LimitRepository {
         categoryId: data.categoryId,
         amount: data.amount,
         type: data.type,
-        currency: data.currency,
         updateBy: userId,
         updateDt: new Date(),
       })
@@ -175,10 +172,6 @@ export class LimitRepository {
 
     if (args.filter.type !== undefined) {
       conditions.push(eq(limits.type, args.filter.type))
-    }
-
-    if (args.filter.currency !== undefined) {
-      conditions.push(eq(limits.currency, args.filter.currency))
     }
 
     conditions.push(eq(limits.status, args.filter.status))

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateGoalBody, Currency, Goal } from '@workspace/poco'
-import { currencies } from '@workspace/poco'
+import type { CreateGoalBody, Goal } from '@workspace/poco'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
@@ -57,10 +56,6 @@ export function GoalsPage() {
           filter.linkedAccountId === undefined
             ? undefined
             : Number(filter.linkedAccountId),
-        currency:
-          filter.currency === undefined
-            ? undefined
-            : (filter.currency as Currency),
         status: 'ACTIVE' as const,
       },
       skip: pagination.pageIndex * pagination.pageSize,
@@ -146,16 +141,6 @@ export function GoalsPage() {
             options: (accounts.data ?? []).map((account) => ({
               value: account.id,
               label: account.name,
-            })),
-          },
-          {
-            key: 'currency',
-            label: t('goals.currency'),
-            type: 'select',
-            placeholder: t('goals.filter-currency-placeholder'),
-            options: currencies.map((value) => ({
-              value,
-              label: value,
             })),
           },
         ]}

@@ -25,13 +25,32 @@ export const timeZoneSchema = z
   .string()
   .refine(isSupportedTimeZone, { error: 'Pick a supported time zone.' })
 
-/** The body `PUT settings` accepts — owner only. */
+/**
+ * The body `PUT settings` accepts — owner only. Limits and goals are
+ * denominated in the main currency, so changing it re-denominates them
+ * without converting any amount: the API answers 409 with a
+ * `CurrencyChangeConflict` until the body confirms the change.
+ */
 export const updateSettingsSchema = z.object({
   timezone: timeZoneSchema,
   mainCurrency: currencySchema,
+  confirmCurrencyChange: z.boolean().optional(),
 })
 
 export type UpdateSettingsBody = z.infer<typeof updateSettingsSchema>
+
+/** The 409 body of a main-currency change that was not confirmed: what the
+ * change would re-denominate. */
+export interface CurrencyChangeConflict {
+  message: string
+  /** The ACTIVE limits that would be read in the new currency. */
+  limits: number
+  /** The ACTIVE goals that would be read in the new currency. */
+  goals: number
+  /** Of those goals, the ones whose account is not in the new currency —
+   * they stop tracking it. */
+  goalsOffCurrency: number
+}
 
 /** The settings as `GET settings` and the session carry them. */
 export interface TenantSettings {

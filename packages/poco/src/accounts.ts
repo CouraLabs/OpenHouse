@@ -37,6 +37,20 @@ export const balanceSchema = z
   .regex(/^-?\d{1,14}(\.\d{1,2})?$/, 'Enter an amount like 12.34.')
 
 /**
+ * The spread an account's bank or card adds on top of the market rate when
+ * it converts a foreign amount, in percent: a decimal string like money
+ * (`"4.00"`), never a float, from 0 to 100 with up to two decimals.
+ */
+export const spreadPctSchema = z
+  .string()
+  .regex(/^\d{1,3}(\.\d{1,2})?$/, 'Enter a percentage like 4.00.')
+  .refine((value) => Number(value) <= 100, 'Keep the spread at 100% or less.')
+
+/** A spread above this is almost always a typo: the form warns, never
+ * refuses. */
+export const SPREAD_WARNING_PCT = 20
+
+/**
  * The body creating an account accepts. Which fields a type needs is a
  * business rule, not a shape: the refinement below makes the agency and the
  * number required for Checking and Savings, the limit and the close/due days
@@ -66,6 +80,9 @@ export const createAccountSchema = z
     balance: balanceSchema,
     /** The currency the account's money is denominated in. */
     currency: currencySchema,
+    /** The conversion spread, in percent. Optional on the wire — an
+     * account that never converts carries 0. Editable at any time. */
+    spreadPct: spreadPctSchema.prefault('0'),
     limit: amountSchema.nullish(),
     closeDay: z.number().int().min(1).max(31).nullish(),
     dueDay: z.number().int().min(1).max(31).nullish(),
@@ -200,6 +217,8 @@ export type Account = {
   type: AccountType
   balance: string
   currency: Currency
+  /** The conversion spread, in percent, like `"4.00"`. */
+  spreadPct: string
   limit: string | null
   closeDay: number | null
   dueDay: number | null
