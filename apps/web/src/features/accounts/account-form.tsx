@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
@@ -35,7 +34,7 @@ import { useMainCurrency } from '@/lib/settings.js'
  */
 const accountFormSchema = createAccountSchema
 
-type AccountFormValues = z.infer<typeof accountFormSchema>
+type AccountFormValues = z.input<typeof accountFormSchema>
 
 /** The props `AccountForm` takes. */
 interface AccountFormProps {
@@ -95,19 +94,15 @@ export function AccountForm({
   const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
-    reset,
     watch,
     setValue,
     register,
     formState: { errors },
-  } = useForm<AccountFormValues>({
+  } = useForm<AccountFormValues, unknown, CreateAccountBody>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues: newAccount(mainCurrency),
-  })
-
-  // The form holds the account it edits: switching rows resets the fields.
-  useEffect(() => {
-    reset(
+    // The page keys the form by the account it edits, so switching rows
+    // remounts it with that row's values.
+    defaultValues:
       account === null
         ? newAccount(mainCurrency)
         : {
@@ -128,9 +123,8 @@ export function AccountForm({
             closeDay: account.closeDay,
             dueDay: account.dueDay,
             isDefault: account.isDefault,
-          }
-    )
-  }, [account, mainCurrency, reset])
+          },
+  })
 
   const type = watch('type')
   const currency = watch('currency')

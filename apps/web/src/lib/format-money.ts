@@ -16,5 +16,7 @@ export function formatMoney(
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
-  }).format(amount)
+    // The formatter takes a decimal string exactly; the lib types only
+    // admit it under the numeric-literal name.
+  }).format(amount as Intl.StringNumericLiteral)
 }

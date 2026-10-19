@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import type {
-  CreateLimitBody,
-  SearchLimitsArgs,
-  UpdateLimitBody,
+import {
+  todayIn,
+  type CreateLimitBody,
+  type SearchLimitsArgs,
+  type UpdateLimitBody,
 } from '@workspace/poco'
 
 import { CategoryRepository } from '../categories/category.repository.js'
+import { Clock } from '../common/clock/clock.js'
+import { SettingsRepository } from '../settings/settings.repository.js'
 import { TransactionRepository } from '../transactions/transaction.repository.js'
 import {
   LimitRepository,
@@ -25,7 +28,9 @@ export class LimitService {
   constructor(
     private readonly repository: LimitRepository,
     private readonly categories: CategoryRepository,
-    private readonly transactions: TransactionRepository
+    private readonly transactions: TransactionRepository,
+    private readonly settings: SettingsRepository,
+    private readonly clock: Clock
   ) {}
 
   /** Creates a limit for the tenant, rejecting a category it cannot use. */
@@ -47,7 +52,8 @@ export class LimitService {
   /**
    * Reads every ACTIVE limit with what the tenant has already spent against
    * it — the sum of the expense transactions its category and currency
-   * share over the period the limit covers: its own day for a Daily limit,
+   * share over the period the limit covers, on the tenant's calendar day:
+   * its own day for a Daily limit,
    * the Monday-based week, the calendar month, the calendar year. One
    * totals query per period type answers every limit of that type.
    */
@@ -58,10 +64,14 @@ export class LimitService {
       return []
     }
 
+    // The periods run on the tenant's calendar, not the server's.
+    const settings = await this.settings.findByTenant(tenantId)
+    const today = todayIn(settings?.timezone ?? 'UTC', this.clock.now())
+
     // One window per period type the tenant actually limits with — never
     // more queries than the four periods.
     const windows = new Map(
-      rows.map((row) => [row.type, periodWindow(row.type, new Date())])
+      rows.map((row) => [row.type, periodWindow(row.type, today)])
     )
 
     const spent = new Map<string, string>()

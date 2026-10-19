@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
@@ -66,28 +65,23 @@ export function LinkerForm({
   const { t } = useTranslation()
   const {
     handleSubmit,
-    reset,
     watch,
     setValue,
     register,
     formState: { errors },
   } = useForm<LinkerFormValues>({
     resolver: zodResolver(linkerFormSchema),
-    defaultValues: NEW_LINKER,
-  })
-
-  // The form holds the linker it edits: switching rows resets the fields.
-  useEffect(() => {
-    reset(
+    // The page keys the form by the linker it edits, so switching rows
+    // remounts it with that row's values.
+    defaultValues:
       linker === null
         ? NEW_LINKER
         : {
             description: linker.description,
             categoryId: linker.categoryId,
             receiverId: linker.receiverId ?? undefined,
-          }
-    )
-  }, [linker, reset])
+          },
+  })
 
   const categoryId = watch('categoryId')
   const receiverId = watch('receiverId')

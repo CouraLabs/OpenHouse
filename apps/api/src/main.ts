@@ -1,11 +1,25 @@
 import { NestFactory } from '@nestjs/core'
+import type { NestExpressApplication } from '@nestjs/platform-express'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import { AppModule } from './app.module.js'
-import { getCorsOrigins, getPositiveInt, isProduction } from './config/env.js'
+import {
+  getCorsOrigins,
+  getInt,
+  getPositiveInt,
+  isProduction,
+} from './config/env.js'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create<NestExpressApplication>(AppModule)
+
+  // Behind a reverse proxy the client's address arrives in
+  // `X-Forwarded-For`; trusting exactly the configured hops lets the rate
+  // limiter count per client without letting a client spoof the header.
+  const proxyHops = getInt('APP_TRUST_PROXY_HOPS')
+  if (proxyHops !== undefined) {
+    app.set('trust proxy', proxyHops)
+  }
 
   // Added before the routes are mounted, so every response carries the
   // security headers.

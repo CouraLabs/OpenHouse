@@ -43,7 +43,7 @@ export function isPublic(handler: object, controller: object): boolean {
 }
 
 /** The metadata key the `Roles` decorator writes and the guard reads. */
-const ROLES_KEY = 'accepted-roles'
+export const ROLES_KEY = 'accepted-roles'
 
 /**
  * The roles a route accepts. A route without it accepts any signed-in user;

@@ -7,11 +7,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
-import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Database, UserRole } from '@workspace/db'
-import { getJwtTtls } from '../../config/env.js'
-import { isPublic, type AuthenticatedRequest, type Session } from './session.js'
-import { TokenService } from '../../auth/token.service.js'
+import type { UserRole } from '@workspace/db'
+import { isProduction } from '../../config/env.js'
+import { isPublic, ROLES_KEY, type AuthenticatedRequest } from './session.js'
+import { SessionResolver } from './session-resolver.js'
 
 /** The cookie holding the access token. Read by the guard, written at sign-in. */
 export const ACCESS_COOKIE = 'openhouse_access'
@@ -24,36 +23,24 @@ export function baseCookieOptions() {
   return {
     httpOnly: true,
     sameSite: 'lax' as const,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction(),
     path: '/',
   }
-}
-
-/** The max-age, in seconds, of the refresh cookie for a session. */
-export function refreshCookieMaxAgeS(rememberMe: boolean): number {
-  return rememberMe
-    ? getJwtTtls().rememberRefreshTtlS
-    : getJwtTtls().refreshTtlS
 }
 
 /** The roles a route accepts when it declares none: any signed-in user. */
 const ANY_ROLE: readonly UserRole[] = ['owner', 'user']
 
 /**
- * Guards every route the application does not mark public: it verifies the
- * access cookie's JWT, loads the user and their tenant from the database, and
+ * Guards every route the application does not mark public: it hands the
+ * access cookie to the `SessionResolver`, checks the route's roles, and
  * attaches the session for the decorators to read.
- *
- * The database read on every request is what keeps the tenant context
- * authoritative — the token never carries tenant data, so a user moved
- * between tenants or deactivated never keeps acting on a stale tenant.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
-    @Inject(TokenService) private readonly tokens: TokenService,
-    @Inject(Reflector) private readonly reflector: Reflector,
-    @InjectDrizzle() private readonly db: Database
+    @Inject(SessionResolver) private readonly sessions: SessionResolver,
+    @Inject(Reflector) private readonly reflector: Reflector
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -69,40 +56,13 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing session.')
     }
 
-    const claims = this.tokens.verifyAccessToken(rawToken)
-    if (claims === null) {
+    const session = await this.sessions.resolve(rawToken)
+    if (session === null) {
       throw new UnauthorizedException('Session expired or invalid.')
     }
 
-    const userId = Number.parseInt(claims.sub, 10)
-    if (!Number.isSafeInteger(userId) || userId <= 0) {
-      throw new UnauthorizedException('Session expired or invalid.')
-    }
-
-    const [row] = await this.db.query.users.findMany({
-      where: { id: userId },
-      with: { tenant: true },
-      columns: {
-        id: true,
-        tenantId: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        startPage: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      limit: 1,
-    })
-    if (row === undefined || !row.isActive || row.tenant === undefined) {
-      throw new UnauthorizedException('Session expired or invalid.')
-    }
-
-    const { tenant, ...user } = row
-    const session: Session = { user, tenant, role: user.role }
     const acceptedRoles =
-      this.reflector.getAllAndOverride<readonly UserRole[]>('accepted-roles', [
+      this.reflector.getAllAndOverride<readonly UserRole[]>(ROLES_KEY, [
         context.getHandler(),
         context.getClass(),
       ]) ?? ANY_ROLE

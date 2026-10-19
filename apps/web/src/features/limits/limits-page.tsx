@@ -210,6 +210,7 @@ export function LimitsPage() {
       />
       {formOpen ? (
         <LimitForm
+          key={editing?.id ?? 'new'}
           limit={editing}
           error={saveError}
           isSaving={save.isPending}

@@ -45,6 +45,10 @@ const VARIABLES: Record<string, VariableSpec> = {
   NODE_ENV: { kind: 'text' },
   PORT: { kind: 'positiveInteger' },
   CORS_ORIGINS: { kind: 'originList', requiredInProduction: true },
+  // How many reverse proxies sit in front of the API. Unset, the API trusts
+  // none and rate-limits by the socket's address; behind a proxy that would
+  // put every user under the proxy's one IP.
+  APP_TRUST_PROXY_HOPS: { kind: 'positiveInteger' },
   THROTTLE_TTL_MS: { kind: 'positiveInteger' },
   THROTTLE_LIMIT: { kind: 'positiveInteger' },
   DB_POOL_MAX: { kind: 'positiveInteger' },

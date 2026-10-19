@@ -229,6 +229,7 @@ export function RecurringTransactionsPage() {
       />
       {formOpen ? (
         <RecurringForm
+          key={editing?.id ?? 'new'}
           rule={editing}
           error={saveError}
           isSaving={save.isPending}

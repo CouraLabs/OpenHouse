@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
@@ -73,18 +72,14 @@ export function LimitForm({
   const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
-    reset,
     watch,
     setValue,
     formState: { errors },
   } = useForm<LimitFormValues>({
     resolver: zodResolver(limitFormSchema),
-    defaultValues: newLimit(mainCurrency),
-  })
-
-  // The form holds the limit it edits: switching rows resets the fields.
-  useEffect(() => {
-    reset(
+    // The page keys the form by the limit it edits, so switching rows
+    // remounts it with that row's values.
+    defaultValues:
       limit === null
         ? newLimit(mainCurrency)
         : {
@@ -92,9 +87,8 @@ export function LimitForm({
             amount: limit.amount,
             type: limit.type,
             currency: limit.currency,
-          }
-    )
-  }, [limit, mainCurrency, reset])
+          },
+  })
 
   const categoryId = watch('categoryId')
   const type = watch('type')

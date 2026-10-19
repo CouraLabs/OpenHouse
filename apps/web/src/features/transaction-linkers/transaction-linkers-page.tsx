@@ -191,6 +191,7 @@ export function TransactionLinkersPage() {
       />
       {formOpen ? (
         <LinkerForm
+          key={editing?.id ?? 'new'}
           linker={editing}
           error={saveError}
           isSaving={save.isPending}

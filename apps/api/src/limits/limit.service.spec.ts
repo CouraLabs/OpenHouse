@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Category, Limit } from '@workspace/db'
 
 import { CategoryRepository } from '../categories/category.repository.js'
+import type { Clock } from '../common/clock/clock.js'
+import type { SettingsRepository } from '../settings/settings.repository.js'
 import { TransactionRepository } from '../transactions/transaction.repository.js'
 import { LimitRepository } from './limit.repository.js'
 import { LimitService } from './limit.service.js'
@@ -57,6 +59,14 @@ const transactions = {
   expenseTotalsByCategory: vi.fn(async () => []),
 } as unknown as TransactionRepository
 
+/** A settings stub — the tenant keeps its calendar in São Paulo (UTC-3). */
+const settings = {
+  findByTenant: vi.fn(async () => ({ timezone: 'America/Sao_Paulo' })),
+} as unknown as SettingsRepository
+
+/** October 1st, 02:00 UTC — still September 30th in the tenant's zone. */
+const clock: Clock = { now: () => new Date('2026-10-01T02:00:00Z') }
+
 describe('LimitService', () => {
   it('creates a limit when the category is usable', async () => {
     const repo = repository()
@@ -65,7 +75,9 @@ describe('LimitService', () => {
     const service = new LimitService(
       repo as unknown as LimitRepository,
       cats as unknown as CategoryRepository,
-      transactions
+      transactions,
+      settings,
+      clock
     )
 
     const created = await service.create(1, 7, {
@@ -91,7 +103,9 @@ describe('LimitService', () => {
     const service = new LimitService(
       repo as unknown as LimitRepository,
       cats as unknown as CategoryRepository,
-      transactions
+      transactions,
+      settings,
+      clock
     )
 
     await expect(
@@ -112,7 +126,9 @@ describe('LimitService', () => {
     const service = new LimitService(
       repo as unknown as LimitRepository,
       cats as unknown as CategoryRepository,
-      transactions
+      transactions,
+      settings,
+      clock
     )
 
     await expect(
@@ -137,7 +153,9 @@ describe('LimitService', () => {
     const service = new LimitService(
       repo as unknown as LimitRepository,
       cats as unknown as CategoryRepository,
-      transactions
+      transactions,
+      settings,
+      clock
     )
 
     const updated = await service.update(1, 7, {
@@ -170,7 +188,9 @@ describe('LimitService', () => {
     const service = new LimitService(
       repo as unknown as LimitRepository,
       cats as unknown as CategoryRepository,
-      transactions
+      transactions,
+      settings,
+      clock
     )
 
     await expect(
@@ -192,7 +212,9 @@ describe('LimitService', () => {
     const service = new LimitService(
       repo as unknown as LimitRepository,
       cats as unknown as CategoryRepository,
-      transactions
+      transactions,
+      settings,
+      clock
     )
 
     await expect(service.find(1, 999)).rejects.toThrow(NotFoundException)
@@ -206,10 +228,37 @@ describe('LimitService', () => {
     const service = new LimitService(
       repo as unknown as LimitRepository,
       cats as unknown as CategoryRepository,
-      transactions
+      transactions,
+      settings,
+      clock
     )
 
     await expect(service.softDelete(1, 7, 1)).resolves.toBeUndefined()
     expect(repo.softDelete).toHaveBeenCalledWith(1, 1, 7)
+  })
+
+  it("totals usage over the period of the tenant's own calendar day", async () => {
+    const repo = repository()
+    const listActive = vi.fn(async () => [{ ...row(), categoryName: 'Office' }])
+    const expenseTotalsByCategory = vi.fn(async () => [
+      { categoryId: 3, currency: 'USD', total: '5.00' },
+    ])
+    const service = new LimitService(
+      { ...repo, listActive } as unknown as LimitRepository,
+      categories() as unknown as CategoryRepository,
+      { expenseTotalsByCategory } as unknown as TransactionRepository,
+      settings,
+      clock
+    )
+
+    const usage = await service.usage(1)
+
+    // The server's UTC day is already October; the tenant's is September.
+    expect(expenseTotalsByCategory).toHaveBeenCalledWith(
+      1,
+      '2026-09-01',
+      '2026-09-30'
+    )
+    expect(usage[0]?.spent).toBe('5.00')
   })
 })

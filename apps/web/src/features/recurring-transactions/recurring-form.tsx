@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
@@ -83,18 +82,14 @@ export function RecurringForm({
   const { t, i18n } = useTranslation()
   const {
     handleSubmit,
-    reset,
     watch,
     setValue,
     formState: { errors },
   } = useForm<RecurringFormValues>({
     resolver: zodResolver(recurringFormSchema),
-    defaultValues: NEW_RULE,
-  })
-
-  // The form holds the rule it edits: switching rows resets the fields.
-  useEffect(() => {
-    reset(
+    // The page keys the form by the rule it edits, so switching rows
+    // remounts it with that row's values.
+    defaultValues:
       rule === null
         ? NEW_RULE
         : {
@@ -106,9 +101,8 @@ export function RecurringForm({
             frequency: rule.frequency,
             frequencyDay: rule.frequencyDay ?? undefined,
             frequencyMonth: rule.frequencyMonth ?? undefined,
-          }
-    )
-  }, [rule, reset])
+          },
+  })
 
   const frequency = watch('frequency')
   const type = watch('type')

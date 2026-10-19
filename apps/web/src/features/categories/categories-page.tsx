@@ -169,6 +169,7 @@ export function CategoriesPage() {
       />
       {formOpen ? (
         <CategoryForm
+          key={editing?.id ?? 'new'}
           category={editing}
           error={saveError}
           isSaving={save.isPending}

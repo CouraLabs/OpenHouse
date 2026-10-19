@@ -8,6 +8,7 @@ import {
   Res,
   UnauthorizedException,
 } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import type { Request, Response } from 'express'
 import type { SessionResponse } from '@workspace/poco'
 import { AuthService } from './auth.service.js'
@@ -34,6 +35,13 @@ import { TokenService } from './token.service.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
 /**
+ * The attempts one IP may make at the credential routes per minute, when the
+ * limits are enforced — tight enough to slow password guessing, loose enough
+ * for a typo or two.
+ */
+const CREDENTIAL_THROTTLE = { default: { limit: 10, ttl: 60_000 } }
+
+/**
  * The routes a browser session goes through: sign up, sign in, refresh, sign
  * out, and reading the session back. The tokens never touch the response
  * body — they ride in httpOnly cookies, so scripts on the page cannot read
@@ -49,6 +57,7 @@ export class AuthController {
 
   /** Creates the tenant and its owner in one transaction, then signs in. */
   @Public()
+  @Throttle(CREDENTIAL_THROTTLE)
   @Post('sign-up')
   async signUp(
     @Body(new ZodValidationPipe(signUpSchema)) body: SignUpBody,
@@ -77,6 +86,7 @@ export class AuthController {
   /** Checks the credentials and starts a session. */
   @Public()
   @HttpCode(200)
+  @Throttle(CREDENTIAL_THROTTLE)
   @Post('sign-in')
   async signIn(
     @Body(new ZodValidationPipe(signInSchema)) body: SignInBody,
@@ -117,10 +127,10 @@ export class AuthController {
       presented
     )
 
-    // A refresh carries no remember-me: the remembered lifetime was decided
-    // at sign-in. The refreshed cookie is a session cookie again, and the
-    // server-side expiry follows the default refresh lifetime.
-    return this.establish(response, refreshed, false)
+    // The refresh token carries the sign-in's remember-me, so a remembered
+    // session stays remembered: each refresh extends it by the remembered
+    // lifetime, and an unremembered one stays a browser-session cookie.
+    return this.establish(response, refreshed, claims.rem)
   }
 
   /** Ends the session server-side and clears both cookies. */
@@ -156,13 +166,20 @@ export class AuthController {
   async changePassword(
     @CurrentSession() session: Session,
     @Body(new ZodValidationPipe(changePasswordSchema)) body: ChangePasswordBody,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response
   ): Promise<SessionResponse> {
     this.passwordChanges.consume(session.user.id)
 
     const changed = await this.auth.changePassword(session.user.id, body)
 
-    return this.establish(response, changed, false)
+    // This session keeps the remember-me it was signed in with.
+    const presented = request.cookies?.[REFRESH_COOKIE]
+    const remembered =
+      typeof presented === 'string' &&
+      this.tokens.verifyRefreshToken(presented)?.rem === true
+
+    return this.establish(response, changed, remembered)
   }
 
   /**

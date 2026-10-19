@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
@@ -79,19 +78,15 @@ export function GoalForm({
   const today = useTenantToday()
   const {
     handleSubmit,
-    reset,
     register,
     watch,
     setValue,
     formState: { errors },
   } = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
-    defaultValues: newGoal(today, mainCurrency),
-  })
-
-  // The form holds the goal it edits: switching rows resets the fields.
-  useEffect(() => {
-    reset(
+    // The page keys the form by the goal it edits, so switching rows
+    // remounts it with that row's values.
+    defaultValues:
       goal === null
         ? newGoal(today, mainCurrency)
         : {
@@ -102,9 +97,8 @@ export function GoalForm({
             targetBalance: goal.targetBalance,
             targetDt: goal.targetDt,
             currency: goal.currency,
-          }
-    )
-  }, [goal, today, mainCurrency, reset])
+          },
+  })
 
   const linkedAccountId = watch('linkedAccountId')
   const balanceDt = watch('balanceDt')

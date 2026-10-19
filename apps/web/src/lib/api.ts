@@ -98,13 +98,17 @@ function endSession(): void {
  * API must fail fast, or the session gate holds the whole app hostage on a
  * blank screen. */
 function request(path: string, init?: RequestInit): Promise<Response> {
+  // Merged, not spread: a caller's own headers add to the JSON content type
+  // instead of silently replacing it.
+  const headers = new Headers(init?.headers)
+  if (init?.body !== undefined && !headers.has('content-type')) {
+    headers.set('content-type', 'application/json')
+  }
+
   return fetch(`/api${path}`, {
     credentials: 'include',
-    headers:
-      init?.body !== undefined
-        ? { 'content-type': 'application/json' }
-        : undefined,
     ...init,
+    headers,
     signal: init?.signal ?? AbortSignal.timeout(10_000),
   })
 }

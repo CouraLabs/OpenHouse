@@ -185,6 +185,7 @@ export function ReceiversPage() {
       />
       {formOpen ? (
         <ReceiverForm
+          key={editing?.id ?? 'new'}
           receiver={editing}
           error={saveError}
           isSaving={save.isPending}

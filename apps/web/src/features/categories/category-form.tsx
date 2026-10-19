@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
@@ -47,23 +46,18 @@ export function CategoryForm({
   const {
     register,
     handleSubmit,
-    reset,
     watch,
     setValue,
     formState: { errors },
   } = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
-    defaultValues: { name: '', color: '#1D4ED8' },
-  })
-
-  // The form holds the category it edits: switching rows resets the fields.
-  useEffect(() => {
-    reset(
+    // The page keys the form by the category it edits, so switching rows
+    // remounts it with that row's values.
+    defaultValues:
       category === null
         ? { name: '', color: '#1D4ED8' }
-        : { name: category.name, color: category.color }
-    )
-  }, [category, reset])
+        : { name: category.name, color: category.color },
+  })
 
   const color = watch('color')
 

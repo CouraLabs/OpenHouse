@@ -174,6 +174,7 @@ export function AccountsPage() {
       />
       {formOpen ? (
         <AccountForm
+          key={editing?.id ?? 'new'}
           account={editing}
           error={saveError}
           isSaving={save.isPending}

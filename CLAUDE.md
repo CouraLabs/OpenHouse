@@ -39,7 +39,9 @@ apps/
       common/                   # cross-cutting infrastructure — no domain logic
         session/                # session.ts: Session type, Public/Roles decorators,
                                 #   CurrentUser/CurrentTenant/CurrentSession params;
-                                #   auth.guard.ts: AuthGuard + session cookie helpers
+                                #   auth.guard.ts: AuthGuard + session cookie helpers;
+                                #   session-resolver.ts: the abstract SessionResolver
+                                #   the guard calls and auth/ implements
         pipes/                  # generic request validation (ZodValidationPipe)
         search/                 # fetch.helper.ts: buildPagedQuery, escapeLikePattern
         clock/                  # Clock (injectable "now"; specs pass a fixed one)
@@ -56,7 +58,8 @@ apps/
         <entity>.service.ts     #   business rules; may be split per concern
                                 #   (invite-code.service.ts, recurring-run.service.ts)
         <concern>.ts            #   pure domain logic with no Nest/DB deps
-                                #   (limit-period.ts, transaction-ledger.ts)
+                                #   (limit-period.ts; transaction-ledger.ts pairs its
+                                #   money math with the row-locked balance writes)
         *.spec.ts               #   Vitest specs next to the code
     test/                       # e2e specs (*.e2e-spec.ts)
   web/

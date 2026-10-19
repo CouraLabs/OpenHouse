@@ -1,4 +1,3 @@
-import { CacheModule } from '@nestjs/cache-manager'
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { ScheduleModule } from '@nestjs/schedule'
@@ -23,8 +22,13 @@ import { RecurringTransactionsModule } from './recurring-transactions/recurring-
 import { TransactionsModule } from './transactions/transactions.module.js'
 import { TransactionLinkersModule } from './transaction-linkers/transaction-linkers.module.js'
 
-/** Requests one IP may send per `THROTTLE_TTL_MS` when the limits are enforced. */
-const THROTTLE_LIMIT = 20
+/**
+ * Requests one IP may send per `THROTTLE_TTL_MS` when the limits are enforced.
+ * Sized for the web app: one page load fans out into several queries, and a
+ * household can share an address. The credential routes set a tighter limit
+ * of their own.
+ */
+const THROTTLE_LIMIT = 300
 
 /** The window the limit is counted over, in milliseconds. */
 const THROTTLE_TTL_MS = 60_000
@@ -37,9 +41,6 @@ const THROTTLE_TTL_MS = 60_000
       cache: true,
       validate: validateEnv,
     }),
-    // The in-memory store is enough while the API is a single process. A
-    // shared store (Redis) is what a second replica would need.
-    CacheModule.register({ isGlobal: true }),
     // Powers the recurring rules' background cron.
     ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({

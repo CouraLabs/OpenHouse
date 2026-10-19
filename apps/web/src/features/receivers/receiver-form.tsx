@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
@@ -63,27 +62,22 @@ export function ReceiverForm({
   const { t } = useTranslation()
   const {
     handleSubmit,
-    reset,
     watch,
     setValue,
     register,
     formState: { errors },
   } = useForm<ReceiverFormValues>({
     resolver: zodResolver(receiverFormSchema),
-    defaultValues: NEW_RECEIVER,
-  })
-
-  // The form holds the receiver it edits: switching rows resets the fields.
-  useEffect(() => {
-    reset(
+    // The page keys the form by the receiver it edits, so switching rows
+    // remounts it with that row's values.
+    defaultValues:
       receiver === null
         ? NEW_RECEIVER
         : {
             name: receiver.name,
             type: receiver.type,
-          }
-    )
-  }, [receiver, reset])
+          },
+  })
 
   const type = watch('type')
 

@@ -18,10 +18,17 @@ import type {
 } from '@workspace/db'
 import { tenants, tenantCodes, users } from '@workspace/db'
 import { toStartPage, type SessionResponse } from '@workspace/poco'
-import { getJwtTtls } from '../config/env.js'
 import type { Session } from '../common/session/session.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
+import { JWT_TTLS, type JwtTtls } from './jwt-ttls.js'
 import { hashToken, TokenService } from './token.service.js'
+
+/**
+ * A hash no password matches, compared against when the email is unknown so
+ * a sign-in costs one bcrypt round either way — the response time does not
+ * reveal which emails have an account.
+ */
+const NO_USER_HASH = bcrypt.hashSync('no-user-has-this-password', 10)
 
 /**
  * The piece of a user the API shares with the web app: never the password
@@ -59,7 +66,8 @@ export class AuthService {
   constructor(
     @InjectDrizzle() private readonly db: Database,
     @Inject(TokenService) private readonly tokens: TokenService,
-    @Inject(SettingsRepository) private readonly settings: SettingsRepository
+    @Inject(SettingsRepository) private readonly settings: SettingsRepository,
+    @Inject(JWT_TTLS) private readonly ttls: JwtTtls
   ) {}
 
   /**
@@ -193,8 +201,10 @@ export class AuthService {
       .from(users)
       .where(eq(sql`lower(${users.email})`, normalizeEmail(body.email)))
 
-    const passwordMatches =
-      user !== undefined && (await bcrypt.compare(body.password, user.password))
+    const passwordMatches = await bcrypt.compare(
+      body.password,
+      user?.password ?? NO_USER_HASH
+    )
     if (!passwordMatches || user === undefined || !user.isActive) {
       throw new UnauthorizedException('Invalid email or password.')
     }
@@ -301,19 +311,22 @@ export class AuthService {
     refreshMaxAgeS: number
   }> {
     const accessToken = this.tokens.signAccessToken(user.id)
-    const { token: refreshToken } = this.tokens.signRefreshToken(user.id)
+    const { token: refreshToken } = this.tokens.signRefreshToken(
+      user.id,
+      rememberMe
+    )
     await this.db
       .update(users)
       .set({ refreshTokenHash: hashToken(refreshToken), updatedAt: new Date() })
       .where(eq(users.id, user.id))
 
-    const ttls = getJwtTtls()
-
     return {
       accessToken,
       refreshToken,
-      accessMaxAgeS: ttls.accessTtlS,
-      refreshMaxAgeS: rememberMe ? ttls.rememberRefreshTtlS : ttls.refreshTtlS,
+      accessMaxAgeS: this.ttls.accessTtlS,
+      refreshMaxAgeS: rememberMe
+        ? this.ttls.rememberRefreshTtlS
+        : this.ttls.refreshTtlS,
     }
   }
 

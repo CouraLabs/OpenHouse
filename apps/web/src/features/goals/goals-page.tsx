@@ -193,6 +193,7 @@ export function GoalsPage() {
       />
       {formOpen ? (
         <GoalForm
+          key={editing?.id ?? 'new'}
           goal={editing}
           error={saveError}
           isSaving={save.isPending}
