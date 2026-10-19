@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { AuthHero } from '@/components/layout/auth-hero.js'
+import { BrandName } from '@/components/layout/brand-name.js'
 import { BrandMark } from '@workspace/ui/components/brand-mark'
 import { LocaleSwitcher } from '@/components/layout/locale-switcher.js'
 import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
@@ -13,8 +13,6 @@ import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
  * exists.
  */
 export function AuthLayout({ children }: { children: ReactNode }) {
-  const { t } = useTranslation()
-
   return (
     <div className="grid min-h-[100dvh] gap-3 p-3 md:grid-cols-2">
       <AuthHero />
@@ -22,9 +20,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <BrandMark />
-            <span className="font-heading text-lg tracking-tight">
-              {t('app.name')}
-            </span>
+            <BrandName className="font-heading text-lg tracking-tight" />
           </div>
           <div className="flex items-center gap-1">
             <ThemeSwitcher />

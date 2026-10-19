@@ -1,25 +1,26 @@
-import { useTranslation } from 'react-i18next'
+import { Link } from '@tanstack/react-router'
 
 import { BrandMark } from '@workspace/ui/components/brand-mark'
 import { SidebarHeader } from '@workspace/ui/components/sidebar'
 
-/** The non-interactive brand block: logo mark, app name, tenant name. */
-export function BrandHeader({ tenantName }: { tenantName: string }) {
-  const { t } = useTranslation()
+import { BrandName } from './brand-name.js'
 
+/** The brand block, linking home: logo mark, app name, tenant name. */
+export function BrandHeader({ tenantName }: { tenantName: string }) {
   return (
     <SidebarHeader>
-      <div className="flex items-center gap-3 px-2 py-2">
+      <Link
+        to="/"
+        className="flex items-center gap-3 rounded-md px-2 py-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
         <BrandMark />
         <div className="grid flex-1 leading-tight">
-          <span className="truncate font-heading text-lg tracking-tight">
-            {t('app.name')}
-          </span>
+          <BrandName className="truncate font-heading text-lg tracking-tight" />
           <span className="truncate text-xs text-muted-foreground">
             {tenantName}
           </span>
         </div>
-      </div>
+      </Link>
     </SidebarHeader>
   )
 }

@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   House,
   Landmark,
+  LayoutDashboard,
   Lightbulb,
   Link,
   Percent,
@@ -36,6 +37,13 @@ export type NavSubgroup = {
 export type NavGroup = {
   key: string
   items: Array<NavItem | CollapsibleNavItem | NavSubgroup>
+}
+
+/** The home page entry, standing alone above every group. */
+export const DASHBOARD_ITEM: NavItem = {
+  key: 'nav.dashboard',
+  to: '/',
+  icon: LayoutDashboard,
 }
 
 /** The financial records a signed-in user manages, ordered by use: daily activity first, then setup, planning, and tips. */

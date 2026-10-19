@@ -1,11 +1,14 @@
 {
   "app": {
     "name": "OpenHouse",
+    "name-styled": "<accent>Open</accent>House",
     "eyebrow": "Household finance",
     "headline": "Every coin in the house, in its place.",
     "tagline": "Accounts, budgets, and goals kept together — calm, clear, and yours."
   },
   "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
     "financial": "Financial",
     "subgroup": {
       "setup": "Setup",
@@ -512,8 +515,9 @@
     "dashboard-other": "Other",
     "dashboard-goal-aria": "{{name}} progress toward the target",
     "dashboard-limit-aria": "{{name}} usage against the limit",
-    "cards-show": "Show cards",
-    "cards-hide": "Hide cards",
+    "view": "View",
+    "view-transactions": "Transactions",
+    "view-metrics": "Metrics",
     "group-incomes": "Incomes",
     "group-expenses": "Expenses",
     "group-net": "Net",

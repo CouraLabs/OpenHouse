@@ -10,8 +10,6 @@ import type {
 } from '@workspace/poco'
 import {
   ArrowLeftRight,
-  ChevronDown,
-  ChevronUp,
   Gauge,
   PieChart,
   Plus,
@@ -41,6 +39,7 @@ import { mainCurrencyFirst } from '@/lib/main-currency-first.js'
 import { TransactionForm } from './transaction-form.js'
 import { TransactionGrid } from './transaction-grid.js'
 import { TransferForm } from './transfer-form.js'
+import { type TransactionsView, ViewToggle } from './view-toggle.js'
 import {
   useExpenseBreakdown,
   useGoals,
@@ -105,9 +104,9 @@ export function TransactionsPage() {
   // The rows the selection checkbox column holds.
   const [selection, setSelection] = useState<Set<number>>(new Set())
 
-  // Whether the summary and dashboard cards are on screen: the grid alone
-  // is the daily workhorse, and the cards fold away when it is.
-  const [cardsOpen, setCardsOpen] = useState(true)
+  // Which body is on screen: the grid (the daily workhorse, so the default)
+  // or the summary and dashboard cards — one or the other, never both.
+  const [view, setView] = useState<TransactionsView>('transactions')
 
   const accounts = useActiveAccounts()
   const categories = useActiveCategories()
@@ -378,17 +377,15 @@ export function TransactionsPage() {
         subtitle={t('transactions.subtitle')}
         actions={
           <>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={cardsOpen}
-              onClick={() => setCardsOpen((open) => !open)}
-            >
-              {cardsOpen ? <ChevronUp /> : <ChevronDown />}
-              {cardsOpen
-                ? t('transactions.cards-hide')
-                : t('transactions.cards-show')}
-            </Button>
+            <ViewToggle
+              value={view}
+              onChange={setView}
+              labels={{
+                group: t('transactions.view'),
+                transactions: t('transactions.view-transactions'),
+                metrics: t('transactions.view-metrics'),
+              }}
+            />
             <MonthFilter
               label={monthLabel}
               onPrevious={() => setAnchor((current) => shiftMonth(current, -1))}
@@ -488,7 +485,7 @@ export function TransactionsPage() {
       {/* The applied filters lead the page: the cards answer to them as
        * much as the grid does. */}
       <FilterChips chips={chips} />
-      {cardsOpen ? (
+      {view === 'metrics' ? (
         <>
           <SummaryCards
             groups={mainCurrencyFirst(summary.data?.groups ?? [], mainCurrency)}
@@ -573,47 +570,48 @@ export function TransactionsPage() {
             />
           </div>
         </>
-      ) : null}
-      <TransactionGrid
-        rows={rows}
-        locale={i18n.language}
-        labels={{
-          description: t('transactions.name'),
-          when: t('transactions.when'),
-          category: t('transactions.category-account'),
-          amount: t('transactions.amount'),
-          status: t('transactions.status'),
-          selectAll: t('transactions.select-all'),
-          selectRow: t('transactions.select-row'),
-          groupIncomes: t('transactions.group-incomes'),
-          groupExpenses: t('transactions.group-expenses'),
-          groupNet: t('transactions.group-net'),
-          loading: t('transactions.loading'),
-        }}
-        selection={selection}
-        onToggleRow={toggleRow}
-        onToggleAll={toggleAll}
-        actions={{
-          onEdit: (transaction) => {
-            setEditing(transaction)
-            save.reset()
-            setFormOpen(true)
-          },
-          onDelete: (transaction) => {
-            // Deleting any row cancels the edit in progress: the sheet
-            // would otherwise keep editing a row the grid no longer holds.
-            setFormOpen(false)
-            setEditing(null)
-            save.reset()
-            setDeleting(transaction)
-          },
-          onStatusChange: changeStatus,
-        }}
-        hasMore={hasMore}
-        isFetchingNextPage={search.isFetchingNextPage}
-        onLoadMore={() => void search.fetchNextPage()}
-        emptyMessage={t('transactions.empty')}
-      />
+      ) : (
+        <TransactionGrid
+          rows={rows}
+          locale={i18n.language}
+          labels={{
+            description: t('transactions.name'),
+            when: t('transactions.when'),
+            category: t('transactions.category-account'),
+            amount: t('transactions.amount'),
+            status: t('transactions.status'),
+            selectAll: t('transactions.select-all'),
+            selectRow: t('transactions.select-row'),
+            groupIncomes: t('transactions.group-incomes'),
+            groupExpenses: t('transactions.group-expenses'),
+            groupNet: t('transactions.group-net'),
+            loading: t('transactions.loading'),
+          }}
+          selection={selection}
+          onToggleRow={toggleRow}
+          onToggleAll={toggleAll}
+          actions={{
+            onEdit: (transaction) => {
+              setEditing(transaction)
+              save.reset()
+              setFormOpen(true)
+            },
+            onDelete: (transaction) => {
+              // Deleting any row cancels the edit in progress: the sheet
+              // would otherwise keep editing a row the grid no longer holds.
+              setFormOpen(false)
+              setEditing(null)
+              save.reset()
+              setDeleting(transaction)
+            },
+            onStatusChange: changeStatus,
+          }}
+          hasMore={hasMore}
+          isFetchingNextPage={search.isFetchingNextPage}
+          onLoadMore={() => void search.fetchNextPage()}
+          emptyMessage={t('transactions.empty')}
+        />
+      )}
       {deleteError ? (
         <p className="text-sm text-destructive">{deleteError}</p>
       ) : null}
