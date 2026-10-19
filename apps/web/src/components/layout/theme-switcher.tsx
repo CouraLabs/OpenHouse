@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu'
 
-import { useTheme } from '@/components/layout/theme-provider.js'
+import { useTheme } from '@workspace/ui/components/theme-provider'
 
 /** The themes the switcher offers, in display order. */
 const THEMES = ['light', 'dark', 'system'] as const

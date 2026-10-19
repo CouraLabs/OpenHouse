@@ -18,7 +18,7 @@ export function AppSidebar({
   tenantName: string
 }) {
   return (
-    <Sidebar>
+    <Sidebar variant="inset">
       <BrandHeader tenantName={tenantName} />
       <SidebarContent>
         <NavGroupContent group={FINANCIAL_GROUP} />

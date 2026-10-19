@@ -12,7 +12,7 @@ import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
  */
 export function AppHeader() {
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-sidebar px-4">
+    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-foreground/[0.06] bg-background/40 px-4 backdrop-blur-2xl backdrop-saturate-150 md:rounded-t-3xl md:px-6">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-2 h-4 self-center!" />
       <Breadcrumb>

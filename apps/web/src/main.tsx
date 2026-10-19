@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import '@workspace/ui/globals.css'
 import '@/lib/i18n.js'
 import { App } from './App.tsx'
-import { ThemeProvider } from '@/components/layout/theme-provider.tsx'
+import { ThemeProvider } from '@workspace/ui/components/theme-provider'
 
 const rootElement = document.getElementById('root')
 

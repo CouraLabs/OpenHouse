@@ -15,7 +15,10 @@ export function NavButtonItem({ item }: { item: NavItem }) {
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton render={<Link to={item.to} />}>
+      <SidebarMenuButton
+        render={<Link to={item.to} activeOptions={{ exact: true }} />}
+        className="data-[status=active]:bg-sidebar-accent data-[status=active]:font-medium data-[status=active]:text-sidebar-accent-foreground"
+      >
         {Icon ? <Icon /> : null}
         <span>{t(item.key)}</span>
       </SidebarMenuButton>

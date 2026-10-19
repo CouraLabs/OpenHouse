@@ -38,7 +38,12 @@ export function CollapsibleNavItemView({ item }: { item: CollapsibleNavItem }) {
           <SidebarMenuSub>
             {item.children.map((child) => (
               <SidebarMenuSubItem key={child.key}>
-                <SidebarMenuSubButton render={<Link to={child.to} />}>
+                <SidebarMenuSubButton
+                  render={
+                    <Link to={child.to} activeOptions={{ exact: true }} />
+                  }
+                  className="data-[status=active]:bg-sidebar-accent data-[status=active]:font-medium data-[status=active]:text-sidebar-accent-foreground"
+                >
                   <span>{t(child.key)}</span>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>

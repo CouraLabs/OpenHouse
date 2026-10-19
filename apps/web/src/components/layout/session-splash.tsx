@@ -1,4 +1,4 @@
-import { House } from 'lucide-react'
+import { BrandMark } from '@workspace/ui/components/brand-mark'
 
 /**
  * What the session gate renders while the first `/auth/me` call settles. A
@@ -8,8 +8,8 @@ import { House } from 'lucide-react'
  */
 export function SessionSplash() {
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background">
-      <House className="size-8 animate-pulse text-muted-foreground" />
+    <div className="flex min-h-svh items-center justify-center">
+      <BrandMark className="size-12 animate-pulse" />
     </div>
   )
 }

@@ -1,6 +1,9 @@
 {
   "app": {
-    "name": "OpenHouse"
+    "name": "OpenHouse",
+    "eyebrow": "Household finance",
+    "headline": "Every coin in the house, in its place.",
+    "tagline": "Accounts, budgets, and goals kept together — calm, clear, and yours."
   },
   "nav": {
     "financial": "Financial",

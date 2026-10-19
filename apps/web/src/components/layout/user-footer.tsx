@@ -31,7 +31,7 @@ export function UserFooter({ user }: { user: SessionUser }) {
           render={
             <button
               type="button"
-              className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-sidebar-accent"
+              className="flex w-full items-center gap-2.5 rounded-2xl p-2 text-left transition-colors hover:bg-sidebar-accent"
             />
           }
         >
