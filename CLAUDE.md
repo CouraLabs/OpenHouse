@@ -2,7 +2,25 @@
 - Turborepo: the agent-guidance block at the bottom of this file, plus the
   bundled docs inside the installed `turbo` package (`node -p
   "require.resolve('turbo/package.json')"` → `docs/README.md`).
-- Dev-loop skills read: **./.agents/skills/umad/SKILL.md** (the `umad` skill set entry point)
+- Project skills live in `.claude/skills/`: `nestjs-best-practices` (api),
+  `react-best-practices` (web `.tsx`), `typescript-best-practices` (any
+  `.ts`/`.tsx`). Load the matching one before writing code in that area.
+
+## COMMANDS
+
+Run from the repo root; each fans out through turbo to every workspace.
+
+```
+npm run dev            # api + web in watch mode
+npm run build
+npm run typecheck
+npm run lint           # biome
+npm run format         # prettier
+npm run test           # vitest unit specs
+npm run test:e2e       # api e2e specs (apps/api/test/), needs DATABASE_URL
+npm run db:generate    # drizzle migration from packages/db schema
+npm run db:migrate
+```
 
 ## PROJECT STRUCTURE
 
@@ -14,39 +32,53 @@ never invert.
 apps/
   api/
     src/
-      main.ts                  # bootstrap only: middleware, CORS, shutdown hooks
-      app.module.ts            # composition root: wires modules and global guards
-      app.controller.ts|spec   # health/root route
-      config/                  # environment: env.ts validation, env.spec.ts
-      common/                  # cross-cutting infrastructure — no domain logic
-        session/               # Session type, Public/Roles/CurrentUser decorators, AuthGuard
-        pipes/                 # generic request validation (ZodValidationPipe)
-        search/                # fetch.helper.ts: buildPagedQuery, escapeLikePattern
-      <feature>/               # a domain feature (auth/, tenants/, categories/, limits/):
-        <feature>.module.ts    #   Nest module — wires the feature's providers; exports
-                               #   a repository when another feature may need its rows
-        <feature>.controller.ts#   routes: HTTP shape, status codes, DTO mapping (toWire)
-        <entity>.repository.ts #   Drizzle queries: tenant passed explicitly, paged
-                               #   search via buildPagedQuery, sortable-column whitelist
-        <entity>.service.ts    #   business rules; may be split per concern (invite-code.service.ts)
-        <entity>.service.spec.ts #  Vitest specs next to the code
+      main.ts                   # bootstrap only: middleware, CORS, shutdown hooks
+      app.module.ts             # composition root: wires modules and global guards
+      app.controller.ts|spec    # health/root route (app.service.ts backs it)
+      config/                   # environment: env.ts validation, env.spec.ts
+      common/                   # cross-cutting infrastructure — no domain logic
+        session/                # session.ts: Session type, Public/Roles decorators,
+                                #   CurrentUser/CurrentTenant/CurrentSession params;
+                                #   auth.guard.ts: AuthGuard + session cookie helpers
+        pipes/                  # generic request validation (ZodValidationPipe)
+        search/                 # fetch.helper.ts: buildPagedQuery, escapeLikePattern
+      <feature>/                # a domain feature (auth/, tenants/, accounts/, categories/,
+                                #   limits/, goals/, receivers/, transactions/,
+                                #   recurring-transactions/, transaction-linkers/):
+        <feature>.module.ts     #   Nest module — wires the feature's providers; exports
+                                #   a repository when another feature may need its rows
+        <feature>.controller.ts #   routes: HTTP shape, status codes, DTO mapping (toWire)
+        <entity>.repository.ts  #   Drizzle queries: tenant passed explicitly, paged
+                                #   search via buildPagedQuery, sortable-column whitelist
+        <entity>.service.ts     #   business rules; may be split per concern
+                                #   (invite-code.service.ts, recurring-run.service.ts)
+        <concern>.ts            #   pure domain logic with no Nest/DB deps
+                                #   (limit-period.ts, transaction-ledger.ts)
+        *.spec.ts               #   Vitest specs next to the code
+    test/                       # e2e specs (*.e2e-spec.ts)
   web/
     src/
-      App.tsx                  # query client + router composition
-      main.tsx                 # React root
-      features/                # one directory per route/feature (sign-in/, sign-up/, main/,
-                               # categories/, limits/): page, forms, columns, hooks
+      App.tsx                   # query client + router composition
+      main.tsx                  # React root
+      features/                 # one directory per route/feature (sign-in/, main/,
+                                #   transactions/, limits/, rent-vs-buy/, …): page,
+                                #   forms, columns, hooks, feature-local pure logic
       components/
-        layout/                # shell/shared chrome: theme-provider, headers, shells
-                               # (shadcn primitives live in packages/ui/src/components)
-      lib/                     # transport and shared client logic: api.ts, auth.ts, router.tsx,
-                               # i18n.ts, format-money.ts, use-debounced-value.ts
-      locales/                 # <locale>.json — every user-facing label (en-US.json today)
+        layout/                 # app shell chrome: shells, header, sidebar, nav,
+                                #   breadcrumbs, theme/locale switchers
+        page-header.tsx         # shared page title block (candidate for packages/ui)
+      lib/                      # transport and shared client logic: api.ts, auth.ts,
+                                #   query.ts, router.tsx, i18n.ts, format-money.ts,
+                                #   format-date-only.ts, finance.ts, use-debounced-value.ts
+      locales/                  # <locale>.json — every user-facing label (en-US.json today)
 packages/
-  poco/                        # shared contracts: zod request schemas + wire DTO types.
-                               #   The single source both api validation and web forms run.
-  db/                          # schema, relations, DatabaseModule — the only schema owner
-  ui/                          # shared design system consumed by web
+  poco/                         # shared contracts: zod request schemas + wire DTO types,
+                                #   one file per feature. The single source both api
+                                #   validation and web forms run.
+  db/                           # schema, relations, DatabaseModule — the only schema owner
+  ui/                           # shared design system consumed by web: components/
+                                #   (shadcn primitives + DataTable, FilterDialog,
+                                #   MoneyField, ConfirmDialog, …), hooks/, lib/, styles/
 ```
 
 ### Rules for growing it
@@ -71,8 +103,8 @@ packages/
    belongs in a feature (or a new shared *domain* module, deliberately created).
 4. **Web features are vertical.** A page, its forms, its hooks, and its
    feature-local components live together in `features/<feature>/`. Lift a
-   component to `components/` only when a second feature uses it — never
-   pre-emptively. Generated shadcn primitives always land in
+   component out only when a second feature uses it — never pre-emptively —
+   and lift it per rule 10. Generated shadcn primitives always land in
    `packages/ui/src/components/`.
 5. **Schema lives only in `packages/db`.** API and web consume its types; no
    feature re-declares table shapes.
@@ -98,9 +130,10 @@ packages/
    humans) — the web never resolves foreign-key ids into labels.
 6b. **Money is a string end to end.** A `numeric` column maps to a string
    (`"12.34"`); poco validates the decimal shape with a regex; the web formats
-   for display through `lib/format-money.ts` (USD fixed, separators from the
-   i18next locale) and inputs it through `MoneyField` (packages/ui), whose
-   reverse masking (digits typed are cents) is locale-aware. Money never
+   for display through `lib/format-money.ts` (the row's `Currency` from poco
+   picks the symbol, defaulting to USD; the i18next locale picks separators
+   and symbol placement) and inputs it through `MoneyField` (packages/ui),
+   whose reverse masking (digits typed are cents) is locale-aware. Money never
    crosses a float.
 7. **Environment is read only in `config/`.** Feature code receives values via
    injection or module factories, never by calling `env.ts` helpers from deep
@@ -114,8 +147,9 @@ packages/
    single-use helpers used only by that component may stay inline, but anything
    exported is its own file.
 10. **Reusable components go to `packages/ui`.** A component needed by more
-    than one feature (or app) belongs in the shared design system, not in
-    `apps/web/src/components/`.
+    than one feature (or app) belongs in the shared design system. Only
+    app-coupled chrome — pieces that read the router, session, or i18n
+    directly — stays in `apps/web/src/components/` (today: `layout/`).
 10a. **Components in `packages/ui` stay label-agnostic.** They render what
     the caller passes — every user-facing string comes in through props or
     `labels` objects, translated by the feature. The data table toolbar
@@ -143,7 +177,6 @@ sub-domain splitting, or web needs shared data-access layers), change the
 contract here first, then the code — this file is the source of truth agents
 navigate by.
 
-<!-- BEGIN:umad-context -->
 ## Project rules
 
 - Required-field markers follow the database: a form field carries the red `*`
@@ -167,8 +200,6 @@ navigate by.
   on the `items`-derived label. `Select`/`RadioGroup` take generic
   `value`/`onValueChange` — numbers work at runtime, but the prop's default
   generic only admits strings, so cast at the boundary.
-
-<!-- END:umad-context -->
 
 <!-- BEGIN:turborepo-agent-rules -->
 
