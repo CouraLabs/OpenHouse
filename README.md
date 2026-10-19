@@ -139,29 +139,142 @@ Run these from the repo root. Turbo runs each one in every workspace.
 To scope a command to one workspace, use a Turbo filter, for example
 `npm run test -- --filter=api`.
 
-## Self-hosting with Docker
+## Deploy
 
-`docker-compose.yml` starts the API and a PostgreSQL database. The production
-API refuses to start without `CORS_ORIGINS`, so set it to the origin your web
-app is served from:
+The repository ships everything a self-hosted deployment needs: a
+multi-target `Dockerfile` and a `docker-compose.yml` that runs the whole
+stack. The browser only ever talks to the web container. nginx serves the
+app and forwards `/api` to the API, so the page and the API share one origin
+and the session cookies are never cross-site.
+
+| Service   | Image target | What it does                                                  |
+| --------- | ------------ | ------------------------------------------------------------- |
+| `db`      | `postgres:17-alpine` | PostgreSQL. Data lives in the `db-data` volume        |
+| `migrate` | `migrate`    | Applies pending migrations, then exits                        |
+| `api`     | `api`        | The NestJS API. Starts only after `migrate` succeeds          |
+| `web`     | `web`        | nginx: the static web build, plus the `/api` proxy. The only published port |
+
+### Requirements
+
+- Docker with Compose v2 (`docker compose`)
+- For anything beyond a local trial: a domain and HTTPS. In production the
+  session cookies are `Secure`, so browsers only send them over HTTPS.
+  Chrome and Firefox make an exception for `http://localhost`; Safari does not.
+
+### 1. Configure
 
 ```sh
-CORS_ORIGINS=https://openhouse.example.com docker compose up --build
+cp .env.example .env
 ```
 
-Compose does not run migrations, and the database publishes no port. To
-migrate, publish the port for one command and run the migration from the
-host:
+Set at least `JWT_SECRET`, and check the rest:
+
+| Variable               | Default                 | Notes                                                                  |
+| ---------------------- | ----------------------- | ---------------------------------------------------------------------- |
+| `JWT_SECRET`           | (none, required)        | Signs the session tokens. `openssl rand -base64 48`. Keep it stable: changing it signs everyone out |
+| `PUBLIC_ORIGIN`        | `http://localhost:8080` | The exact origin users open, e.g. `https://openhouse.example.com`. The API only accepts browser requests from it |
+| `WEB_PORT`             | `8080`                  | The host port the web container is published on                       |
+| `POSTGRES_PASSWORD`    | `postgres`              | Set it before the first start. PostgreSQL keeps the password it was initialized with in its volume |
+| `APP_TRUST_PROXY_HOPS` | `1`                     | Proxies between the client and the API. The bundled nginx is 1; a TLS terminator in front makes it 2 |
+
+### 2. Start
 
 ```sh
-docker compose run --rm -p 5433:5432 db
-DATABASE_URL=postgres://postgres:postgres@localhost:5433/openhouse npm run db:migrate
+docker compose up --build -d
 ```
 
-In production, also set `JWT_SECRET`. `apps/api/.env.example` documents every
-API variable, and `apps/api/src/config/env.ts` validates them at boot. The web
-app is a static Vite build (`apps/web/dist`). Serve it from any static host and
-route `/api` to the API.
+Compose starts the database, runs the migrations, starts the API, and then
+starts the web container. Open `PUBLIC_ORIGIN` and sign up. The first sign-up
+creates your household, and other members join with an invite code from the
+settings.
+
+To check on the stack:
+
+```sh
+docker compose ps
+docker compose logs -f api
+```
+
+### 3. Put HTTPS in front
+
+Point a TLS-terminating proxy at the web container's port. With
+[Caddy](https://caddyserver.com), which fetches certificates on its own, the
+whole `Caddyfile` is:
+
+```
+openhouse.example.com {
+  reverse_proxy localhost:8080
+}
+```
+
+Then set these in `.env` and run `docker compose up -d` again:
+
+```sh
+PUBLIC_ORIGIN=https://openhouse.example.com
+APP_TRUST_PROXY_HOPS=2   # Caddy + the bundled nginx
+```
+
+`APP_TRUST_PROXY_HOPS` must match the real number of proxies. If it's too low,
+every user is rate-limited as a single address. If it's too high, a client can
+spoof its own address in `X-Forwarded-For`.
+
+### Updating
+
+```sh
+git pull
+docker compose up --build -d
+```
+
+The `migrate` service applies new migrations before the new API starts. The
+web app is an installable PWA, and its service worker picks up the new build
+on the next reload.
+
+### Backups
+
+All state is in PostgreSQL:
+
+```sh
+docker compose exec db pg_dump -U postgres openhouse > openhouse-$(date +%F).sql
+cat openhouse-2026-10-19.sql | docker compose exec -T db psql -U postgres openhouse   # restore
+```
+
+### Rate limits
+
+In production, every route allows 300 requests per minute per client
+(`THROTTLE_LIMIT` / `THROTTLE_TTL_MS`). Sign-in and sign-up allow 10 attempts
+per minute, and password changes allow 5 per 15 minutes per user.
+
+### Deploying without Docker
+
+1. Build: `npm ci && npm run build -- --filter=api --filter=web`.
+2. Migrate: `DATABASE_URL=… npm run db:migrate`.
+3. Run the API with `NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET`, and
+   `CORS_ORIGINS` (your public origin) set: `node apps/api/dist/main.js`. It
+   listens on `PORT` (default 3000). `apps/api/.env.example` documents every
+   variable, and `apps/api/src/config/env.ts` rejects bad values at boot.
+4. Serve `apps/web/dist` as static files on the same origin. Route `/api/*`
+   to the API **with the `/api` prefix stripped**, and fall back to
+   `index.html` for client routes. `apps/web/nginx.conf` is a working
+   example. Serve `sw.js` and `index.html` with `Cache-Control: no-cache`.
+5. Set `APP_TRUST_PROXY_HOPS` to the number of proxies in front of the API.
+
+### The landing page
+
+`apps/landing` is a separate static site with no API. Build it with the URL
+of your deployed web app, then host `apps/landing/dist` anywhere static:
+
+```sh
+VITE_APP_URL=https://openhouse.example.com npm run build -- --filter=landing
+```
+
+### Checklist
+
+- [ ] `JWT_SECRET` set to a long random value, and backed up
+- [ ] `POSTGRES_PASSWORD` changed before the first start
+- [ ] `PUBLIC_ORIGIN` is the exact HTTPS origin users open
+- [ ] HTTPS in front of the web container
+- [ ] `APP_TRUST_PROXY_HOPS` matches the proxies in front of the API
+- [ ] A scheduled `pg_dump`
 
 ## Contributing
 

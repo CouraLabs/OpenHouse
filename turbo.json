@@ -51,6 +51,7 @@
         "PORT",
         "NODE_ENV",
         "CORS_ORIGINS",
+        "APP_TRUST_PROXY_HOPS",
         "THROTTLE_TTL_MS",
         "THROTTLE_LIMIT",
         "JWT_SECRET",
