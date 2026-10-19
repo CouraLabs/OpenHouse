@@ -50,6 +50,42 @@ export class CategoryRepository {
     return row
   }
 
+  /**
+   * Answers the tenant's ACTIVE category with this name (case-insensitive),
+   * creating it the first time. `ON CONFLICT DO NOTHING` against the
+   * partial unique name index makes it race-safe: a concurrent creator makes
+   * this insert wait and then yield, and the follow-up select reads the row
+   * it committed.
+   */
+  async getOrCreateByName(
+    tenantId: number,
+    userId: number,
+    data: CategoryWrite
+  ): Promise<Category> {
+    const [created] = await this.db
+      .insert(categories)
+      .values({ tenantId, createdBy: userId, updateBy: userId, ...data })
+      .onConflictDoNothing()
+      .returning()
+
+    if (created !== undefined) {
+      return created
+    }
+
+    const [existing] = await this.db
+      .select()
+      .from(categories)
+      .where(
+        and(
+          eq(categories.tenantId, tenantId),
+          eq(categories.status, 'ACTIVE'),
+          sql`lower(${categories.name}) = lower(${data.name})`
+        )
+      )
+
+    return existing
+  }
+
   /** Runs the paged search a `FetchArgs` describes, over the tenant's rows. */
   async search(
     tenantId: number,

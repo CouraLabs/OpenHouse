@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@workspace/ui/components/card'
+import { Button } from '@workspace/ui/components/button'
 import { CalendarClock } from 'lucide-react'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
@@ -14,7 +15,8 @@ import { formatMoney } from '@/lib/format-money.js'
 /**
  * What each card asks for next: its latest closed bill's amount due — which
  * already carries every earlier remainder, so nothing is counted twice —
- * and its due date, in red once overdue.
+ * and its due date, in red once overdue. Pay opens the bill with its
+ * payment dialog.
  */
 export function NextDueCard({
   title,
@@ -26,7 +28,12 @@ export function NextDueCard({
   /** The latest closed, unpaid bill per card. */
   bills: CreditCardStatement[]
   locale: string
-  labels: { empty: string; dueOn: (due: string) => string; overdue: string }
+  labels: {
+    empty: string
+    dueOn: (due: string) => string
+    overdue: string
+    pay: string
+  }
 }) {
   return (
     <Card className="gap-2">
@@ -44,28 +51,46 @@ export function NextDueCard({
             const overdue = bill.status === 'Overdue'
 
             return (
-              <Link
+              <div
                 key={bill.id}
-                to="/bills/$statementId"
-                params={{ statementId: String(bill.id) }}
-                className="flex items-center justify-between gap-2 rounded-md hover:bg-muted/50"
+                className="flex items-center justify-between gap-2"
               >
-                <span className="flex flex-col">
-                  <span className="text-sm">{bill.accountName}</span>
-                  <span
-                    className={`text-xs ${overdue ? 'text-destructive' : 'text-muted-foreground'}`}
-                  >
-                    {overdue
-                      ? labels.overdue
-                      : labels.dueOn(formatDayLabel(bill.dueDate, locale))}
-                  </span>
-                </span>
-                <span
-                  className={`text-sm font-semibold tabular-nums ${overdue ? 'text-destructive' : ''}`}
+                <Link
+                  to="/bills/$statementId"
+                  params={{ statementId: String(bill.id) }}
+                  className="flex flex-1 items-center justify-between gap-2 rounded-md hover:bg-muted/50"
                 >
-                  {formatMoney(bill.amountDue, locale, bill.currency)}
-                </span>
-              </Link>
+                  <span className="flex flex-col">
+                    <span className="text-sm">{bill.accountName}</span>
+                    <span
+                      className={`text-xs ${overdue ? 'text-destructive' : 'text-muted-foreground'}`}
+                    >
+                      {overdue
+                        ? labels.overdue
+                        : labels.dueOn(formatDayLabel(bill.dueDate, locale))}
+                    </span>
+                  </span>
+                  <span
+                    className={`text-sm font-semibold tabular-nums ${overdue ? 'text-destructive' : ''}`}
+                  >
+                    {formatMoney(bill.amountDue, locale, bill.currency)}
+                  </span>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={
+                    <Link
+                      to="/bills/$statementId"
+                      params={{ statementId: String(bill.id) }}
+                      search={{ pay: true }}
+                    />
+                  }
+                >
+                  {labels.pay}
+                </Button>
+              </div>
             )
           })
         )}

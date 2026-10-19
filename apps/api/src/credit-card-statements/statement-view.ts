@@ -2,6 +2,7 @@ import {
   addMoney,
   deriveStatementStatus,
   displayCloseDate,
+  isZeroMoney,
   negateMoney,
   type CreditCardStatement,
   type Currency,
@@ -19,23 +20,40 @@ export interface StatementTotalsRow {
   closeDate: string
   dueDate: string
   closedAt: Date | null
+  minimumDue: string | null
+  bankTotal: string | null
+  reconciledAt: Date | null
   transactionCount: number
+  paymentCount: number
   charges: string
   credits: string
   total: string
   paid: string
   previousBalance: string
+  /** The due date of the card's next bill, or nothing on its latest. */
+  nextDueDate: string | null
 }
 
 /**
  * Composes a bill's wire shape: `amountDue = previousBalance + total −
- * paid`, and the status derived against the tenant's today.
+ * paid`, the status derived against the tenant's today, and `carriedTo` —
+ * the next bill's due date once this one is closed with something left
+ * over (a remainder or a credit), which the next bill's `previousBalance`
+ * already carries.
  */
 export function toStatement(
   row: StatementTotalsRow,
   today: string
 ): CreditCardStatement {
   const owed = addMoney(row.previousBalance, row.total)
+  const amountDue = addMoney(owed, negateMoney(row.paid))
+  const status = deriveStatementStatus({
+    today,
+    closeDate: row.closeDate,
+    dueDate: row.dueDate,
+    owed,
+    paid: row.paid,
+  })
 
   return {
     id: row.id,
@@ -52,14 +70,14 @@ export function toStatement(
     total: row.total,
     previousBalance: row.previousBalance,
     paid: row.paid,
-    amountDue: addMoney(owed, negateMoney(row.paid)),
-    status: deriveStatementStatus({
-      today,
-      closeDate: row.closeDate,
-      dueDate: row.dueDate,
-      owed,
-      paid: row.paid,
-    }),
+    amountDue,
+    status,
+    carriedTo:
+      status === 'Open' || isZeroMoney(amountDue) ? null : row.nextDueDate,
+    minimumDue: row.minimumDue,
+    bankTotal: row.bankTotal,
+    reconciledAt:
+      row.reconciledAt === null ? null : row.reconciledAt.toISOString(),
     transactionCount: row.transactionCount,
   }
 }

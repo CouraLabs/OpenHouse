@@ -243,6 +243,8 @@ function toWire(row: TransactionRowLike): Transaction {
     statementId: row.statementId,
     statementPinned: row.statementPinned,
     statementDueDate: row.statementDueDate,
+    paymentStatementId: row.paymentStatementId,
+    paymentStatementDueDate: row.paymentStatementDueDate,
     warning: row.warning ?? null,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),
@@ -275,6 +277,8 @@ interface TransactionRowLike {
   statementId: number | null
   statementPinned: boolean
   statementDueDate: string | null
+  paymentStatementId: number | null
+  paymentStatementDueDate: string | null
   warning?: StatementWarning
   createdDt: Date
   updateDt: Date

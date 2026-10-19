@@ -12,6 +12,7 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type {
@@ -71,6 +72,8 @@ export type TransactionRow = Transaction & {
   currency: Currency
   /** The due date of the card bill the row is on, joined. */
   statementDueDate: string | null
+  /** The due date of the card bill the row pays, joined. */
+  paymentStatementDueDate: string | null
   /** Set only on a write's answer: the row landed on a closed bill. */
   warning?: StatementWarning
 }
@@ -99,6 +102,9 @@ export interface TransactionWrite {
   statusNote: string | null
   /** The id both sides of one transfer share — set only by `insertTransfer`. */
   transferGroupId?: string
+  /** The bill a payment settles — set only by `insertTransfer`, on the
+   * card side. */
+  paymentStatementId?: number
 }
 
 /** A transfer writes two rows from one body. */
@@ -109,7 +115,14 @@ export interface TransferWrite {
   fromAccountId: number
   toAccountId: number
   note: string | null
+  /** The bill of the destination card the transfer pays, or nothing when
+   * the destination is no card (or a card with no bills). */
+  paymentStatementId: number | null
 }
+
+/** The bills a payment row joins its due date from — the row's own bill
+ * keeps the plain table name, which the cash-mode filter dates by. */
+const paymentStatements = alias(creditCardStatements, 'payment_statement')
 
 /**
  * The transaction rows, reached only through the tenant of the session.
@@ -273,9 +286,11 @@ export class TransactionRepository {
   /**
    * Moves a card charge to another bill of the same card by hand and pins
    * it there: later date edits no longer re-resolve it (a merchant posted
-   * late and the bank billed it a cycle on). The caller checked the bill
-   * belongs to the row's card; the row is locked and its lifecycle checked
-   * here, and the account is locked before the bill, in the ledger's order.
+   * late and the bank billed it a cycle on). On the card side of a payment
+   * it re-points the bill the payment settles instead — a payment is on no
+   * bill, so there is nothing to pin. The caller checked the bill belongs
+   * to the row's card; the row is locked and its lifecycle checked here,
+   * and the account is locked before the bill, in the ledger's order.
    * Answers `undefined` when the row or the bill is gone.
    */
   async moveToStatement(
@@ -306,11 +321,13 @@ export class TransactionRepository {
         return undefined
       }
 
+      const payment = isPaymentRow(locked)
       const [row] = await tx
         .update(transactions)
         .set({
-          statementId,
-          statementPinned: true,
+          ...(payment
+            ? { paymentStatementId: statementId }
+            : { statementId, statementPinned: true }),
           updateBy: userId,
           updateDt: new Date(),
         })
@@ -325,10 +342,19 @@ export class TransactionRepository {
 
       await this.recordHistory(tx, tenantId, id, userId, 'UPDATE', locked, row)
 
-      return withWarning(
-        (await this.findByIdInTx(tx, tenantId, id)) as TransactionRow,
-        { statementId, statementPinned: true, closed: target.closed }
-      )
+      const moved = (await this.findByIdInTx(
+        tx,
+        tenantId,
+        id
+      )) as TransactionRow
+
+      return payment
+        ? moved
+        : withWarning(moved, {
+            statementId,
+            statementPinned: true,
+            closed: target.closed,
+          })
     })
   }
 
@@ -435,16 +461,32 @@ export class TransactionRepository {
    * `transferGroupId`, the link every later write keeps the pair by. Both
    * accounts are locked in the global order first, so a transfer A→B racing
    * one B→A never deadlocks.
+   *
+   * A payment's bill is locked `FOR SHARE` after the accounts, in the
+   * ledger's order, so a cycle resync cannot retire it mid-write. Answers
+   * `undefined` when that bill is gone or belongs to another card.
    */
   async insertTransfer(
     tenantId: number,
     userId: number,
     write: TransferWrite
-  ): Promise<[TransactionRow, TransactionRow]> {
+  ): Promise<[TransactionRow, TransactionRow] | undefined> {
     return this.inLedgerTx(async (tx) => {
       const transferGroupId = randomUUID()
 
       await lockAccounts(tx, tenantId, [write.fromAccountId, write.toAccountId])
+
+      if (write.paymentStatementId !== null) {
+        const target = await this.statements.findForMoveInTx(
+          tx,
+          tenantId,
+          write.paymentStatementId
+        )
+
+        if (target?.statement.accountId !== write.toAccountId) {
+          return undefined
+        }
+      }
 
       const from = await this.insertInTx(tx, tenantId, userId, {
         name: 'TRANSFER_OUT',
@@ -476,9 +518,12 @@ export class TransactionRepository {
         reviewStatus: 'Verify',
         statusNote: null,
         transferGroupId,
+        ...(write.paymentStatementId === null
+          ? {}
+          : { paymentStatementId: write.paymentStatementId }),
       })
 
-      return [from, to]
+      return [from, to] as [TransactionRow, TransactionRow]
     })
   }
 
@@ -826,6 +871,7 @@ export class TransactionRepository {
         receiverName: receivers.name,
         currency: accounts.currency,
         statementDueDate: creditCardStatements.dueDate,
+        paymentStatementDueDate: paymentStatements.dueDate,
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
@@ -834,6 +880,10 @@ export class TransactionRepository {
       .leftJoin(
         creditCardStatements,
         eq(transactions.statementId, creditCardStatements.id)
+      )
+      .leftJoin(
+        paymentStatements,
+        eq(transactions.paymentStatementId, paymentStatements.id)
       )
   }
 
@@ -1105,6 +1155,12 @@ export class TransactionRepository {
       conditions.push(eq(transactions.statementId, filter.statementId))
     }
 
+    if (filter.paymentStatementId !== undefined) {
+      conditions.push(
+        eq(transactions.paymentStatementId, filter.paymentStatementId)
+      )
+    }
+
     if (filter.categoryId !== undefined) {
       conditions.push(eq(transactions.categoryId, filter.categoryId))
     }
@@ -1138,6 +1194,16 @@ function isUniqueViolation(error: unknown): boolean {
 
   return codes.some(
     (candidate) => (candidate as { code?: string } | null)?.code === '23505'
+  )
+}
+
+/** Whether a row is the card side of a payment — an Income transfer leg
+ * on no bill by date. Its bill is the one it settles. */
+function isPaymentRow(row: Transaction): boolean {
+  return (
+    row.type === 'Income' &&
+    row.transferGroupId !== null &&
+    row.statementId === null
   )
 }
 

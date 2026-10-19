@@ -85,7 +85,8 @@ export const relations = defineRelations(schema, (r) => ({
       to: r.accounts.id,
       optional: false,
     }),
-    transactions: r.many.transactions(),
+    transactions: r.many.transactions({ alias: 'statement' }),
+    payments: r.many.transactions({ alias: 'payment_statement' }),
   },
   goals: {
     tenant: r.one.tenants({
@@ -179,6 +180,13 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.transactions.statementId,
       to: r.creditCardStatements.id,
       optional: true,
+      alias: 'statement',
+    }),
+    paymentStatement: r.one.creditCardStatements({
+      from: r.transactions.paymentStatementId,
+      to: r.creditCardStatements.id,
+      optional: true,
+      alias: 'payment_statement',
     }),
     history: r.many.transactionHistory(),
   },

@@ -33,8 +33,10 @@ export function MoveStatementFields({
     skip: 0,
     limit: 24,
   })
+  // A charge leaves its own bill; a payment, the bill it settles.
+  const current = transaction.statementId ?? transaction.paymentStatementId
   const options = (bills.data?.items ?? [])
-    .filter((bill) => bill.id !== transaction.statementId)
+    .filter((bill) => bill.id !== current)
     .map((bill) => ({
       value: bill.id,
       label: t('bills.bill-option', {

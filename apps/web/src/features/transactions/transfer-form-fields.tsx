@@ -19,7 +19,8 @@ import {
 import { TextField } from '@workspace/ui/components/text-field'
 
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
-import { AccountPick } from './account-pick.js'
+import { RefPick } from '@workspace/ui/components/ref-pick'
+import { PaymentBillPick } from './payment-bill-pick.js'
 import { useActiveCategories } from './use-transactions.js'
 
 /**
@@ -49,6 +50,10 @@ export interface TransferFormFieldsProps {
 /**
  * The fields of the transfer dialog. Rendered inside the dialog's content,
  * which unmounts on close, so every opening starts from fresh values.
+ *
+ * A transfer into a credit card is a bill payment: the Bill picker shows,
+ * and the category may stay empty — the API files it under "Credit card
+ * payment". Any other transfer needs a category.
  */
 export function TransferFormFields({
   accounts,
@@ -63,6 +68,7 @@ export function TransferFormFields({
     handleSubmit,
     watch,
     setValue,
+    setError,
     register,
     formState: { errors },
   } = useForm<TransferFormValues, unknown, TransferFormValues>({
@@ -78,6 +84,7 @@ export function TransferFormFields({
   const categories = useActiveCategories()
   const from = accounts.find((account) => account.id === fromId)
   const to = accounts.find((account) => account.id === toId)
+  const paysCard = to?.type === 'Credit Card'
   const chosenCurrency: Currency | undefined = from?.currency ?? to?.currency
   // The destination excludes the source; both sides share the currency.
   const destinationOptions = accounts.filter(
@@ -93,12 +100,22 @@ export function TransferFormFields({
 
   return (
     <form
-      onSubmit={handleSubmit((values) => onSubmit(values))}
+      onSubmit={handleSubmit((values) => {
+        if (values.categoryId === undefined && !paysCard) {
+          setError('categoryId', { message: t('transactions.pick-category') })
+
+          return
+        }
+
+        onSubmit(
+          paysCard ? values : { ...values, paymentStatementId: undefined }
+        )
+      })}
       className="flex flex-col gap-4"
       noValidate
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <AccountPick
+        <RefPick
           id="transfer-from"
           label={t('transactions.transfer-from')}
           placeholder={t('transactions.transfer-from-placeholder')}
@@ -109,18 +126,26 @@ export function TransferFormFields({
             setValue('fromAccountId', value, { shouldValidate: true })
           }
         />
-        <AccountPick
+        <RefPick
           id="transfer-to"
           label={t('transactions.transfer-to')}
           placeholder={t('transactions.transfer-to-placeholder')}
           value={toId}
           options={destinationOptions}
           error={errors.toAccountId?.message}
-          onChange={(value) =>
+          onChange={(value) => {
             setValue('toAccountId', value, { shouldValidate: true })
-          }
+            setValue('paymentStatementId', undefined)
+          }}
         />
       </div>
+      {paysCard && to !== undefined ? (
+        <PaymentBillPick
+          cardId={to.id}
+          value={watch('paymentStatementId')}
+          onChange={(value) => setValue('paymentStatementId', value)}
+        />
+      ) : null}
       {from !== undefined &&
       to !== undefined &&
       from.currency !== to.currency ? (
@@ -168,9 +193,11 @@ export function TransferFormFields({
       <Field data-invalid={errors.categoryId !== undefined}>
         <FieldLabel htmlFor="transfer-category">
           {t('transactions.transfer-category')}
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
+          {paysCard ? null : (
+            <span aria-hidden="true" className="text-destructive">
+              *
+            </span>
+          )}
         </FieldLabel>
         <Select
           value={watch('categoryId')}
@@ -184,7 +211,10 @@ export function TransferFormFields({
             <SelectValue>
               {(categories.data ?? []).find(
                 (category) => category.id === watch('categoryId')
-              )?.name ?? t('transactions.transfer-category-placeholder')}
+              )?.name ??
+                (paysCard
+                  ? t('transactions.card-payment-category')
+                  : t('transactions.transfer-category-placeholder'))}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -229,7 +259,7 @@ function newValues(defaultDt: string): TransferFormValues {
   return {
     fromAccountId: undefined as unknown as number,
     toAccountId: undefined as unknown as number,
-    categoryId: undefined as unknown as number,
+    categoryId: undefined,
     amount: '',
     transactionDt: defaultDt,
     note: undefined,

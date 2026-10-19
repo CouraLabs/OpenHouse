@@ -149,11 +149,14 @@ const billsRoute = createRoute({
   },
 })
 
-/** One bill: its figures and the charges on it. */
+/** One bill: its figures, its charges and payments. The dashboard's Pay
+ * shortcut opens it with `pay`, which opens the payment dialog. */
 const billDetailRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'bills/$statementId',
   component: BillDetailPage,
+  validateSearch: (search: Record<string, unknown>): { pay?: boolean } =>
+    search.pay === true || search.pay === 'true' ? { pay: true } : {},
 })
 
 /** The page the tenant's receivers are managed from. */

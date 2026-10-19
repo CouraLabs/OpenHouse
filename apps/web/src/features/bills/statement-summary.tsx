@@ -1,13 +1,18 @@
 import type { CreditCardStatement } from '@workspace/poco'
+import { compareMoney, isPrepaid, negateMoney } from '@workspace/poco'
 import { Card, CardContent } from '@workspace/ui/components/card'
 import { useTranslation } from 'react-i18next'
 
+import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 
 /**
  * A bill's figures, in the order a bank bill reads them: what the earlier
  * bills left, this cycle's charges and credits, what was paid, and what is
- * due — every amount in the card's currency.
+ * due — every amount in the card's currency. Below them, what became of
+ * the amount due: carried to the next bill (a remainder, or a credit when
+ * overpaid — counted there, never again here), paid ahead (prepaid), and
+ * the bank's minimum and reconciliation, when known.
  */
 export function StatementSummary({
   bill,
@@ -23,6 +28,27 @@ export function StatementSummary({
     { label: t('bills.credits'), amount: bill.credits },
     { label: t('bills.paid'), amount: bill.paid },
   ]
+
+  const credit = compareMoney(bill.amountDue, '0') < 0
+  const notes = [
+    bill.carriedTo === null
+      ? null
+      : t(credit ? 'bills.credit-carried' : 'bills.remainder-carried', {
+          amount: formatMoney(
+            credit ? negateMoney(bill.amountDue) : bill.amountDue,
+            locale,
+            bill.currency
+          ),
+          due: formatDayLabel(bill.carriedTo, locale),
+        }),
+    isPrepaid(bill) ? t('bills.prepaid') : null,
+    bill.minimumDue === null
+      ? null
+      : t('bills.minimum-due-note', {
+          amount: formatMoney(bill.minimumDue, locale, bill.currency),
+        }),
+    bill.reconciledAt === null ? null : t('bills.reconciled'),
+  ].filter((note) => note !== null)
 
   return (
     <Card>
@@ -45,6 +71,13 @@ export function StatementSummary({
             {formatMoney(bill.amountDue, locale, bill.currency)}
           </span>
         </div>
+        {notes.length === 0 ? null : (
+          <ul className="col-span-full flex flex-col gap-1 text-sm text-muted-foreground">
+            {notes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   )

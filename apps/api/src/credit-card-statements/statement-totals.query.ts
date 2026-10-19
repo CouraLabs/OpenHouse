@@ -1,4 +1,4 @@
-import { and, eq, ne, sql, type SQL } from 'drizzle-orm'
+import { and, eq, isNotNull, ne, sql, type SQL } from 'drizzle-orm'
 import type { DbOrTx } from '@workspace/db'
 import { creditCardStatements, transactions } from '@workspace/db'
 import type { StatementStatus } from '@workspace/poco'
@@ -11,13 +11,19 @@ import type { StatementStatus } from '@workspace/poco'
  * - `charges`: its expenses, a transfer out of the card included;
  * - `credits`: its incomes — refunds; the card side of a payment lands on
  *   no bill by date, so it is never among them;
- * - `paid`: the payments that settle it — zero until bill payment lands.
+ * - `paid`: the payments that settle it — the card sides of transfers whose
+ *   `paymentStatementId` names it, summed in a subquery of their own so
+ *   they never multiply the charge rows.
  *
  * `statement_run` adds the carry-over: a bill's `previousBalance` is the
  * running sum of `total − paid` over the same card's earlier bills, in close
  * order — a positive remainder rolls forward, an overpayment rolls forward
  * as a credit. The window covers every bill of the card, never just the
- * page a search asks for, so paging cannot cut a carry-over short.
+ * page a search asks for, so paging cannot cut a carry-over short. Derived
+ * on every read and never cached (rule 6f): a payment or a charge on an
+ * earlier bill changes every later bill the moment it commits.
+ * `nextDueDate` is the due date of the card's next bill — where this one's
+ * remainder rolled.
  *
  * Every sum is cast to `numeric(16,2)`, so money reads back as a
  * two-decimal string and never crosses a float.
@@ -27,6 +33,24 @@ export function statementTotals(
   tenantId: number,
   accountScope?: SQL
 ) {
+  const payments = db
+    .select({
+      statementId: transactions.paymentStatementId,
+      paid: sql<string>`sum(${transactions.amount})`.as('paid'),
+      count: sql<number>`count(*)::int`.as('payment_count'),
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.tenantId, tenantId),
+        isNotNull(transactions.paymentStatementId),
+        eq(transactions.status, 'ACTIVE'),
+        ne(transactions.reviewStatus, 'Canceled')
+      )
+    )
+    .groupBy(transactions.paymentStatementId)
+    .as('statement_payments')
+
   const net = db.$with('statement_net').as(
     db
       .select({
@@ -36,8 +60,14 @@ export function statementTotals(
         closeDate: creditCardStatements.closeDate,
         dueDate: creditCardStatements.dueDate,
         closedAt: creditCardStatements.closedAt,
+        minimumDue: creditCardStatements.minimumDue,
+        bankTotal: creditCardStatements.bankTotal,
+        reconciledAt: creditCardStatements.reconciledAt,
         transactionCount: sql<number>`count(${transactions.id})::int`.as(
           'transaction_count'
+        ),
+        paymentCount: sql<number>`coalesce(max(${payments.count}), 0)::int`.as(
+          'payment_count'
         ),
         charges:
           sql<string>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'Expense'), 0)::numeric(16,2)`.as(
@@ -47,7 +77,9 @@ export function statementTotals(
           sql<string>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'Income'), 0)::numeric(16,2)`.as(
             'credits'
           ),
-        paid: sql<string>`0::numeric(16,2)`.as('paid'),
+        paid: sql<string>`coalesce(max(${payments.paid}), 0)::numeric(16,2)`.as(
+          'paid'
+        ),
       })
       .from(creditCardStatements)
       .leftJoin(
@@ -59,6 +91,7 @@ export function statementTotals(
           ne(transactions.reviewStatus, 'Canceled')
         )
       )
+      .leftJoin(payments, eq(payments.statementId, creditCardStatements.id))
       .where(
         and(
           eq(creditCardStatements.tenantId, tenantId),
@@ -78,7 +111,11 @@ export function statementTotals(
         closeDate: net.closeDate,
         dueDate: net.dueDate,
         closedAt: net.closedAt,
+        minimumDue: net.minimumDue,
+        bankTotal: net.bankTotal,
+        reconciledAt: net.reconciledAt,
         transactionCount: net.transactionCount,
+        paymentCount: net.paymentCount,
         charges: net.charges,
         credits: net.credits,
         paid: net.paid,
@@ -89,6 +126,11 @@ export function statementTotals(
           sql<string>`coalesce(sum(${net.charges} - ${net.credits} - ${net.paid}) over (partition by ${net.accountId} order by ${net.closeDate} rows between unbounded preceding and 1 preceding), 0)::numeric(16,2)`.as(
             'previous_balance'
           ),
+        nextDueDate: sql<
+          string | null
+        >`lead(${net.dueDate}) over (partition by ${net.accountId} order by ${net.closeDate})`.as(
+          'next_due_date'
+        ),
       })
       .from(net)
   )

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { deriveStatementStatus } from './credit-card-statements.js'
+import {
+  defaultPaymentStatement,
+  deriveStatementStatus,
+  isPrepaid,
+  type StatementStatus,
+} from './credit-card-statements.js'
 
 const bill = {
   closeDate: '2026-10-25',
@@ -57,5 +62,47 @@ describe('deriveStatementStatus', () => {
     expect(deriveStatementStatus({ ...bill, today: '2026-11-05' })).toBe(
       'Closed'
     )
+  })
+})
+
+describe('defaultPaymentStatement', () => {
+  const bill = (closeDate: string, status: StatementStatus) => ({
+    closeDate,
+    status,
+  })
+
+  it('picks the oldest closed bill still unpaid', () => {
+    expect(
+      defaultPaymentStatement([
+        bill('2026-10-25', 'Open'),
+        bill('2026-09-25', 'Overdue'),
+        bill('2026-08-25', 'Paid'),
+        bill('2026-07-25', 'PartiallyPaid'),
+      ])
+    ).toEqual(bill('2026-07-25', 'PartiallyPaid'))
+  })
+
+  it('falls back to the earliest Open bill', () => {
+    expect(
+      defaultPaymentStatement([
+        bill('2026-11-25', 'Open'),
+        bill('2026-10-25', 'Open'),
+        bill('2026-09-25', 'Paid'),
+      ])
+    ).toEqual(bill('2026-10-25', 'Open'))
+  })
+
+  it('answers nothing for a card with no bill to pay', () => {
+    expect(defaultPaymentStatement([bill('2026-09-25', 'Paid')])).toBe(
+      undefined
+    )
+  })
+})
+
+describe('isPrepaid', () => {
+  it('reads an Open bill with a payment as prepaid', () => {
+    expect(isPrepaid({ status: 'Open', paid: '10.00' })).toBe(true)
+    expect(isPrepaid({ status: 'Open', paid: '0.00' })).toBe(false)
+    expect(isPrepaid({ status: 'Paid', paid: '10.00' })).toBe(false)
   })
 })

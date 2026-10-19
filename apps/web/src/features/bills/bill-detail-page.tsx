@@ -1,30 +1,41 @@
-import { Link, useParams } from '@tanstack/react-router'
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SearchTransactionsArgs, Transaction } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { DataTable } from '@workspace/ui/components/data-table'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Scale, WalletCards } from 'lucide-react'
 
 import { PageHeader } from '@/components/page-header.js'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { useStatement } from '@/lib/statements.js'
+import { BillPaymentsTable } from './bill-payments-table.js'
 import { buildBillTransactionsColumns } from './bill-transactions-columns.js'
 import { MoveStatementDialog } from './move-statement-dialog.js'
+import { PayBillDialog } from './pay-bill-dialog.js'
+import { ReconcileDialog } from './reconcile-dialog.js'
 import { StatementStatusBadge } from './statement-status-badge.js'
 import { StatementSummary } from './statement-summary.js'
 import { useBillTransactions } from './use-bills.js'
 
 /**
- * One bill: its card, period, and status in the header, its figures, and
- * the charges on it — each of which can move to another bill of the card.
+ * One bill: its card, period, and status in the header, its figures, the
+ * charges on it — each of which can move to another bill of the card — and
+ * the payments settling it. Pay bill opens the payment dialog (also reached
+ * from the dashboard through the `pay` search param, which is its open
+ * state); Reconcile checks the bill against the bank's.
  */
 export function BillDetailPage() {
   const { t, i18n } = useTranslation()
   const { statementId } = useParams({ from: '/_main/bills/$statementId' })
   const id = Number(statementId)
   const bill = useStatement(id)
+  const { pay } = useSearch({ from: '/_main/bills/$statementId' })
+  const navigate = useNavigate({ from: '/bills/$statementId' })
+  const setPaying = (open: boolean) =>
+    void navigate({ search: open ? { pay: true } : {}, replace: true })
+  const [reconciling, setReconciling] = useState(false)
 
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'transactionDt', desc: false },
@@ -98,6 +109,16 @@ export function BillDetailPage() {
         actions={
           <>
             <StatementStatusBadge status={statement.status} />
+            {statement.status === 'Paid' ? null : (
+              <Button onClick={() => setPaying(true)}>
+                <WalletCards />
+                {t('bills.pay')}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setReconciling(true)}>
+              <Scale />
+              {t('bills.reconcile')}
+            </Button>
             {back}
           </>
         }
@@ -120,9 +141,20 @@ export function BillDetailPage() {
           next: t('bills.next-page'),
         }}
       />
+      <BillPaymentsTable statementId={id} onMove={setMoving} />
       <MoveStatementDialog
         transaction={moving}
         onClose={() => setMoving(null)}
+      />
+      <PayBillDialog
+        bill={statement}
+        open={pay === true}
+        onClose={() => setPaying(false)}
+      />
+      <ReconcileDialog
+        bill={statement}
+        open={reconciling}
+        onClose={() => setReconciling(false)}
       />
     </main>
   )

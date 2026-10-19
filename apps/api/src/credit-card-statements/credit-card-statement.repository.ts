@@ -7,6 +7,7 @@ import {
   eq,
   gt,
   inArray,
+  isNotNull,
   isNull,
   lte,
   or,
@@ -26,12 +27,15 @@ import {
 } from '@workspace/db'
 import {
   cardCycleOf,
+  compareMoney,
+  defaultPaymentStatement,
   resolveStatement,
   todayIn,
+  unpaidStatementStatuses,
   type CardCycle,
   type Currency,
   type SearchStatementsArgs,
-  type StatementStatus,
+  type StatementBankFiguresBody,
   type StatementWindow,
 } from '@workspace/poco'
 
@@ -44,8 +48,19 @@ import {
   type StatementAssigned,
   type StatementKey,
 } from './statement-assignment.js'
-import { statementTotals, statusCondition } from './statement-totals.query.js'
+import {
+  statementTotals,
+  statusCondition,
+  type StatementRun,
+} from './statement-totals.query.js'
 import { toStatement, type StatementTotalsRow } from './statement-view.js'
+
+/** What reconciling a bill answered: done, or the bill's own total when
+ * the bank's does not match it. */
+export type ReconcileOutcome =
+  | { kind: 'reconciled' }
+  | { kind: 'mismatch'; total: string }
+  | { kind: 'missing' }
 
 /** Where a write put a row: its bill, and whether that bill was already
  * closed — the answer the API turns into a `STATEMENT_CLOSED` warning. */
@@ -177,7 +192,7 @@ export class CreditCardStatementRepository {
 
   /**
    * Runs the paged bill search. Bills nothing landed on are left out — a
-   * cycle with no charge is no bill to show. A status filter runs in SQL
+   * cycle with no charge and no payment is no bill to show. A status filter runs in SQL
    * against the tenant's today.
    */
   async search(
@@ -194,7 +209,7 @@ export class CreditCardStatementRepository {
     )
     const statuses = args.filter.status
     const where = and(
-      gt(run.transactionCount, 0),
+      hasActivity(run),
       statuses === undefined || statuses.length === 0
         ? undefined
         : or(...statuses.map((status) => statusCondition(run, today, status)))
@@ -233,21 +248,30 @@ export class CreditCardStatementRepository {
    * computed over the whole card. */
   async findTotals(
     tenantId: number,
-    id: number
+    id: number,
+    db: DbOrTx = this.db
   ): Promise<StatementTotalsRow | undefined> {
-    const statement = await this.findById(tenantId, id)
+    const [statement] = await db
+      .select()
+      .from(creditCardStatements)
+      .where(
+        and(
+          eq(creditCardStatements.tenantId, tenantId),
+          eq(creditCardStatements.id, id)
+        )
+      )
 
     if (statement === undefined || statement.status === 'DELETED') {
       return undefined
     }
 
     const { net, run } = statementTotals(
-      this.db,
+      db,
       tenantId,
       eq(creditCardStatements.accountId, statement.accountId)
     )
 
-    const [row] = await this.db
+    const [row] = await db
       .with(net, run)
       .select(this.joinedFields(run))
       .from(run)
@@ -274,7 +298,7 @@ export class CreditCardStatementRepository {
       .select(this.joinedFields(run))
       .from(run)
       .innerJoin(accounts, eq(accounts.id, run.accountId))
-      .where(gt(run.transactionCount, 0))
+      .where(hasActivity(run))
       .orderBy(asc(run.closeDate))
   }
 
@@ -291,18 +315,203 @@ export class CreditCardStatementRepository {
     const bills = (await this.listTotalsByAccount(tenantId, accountId)).map(
       (row) => toStatement(row, today)
     )
-    const unpaid: readonly StatementStatus[] = [
-      'Closed',
-      'PartiallyPaid',
-      'Overdue',
-    ]
     const latest = bills.at(-1)
 
     return {
-      unpaidBills: bills.filter((bill) => unpaid.includes(bill.status)).length,
+      unpaidBills: bills.filter((bill) =>
+        unpaidStatementStatuses.includes(bill.status)
+      ).length,
       amountDue: latest?.amountDue ?? '0.00',
       currency: latest?.currency ?? 'USD',
     }
+  }
+
+  /**
+   * The bill a payment into a card settles when the transfer names none:
+   * poco's `defaultPaymentStatement` over the card's bills, else the bill
+   * today lands on. Nothing for a card whose days are unset.
+   */
+  async defaultPaymentStatementId(
+    tenantId: number,
+    userId: number,
+    accountId: number
+  ): Promise<number | null> {
+    const today = await this.todayOf(tenantId)
+    const bills = (await this.listTotalsByAccount(tenantId, accountId)).map(
+      (row) => toStatement(row, today)
+    )
+
+    return (
+      defaultPaymentStatement(bills)?.id ??
+      (await this.getOrCreateCurrent(tenantId, userId, accountId))
+    )
+  }
+
+  /**
+   * The bill a payment into a card settles when nothing named one and the
+   * card has no unpaid or Open bill yet: the one today lands on, opened if
+   * need be. Nothing for a card whose days are unset — it has no bills. Runs
+   * in a transaction of its own; an empty bill a failed payment leaves
+   * behind is hidden like any bill nothing landed on.
+   */
+  private async getOrCreateCurrent(
+    tenantId: number,
+    userId: number,
+    accountId: number
+  ): Promise<number | null> {
+    return this.db.transaction(async (tx) => {
+      const cycle = await this.cycleInTx(tx, tenantId, accountId)
+
+      if (cycle === null) {
+        return null
+      }
+
+      const window = resolveStatement(cycle, await this.todayOf(tenantId, tx))
+
+      return this.getOrCreateInTx(tx, tenantId, userId, accountId, window)
+    })
+  }
+
+  /** Writes the figures typed in from the bank's bill. Answers the row, or
+   * nothing when the bill is gone. */
+  async updateBankFigures(
+    tenantId: number,
+    userId: number,
+    id: number,
+    figures: StatementBankFiguresBody
+  ): Promise<CreditCardStatement | undefined> {
+    const [row] = await this.db
+      .update(creditCardStatements)
+      .set({
+        minimumDue: figures.minimumDue,
+        bankTotal: figures.bankTotal,
+        updateBy: userId,
+        updateDt: this.clock.now(),
+      })
+      .where(
+        and(
+          eq(creditCardStatements.tenantId, tenantId),
+          eq(creditCardStatements.id, id),
+          eq(creditCardStatements.status, 'ACTIVE')
+        )
+      )
+      .returning()
+
+    return row
+  }
+
+  /**
+   * Reconciles a bill with the bank's: when the bank's total equals the
+   * bill's own, stamps `reconciledAt` (and keeps the bank total) and marks
+   * every Verify row on the bill Checked — the other side of a transfer
+   * with it, as any status change does — each recorded in the history. No
+   * money moves, so no account is locked. The bill's rows are locked `FOR
+   * UPDATE` in id order first and the bill after them, the ledger's
+   * row-first order, so no edit can change the total between the check and
+   * the stamp.
+   */
+  async reconcile(
+    tenantId: number,
+    userId: number,
+    id: number,
+    bankTotal: string
+  ): Promise<ReconcileOutcome> {
+    return this.db.transaction(async (tx) => {
+      const onBill = tx
+        .select({ id: transactions.transferGroupId })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.tenantId, tenantId),
+            eq(transactions.statementId, id),
+            isNotNull(transactions.transferGroupId)
+          )
+        )
+      const rows = await tx
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.tenantId, tenantId),
+            eq(transactions.status, 'ACTIVE'),
+            or(
+              eq(transactions.statementId, id),
+              inArray(transactions.transferGroupId, onBill)
+            )
+          )
+        )
+        .orderBy(asc(transactions.id))
+        .for('update')
+
+      const [statement] = await tx
+        .select({ id: creditCardStatements.id })
+        .from(creditCardStatements)
+        .where(
+          and(
+            eq(creditCardStatements.tenantId, tenantId),
+            eq(creditCardStatements.id, id),
+            eq(creditCardStatements.status, 'ACTIVE')
+          )
+        )
+        .for('update')
+
+      if (statement === undefined) {
+        return { kind: 'missing' as const }
+      }
+
+      const totals = await this.findTotals(tenantId, id, tx)
+
+      if (totals === undefined) {
+        return { kind: 'missing' as const }
+      }
+
+      if (compareMoney(totals.total, bankTotal) !== 0) {
+        return { kind: 'mismatch' as const, total: totals.total }
+      }
+
+      const now = this.clock.now()
+      const verify = rows.filter((row) => row.reviewStatus === 'Verify')
+
+      if (verify.length > 0) {
+        const updated = await tx
+          .update(transactions)
+          .set({ reviewStatus: 'Checked', updateBy: userId, updateDt: now })
+          .where(
+            and(
+              eq(transactions.tenantId, tenantId),
+              inArray(
+                transactions.id,
+                verify.map((row) => row.id)
+              )
+            )
+          )
+          .returning()
+        const before = new Map(verify.map((row) => [row.id, row]))
+
+        await tx.insert(transactionHistory).values(
+          updated.map((after) => ({
+            tenantId,
+            transactionId: after.id,
+            action: 'UPDATE' as const,
+            before: before.get(after.id) ?? null,
+            after,
+            createdBy: userId,
+          }))
+        )
+      }
+
+      await tx
+        .update(creditCardStatements)
+        .set({ bankTotal, reconciledAt: now, updateBy: userId, updateDt: now })
+        .where(
+          and(
+            eq(creditCardStatements.tenantId, tenantId),
+            eq(creditCardStatements.id, id)
+          )
+        )
+
+      return { kind: 'reconciled' as const }
+    })
   }
 
   /** The tenant's "today", in its own zone — what decides whether a bill
@@ -371,7 +580,9 @@ export class CreditCardStatementRepository {
       .for('update')
   }
 
-  /** The card's Open ACTIVE bills, and which of them hold pinned charges. */
+  /** The card's Open ACTIVE bills, and which of them a resync must keep:
+   * those holding pinned charges, or payments — a prepaid bill keeps the
+   * payment that settles it. */
   async findOpenInTx(
     tx: DbOrTx,
     tenantId: number,
@@ -409,10 +620,27 @@ export class CreditCardStatementRepository {
               )
             )
 
+    const paid =
+      open.length === 0
+        ? []
+        : await tx
+            .selectDistinct({ id: transactions.paymentStatementId })
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.tenantId, tenantId),
+                eq(transactions.status, 'ACTIVE'),
+                inArray(
+                  transactions.paymentStatementId,
+                  open.map((statement) => statement.id)
+                )
+              )
+            )
+
     return {
       open,
       pinnedIds: new Set(
-        pinned.flatMap((row) => (row.id === null ? [] : [row.id]))
+        [...pinned, ...paid].flatMap((row) => (row.id === null ? [] : [row.id]))
       ),
     }
   }
@@ -619,7 +847,7 @@ export class CreditCardStatementRepository {
   }
 
   /** The joined select every totals read shares. */
-  private joinedFields(run: ReturnType<typeof statementTotals>['run']) {
+  private joinedFields(run: StatementRun) {
     return {
       id: run.id,
       accountId: run.accountId,
@@ -630,12 +858,22 @@ export class CreditCardStatementRepository {
       closeDate: run.closeDate,
       dueDate: run.dueDate,
       closedAt: run.closedAt,
+      minimumDue: run.minimumDue,
+      bankTotal: run.bankTotal,
+      reconciledAt: run.reconciledAt,
       transactionCount: run.transactionCount,
+      paymentCount: run.paymentCount,
       charges: run.charges,
       credits: run.credits,
       total: run.total,
       paid: run.paid,
       previousBalance: run.previousBalance,
+      nextDueDate: run.nextDueDate,
     }
   }
+}
+
+/** Whether anything landed on a bill: a charge, or a payment settling it. */
+function hasActivity(run: StatementRun) {
+  return or(gt(run.transactionCount, 0), gt(run.paymentCount, 0))
 }

@@ -549,6 +549,7 @@ export function TransactionsPage() {
                 empty: t('transactions.dashboard-next-due-empty'),
                 dueOn: (due) => t('transactions.dashboard-due-on', { due }),
                 overdue: t('transactions.dashboard-overdue'),
+                pay: t('transactions.dashboard-pay'),
               }}
             />
             <ExpensePieCard

@@ -1,4 +1,3 @@
-import type { AccountRef } from '@workspace/poco'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {
   Select,
@@ -8,22 +7,37 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 
-/** One account select: label, trigger with an explicit label, options. */
-export function AccountPick({
+/** What an option needs to show: its id and name — the shape of every
+ * `…Ref` a picker list returns (accounts, categories, receivers). */
+export interface RefOption {
+  id: number
+  name: string
+}
+
+/**
+ * One select over id/name references: label, trigger with an explicit
+ * label (base-ui would show the placeholder for a value set while closed),
+ * options. The caller passes the options already narrowed (same currency,
+ * not a card, …) and every label translated; the red `*` shows unless the
+ * field is optional.
+ */
+export function RefPick({
   id,
   label,
   placeholder,
   value,
   options,
   error,
+  required = true,
   onChange,
 }: {
   id: string
   label: string
   placeholder: string
   value: number | undefined
-  options: AccountRef[]
+  options: RefOption[]
   error?: string
+  required?: boolean
   onChange: (value: number) => void
 }) {
   const selected = options.find((option) => option.id === value)
@@ -32,9 +46,11 @@ export function AccountPick({
     <Field data-invalid={error !== undefined}>
       <FieldLabel htmlFor={id}>
         {label}
-        <span aria-hidden="true" className="text-destructive">
-          *
-        </span>
+        {required ? (
+          <span aria-hidden="true" className="text-destructive">
+            *
+          </span>
+        ) : null}
       </FieldLabel>
       <Select
         value={value}

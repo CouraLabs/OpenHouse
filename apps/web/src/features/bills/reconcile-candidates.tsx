@@ -1,0 +1,116 @@
+import { useTranslation } from 'react-i18next'
+import type { CreditCardStatement, Transaction } from '@workspace/poco'
+import { addDays } from '@workspace/poco'
+import { Button } from '@workspace/ui/components/button'
+
+import { formatDayLabel } from '@/lib/format-date-only.js'
+import { formatMoney } from '@/lib/format-money.js'
+import { useMoveToStatement } from '@/lib/statements.js'
+import { useBillTransactions, useMarkChecked } from './use-bills.js'
+
+/** How far from the close a late posting is looked for, in days. */
+const LATE_POSTING_DAYS = 3
+
+/**
+ * What may explain a difference against the bank's bill: charges of the
+ * card on a neighbouring bill within three days of the close (a merchant
+ * posted late, the bank billed it here) — offered "Move to this bill" — and
+ * rows of this bill still in Verify — offered "Mark checked".
+ */
+export function ReconcileCandidates({ bill }: { bill: CreditCardStatement }) {
+  const { t, i18n } = useTranslation()
+  const move = useMoveToStatement()
+  const check = useMarkChecked()
+  const nearClose = useBillTransactions({
+    sort: [{ field: 'transactionDt', dir: 'asc' }],
+    filter: {
+      linkedAccountId: bill.accountId,
+      transactionDtFrom: addDays(bill.closesOn, -LATE_POSTING_DAYS),
+      transactionDtTo: addDays(bill.closesOn, LATE_POSTING_DAYS),
+      creditMode: 'accrual',
+      lifecycle: 'ACTIVE',
+    },
+    skip: 0,
+    limit: 100,
+  })
+  const unchecked = useBillTransactions({
+    sort: [{ field: 'transactionDt', dir: 'asc' }],
+    filter: {
+      statementId: bill.id,
+      status: 'Verify',
+      creditMode: 'accrual',
+      lifecycle: 'ACTIVE',
+    },
+    skip: 0,
+    limit: 100,
+  })
+  // Payments are on no bill, and rows already here are no late posting.
+  const late = (nearClose.data?.items ?? []).filter(
+    (row) => row.statementId !== null && row.statementId !== bill.id
+  )
+  const rows: Array<{ row: Transaction; action: 'move' | 'check' }> = [
+    ...late.map((row) => ({ row, action: 'move' as const })),
+    ...(unchecked.data?.items ?? []).map((row) => ({
+      row,
+      action: 'check' as const,
+    })),
+  ]
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {t('bills.reconcile-no-candidates')}
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium">
+        {t('bills.reconcile-candidates')}
+      </span>
+      <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+        {rows.map(({ row, action }) => (
+          <li
+            key={row.id}
+            className="flex items-center justify-between gap-2 rounded-md px-2 py-1 hover:bg-muted/50"
+          >
+            <span className="flex flex-col">
+              <span className="text-sm">{row.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {formatDayLabel(row.transactionDt, i18n.language)}
+                {' · '}
+                {formatMoney(
+                  row.type === 'Income' ? `-${row.amount}` : row.amount,
+                  i18n.language,
+                  row.currency
+                )}
+              </span>
+            </span>
+            {action === 'move' ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={move.isPending}
+                onClick={() =>
+                  move.mutate({ id: row.id, statementId: bill.id })
+                }
+              >
+                {t('bills.reconcile-move')}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={check.isPending}
+                onClick={() => check.mutate(row.id)}
+              >
+                {t('bills.reconcile-check')}
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}

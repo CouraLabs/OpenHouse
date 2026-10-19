@@ -406,6 +406,14 @@ export const creditCardStatements = pgTable(
     /** When a write first found the bill past its close — an audit stamp
      * only; the status is derived from the dates, never from this. */
     closedAt: timestamp('closed_at', { withTimezone: true }),
+    /** The minimum payment printed on the bank's bill — typed in by the
+     * user, shown only; nothing computes it. */
+    minimumDue: numeric('minimum_due', { precision: 16, scale: 2 }),
+    /** The total printed on the bank's bill, as last typed in to reconcile. */
+    bankTotal: numeric('bank_total', { precision: 16, scale: 2 }),
+    /** When the bill was reconciled against the bank's — an audit stamp
+     * only, like `closedAt`; no logic reads it. */
+    reconciledAt: timestamp('reconciled_at', { withTimezone: true }),
   },
   (table) => [
     // One ACTIVE bill per card cycle. The partial unique index turns the
@@ -681,6 +689,11 @@ export const transactions = pgTable(
     /** Whether the user moved the charge to its bill by hand: date edits
      * then no longer re-resolve it. */
     statementPinned: boolean('statement_pinned').notNull().default(false),
+    /** The bill a payment settles — set only on the card side of a transfer
+     * into a card, chosen explicitly and never resolved from the day. */
+    paymentStatementId: integer('payment_statement_id').references(
+      () => creditCardStatements.id
+    ),
   },
   (table) => [
     // Every query that lists or searches transactions starts from the
@@ -704,6 +717,15 @@ export const transactions = pgTable(
     check(
       'transactions_pinned_needs_statement',
       sql`not ${table.statementPinned} or ${table.statementId} is not null`
+    ),
+    // A bill's `paid` sums the payments that settle it.
+    index('transactions_payment_statement_id_idx')
+      .on(table.tenantId, table.paymentStatementId)
+      .where(sql`status = 'ACTIVE' and payment_statement_id is not null`),
+    // Only the card side of a transfer settles a bill, and it is on none.
+    check(
+      'transactions_payment_is_transfer_in',
+      sql`${table.paymentStatementId} is null or (${table.type} = 'Income' and ${table.transferGroupId} is not null and ${table.statementId} is null)`
     ),
   ]
 )

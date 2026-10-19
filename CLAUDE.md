@@ -215,6 +215,13 @@ packages/
    audit stamp written only by write paths; no logic reads it. The
    assignment rule is poco's `resolveStatement`, shared by the API and the
    form; a bill's money is in its card's account currency.
+   **A payment is a transfer into the card.** Its card side lands on no
+   bill by date; `paymentStatementId` names the bill it settles, chosen
+   explicitly (or poco's `defaultPaymentStatement`), never resolved from
+   the payment's day. A bill's `paid` sums those rows, and the carry-over
+   (`previousBalance`, `amountDue`, `carriedTo`) is derived on read too —
+   no cache. `minimumDue`/`bankTotal` are typed in from the bank's bill and
+   `reconciledAt`, like `closedAt`, is an audit stamp.
 6e. **Password recovery never needs email.** A one-time reset code — issued
    by an owner for a member, generated in advance as an owner's recovery
    codes, or printed by the server's `reset-code` command — sets a new

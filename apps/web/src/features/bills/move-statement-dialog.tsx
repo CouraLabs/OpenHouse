@@ -37,7 +37,9 @@ export function MoveStatementDialog({
         <DialogHeader>
           <DialogTitle>{t('bills.move-title')}</DialogTitle>
           <DialogDescription>
-            {t('bills.move-description', { name: transaction?.name ?? '' })}
+            {transaction?.paymentStatementId != null
+              ? t('bills.move-payment-description')
+              : t('bills.move-description', { name: transaction?.name ?? '' })}
           </DialogDescription>
         </DialogHeader>
         {transaction !== null ? (

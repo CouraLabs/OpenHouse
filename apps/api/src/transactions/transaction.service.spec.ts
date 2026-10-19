@@ -1,6 +1,16 @@
-import { ConflictException, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
-import type { Account, Category, Receiver } from '@workspace/db'
+import type {
+  Account,
+  Category,
+  CreditCardStatement,
+  Receiver,
+} from '@workspace/db'
+import { CARD_PAYMENT_CATEGORY } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
@@ -85,6 +95,7 @@ const row = (overrides: Partial<TransactionRow> = {}): TransactionRow => ({
   transferGroupId: null,
   statementId: null,
   statementPinned: false,
+  paymentStatementId: null,
   createdBy: 7,
   createdDt: new Date('2026-01-01T00:00:00Z'),
   updateBy: 7,
@@ -95,6 +106,7 @@ const row = (overrides: Partial<TransactionRow> = {}): TransactionRow => ({
   receiverName: 'Market',
   currency: 'USD',
   statementDueDate: null,
+  paymentStatementDueDate: null,
   ...overrides,
 })
 
@@ -119,6 +131,7 @@ const accounts = () => ({
 /** A category repository mock with every method the service touches. */
 const categories = () => ({
   findById: vi.fn(async (): Promise<Category | undefined> => category()),
+  getOrCreateByName: vi.fn(async () => category({ id: 30 })),
 })
 
 /** A receiver repository mock with every method the service touches. */
@@ -126,18 +139,49 @@ const receivers = () => ({
   findById: vi.fn(async (): Promise<Receiver | undefined> => receiver()),
 })
 
+/** A bill repository mock with every method the transfer touches. */
+const statements = () => ({
+  findById: vi.fn(async (): Promise<CreditCardStatement | undefined> =>
+    statement()
+  ),
+  defaultPaymentStatementId: vi.fn(async (): Promise<number | null> => 40),
+})
+
+/** A bill of the card account 11 — ACTIVE unless overridden. */
+const statement = (
+  overrides: Partial<CreditCardStatement> = {}
+): CreditCardStatement => ({
+  id: 41,
+  tenantId: 1,
+  accountId: 11,
+  periodStart: '2026-09-25',
+  closeDate: '2026-10-25',
+  dueDate: '2026-11-05',
+  closedAt: null,
+  minimumDue: null,
+  bankTotal: null,
+  reconciledAt: null,
+  status: 'ACTIVE',
+  createdBy: null,
+  createdDt: new Date('2026-01-01T00:00:00Z'),
+  updateBy: null,
+  updateDt: new Date('2026-01-01T00:00:00Z'),
+  ...overrides,
+})
+
 const service = (
   repo = repository(),
   accs = accounts(),
   cats = categories(),
-  rcv = receivers()
+  rcv = receivers(),
+  bills = statements()
 ) =>
   new TransactionService(
     repo as unknown as TransactionRepository,
     accs as unknown as AccountRepository,
     cats as unknown as CategoryRepository,
     rcv as unknown as ReceiverRepository,
-    {} as CreditCardStatementRepository
+    bills as unknown as CreditCardStatementRepository
   )
 
 const createBody = {
@@ -373,7 +417,123 @@ describe('TransactionService', () => {
 
       expect(out.type).toBe('Expense')
       expect(inn.type).toBe('Income')
-      expect(repo.insertTransfer).toHaveBeenCalledWith(1, 7, transferBody)
+      expect(repo.insertTransfer).toHaveBeenCalledWith(1, 7, {
+        ...transferBody,
+        paymentStatementId: null,
+      })
+    })
+
+    describe('into a credit card', () => {
+      const card = account({ id: 11, name: 'Visa', type: 'Credit Card' })
+      const paying = () => {
+        const accs = accounts()
+        accs.findById
+          .mockResolvedValueOnce(account())
+          .mockResolvedValueOnce(card)
+        const repo = repository()
+        repo.insertTransfer.mockResolvedValue([row(), row()])
+
+        return { accs, repo }
+      }
+
+      it('settles the card default bill when the body names none', async () => {
+        const { accs, repo } = paying()
+
+        await service(repo, accs).transfer(1, 7, transferBody)
+
+        expect(repo.insertTransfer).toHaveBeenCalledWith(
+          1,
+          7,
+          expect.objectContaining({ paymentStatementId: 40 })
+        )
+      })
+
+      it('settles the bill the body names, whatever day it is paid', async () => {
+        const { accs, repo } = paying()
+        const bills = statements()
+
+        await service(repo, accs, categories(), receivers(), bills).transfer(
+          1,
+          7,
+          {
+            ...transferBody,
+            transactionDt: '2026-11-03',
+            paymentStatementId: 41,
+          }
+        )
+
+        expect(bills.defaultPaymentStatementId).not.toHaveBeenCalled()
+        expect(repo.insertTransfer).toHaveBeenCalledWith(
+          1,
+          7,
+          expect.objectContaining({ paymentStatementId: 41 })
+        )
+      })
+
+      it('rejects a bill of another card', async () => {
+        const { accs, repo } = paying()
+        const bills = statements()
+        bills.findById.mockResolvedValue(statement({ accountId: 99 }))
+
+        await expect(
+          service(repo, accs, categories(), receivers(), bills).transfer(1, 7, {
+            ...transferBody,
+            paymentStatementId: 41,
+          })
+        ).rejects.toThrow(ConflictException)
+        expect(repo.insertTransfer).not.toHaveBeenCalled()
+      })
+
+      it('lands an uncategorized payment in the card payment category', async () => {
+        const { accs, repo } = paying()
+        const cats = categories()
+
+        await service(repo, accs, cats).transfer(1, 7, {
+          ...transferBody,
+          categoryId: undefined,
+        })
+
+        expect(cats.getOrCreateByName).toHaveBeenCalledWith(
+          1,
+          7,
+          CARD_PAYMENT_CATEGORY
+        )
+        expect(repo.insertTransfer).toHaveBeenCalledWith(
+          1,
+          7,
+          expect.objectContaining({ categoryId: 30 })
+        )
+      })
+    })
+
+    it('needs a category on a transfer that pays no card', async () => {
+      const repo = repository()
+      const accs = accounts()
+      accs.findById
+        .mockResolvedValueOnce(account())
+        .mockResolvedValueOnce(account({ id: 11 }))
+
+      await expect(
+        service(repo, accs).transfer(1, 7, {
+          ...transferBody,
+          categoryId: undefined,
+        })
+      ).rejects.toThrow(BadRequestException)
+    })
+
+    it('names a bill only on a transfer into a card', async () => {
+      const repo = repository()
+      const accs = accounts()
+      accs.findById
+        .mockResolvedValueOnce(account())
+        .mockResolvedValueOnce(account({ id: 11 }))
+
+      await expect(
+        service(repo, accs).transfer(1, 7, {
+          ...transferBody,
+          paymentStatementId: 41,
+        })
+      ).rejects.toThrow(ConflictException)
     })
 
     it('rejects accounts of different currencies', async () => {

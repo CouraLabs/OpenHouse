@@ -189,10 +189,15 @@ describe('credit card statements (e2e, #5)', () => {
     expect(cardSide.statementId).toBeNull()
     expect(checkingSide.statementId).toBeNull()
     expect(cardCharge.statementId).not.toBeNull()
+    // The payment settles a bill (#7) — today's, the card having no other
+    // — without landing on one by its day.
+    expect(cardSide.paymentStatementId).not.toBeNull()
 
-    const [bill] = await billsOf(agent, card)
+    const bills = await billsOf(agent, card)
+    const charged = bills.find((bill) => bill.id === cardCharge.statementId)
 
-    expect(bill.charges).toBe('25.00')
+    expect(charged?.charges).toBe('25.00')
+    expect(charged?.paid).toBe('0.00')
   })
 
   it('opens one bill for concurrent first charges', async () => {

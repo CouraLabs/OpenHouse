@@ -1,9 +1,11 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
 import type { Account } from '@workspace/db'
+import { CARD_PAYMENT_CATEGORY } from '@workspace/poco'
 import type {
   ChangeTransactionStatusBody,
   CreateTransactionBody,
@@ -200,10 +202,10 @@ export class TransactionService {
   }
 
   /**
-   * Moves a card charge to another bill of the same card and pins it there.
-   * Only a row already on a bill can move — a charge off a card, or the
-   * card side of a payment, is on none — and only to an ACTIVE bill of its
-   * own card.
+   * Moves a card charge to another bill of the same card and pins it there,
+   * or re-points the bill the card side of a payment settles. Only a row on
+   * a card can move — a charge on its bill, or a payment — and only to an
+   * ACTIVE bill of its own card.
    */
   async moveToStatement(
     tenantId: number,
@@ -217,7 +219,9 @@ export class TransactionService {
       throw new NotFoundException(`No transaction with id ${id}.`)
     }
 
-    if (row.statementId === null) {
+    const payment = row.type === 'Income' && row.transferGroupId !== null
+
+    if (row.statementId === null && !payment) {
       throw new ConflictException('Only a card charge is on a bill.')
     }
 
@@ -265,6 +269,11 @@ export class TransactionService {
    * Transfers money between two accounts: two transactions in one database
    * transaction — an Expense on the source and an Income on the
    * destination. Both accounts must be ACTIVE and share a currency.
+   *
+   * A transfer into a credit card pays a bill of that card: the one the
+   * body names, or the card's default (its oldest unpaid closed bill, else
+   * the open one). A payment with no category lands in the tenant's
+   * "Credit card payment" category, created the first time.
    */
   async transfer(
     tenantId: number,
@@ -293,20 +302,96 @@ export class TransactionService {
       )
     }
 
-    const category = await this.categories.findById(tenantId, body.categoryId)
+    const paysCard = to.type === 'Credit Card'
 
-    if (category === undefined || category.status === 'DELETED') {
-      throw new NotFoundException(`No category with id ${body.categoryId}.`)
+    if (body.paymentStatementId !== undefined && !paysCard) {
+      throw new ConflictException('Only a transfer into a card pays a bill.')
     }
 
-    return this.repository.insertTransfer(tenantId, userId, {
+    const categoryId = await this.transferCategoryId(
+      tenantId,
+      userId,
+      body.categoryId,
+      paysCard
+    )
+    const paymentStatementId = paysCard
+      ? await this.paymentStatementId(tenantId, userId, to.id, body)
+      : null
+
+    const rows = await this.repository.insertTransfer(tenantId, userId, {
       amount: body.amount,
       transactionDt: body.transactionDt,
-      categoryId: body.categoryId,
+      categoryId,
       fromAccountId: body.fromAccountId,
       toAccountId: body.toAccountId,
       note: body.note ?? null,
+      paymentStatementId,
     })
+
+    if (rows === undefined) {
+      throw new NotFoundException(`No bill with id ${paymentStatementId}.`)
+    }
+
+    return rows
+  }
+
+  /** The category a transfer lands in: the one named, which must be
+   * usable, or — on a bill payment only — the card payment category. */
+  private async transferCategoryId(
+    tenantId: number,
+    userId: number,
+    categoryId: number | undefined,
+    paysCard: boolean
+  ): Promise<number> {
+    if (categoryId === undefined) {
+      if (!paysCard) {
+        throw new BadRequestException('Pick a category.')
+      }
+
+      const category = await this.categories.getOrCreateByName(
+        tenantId,
+        userId,
+        CARD_PAYMENT_CATEGORY
+      )
+
+      return category.id
+    }
+
+    const category = await this.categories.findById(tenantId, categoryId)
+
+    if (category === undefined || category.status === 'DELETED') {
+      throw new NotFoundException(`No category with id ${categoryId}.`)
+    }
+
+    return categoryId
+  }
+
+  /** The bill a payment into a card settles: the one named, which must be
+   * an ACTIVE bill of that card, or the card's default. */
+  private async paymentStatementId(
+    tenantId: number,
+    userId: number,
+    cardId: number,
+    body: TransferBody
+  ): Promise<number | null> {
+    if (body.paymentStatementId === undefined) {
+      return this.statements.defaultPaymentStatementId(tenantId, userId, cardId)
+    }
+
+    const statement = await this.statements.findById(
+      tenantId,
+      body.paymentStatementId
+    )
+
+    if (statement === undefined || statement.status === 'DELETED') {
+      throw new NotFoundException(`No bill with id ${body.paymentStatementId}.`)
+    }
+
+    if (statement.accountId !== cardId) {
+      throw new ConflictException('Pick a bill of the card being paid.')
+    }
+
+    return statement.id
   }
 
   /** Rejects an account, category, or — when set — receiver the tenant

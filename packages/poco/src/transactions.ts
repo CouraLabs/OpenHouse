@@ -123,6 +123,8 @@ export const transactionFilterSchema = transactionRangeSchema.extend({
   status: transactionStatusSchema.optional(),
   /** Only the charges on one card bill. */
   statementId: z.number().int().positive().optional(),
+  /** Only the payments that settle one card bill. */
+  paymentStatementId: z.number().int().positive().optional(),
   /** Which day the date window reads for card charges. */
   creditMode: creditModeSchema.prefault('accrual'),
   lifecycle: entityStatusSchema.prefault('ACTIVE'),
@@ -134,9 +136,25 @@ export const searchTransactionsSchema = fetchArgsSchema.extend({
 })
 
 /**
+ * The category a bill payment lands in when the transfer names none:
+ * fetched, or created the first time a tenant needs it. Transfers stay out
+ * of every report, so the category is informative only.
+ */
+export const CARD_PAYMENT_CATEGORY = {
+  name: 'Credit card payment',
+  color: '#64748B',
+} as const
+
+/**
  * The body the transfer route accepts: money moving between two accounts of
  * the tenant, which materializes as two transactions — an Expense on the
  * source and an Income on the destination.
+ *
+ * A transfer into a credit card is a bill payment. `paymentStatementId`
+ * names the bill it settles — explicitly: a payment made inside the next
+ * period still settles the bill picked. Without one the API settles the
+ * card's `defaultPaymentStatement`. The category may be left out only on a
+ * payment, which then lands in `CARD_PAYMENT_CATEGORY`.
  */
 export const transferSchema = z
   .object({
@@ -151,13 +169,19 @@ export const transferSchema = z
     categoryId: z
       .number({ error: 'Pick a category.' })
       .int()
-      .positive('Pick a category.'),
+      .positive('Pick a category.')
+      .optional(),
     amount: amountSchema,
     transactionDt: transactionDtSchema,
     note: z
       .string()
       .max(2000, 'Keep the note under 2000 characters.')
       .nullish(),
+    paymentStatementId: z
+      .number({ error: 'Pick a bill.' })
+      .int()
+      .positive('Pick a bill.')
+      .optional(),
   })
   .superRefine((body, ctx) => {
     if (body.fromAccountId === body.toAccountId) {
@@ -222,6 +246,11 @@ export type Transaction = {
   statementPinned: boolean
   /** The due date of the bill, joined. */
   statementDueDate: string | null
+  /** The bill a payment settles — set only on the card side of a transfer
+   * into a card. */
+  paymentStatementId: number | null
+  /** The due date of the bill the payment settles, joined. */
+  paymentStatementDueDate: string | null
   /** Set on a write's answer when the charge landed on a bill already
    * closed, so the form can offer to move it to the open one. */
   warning: StatementWarning | null
