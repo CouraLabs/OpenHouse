@@ -228,6 +228,41 @@ describe('TransactionService', () => {
     )
   })
 
+  it("rejects a change to a transfer side's type", async () => {
+    const repo = repository()
+    repo.findById.mockResolvedValue(row({ transferGroupId: 'group-1' }))
+
+    await expect(
+      service(repo).update(1, 7, { ...createBody, id: 1, type: 'Income' })
+    ).rejects.toThrow(ConflictException)
+    expect(repo.updateWithBalance).not.toHaveBeenCalled()
+  })
+
+  it("rejects a change to a transfer side's account", async () => {
+    const repo = repository()
+    repo.findById.mockResolvedValue(row({ transferGroupId: 'group-1' }))
+
+    await expect(
+      service(repo).update(1, 7, { ...createBody, id: 1, linkedAccountId: 11 })
+    ).rejects.toThrow(ConflictException)
+    expect(repo.updateWithBalance).not.toHaveBeenCalled()
+  })
+
+  it("updates a transfer side's amount, leaving the pair to the ledger", async () => {
+    const repo = repository()
+    repo.findById.mockResolvedValue(row({ transferGroupId: 'group-1' }))
+    repo.updateWithBalance.mockResolvedValue(row({ amount: '50.00' }))
+
+    await service(repo).update(1, 7, { ...createBody, id: 1, amount: '50.00' })
+
+    expect(repo.updateWithBalance).toHaveBeenCalledWith(
+      1,
+      1,
+      7,
+      expect.objectContaining({ amount: '50.00', type: 'Expense' })
+    )
+  })
+
   it('soft-deletes an ACTIVE transaction through the ledger', async () => {
     const repo = repository()
     const svc = service(repo)

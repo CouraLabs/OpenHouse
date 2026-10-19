@@ -114,6 +114,19 @@ export class TransactionService {
       throw new NotFoundException(`No transaction with id ${body.id}.`)
     }
 
+    // A transfer side's type and account are what pair it with its sibling:
+    // the sibling only mirrors amount, day, category, note, and status, so
+    // flipping one side's type or moving it to another account would create
+    // or destroy money across the pair.
+    if (
+      row.transferGroupId !== null &&
+      (body.type !== row.type || body.linkedAccountId !== row.linkedAccountId)
+    ) {
+      throw new ConflictException(
+        "A transfer's type and account cannot be changed."
+      )
+    }
+
     await this.assertReferencesUsable(tenantId, body)
 
     // As in create: the wire's `status` names out before the spread.

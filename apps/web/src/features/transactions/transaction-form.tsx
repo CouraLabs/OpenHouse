@@ -137,6 +137,11 @@ export function TransactionForm({
   const receiverId = watch('receiverId')
   const name = watch('name')
 
+  // A transfer side's type and account pair it with its sibling; the API
+  // rejects a change to either, so the form locks them.
+  const isTransfer =
+    transaction !== null && transaction.transferGroupId !== null
+
   const accounts = useActiveAccounts()
   const categories = useActiveCategories()
   const receivers = useActiveReceivers()
@@ -208,6 +213,7 @@ export function TransactionForm({
             <FieldLabel>{t('transactions.type')}</FieldLabel>
             <RadioGroup
               value={type}
+              disabled={isTransfer}
               onValueChange={(value) =>
                 setValue('type', value as TransactionType, {
                   shouldValidate: true,
@@ -270,6 +276,7 @@ export function TransactionForm({
             id="transaction-account"
             label={t('transactions.account')}
             required
+            disabled={isTransfer}
             value={accountId === undefined ? undefined : String(accountId)}
             placeholder={t('transactions.filter-account-placeholder')}
             onChange={(value) =>
@@ -429,6 +436,7 @@ function StringPick({
   onChange,
   options,
   error,
+  disabled = false,
 }: {
   id: string
   label: string
@@ -439,6 +447,7 @@ function StringPick({
   onChange: (value: string | undefined) => void
   options: Array<{ value: string; label: string }>
   error?: string
+  disabled?: boolean
 }) {
   const selected = options.find((option) => option.value === value)
 
@@ -454,6 +463,7 @@ function StringPick({
       </FieldLabel>
       <Select
         value={value}
+        disabled={disabled}
         onValueChange={(rawValue) => {
           const chosen = rawValue as unknown as string
 
