@@ -13,6 +13,7 @@ function rule(overrides: Partial<RecurringTransaction>): RecurringTransaction {
     categoryName: 'Housing',
     linkedAccountId: 1,
     accountName: 'Checking',
+    accountCurrency: 'USD',
     amount: '100.00',
     type: 'Expense',
     frequency: 'Monthly',

@@ -13,6 +13,7 @@ import { NumberField } from '@workspace/ui/components/number-field'
 
 import { pmt, realRate } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { useMainCurrency } from '@/lib/settings.js'
 
 /**
  * Reaching a target: the monthly contribution that turns today's balance
@@ -22,6 +23,7 @@ import { formatMoney } from '@/lib/format-money.js'
  */
 export function AccumulationCard() {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
   const [target, setTarget] = useState('2000000.00')
   const [present, setPresent] = useState('25000.00')
   const [rate, setRate] = useState('0.8')
@@ -129,7 +131,7 @@ export function AccumulationCard() {
               {t('financial-independence.accumulation.result')}
             </span>
             <p className="text-2xl font-semibold">
-              {formatMoney(String(contribution), i18n.language)}
+              {formatMoney(String(contribution), i18n.language, mainCurrency)}
             </p>
           </div>
           <div className="flex justify-between gap-2 text-sm">
@@ -137,7 +139,11 @@ export function AccumulationCard() {
               {t('financial-independence.accumulation.contributed')}
             </span>
             <span className="font-medium tabular-nums">
-              {formatMoney(String(totalContributed), i18n.language)}
+              {formatMoney(
+                String(totalContributed),
+                i18n.language,
+                mainCurrency
+              )}
             </span>
           </div>
           <div className="flex justify-between gap-2 text-sm">
@@ -145,7 +151,7 @@ export function AccumulationCard() {
               {t('financial-independence.accumulation.tax')}
             </span>
             <span className="font-medium tabular-nums">
-              {formatMoney(String(totalTax), i18n.language)}
+              {formatMoney(String(totalTax), i18n.language, mainCurrency)}
             </span>
           </div>
         </div>

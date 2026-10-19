@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -7,10 +8,19 @@ import {
 import bcrypt from 'bcrypt'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, eq, isNull, sql } from 'drizzle-orm'
-import type { Database, Tenant, User, UserRole } from '@workspace/db'
+import type {
+  Currency,
+  Database,
+  Tenant,
+  TenantSettingsRow,
+  User,
+  UserRole,
+} from '@workspace/db'
 import { tenants, tenantCodes, users } from '@workspace/db'
-import type { SessionResponse } from '@workspace/poco'
+import { toStartPage, type SessionResponse } from '@workspace/poco'
 import { getJwtTtls } from '../config/env.js'
+import type { Session } from '../common/session/session.js'
+import { SettingsRepository } from '../settings/settings.repository.js'
 import { hashToken, TokenService } from './token.service.js'
 
 /**
@@ -23,6 +33,7 @@ export interface PublicUser {
   email: string
   name: string
   role: UserRole
+  startPage: string
   createdAt: Date
   updatedAt: Date
 }
@@ -47,18 +58,23 @@ export interface PublicTenant {
 export class AuthService {
   constructor(
     @InjectDrizzle() private readonly db: Database,
-    @Inject(TokenService) private readonly tokens: TokenService
+    @Inject(TokenService) private readonly tokens: TokenService,
+    @Inject(SettingsRepository) private readonly settings: SettingsRepository
   ) {}
 
   /**
-   * Creates the tenant with its first user, who owns it. Both rows exist or
-   * neither does: a sign-up that fails halfway leaves no orphan tenant.
+   * Creates the tenant with its first user, who owns it, and its settings.
+   * All three rows exist or none does: a sign-up that fails halfway leaves
+   * no orphan tenant. The browser sends its time zone and currency; a
+   * client that sends no zone gets `UTC`, left unconfirmed.
    */
   async signUpWithTenant(body: {
     tenantName: string
     name: string
     email: string
     password: string
+    timezone?: string
+    currency?: Currency
   }): Promise<SessionResponse> {
     const passwordHash = await bcrypt.hash(body.password, 10)
 
@@ -80,13 +96,23 @@ export class AuthService {
           })
           .returning()
 
-        return { tenant, user }
+        const settings = await this.settings.insert(
+          tenant.id,
+          {
+            timezone: body.timezone ?? 'UTC',
+            mainCurrency: body.currency ?? 'USD',
+            timezoneConfirmed: body.timezone !== undefined,
+          },
+          tx
+        )
+
+        return { tenant, user, settings }
       } catch (error) {
         throw this.conflictFor(error)
       }
     })
 
-    return this.sessionResponse(created.user, created.tenant)
+    return this.sessionResponse(created.user, created.tenant, created.settings)
   }
 
   /**
@@ -146,12 +172,7 @@ export class AuthService {
       }
     })
 
-    const [tenant] = await this.db.query.tenants.findMany({
-      where: { id: created.tenantId },
-      limit: 1,
-    })
-
-    return this.sessionResponse(created, tenant)
+    return this.sessionFor(created)
   }
 
   /**
@@ -178,12 +199,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password.')
     }
 
-    const [tenant] = await this.db.query.tenants.findMany({
-      where: { id: user.tenantId },
-      limit: 1,
-    })
-
-    return this.sessionResponse(user, tenant)
+    return this.sessionFor(user)
   }
 
   /**
@@ -217,12 +233,49 @@ export class AuthService {
       throw new UnauthorizedException('Session expired or invalid.')
     }
 
-    const [tenant] = await this.db.query.tenants.findMany({
-      where: { id: user.tenantId },
+    return this.sessionFor(user)
+  }
+
+  /** The session response of a request the guard already resolved. */
+  async current(session: Session): Promise<SessionResponse> {
+    const settings = await this.settings.findByTenant(session.tenant.id)
+
+    return this.sessionResponse(session.user, session.tenant, settings)
+  }
+
+  /**
+   * Changes the signed-in user's password. The current password must
+   * match; the stored refresh hash is cleared, which signs out every other
+   * session — the caller then issues a fresh pair for this one.
+   */
+  async changePassword(
+    userId: number,
+    body: { currentPassword: string; newPassword: string }
+  ): Promise<SessionResponse> {
+    const [user] = await this.db.query.users.findMany({
+      where: { id: userId },
       limit: 1,
     })
+    if (user === undefined || !user.isActive) {
+      throw new UnauthorizedException('Session expired or invalid.')
+    }
 
-    return this.sessionResponse(user, tenant)
+    if (!(await bcrypt.compare(body.currentPassword, user.password))) {
+      throw new BadRequestException('Current password is incorrect.')
+    }
+
+    const passwordHash = await bcrypt.hash(body.newPassword, 10)
+    const [updated] = await this.db
+      .update(users)
+      .set({
+        password: passwordHash,
+        refreshTokenHash: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning()
+
+    return this.sessionFor(updated)
   }
 
   /** Ends the session server-side: the next refresh token stops working. */
@@ -264,12 +317,27 @@ export class AuthService {
     }
   }
 
-  /** Shapes a user and their tenant for the response, dropping secrets. */
+  /** Reads the tenant and settings of a user and shapes their session. */
+  private async sessionFor(user: User): Promise<SessionResponse> {
+    const [[tenant], settings] = await Promise.all([
+      this.db.query.tenants.findMany({
+        where: { id: user.tenantId },
+        limit: 1,
+      }),
+      this.settings.findByTenant(user.tenantId),
+    ])
+
+    return this.sessionResponse(user, tenant, settings)
+  }
+
+  /** Shapes a user, their tenant, and its settings for the response,
+   * dropping secrets. */
   private sessionResponse(
     user: PublicUser | Omit<User, 'password' | 'refreshTokenHash'>,
-    tenant: Tenant | undefined
+    tenant: Tenant | undefined,
+    settings: TenantSettingsRow | undefined
   ): SessionResponse {
-    if (tenant === undefined) {
+    if (tenant === undefined || settings === undefined) {
       throw new UnauthorizedException('Session expired or invalid.')
     }
 
@@ -286,6 +354,7 @@ export class AuthService {
         email: publicUser.email,
         name: publicUser.name,
         role: publicUser.role,
+        startPage: toStartPage(publicUser.startPage),
         createdAt: publicUser.createdAt.toISOString(),
         updatedAt: publicUser.updatedAt.toISOString(),
       },
@@ -295,6 +364,11 @@ export class AuthService {
         expiresIn: tenant.expiresIn?.toISOString() ?? null,
         createdAt: tenant.createdAt.toISOString(),
         updatedAt: tenant.updatedAt.toISOString(),
+      },
+      settings: {
+        timezone: settings.timezone,
+        mainCurrency: settings.mainCurrency,
+        timezoneConfirmed: settings.timezoneConfirmed,
       },
     }
   }

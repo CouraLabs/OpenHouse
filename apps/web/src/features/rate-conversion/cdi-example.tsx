@@ -13,6 +13,7 @@ import { NumberField } from '@workspace/ui/components/number-field'
 
 import { formatPercent } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { useMainCurrency } from '@/lib/settings.js'
 
 /**
  * The CDI example the sheet walked: a CDI-linked investment pays a share
@@ -22,6 +23,7 @@ import { formatMoney } from '@/lib/format-money.js'
  */
 export function CdiExample() {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
   const [diRate, setDiRate] = useState('13')
   const [share, setShare] = useState('90')
   const [deposit, setDeposit] = useState('10000.00')
@@ -102,7 +104,7 @@ export function CdiExample() {
             {t('rate-conversion.cdi.future-value', { count })}
           </span>
           <p className="text-2xl font-semibold">
-            {formatMoney(String(futureValue), i18n.language)}
+            {formatMoney(String(futureValue), i18n.language, mainCurrency)}
           </p>
         </div>
       </CardContent>

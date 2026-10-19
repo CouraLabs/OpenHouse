@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Cron } from '@nestjs/schedule'
 import type { RecurringTransaction } from '@workspace/db'
-import type { Frequency } from '@workspace/poco'
+import { dayIn, todayIn, type Frequency } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
+import { Clock } from '../common/clock/clock.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
+import { SettingsRepository } from '../settings/settings.repository.js'
 import { TransactionRepository } from '../transactions/transaction.repository.js'
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
 
@@ -55,34 +57,23 @@ export function isDueOn(rule: DueRule, day: string): boolean {
 }
 
 /**
- * The local calendar day of an instant, as `YYYY-MM-DD` — the same clock
- * the `@Cron` fires on. The cron evaluates "is today due" against the
- * server's own calendar, never against UTC: on a server east of UTC, the
- * UTC day at local 00:30 is still yesterday, and every generated
- * transaction would be dated a day early.
- */
-export function localDayOf(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
-/**
- * Shifts a `YYYY-MM-DD` day by a number of days. The parsing pins the
- * noon hour in UTC so a shift never lands on a different calendar day —
- * no timezone offset or DST boundary can move a noon.
+ * Shifts a `YYYY-MM-DD` day by a number of days. Pure calendar arithmetic
+ * on a UTC midnight — no timezone offset or DST boundary can move it.
  */
 export function shiftDay(day: string, days: number): string {
   const [year, month, date] = day.split('-').map(Number)
 
-  return localDayOf(new Date(year, month - 1, date + days, 12))
+  return new Date(Date.UTC(year, month - 1, date + days))
+    .toISOString()
+    .slice(0, 10)
 }
 
 /**
  * The background service that materializes due recurring rules into real
- * transactions. It runs once a day, after midnight, and is idempotent: a
+ * transactions. "Today" is each tenant's own: a rule is evaluated against
+ * the calendar day of the tenant's time zone, never the server's. The job
+ * runs every hour, so every zone's new day is picked up soon after its
+ * midnight, and it is idempotent: a
  * rule due on a day whose transaction already exists is skipped, so a
  * restarted process never double-bills — and the partial unique index in
  * the schema makes that claim atomic even between replicas.
@@ -100,7 +91,9 @@ export class RecurringRunService {
     private readonly transactions: TransactionRepository,
     private readonly accounts: AccountRepository,
     private readonly categories: CategoryRepository,
-    private readonly receivers: ReceiverRepository
+    private readonly receivers: ReceiverRepository,
+    private readonly settings: SettingsRepository,
+    private readonly clock: Clock
   ) {}
 
   /** How many days back a run looks for days it missed — the downtime a
@@ -110,7 +103,7 @@ export class RecurringRunService {
   /** Materializes every due rule of every tenant; answers how many rows
    * it created. One failing tenant never stops the others. `days` widens
    * the catch-up window — the tests pin it to one day. */
-  @Cron('0 30 0 * * *')
+  @Cron('0 30 * * * *')
   async runDue(
     days: number = RecurringRunService.CATCH_UP_DAYS
   ): Promise<number> {
@@ -125,19 +118,31 @@ export class RecurringRunService {
     })
   }
 
-  /** Materializes every due rule over the last `days` local days,
-   * oldest first, ending today — the day order keeps an outage's days
-   * landing in sequence. Rules do not generate before the day they were
-   * created. */
+  /** Materializes every due rule over the last `days` days of its
+   * tenant's calendar, oldest first, ending on the tenant's today — the
+   * day order keeps an outage's days landing in sequence. Rules do not
+   * generate before the day they were created. */
   private async materializeWindow(days: number): Promise<number> {
-    const today = localDayOf(new Date())
-    const window = Array.from({ length: days }, (_, index) =>
-      shiftDay(today, index - (days - 1))
-    )
+    const now = this.clock.now()
+    const rules = await this.rules.listActiveAllTenants()
+    const timezones = await this.settings.timezonesOf([
+      ...new Set(rules.map((rule) => rule.tenantId)),
+    ])
+    const windows = new Map<string, string[]>()
     let created = 0
 
-    for (const rule of await this.rules.listActiveAllTenants()) {
-      const firstDay = localDayOf(rule.createdDt)
+    for (const rule of rules) {
+      // A tenant always has its settings row; UTC only guards a gap.
+      const timezone = timezones.get(rule.tenantId) ?? 'UTC'
+      let window = windows.get(timezone)
+      if (window === undefined) {
+        const today = todayIn(timezone, now)
+        window = Array.from({ length: days }, (_, index) =>
+          shiftDay(today, index - (days - 1))
+        )
+        windows.set(timezone, window)
+      }
+      const firstDay = dayIn(rule.createdDt, timezone)
 
       for (const day of window) {
         if (day < firstDay || !isDueOn(rule, day)) {
@@ -156,9 +161,7 @@ export class RecurringRunService {
     }
 
     if (created > 0) {
-      this.logger.log(
-        `Materialized ${created} recurring transactions up to ${today}.`
-      )
+      this.logger.log(`Materialized ${created} recurring transactions.`)
     }
 
     return created

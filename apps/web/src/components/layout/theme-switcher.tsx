@@ -1,63 +1,36 @@
-import { Monitor, Moon, Sun, type LucideIcon } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@workspace/ui/components/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '@workspace/ui/components/dropdown-menu'
 
 import { useTheme } from '@workspace/ui/components/theme-provider'
 
-/** The themes the switcher offers, in display order. */
-const THEMES = ['light', 'dark', 'system'] as const
-
-/** The icons the theme options read as. */
-const THEME_ICONS: Record<(typeof THEMES)[number], LucideIcon> = {
-  light: Sun,
-  dark: Moon,
-  system: Monitor,
+/** Whether the OS prefers dark — what a `system` theme renders as. */
+function systemPrefersDark(): boolean {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
 /**
- * The theme dropdown: Light, Dark, System via the theme provider. Extracted
- * from the app header so the auth pages offer the same control.
+ * The theme toggle: one click flips between light and dark. A stored
+ * `system` theme reads as whatever the OS renders, and the first click
+ * leaves it for the opposite. Extracted from the app header so the auth
+ * pages offer the same control.
  */
 export function ThemeSwitcher() {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
-  const CurrentIcon = THEME_ICONS[theme]
+  const isDark = theme === 'dark' || (theme === 'system' && systemPrefersDark())
+  const next = isDark ? 'light' : 'dark'
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t('theme.label')}
-          />
-        }
-      >
-        <CurrentIcon />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-          {THEMES.map((value) => {
-            const Icon = THEME_ICONS[value]
-
-            return (
-              <DropdownMenuRadioItem key={value} value={value}>
-                <Icon />
-                {t(`theme.${value}`)}
-              </DropdownMenuRadioItem>
-            )
-          })}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      aria-label={t(`theme.switch-to-${next}`)}
+      title={t(`theme.switch-to-${next}`)}
+      onClick={() => setTheme(next)}
+    >
+      {isDark ? <Moon /> : <Sun />}
+    </Button>
   )
 }

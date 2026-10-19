@@ -20,6 +20,7 @@ import {
 import { TextField } from '@workspace/ui/components/text-field'
 
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
+import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
 import { useActiveAccounts } from './use-goals.js'
 
 /**
@@ -32,18 +33,19 @@ const goalFormSchema = createGoalSchema
 type GoalFormValues = z.infer<typeof goalFormSchema>
 
 /**
- * The default values of a new goal: nothing chosen, nothing typed. Built
- * when the form opens, not at module load — the balance day is the day the
- * user opens the form, however long the tab has been alive.
+ * The default values of a new goal: nothing chosen, nothing typed, the
+ * tenant's main currency preselected. Built when the form opens, not at
+ * module load — the balance day is the tenant's today when the user opens
+ * the form, however long the tab has been alive.
  */
-const newGoal = (): GoalFormValues => ({
+const newGoal = (today: string, mainCurrency: Currency): GoalFormValues => ({
   name: '',
   linkedAccountId: undefined as unknown as number,
   balance: '',
-  balanceDt: formatDateOnly(new Date()),
+  balanceDt: today,
   targetBalance: '',
   targetDt: undefined,
-  currency: 'USD',
+  currency: mainCurrency,
 })
 
 /** The props `GoalForm` takes. */
@@ -73,6 +75,8 @@ export function GoalForm({
   isSaving = false,
 }: GoalFormProps) {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
+  const today = useTenantToday()
   const {
     handleSubmit,
     reset,
@@ -82,14 +86,14 @@ export function GoalForm({
     formState: { errors },
   } = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
-    defaultValues: newGoal(),
+    defaultValues: newGoal(today, mainCurrency),
   })
 
   // The form holds the goal it edits: switching rows resets the fields.
   useEffect(() => {
     reset(
       goal === null
-        ? newGoal()
+        ? newGoal(today, mainCurrency)
         : {
             name: goal.name,
             linkedAccountId: goal.linkedAccountId,
@@ -100,7 +104,7 @@ export function GoalForm({
             currency: goal.currency,
           }
     )
-  }, [goal, reset])
+  }, [goal, today, mainCurrency, reset])
 
   const linkedAccountId = watch('linkedAccountId')
   const balanceDt = watch('balanceDt')
@@ -120,9 +124,9 @@ export function GoalForm({
     (account) => account.id === linkedAccountId
   )
 
-  // The earliest day a target deadline may hold: today, at local midnight.
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  // The earliest day a target deadline may hold: the tenant's today, as a
+  // local-midnight date the picker compares against.
+  const earliestTargetDt = parseDateOnly(today)
 
   return (
     <form
@@ -293,7 +297,7 @@ export function GoalForm({
             className="h-8"
             locale={i18n.language}
             // A deadline cannot sit in the past: today and later only.
-            disabledBefore={today}
+            disabledBefore={earliestTargetDt}
             value={parseDateOnly(targetDt)}
             onChange={(date) =>
               setValue('targetDt', formatDateOnly(date), {

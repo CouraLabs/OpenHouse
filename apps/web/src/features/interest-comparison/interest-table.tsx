@@ -8,6 +8,7 @@ import {
 } from '@workspace/ui/components/card'
 
 import { formatMoney } from '@/lib/format-money.js'
+import { useMainCurrency } from '@/lib/settings.js'
 
 /** One period of the schedule: both capitals, both interest runs, the gap. */
 export interface InterestRow {
@@ -30,6 +31,7 @@ interface InterestTableProps {
  */
 export function InterestTable({ rows }: InterestTableProps) {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
 
   return (
     <Card>
@@ -68,19 +70,39 @@ export function InterestTable({ rows }: InterestTableProps) {
                 <tr key={row.period} className="border-t">
                   <td className="px-3 py-1.5 tabular-nums">{row.period}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
-                    {formatMoney(String(row.simpleCapital), i18n.language)}
+                    {formatMoney(
+                      String(row.simpleCapital),
+                      i18n.language,
+                      mainCurrency
+                    )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
-                    {formatMoney(String(row.simpleInterest), i18n.language)}
+                    {formatMoney(
+                      String(row.simpleInterest),
+                      i18n.language,
+                      mainCurrency
+                    )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
-                    {formatMoney(String(row.compoundCapital), i18n.language)}
+                    {formatMoney(
+                      String(row.compoundCapital),
+                      i18n.language,
+                      mainCurrency
+                    )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
-                    {formatMoney(String(row.compoundInterest), i18n.language)}
+                    {formatMoney(
+                      String(row.compoundInterest),
+                      i18n.language,
+                      mainCurrency
+                    )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
-                    {formatMoney(String(row.variation), i18n.language)}
+                    {formatMoney(
+                      String(row.variation),
+                      i18n.language,
+                      mainCurrency
+                    )}
                   </td>
                 </tr>
               ))}

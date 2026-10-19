@@ -10,6 +10,10 @@ export const relations = defineRelations(schema, (r) => ({
   tenants: {
     users: r.many.users(),
     tenantCodes: r.many.tenantCodes(),
+    settings: r.one.tenantSettings({
+      from: r.tenants.id,
+      to: r.tenantSettings.tenantId,
+    }),
     categories: r.many.categories(),
     limits: r.many.limits(),
     accounts: r.many.accounts(),
@@ -22,6 +26,13 @@ export const relations = defineRelations(schema, (r) => ({
   users: {
     tenant: r.one.tenants({
       from: r.users.tenantId,
+      to: r.tenants.id,
+      optional: false,
+    }),
+  },
+  tenantSettings: {
+    tenant: r.one.tenants({
+      from: r.tenantSettings.tenantId,
       to: r.tenants.id,
       optional: false,
     }),

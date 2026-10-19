@@ -1,15 +1,13 @@
 import { z } from 'zod'
 
+import type { Currency } from './currencies.js'
 import { amountSchema } from './limits.js'
 import {
   entityStatusSchema,
   fetchArgsSchema,
   type EntityStatus,
 } from './fetch.js'
-import {
-  transactionTypeSchema,
-  type TransactionType,
-} from './transactions.js'
+import { transactionTypeSchema, type TransactionType } from './transactions.js'
 
 /**
  * The recurring-transaction routes' contract: the bodies the write routes
@@ -164,8 +162,9 @@ export type SearchRecurringTransactionsArgs = z.infer<
 
 /**
  * What the recurring routes return: the wire shape, dates as ISO strings.
- * The receiver, category, and account names come joined on every read, so
- * the UI never has to resolve an id.
+ * The receiver, category, and account names — and the account's currency,
+ * which the amount is in — come joined on every read, so the UI never has
+ * to resolve an id.
  */
 export type RecurringTransaction = {
   id: number
@@ -175,6 +174,7 @@ export type RecurringTransaction = {
   categoryName: string
   linkedAccountId: number
   accountName: string
+  accountCurrency: Currency
   amount: string
   type: TransactionType
   frequency: Frequency

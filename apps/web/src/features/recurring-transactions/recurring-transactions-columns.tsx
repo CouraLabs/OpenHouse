@@ -64,7 +64,12 @@ export function buildRecurringColumns(
     {
       accessorKey: 'amount',
       header: t('recurring.amount'),
-      cell: (context) => formatRuleAmount(context.row.original.amount, locale),
+      cell: (context) =>
+        formatMoney(
+          context.row.original.amount,
+          locale,
+          context.row.original.accountCurrency
+        ),
     },
     {
       accessorKey: 'frequency',
@@ -127,12 +132,6 @@ export function readFrequency(
         month: months[(rule.frequencyMonth ?? 1) - 1],
       })
   }
-}
-
-/** Formats an amount in the user's locale, currency-less: a rule's amount
- * takes its currency from the account it hits. */
-function formatRuleAmount(amount: string, locale: string): string {
-  return formatMoney(amount, locale)
 }
 
 /** The actions cell: the edit and delete buttons, one per row. */

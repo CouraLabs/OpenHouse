@@ -10,6 +10,7 @@ import { ProjectionLineChart } from '@workspace/ui/components/projection-line-ch
 
 import { compactMoney } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { useMainCurrency } from '@/lib/settings.js'
 
 import type { RentVsBuyRow } from './simulate.js'
 
@@ -34,6 +35,7 @@ interface RentVsBuyChartProps {
  */
 export function RentVsBuyChart({ rows, sampleStep }: RentVsBuyChartProps) {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
 
   // The sample keeps the first row and always the last, so the curves end
   // at the month the summary quotes.
@@ -69,8 +71,10 @@ export function RentVsBuyChart({ rows, sampleStep }: RentVsBuyChartProps) {
               values: sampled.map((row) => row.investment),
             },
           ]}
-          formatValue={(value) => formatMoney(String(value), i18n.language)}
-          formatTick={compactMoney(i18n.language)}
+          formatValue={(value) =>
+            formatMoney(String(value), i18n.language, mainCurrency)
+          }
+          formatTick={compactMoney(i18n.language, mainCurrency)}
         />
       </CardContent>
     </Card>

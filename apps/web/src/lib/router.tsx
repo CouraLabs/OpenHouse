@@ -24,6 +24,8 @@ import { InterestComparisonPage } from '@/features/interest-comparison/interest-
 import { RateConversionPage } from '@/features/rate-conversion/rate-conversion-page.js'
 import { FinancialIndependencePage } from '@/features/financial-independence/financial-independence-page.js'
 import { RentVsBuyPage } from '@/features/rent-vs-buy/rent-vs-buy-page.js'
+import { SettingsPage } from '@/features/settings/settings-page.js'
+import { isSectionFor } from '@/features/settings/settings-sections.js'
 import { MainLayout } from '@/components/layout/main-layout.js'
 
 /** The root route renders nothing but the matched child. */
@@ -38,17 +40,24 @@ const signInRoute = createRoute({
   path: '/sign-in',
   component: SignInPage,
   beforeLoad: () => {
-    if (currentSession() !== null) {
-      throw redirect({ to: '/' })
+    const session = currentSession()
+
+    if (session !== null) {
+      throw redirect({ to: session.user.startPage })
     }
   },
 })
 
-/** The route a new user — or one joining with a code — signs up from. */
+/** The route a new user — or one joining with a code — signs up from. An
+ * invite link carries the code as `?code=`, which prefills the form. */
 const signUpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-up',
   component: SignUpPage,
+  validateSearch: (search: Record<string, unknown>): { code?: string } =>
+    typeof search.code === 'string' && search.code !== ''
+      ? { code: search.code }
+      : {},
   beforeLoad: () => {
     if (currentSession() !== null) {
       throw redirect({ to: '/' })
@@ -171,6 +180,31 @@ const rentVsBuyRoute = createRoute({
   component: RentVsBuyPage,
 })
 
+/** The Settings page, opening the first section the role may see. */
+const settingsRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'settings',
+  component: SettingsPage,
+})
+
+/**
+ * One Settings section. A section the role may not open — a member asking
+ * for General or Users — or an unknown one redirects to `/settings`; the
+ * API refuses those routes on its own as well.
+ */
+const settingsSectionRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'settings/$section',
+  component: SettingsPage,
+  beforeLoad: ({ params }) => {
+    const role = currentSession()?.user.role ?? 'user'
+
+    if (!isSectionFor(role, params.section)) {
+      throw redirect({ to: '/settings' })
+    }
+  },
+})
+
 const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
@@ -189,6 +223,8 @@ const routeTree = rootRoute.addChildren([
     rateConversionRoute,
     financialIndependenceRoute,
     rentVsBuyRoute,
+    settingsRoute,
+    settingsSectionRoute,
   ]),
 ])
 

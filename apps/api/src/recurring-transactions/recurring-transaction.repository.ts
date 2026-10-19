@@ -1,7 +1,7 @@
 import { and, asc, count, eq, getTableColumns, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Database, RecurringTransaction } from '@workspace/db'
+import type { Currency, Database, RecurringTransaction } from '@workspace/db'
 import {
   accounts,
   categories,
@@ -14,13 +14,14 @@ import { buildPagedQuery } from '../common/search/fetch.helper.js'
 
 /**
  * A recurring rule row with the receiver's, category's, and account's names
- * joined on — what every read answers. The web never resolves an id into a
- * label.
+ * — and the account's currency, which the rule's amount is in — joined on:
+ * what every read answers. The web never resolves an id into a label.
  */
 export type RecurringTransactionRow = RecurringTransaction & {
   receiverName: string
   categoryName: string
   accountName: string
+  accountCurrency: Currency
 }
 
 /** What a search answers with: the page's rows and how many match in all. */
@@ -208,6 +209,7 @@ export class RecurringTransactionRepository {
         receiverName: sql<string>`coalesce(${receivers.name}, '')`,
         categoryName: sql<string>`coalesce(${categories.name}, '')`,
         accountName: sql<string>`coalesce(${accounts.name}, '')`,
+        accountCurrency: accounts.currency,
       })
       .from(recurringTransactions)
       .innerJoin(receivers, eq(recurringTransactions.receiverId, receivers.id))

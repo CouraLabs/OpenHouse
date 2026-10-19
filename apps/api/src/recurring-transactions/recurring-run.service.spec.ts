@@ -3,7 +3,9 @@ import type { RecurringTransaction } from '@workspace/db'
 
 import type { AccountRepository } from '../accounts/account.repository.js'
 import type { CategoryRepository } from '../categories/category.repository.js'
+import type { Clock } from '../common/clock/clock.js'
 import type { ReceiverRepository } from '../receivers/receiver.repository.js'
+import type { SettingsRepository } from '../settings/settings.repository.js'
 import type {
   TransactionRepository,
   TransactionRow,
@@ -12,7 +14,6 @@ import type {
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
 import {
   isDueOn,
-  localDayOf,
   RecurringRunService,
   shiftDay,
 } from './recurring-run.service.js'
@@ -96,14 +97,7 @@ describe('isDueOn', () => {
   })
 })
 
-describe('localDayOf and shiftDay', () => {
-  it('reads the local calendar fields, not the UTC ones', () => {
-    // Built from local fields, so the assertion holds on a server in any
-    // timezone: local 00:30 on the 15th is the day the cron fires on.
-    expect(localDayOf(new Date(2026, 9, 15, 0, 30))).toBe('2026-10-15')
-    expect(localDayOf(new Date(2026, 0, 1, 23, 59))).toBe('2026-01-01')
-  })
-
+describe('shiftDay', () => {
   it('shifts across month and year boundaries without losing a day', () => {
     expect(shiftDay('2026-10-01', -1)).toBe('2026-09-30')
     expect(shiftDay('2027-01-01', -1)).toBe('2026-12-31')
@@ -133,8 +127,22 @@ const rule = (
   ...overrides,
 })
 
+/** The instant every run below happens at: midday UTC on 2026-10-15. */
+const NOW = new Date('2026-10-15T12:00:00Z')
+
+/** A clock pinned to an instant. */
+const fixedClock = (now: Date = NOW): Clock => ({ now: () => now })
+
+/** A settings repository answering one zone for every tenant asked. */
+const settingsIn = (timezone = 'UTC') => ({
+  timezonesOf: vi.fn(
+    async (ids: readonly number[]) =>
+      new Map(ids.map((id) => [id, timezone] as const))
+  ),
+})
+
 describe('RecurringRunService.runDue', () => {
-  const today = localDayOf(new Date())
+  const today = '2026-10-15'
   const dueRule = rule({
     frequency: 'Daily',
     frequencyDay: null,
@@ -143,7 +151,12 @@ describe('RecurringRunService.runDue', () => {
 
   /** A run service over mocked repositories, with the references ACTIVE
    * and the names joined read. */
-  const run = (rules: RecurringTransaction[], existing: boolean) => {
+  const run = (
+    rules: RecurringTransaction[],
+    existing: boolean,
+    timezone = 'UTC',
+    now = NOW
+  ) => {
     const rulesRepo = {
       listActiveAllTenants: vi.fn(async () => rules),
       findById: vi.fn(async () => ({
@@ -178,7 +191,9 @@ describe('RecurringRunService.runDue', () => {
       transactionsRepo as unknown as TransactionRepository,
       accountsRepo as unknown as AccountRepository,
       categoriesRepo as unknown as CategoryRepository,
-      receiversRepo as unknown as ReceiverRepository
+      receiversRepo as unknown as ReceiverRepository,
+      settingsIn(timezone) as unknown as SettingsRepository,
+      fixedClock(now)
     )
 
     return {
@@ -208,6 +223,38 @@ describe('RecurringRunService.runDue', () => {
         name: 'City Power',
       })
     )
+  })
+
+  it("dates by the tenant's zone: 01:00 UTC is still yesterday at UTC−03:00", async () => {
+    const { svc, transactionsRepo } = run(
+      [dueRule],
+      false,
+      'America/Sao_Paulo',
+      new Date('2026-10-15T01:00:00Z')
+    )
+
+    const created = await svc.runDue(1)
+
+    expect(created).toBe(1)
+    expect(transactionsRepo.insertGenerated).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ transactionDt: '2026-10-14' })
+    )
+  })
+
+  it("does not run a day-of-month rule before the tenant's day begins", async () => {
+    const monthly15 = rule({ frequencyDay: 15 })
+    const { svc, transactionsRepo } = run(
+      [monthly15],
+      false,
+      'America/Sao_Paulo',
+      new Date('2026-10-15T01:00:00Z')
+    )
+
+    const created = await svc.runDue(1)
+
+    expect(created).toBe(0)
+    expect(transactionsRepo.insertGenerated).not.toHaveBeenCalled()
   })
 
   it('skips a rule whose transaction already exists today — idempotent', async () => {
@@ -334,7 +381,9 @@ describe('RecurringRunService.runDue', () => {
       transactionsRepo as unknown as TransactionRepository,
       accountsRepo as unknown as AccountRepository,
       categoriesRepo as unknown as CategoryRepository,
-      receiversRepo as unknown as ReceiverRepository
+      receiversRepo as unknown as ReceiverRepository,
+      settingsIn() as unknown as SettingsRepository,
+      fixedClock()
     )
 
     const created = await svc.runDue(1)

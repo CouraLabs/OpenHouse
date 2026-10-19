@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import type { SessionResponse, SignInBody, SignUpBody } from '@workspace/poco'
+import type {
+  ChangePasswordBody,
+  SessionResponse,
+  SignInBody,
+  SignUpBody,
+} from '@workspace/poco'
 import { ApiError, api } from './api.js'
 import { SESSION_QUERY_KEY } from './query.js'
 
@@ -70,6 +75,25 @@ export function useRefresh() {
 
   return useMutation({
     mutationFn: () => api<SessionResponse>('/auth/refresh', { method: 'POST' }),
+    onSuccess: (session) => {
+      queryClient.setQueryData(SESSION_QUERY_KEY, session)
+    },
+  })
+}
+
+/**
+ * Changes the signed-in user's password. The API signs out every other
+ * session and answers this one's fresh session, which replaces the cache.
+ */
+export function useChangePassword() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: ChangePasswordBody) =>
+      api<SessionResponse>('/auth/password/change', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
     onSuccess: (session) => {
       queryClient.setQueryData(SESSION_QUERY_KEY, session)
     },

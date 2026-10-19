@@ -17,7 +17,12 @@ import {
  * `@workspace/db` (`receiverTypes`) — keep the two in step. A form picking
  * a kind with nothing chosen gets the friendly message, not a type error.
  */
-export const receiverTypes = ['Person', 'Service', 'Merchant', 'Charity'] as const
+export const receiverTypes = [
+  'Person',
+  'Service',
+  'Merchant',
+  'Charity',
+] as const
 
 export const receiverTypeSchema = z.enum(receiverTypes, {
   error: 'Pick a type.',

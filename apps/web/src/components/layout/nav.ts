@@ -38,18 +38,10 @@ export type NavGroup = {
   items: Array<NavItem | CollapsibleNavItem | NavSubgroup>
 }
 
-/** The financial records a signed-in user manages, ordered by role: setup, then daily activity, then planning. */
+/** The financial records a signed-in user manages, ordered by use: daily activity first, then setup, planning, and tips. */
 export const FINANCIAL_GROUP: NavGroup = {
   key: 'nav.financial',
   items: [
-    {
-      key: 'nav.subgroup.setup',
-      items: [
-        { key: 'nav.accounts', to: '/accounts', icon: Wallet },
-        { key: 'nav.categories', to: '/categories', icon: Tags },
-        { key: 'nav.receivers', to: '/receivers', icon: Users },
-      ],
-    },
     {
       key: 'nav.subgroup.activity',
       items: [
@@ -64,6 +56,14 @@ export const FINANCIAL_GROUP: NavGroup = {
           to: '/transaction-linkers',
           icon: Link,
         },
+      ],
+    },
+    {
+      key: 'nav.subgroup.setup',
+      items: [
+        { key: 'nav.accounts', to: '/accounts', icon: Wallet },
+        { key: 'nav.categories', to: '/categories', icon: Tags },
+        { key: 'nav.receivers', to: '/receivers', icon: Users },
       ],
     },
     {

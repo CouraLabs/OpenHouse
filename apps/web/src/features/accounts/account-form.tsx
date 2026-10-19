@@ -24,6 +24,8 @@ import {
 } from '@workspace/ui/components/select'
 import { TextField } from '@workspace/ui/components/text-field'
 
+import { useMainCurrency } from '@/lib/settings.js'
+
 /**
  * The fields the account form holds. The rules come straight from the
  * shared poco schema — the same check the API runs, whose messages are
@@ -48,19 +50,20 @@ interface AccountFormProps {
   isSaving?: boolean
 }
 
-/** The default values of a new account: nothing chosen, nothing typed. */
-const NEW_ACCOUNT: AccountFormValues = {
+/** The default values of a new account: nothing typed, and the tenant's
+ * main currency preselected. */
+const newAccount = (mainCurrency: Currency): AccountFormValues => ({
   name: '',
   agency: null,
   number: null,
   type: 'Checking',
   balance: '',
-  currency: 'USD',
+  currency: mainCurrency,
   limit: null,
   closeDay: null,
   dueDay: null,
   isDefault: false,
-}
+})
 
 /** The fields only a Credit Card carries; the other types never keep them. */
 const CARD_ONLY_FIELDS = ['limit', 'closeDay', 'dueDay'] as const
@@ -89,6 +92,7 @@ export function AccountForm({
   isSaving = false,
 }: AccountFormProps) {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
     reset,
@@ -98,14 +102,14 @@ export function AccountForm({
     formState: { errors },
   } = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues: NEW_ACCOUNT,
+    defaultValues: newAccount(mainCurrency),
   })
 
   // The form holds the account it edits: switching rows resets the fields.
   useEffect(() => {
     reset(
       account === null
-        ? NEW_ACCOUNT
+        ? newAccount(mainCurrency)
         : {
             name: account.name,
             // A wallet or card has no agency or number — a legacy row that
@@ -126,7 +130,7 @@ export function AccountForm({
             isDefault: account.isDefault,
           }
     )
-  }, [account, reset])
+  }, [account, mainCurrency, reset])
 
   const type = watch('type')
   const currency = watch('currency')

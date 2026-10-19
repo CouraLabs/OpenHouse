@@ -5,6 +5,7 @@ import { hasExactlyOneTenantField } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { ApiError } from '@/lib/api.js'
 import { useSignUp } from '@/lib/auth.js'
+import { browserCurrency, browserTimeZone } from '@/lib/settings.js'
 import { TextField } from '@workspace/ui/components/text-field'
 
 /**
@@ -50,9 +51,11 @@ const signUpFormSchema = z
 
 type SignUpFormValues = z.infer<typeof signUpFormSchema>
 
-/** The props `SignUpForm` takes: what to do when the account exists. */
+/** The props `SignUpForm` takes: what to do when the account exists, and
+ * the invite code an invite link carried, if any. */
 interface SignUpFormProps {
   onSuccess: () => void
+  defaultTenantCode?: string
 }
 
 /**
@@ -60,7 +63,7 @@ interface SignUpFormProps {
  * account join that tenant) or a new tenant name, then name, email, and
  * password.
  */
-export function SignUpForm({ onSuccess }: SignUpFormProps) {
+export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
   const signUp = useSignUp()
   const {
     register,
@@ -69,7 +72,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpFormSchema),
-    defaultValues: { tenantName: '', tenantCode: '' },
+    defaultValues: { tenantName: '', tenantCode: defaultTenantCode ?? '' },
   })
 
   const onSubmit = handleSubmit(async (values) => {
@@ -88,6 +91,10 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             name: values.name,
             email: values.email,
             password: values.password,
+            // A new tenant's settings start on this browser's zone and
+            // locale currency; the owner can change both later.
+            timezone: browserTimeZone(),
+            currency: browserCurrency(),
           }
 
     try {

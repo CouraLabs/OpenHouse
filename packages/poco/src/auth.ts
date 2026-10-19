@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { currencySchema } from './currencies.js'
+import { timeZoneSchema } from './settings.js'
 
 /**
  * The bodies the auth routes accept and the web forms validate against. One
@@ -38,6 +40,12 @@ export const signUpSchema = z
     name: z.string().min(1).max(120),
     email,
     password,
+    /** The browser's time zone, which a new tenant's settings start on.
+     * Ignored when joining with a code. */
+    timezone: timeZoneSchema.optional(),
+    /** The main currency of a new tenant, defaulted from the browser locale.
+     * Ignored when joining with a code. */
+    currency: currencySchema.optional(),
   })
   .refine(hasExactlyOneTenantField, {
     message: 'Send exactly one of tenantName or tenantCode.',
@@ -50,5 +58,21 @@ export const signInSchema = z.object({
   rememberMe: z.boolean().optional().default(false),
 })
 
+/**
+ * The body changing the signed-in user's password. The current password is
+ * only compared, never re-validated against the rule — the new one follows
+ * it, and must differ from the current one.
+ */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(72),
+    newPassword: password,
+  })
+  .refine((body) => body.newPassword !== body.currentPassword, {
+    message: 'The new password must differ from the current one.',
+    path: ['newPassword'],
+  })
+
 export type SignUpBody = z.infer<typeof signUpSchema>
 export type SignInBody = z.infer<typeof signInSchema>
+export type ChangePasswordBody = z.infer<typeof changePasswordSchema>

@@ -8,6 +8,7 @@ import {
 } from '@workspace/ui/components/card'
 
 import { formatMoney } from '@/lib/format-money.js'
+import { useMainCurrency } from '@/lib/settings.js'
 
 import type { RentVsBuyResult } from './simulate.js'
 
@@ -24,7 +25,9 @@ interface RentVsBuySummaryProps {
  */
 export function RentVsBuySummary({ result }: RentVsBuySummaryProps) {
   const { t, i18n } = useTranslation()
-  const format = (value: number) => formatMoney(String(value), i18n.language)
+  const mainCurrency = useMainCurrency()
+  const format = (value: number) =>
+    formatMoney(String(value), i18n.language, mainCurrency)
 
   const panels = [
     {

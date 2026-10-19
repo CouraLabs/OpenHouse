@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common'
 import { AccountsModule } from '../accounts/accounts.module.js'
 import { CategoriesModule } from '../categories/categories.module.js'
 import { ReceiversModule } from '../receivers/receivers.module.js'
+import { SettingsModule } from '../settings/settings.module.js'
 import { TransactionsModule } from '../transactions/transactions.module.js'
 import { RecurringRunService } from './recurring-run.service.js'
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
@@ -14,13 +15,15 @@ import { RecurringTransactionsController } from './recurring-transactions.contro
  * and the background service that materializes due rules. The accounts,
  * categories, receivers, and transactions modules are imported so the
  * services can validate references and write transactions through the
- * repositories they export.
+ * repositories they export; the settings module so the job reads each
+ * tenant's time zone.
  */
 @Module({
   imports: [
     AccountsModule,
     CategoriesModule,
     ReceiversModule,
+    SettingsModule,
     TransactionsModule,
   ],
   controllers: [RecurringTransactionsController],

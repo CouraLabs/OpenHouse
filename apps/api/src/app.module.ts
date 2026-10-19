@@ -7,6 +7,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { DatabaseModule } from '@workspace/db'
 import { AuthModule } from './auth/auth.module.js'
 import { AuthGuard } from './common/session/auth.guard.js'
+import { ClockModule } from './common/clock/clock.module.js'
 import { AppController } from './app.controller.js'
 import { AppService } from './app.service.js'
 import { getPositiveInt, isProduction, validateEnv } from './config/env.js'
@@ -15,6 +16,8 @@ import { LimitsModule } from './limits/limits.module.js'
 import { AccountsModule } from './accounts/accounts.module.js'
 import { GoalsModule } from './goals/goals.module.js'
 import { TenantsModule } from './tenants/tenants.module.js'
+import { SettingsModule } from './settings/settings.module.js'
+import { PreferencesModule } from './preferences/preferences.module.js'
 import { ReceiversModule } from './receivers/receivers.module.js'
 import { RecurringTransactionsModule } from './recurring-transactions/recurring-transactions.module.js'
 import { TransactionsModule } from './transactions/transactions.module.js'
@@ -56,8 +59,11 @@ const THROTTLE_TTL_MS = 60_000
       }),
     }),
     DatabaseModule,
+    ClockModule,
     AuthModule,
     TenantsModule,
+    SettingsModule,
+    PreferencesModule,
     CategoriesModule,
     LimitsModule,
     AccountsModule,

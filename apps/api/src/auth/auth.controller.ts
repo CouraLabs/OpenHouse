@@ -22,11 +22,14 @@ import {
   type Session,
 } from '../common/session/session.js'
 import {
+  changePasswordSchema,
   signInSchema,
   signUpSchema,
+  type ChangePasswordBody,
   type SignInBody,
   type SignUpBody,
 } from '@workspace/poco'
+import { PasswordChangeLimiter } from './password-change-limiter.js'
 import { TokenService } from './token.service.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
@@ -40,7 +43,8 @@ import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
-    private readonly tokens: TokenService
+    private readonly tokens: TokenService,
+    private readonly passwordChanges: PasswordChangeLimiter
   ) {}
 
   /** Creates the tenant and its owner in one transaction, then signs in. */
@@ -57,6 +61,8 @@ export class AuthController {
             name: body.name,
             email: body.email,
             password: body.password,
+            timezone: body.timezone,
+            currency: body.currency,
           })
         : await this.auth.signUpWithCode({
             tenantCode: body.tenantCode as string,
@@ -136,25 +142,27 @@ export class AuthController {
 
   /** The session the current cookies resolve to, or 401. */
   @Get('me')
-  me(@CurrentSession() session: Session): SessionResponse {
-    return {
-      user: {
-        id: session.user.id,
-        tenantId: session.user.tenantId,
-        email: session.user.email,
-        name: session.user.name,
-        role: session.user.role,
-        createdAt: session.user.createdAt.toISOString(),
-        updatedAt: session.user.updatedAt.toISOString(),
-      },
-      tenant: {
-        id: session.tenant.id,
-        name: session.tenant.name,
-        expiresIn: session.tenant.expiresIn?.toISOString() ?? null,
-        createdAt: session.tenant.createdAt.toISOString(),
-        updatedAt: session.tenant.updatedAt.toISOString(),
-      },
-    }
+  me(@CurrentSession() session: Session): Promise<SessionResponse> {
+    return this.auth.current(session)
+  }
+
+  /**
+   * Changes the signed-in user's password. Every other session is signed
+   * out; this one gets a fresh token pair, so the user stays signed in
+   * here. Limited to 5 attempts per 15 minutes per user.
+   */
+  @HttpCode(200)
+  @Post('password/change')
+  async changePassword(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(changePasswordSchema)) body: ChangePasswordBody,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<SessionResponse> {
+    this.passwordChanges.consume(session.user.id)
+
+    const changed = await this.auth.changePassword(session.user.id, body)
+
+    return this.establish(response, changed, false)
   }
 
   /**

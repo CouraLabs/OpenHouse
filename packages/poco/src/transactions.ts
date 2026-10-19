@@ -56,7 +56,10 @@ export const transactionRangeSchema = z.object({
 export const createTransactionSchema = z.object({
   name: z.string().min(1, 'Enter a name.').max(255),
   note: z.string().max(2000, 'Keep the note under 2000 characters.').nullish(),
-  invoice: z.string().max(255, 'Keep the invoice under 255 characters.').nullish(),
+  invoice: z
+    .string()
+    .max(255, 'Keep the invoice under 255 characters.')
+    .nullish(),
   amount: amountSchema,
   transactionDt: transactionDtSchema,
   linkedAccountId: z
@@ -132,7 +135,10 @@ export const transferSchema = z
       .positive('Pick a category.'),
     amount: amountSchema,
     transactionDt: transactionDtSchema,
-    note: z.string().max(2000, 'Keep the note under 2000 characters.').nullish(),
+    note: z
+      .string()
+      .max(2000, 'Keep the note under 2000 characters.')
+      .nullish(),
   })
   .superRefine((body, ctx) => {
     if (body.fromAccountId === body.toAccountId) {

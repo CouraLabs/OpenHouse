@@ -3,6 +3,7 @@ import type { SessionResponse } from '@workspace/poco'
 
 import { AppHeader } from '@/components/layout/app-header.js'
 import { AppSidebar } from '@/components/layout/app-sidebar.js'
+import { TimezoneConfirmBanner } from '@/components/layout/timezone-confirm-banner.js'
 import { SidebarInset, SidebarProvider } from '@workspace/ui/components/sidebar'
 
 /**
@@ -19,9 +20,10 @@ export function AppShell({
 }) {
   return (
     <SidebarProvider>
-      <AppSidebar user={session.user} tenantName={session.tenant.name} />
+      <AppSidebar tenantName={session.tenant.name} />
       <SidebarInset>
-        <AppHeader />
+        <AppHeader user={session.user} />
+        <TimezoneConfirmBanner />
         <main className="flex flex-1 flex-col">{children}</main>
       </SidebarInset>
     </SidebarProvider>

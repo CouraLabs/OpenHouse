@@ -1,10 +1,12 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { AuthLayout } from '@/components/layout/auth-layout.js'
+import { currentSession } from '@/lib/query.js'
 import { SignInForm } from './sign-in-form.js'
 
 /**
  * The page signing in from: brand and controls above, the sign-in form
- * centered, and the link to sign-up beside it.
+ * centered, and the link to sign-up beside it. A sign-in opens the page the
+ * user chose in their preferences.
  */
 export function SignInPage() {
   const navigate = useNavigate()
@@ -12,7 +14,11 @@ export function SignInPage() {
   return (
     <AuthLayout>
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <SignInForm onSuccess={() => void navigate({ to: '/' })} />
+        <SignInForm
+          onSuccess={() =>
+            void navigate({ to: currentSession()?.user.startPage ?? '/' })
+          }
+        />
         <p className="text-sm text-muted-foreground">
           No account yet?{' '}
           <Link

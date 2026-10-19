@@ -1,3 +1,6 @@
+import type { StartPage } from './preferences.js'
+import type { TenantSettings } from './settings.js'
+
 /**
  * The session the API answers `/auth/*` with and the web app lives in. These
  * are the wire shapes: dates cross HTTP as ISO strings, so every date is a
@@ -11,6 +14,8 @@ export interface SessionUser {
   email: string
   name: string
   role: 'owner' | 'user'
+  /** The page the user opens on after signing in. */
+  startPage: StartPage
   createdAt: string
   updatedAt: string
 }
@@ -24,8 +29,10 @@ export interface SessionTenant {
   updatedAt: string
 }
 
-/** The response body of the routes that establish a session. */
+/** The response body of the routes that establish a session. The tenant's
+ * settings ride along, so the web app has them at boot. */
 export interface SessionResponse {
   user: SessionUser
   tenant: SessionTenant
+  settings: TenantSettings
 }

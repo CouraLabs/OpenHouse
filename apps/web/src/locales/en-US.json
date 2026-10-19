@@ -25,22 +25,25 @@
     "interest-comparison": "Simple vs Compound Interest",
     "rate-conversion": "Rate Conversion",
     "financial-independence": "Financial Independence",
-    "rent-vs-buy": "Buy or Rent"
+    "rent-vs-buy": "Buy or Rent",
+    "settings": "Settings",
+    "general": "General",
+    "users": "Users",
+    "security": "Security"
   },
-  "breadcrumb": {
-    "home": "Home"
+  "sidebar": {
+    "month-summary": "This month",
+    "incomes": "Income",
+    "expenses": "Expenses"
   },
   "profile": {
-    "account": "Account",
-    "billing": "Billing",
-    "notifications": "Notifications",
+    "settings": "Settings",
     "logout": "Log out"
   },
   "theme": {
     "label": "Theme",
-    "light": "Light",
-    "dark": "Dark",
-    "system": "System"
+    "switch-to-light": "Switch to light theme",
+    "switch-to-dark": "Switch to dark theme"
   },
   "language": {
     "label": "Language",
@@ -698,6 +701,99 @@
       "amortization": "Amortization",
       "interest": "Interest",
       "property": "Property value"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "The household's time zone, main currency, and members, and your own preferences and password.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Settings saved.",
+    "cancel": "Cancel",
+    "error": "Something went wrong. Try again.",
+    "tabs": {
+      "general": "General",
+      "users": "Users",
+      "preferences": "Preferences",
+      "security": "Security"
+    },
+    "general": {
+      "title": "General",
+      "description": "The time zone decides what \"today\" is for recurring transactions and new entries. The main currency is the default for new accounts, limits, and goals. Changing either never shifts or converts what is already recorded.",
+      "timezone": "Time zone",
+      "timezone-placeholder": "Search a city or region",
+      "timezone-empty": "No time zone matches.",
+      "main-currency": "Main currency",
+      "main-currency-placeholder": "Pick a currency"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Your own choices — they apply only to you.",
+      "start-page": "Page to open after signing in",
+      "home": "Home"
+    },
+    "confirm-timezone": {
+      "title": "Confirm your time zone",
+      "description": "Your household is on UTC until you confirm. We suggest the zone of this browser.",
+      "confirm": "Confirm"
+    },
+    "users": {
+      "title": "Users",
+      "description": "Everyone who signs in to these books. Removing a user signs them out; what they recorded stays.",
+      "add": "Add user",
+      "empty": "No users yet.",
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "created": "Joined",
+      "role-owner": "Owner",
+      "role-user": "Member",
+      "active": "Active",
+      "removed": "Removed",
+      "remove": "Remove",
+      "reactivate": "Reactivate",
+      "remove-title": "Remove this user?",
+      "remove-description": "{{name}} will be signed out and unable to sign in until reactivated. Nothing they recorded is deleted.",
+      "remove-confirm": "Remove",
+      "removing": "Removing…",
+      "rows-per-page": "Rows per page",
+      "page-of": "Page {{page}} of {{count}}",
+      "previous-page": "Previous page",
+      "next-page": "Next page"
+    },
+    "invite": {
+      "title": "Add user",
+      "description": "Generate an invite code and share it, or its link, with the person joining. Nothing is emailed.",
+      "expiry": "Expires after",
+      "expiry-1": "24 hours",
+      "expiry-7": "7 days",
+      "expiry-never": "Never",
+      "generate": "Generate invite",
+      "generating": "Generating…",
+      "done": "Done",
+      "code": "Invite code",
+      "link": "Sign-up link",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "share": "Share",
+      "share-title": "Join our household on OpenHouse",
+      "pending-title": "Pending invitations",
+      "pending-empty": "No invitations are waiting.",
+      "expires": "Expires {{date}}",
+      "never-expires": "Never expires",
+      "revoke": "Revoke"
+    },
+    "security": {
+      "title": "Change password",
+      "description": "Changing your password signs you out everywhere else. You stay signed in here.",
+      "current-password": "Current password",
+      "new-password": "New password",
+      "new-password-placeholder": "At least 8 characters",
+      "confirm-password": "Confirm new password",
+      "change": "Change password",
+      "changing": "Changing…",
+      "changed": "Password changed. Other sessions were signed out."
     }
   }
 }

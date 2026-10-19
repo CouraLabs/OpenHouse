@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common'
 import type {
   CreateRecurringTransactionBody,
+  Currency,
   EntityStatus,
   Frequency,
   PagedResults,
@@ -106,6 +107,7 @@ function toWire(row: {
   categoryName: string
   linkedAccountId: number
   accountName: string
+  accountCurrency: Currency
   amount: string
   type: TransactionType
   frequency: Frequency
@@ -123,6 +125,7 @@ function toWire(row: {
     categoryName: row.categoryName,
     linkedAccountId: row.linkedAccountId,
     accountName: row.accountName,
+    accountCurrency: row.accountCurrency,
     amount: row.amount,
     type: row.type,
     frequency: row.frequency,

@@ -27,6 +27,7 @@ import {
 } from '@workspace/ui/components/filter-dialog'
 import { PageHeader } from '@/components/page-header.js'
 import { formatDateOnly } from '@/lib/format-date-only.js'
+import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
 import { ExpensePieCard } from './expense-pie-card.js'
 import { FilterChips } from './filter-chips.js'
 import { forecastNextMonthExpenses } from './forecast-next-month.js'
@@ -36,6 +37,7 @@ import { LimitUsageCard } from './limit-usage-card.js'
 import { MonthFilter } from './month-filter.js'
 import { NextMonthCard } from './next-month-card.js'
 import { SummaryCards } from './summary-cards.js'
+import { mainCurrencyFirst } from '@/lib/main-currency-first.js'
 import { TransactionForm } from './transaction-form.js'
 import { TransactionGrid } from './transaction-grid.js'
 import { TransferForm } from './transfer-form.js'
@@ -79,6 +81,8 @@ function shiftMonth(anchor: Date, months: number): Date {
  */
 export function TransactionsPage() {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
+  const today = useTenantToday()
 
   // The month the grid shows, defaulting to the current one. Every other
   // piece of state derives its date range from this anchor.
@@ -487,7 +491,7 @@ export function TransactionsPage() {
       {cardsOpen ? (
         <>
           <SummaryCards
-            groups={summary.data?.groups ?? []}
+            groups={mainCurrencyFirst(summary.data?.groups ?? [], mainCurrency)}
             locale={i18n.language}
             labels={{
               incomes: t('transactions.summary-incomes'),
@@ -500,7 +504,10 @@ export function TransactionsPage() {
             <ExpensePieCard
               title={t('transactions.dashboard-category-expenses')}
               icon={<PieChart aria-hidden className="size-4" />}
-              groups={categoryBreakdown.data?.groups ?? []}
+              groups={mainCurrencyFirst(
+                categoryBreakdown.data?.groups ?? [],
+                mainCurrency
+              )}
               locale={i18n.language}
               labels={{
                 other: t('transactions.dashboard-other'),
@@ -510,7 +517,10 @@ export function TransactionsPage() {
             <ExpensePieCard
               title={t('transactions.dashboard-account-expenses')}
               icon={<Wallet aria-hidden className="size-4" />}
-              groups={accountBreakdown.data?.groups ?? []}
+              groups={mainCurrencyFirst(
+                accountBreakdown.data?.groups ?? [],
+                mainCurrency
+              )}
               locale={i18n.language}
               labels={{
                 other: t('transactions.dashboard-other'),
@@ -519,7 +529,10 @@ export function TransactionsPage() {
             />
             <LastMonthCard
               title={t('transactions.dashboard-last-month')}
-              groups={lastMonthSummary.data?.groups ?? []}
+              groups={mainCurrencyFirst(
+                lastMonthSummary.data?.groups ?? [],
+                mainCurrency
+              )}
               locale={i18n.language}
               labels={{
                 incomes: t('transactions.summary-incomes'),
@@ -528,7 +541,7 @@ export function TransactionsPage() {
             />
             <NextMonthCard
               title={t('transactions.dashboard-next-month')}
-              slices={nextMonthSlices}
+              slices={mainCurrencyFirst(nextMonthSlices, mainCurrency)}
               locale={i18n.language}
               labels={{
                 expected: t('transactions.dashboard-next-month-expected'),
@@ -614,7 +627,7 @@ export function TransactionsPage() {
       <TransactionForm
         open={formOpen}
         transaction={editing}
-        defaultDt={formatDateOnly(new Date())}
+        defaultDt={today}
         error={saveError}
         isSaving={save.isPending}
         onSubmit={submitSave}

@@ -94,6 +94,12 @@ export const users = pgTable(
      */
     refreshTokenHash: text('refresh_token_hash'),
     isActive: boolean('is_active').notNull().default(true),
+    /**
+     * The page the user opens on after signing in — a web route path. The
+     * vocabulary lives in `@workspace/poco` (`startPages`); a value it no
+     * longer knows reads as the home page.
+     */
+    startPage: text('start_page').notNull().default('/'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -132,6 +138,31 @@ export const tenantCodes = pgTable('tenant_codes', {
 })
 
 /**
+ * The tenant's global settings, one row per tenant, created with it. Typed
+ * columns rather than key/value pairs: every setting is checked by poco and
+ * by the database, and a new setting is a new column by migration.
+ *
+ * A sanctioned exception to the tenant-entity recipe: a singleton has no
+ * lifecycle, so it spreads no `tenantEntityColumns()` — no status, no soft
+ * delete — and is keyed by the tenant itself.
+ */
+export const tenantSettings = pgTable('tenant_settings', {
+  tenantId: integer('tenant_id')
+    .primaryKey()
+    .references(() => tenants.id),
+  /** The IANA time zone that decides what "today" is for the tenant. */
+  timezone: text().notNull(),
+  /** The currency new accounts, limits, and goals default to. */
+  mainCurrency: text('main_currency').$type<Currency>().notNull(),
+  /** False while a migrated tenant still runs on the `UTC` placeholder. */
+  timezoneConfirmed: boolean('timezone_confirmed').notNull().default(false),
+  updateBy: integer('update_by'),
+  updateDt: timestamp('update_dt', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+/**
  * A category of something the tenant organizes — the first tenant entity
  * built on the shared base shape. A name is unique per tenant among ACTIVE
  * rows: deleting a category frees its name for reuse, and the partial index
@@ -164,6 +195,7 @@ export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type TenantCode = typeof tenantCodes.$inferSelect
 export type NewTenantCode = typeof tenantCodes.$inferInsert
+export type TenantSettingsRow = typeof tenantSettings.$inferSelect
 export type Category = typeof categories.$inferSelect
 export type NewCategory = typeof categories.$inferInsert
 export type UserRole = (typeof userRoles)[number]

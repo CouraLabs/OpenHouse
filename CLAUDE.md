@@ -42,8 +42,11 @@ apps/
                                 #   auth.guard.ts: AuthGuard + session cookie helpers
         pipes/                  # generic request validation (ZodValidationPipe)
         search/                 # fetch.helper.ts: buildPagedQuery, escapeLikePattern
-      <feature>/                # a domain feature (auth/, tenants/, accounts/, categories/,
-                                #   limits/, goals/, receivers/, transactions/,
+        clock/                  # Clock (injectable "now"; specs pass a fixed one)
+                                #   + global ClockModule — never `new Date()` in a
+                                #   service whose logic depends on the day
+      <feature>/                # a domain feature (auth/, tenants/, settings/, preferences/, accounts/,
+                                #   categories/, limits/, goals/, receivers/, transactions/,
                                 #   recurring-transactions/, transaction-linkers/):
         <feature>.module.ts     #   Nest module — wires the feature's providers; exports
                                 #   a repository when another feature may need its rows
@@ -68,8 +71,11 @@ apps/
                                 #   breadcrumbs, theme/locale switchers
         page-header.tsx         # shared page title block (candidate for packages/ui)
       lib/                      # transport and shared client logic: api.ts, auth.ts,
+                                #   settings.ts (tenant settings from the session:
+                                #   useMainCurrency, useTenantToday, useSaveSettings),
                                 #   query.ts, router.tsx, i18n.ts, format-money.ts,
-                                #   format-date-only.ts, finance.ts, use-debounced-value.ts
+                                #   format-date-only.ts, finance.ts, main-currency-first.ts,
+                                #   use-debounced-value.ts
       locales/                  # <locale>.json — every user-facing label (en-US.json today)
   landing/                      # public marketing single page (Vite + React, no API,
                                 #   port 5174): warm-monochrome light/dark tokens in
@@ -144,11 +150,23 @@ packages/
    session user. Wire rows that need a display field from another table carry
    it **joined** (limits carry `categoryName`, never a bare `categoryId` for
    humans) — the web never resolves foreign-key ids into labels.
+   **Sanctioned exception — tenant singletons.** `tenant_settings` holds one
+   row per tenant, keyed by `tenantId`, created in the sign-up transaction.
+   It has no lifecycle, so it spreads no `tenantEntityColumns()` (no status,
+   no soft delete, no `createdBy`); it keeps `updateBy`/`updateDt`. Settings
+   are typed columns, never key/value rows: a new global setting is a new
+   column by migration, validated by poco and the database.
+6c. **Time is the tenant's.** "Today" is `todayIn(settings.timezone)` (poco),
+   never the server's or the device's zone: the recurring job evaluates each
+   tenant against its own calendar day, and web forms default dates through
+   `useTenantToday()`. `date` columns are calendar days and never shift when
+   the zone changes.
 6b. **Money is a string end to end.** A `numeric` column maps to a string
    (`"12.34"`); poco validates the decimal shape with a regex; the web formats
    for display through `lib/format-money.ts` (the row's `Currency` from poco
-   picks the symbol, defaulting to USD; the i18next locale picks separators
-   and symbol placement) and inputs it through `MoneyField` (packages/ui),
+   picks the symbol; an amount with no currency of its own formats in the
+   tenant's main currency (`useMainCurrency()`), never a hard-coded one; the
+   i18next locale picks separators and symbol placement) and inputs it through `MoneyField` (packages/ui),
    whose reverse masking (digits typed are cents) is locale-aware. Money never
    crosses a float.
 7. **Environment is read only in `config/`.** Feature code receives values via

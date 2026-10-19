@@ -22,6 +22,7 @@ import {
 } from '@workspace/ui/components/select'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
 
+import { useMainCurrency } from '@/lib/settings.js'
 import { useActiveCategories } from './use-limits.js'
 
 /**
@@ -46,13 +47,14 @@ interface LimitFormProps {
   isSaving?: boolean
 }
 
-/** The default values of a new limit: nothing chosen, nothing typed. */
-const NEW_LIMIT: LimitFormValues = {
+/** The default values of a new limit: nothing typed, and the tenant's main
+ * currency preselected. */
+const newLimit = (mainCurrency: Currency): LimitFormValues => ({
   categoryId: undefined as unknown as number,
   amount: '',
   type: 'Daily',
-  currency: 'USD',
-}
+  currency: mainCurrency,
+})
 
 /**
  * The insert and edit form of the limits page: a category dropdown, the
@@ -68,6 +70,7 @@ export function LimitForm({
   isSaving = false,
 }: LimitFormProps) {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
     reset,
@@ -76,14 +79,14 @@ export function LimitForm({
     formState: { errors },
   } = useForm<LimitFormValues>({
     resolver: zodResolver(limitFormSchema),
-    defaultValues: NEW_LIMIT,
+    defaultValues: newLimit(mainCurrency),
   })
 
   // The form holds the limit it edits: switching rows resets the fields.
   useEffect(() => {
     reset(
       limit === null
-        ? NEW_LIMIT
+        ? newLimit(mainCurrency)
         : {
             categoryId: limit.categoryId,
             amount: limit.amount,
@@ -91,7 +94,7 @@ export function LimitForm({
             currency: limit.currency,
           }
     )
-  }, [limit, reset])
+  }, [limit, mainCurrency, reset])
 
   const categoryId = watch('categoryId')
   const type = watch('type')

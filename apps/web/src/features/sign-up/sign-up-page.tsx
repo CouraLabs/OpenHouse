@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { AuthLayout } from '@/components/layout/auth-layout.js'
 import { SignUpForm } from './sign-up-form.js'
 
@@ -8,11 +8,15 @@ import { SignUpForm } from './sign-up-form.js'
  */
 export function SignUpPage() {
   const navigate = useNavigate()
+  const { code } = useSearch({ from: '/sign-up' })
 
   return (
     <AuthLayout>
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <SignUpForm onSuccess={() => void navigate({ to: '/' })} />
+        <SignUpForm
+          defaultTenantCode={code}
+          onSuccess={() => void navigate({ to: '/' })}
+        />
         <p className="text-sm text-muted-foreground">
           Already have an account?{' '}
           <Link

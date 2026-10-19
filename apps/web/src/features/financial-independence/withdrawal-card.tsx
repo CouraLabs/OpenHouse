@@ -13,6 +13,7 @@ import { NumberField } from '@workspace/ui/components/number-field'
 
 import { pmt, realRate } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { useMainCurrency } from '@/lib/settings.js'
 
 /**
  * Living off the accumulation: the constant monthly withdrawal an
@@ -22,6 +23,7 @@ import { formatMoney } from '@/lib/format-money.js'
  */
 export function WithdrawalCard() {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
   const [balance, setBalance] = useState('2000000.00')
   const [rate, setRate] = useState('0.6')
   const [inflation, setInflation] = useState('0')
@@ -103,7 +105,7 @@ export function WithdrawalCard() {
               {t('financial-independence.withdrawal.result')}
             </span>
             <p className="text-2xl font-semibold">
-              {formatMoney(String(withdrawal), i18n.language)}
+              {formatMoney(String(withdrawal), i18n.language, mainCurrency)}
             </p>
           </div>
           <div className="flex justify-between gap-2 text-sm">
@@ -111,7 +113,7 @@ export function WithdrawalCard() {
               {t('financial-independence.withdrawal.first-interest')}
             </span>
             <span className="font-medium tabular-nums">
-              {formatMoney(String(firstInterest), i18n.language)}
+              {formatMoney(String(firstInterest), i18n.language, mainCurrency)}
             </span>
           </div>
         </div>

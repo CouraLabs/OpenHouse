@@ -89,6 +89,7 @@ export class AuthGuard implements CanActivate {
         name: true,
         role: true,
         isActive: true,
+        startPage: true,
         createdAt: true,
         updatedAt: true,
       },

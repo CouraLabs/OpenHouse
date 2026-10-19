@@ -9,26 +9,31 @@ import {
   BreadcrumbSeparator,
 } from '@workspace/ui/components/breadcrumb'
 
+import { FINANCIAL_GROUP } from './nav.js'
+import { findNavTrail } from './nav-trail.js'
+
 /**
- * The breadcrumb trail for the current location: `Home` first, then one entry
- * per path segment, each linking to its own prefix; the last is the current
- * page. Segment labels go through i18n and fall back to the raw segment.
- * Renders inside a `BreadcrumbList`.
+ * The breadcrumb trail for the current location: the sidebar's grouping for
+ * the page, starting at its group (group, subgroup, item — groups are
+ * labels, not links); the last is the current page. A route outside the menu
+ * falls back to one entry per path segment, each linking to its own prefix,
+ * labeled through i18n with the raw segment as fallback. Renders inside a
+ * `BreadcrumbList`.
  */
 export function RouteBreadcrumbs() {
   const { t } = useTranslation()
   const location = useLocation()
   const segments = location.pathname.split('/').filter(Boolean)
+  const navTrail = findNavTrail([FINANCIAL_GROUP], location.pathname)
 
-  const crumbs: Array<{ label: string; to?: string }> = [
-    { label: t('breadcrumb.home'), to: '/' },
-    ...segments.map((segment, index) => ({
-      label: t(`nav.${segment}`, {
-        defaultValue: segment,
-      }),
-      to: `/${segments.slice(0, index + 1).join('/')}`,
-    })),
-  ]
+  const crumbs: Array<{ label: string; to?: string }> = navTrail
+    ? navTrail.map((step) => ({ label: t(step.key), to: step.to }))
+    : segments.map((segment, index) => ({
+        label: t(`nav.${segment}`, {
+          defaultValue: segment,
+        }),
+        to: `/${segments.slice(0, index + 1).join('/')}`,
+      }))
 
   return crumbs.map((crumb, index) => {
     const isLast = index === crumbs.length - 1

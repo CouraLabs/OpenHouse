@@ -4,6 +4,8 @@
  * render through. Pure functions — the tools hold no data of their own.
  */
 
+import type { Currency } from '@workspace/poco'
+
 /** The period a rate is quoted for: a year, a month, or a business day. */
 export type RateUnit = 'year' | 'month' | 'day'
 
@@ -73,10 +75,13 @@ export function formatPercent(value: number, locale: string): string {
 }
 
 /** A money axis tick: compact currency that keeps the chart readable. */
-export function compactMoney(locale: string): (value: number) => string {
+export function compactMoney(
+  locale: string,
+  currency: Currency
+): (value: number) => string {
   const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'USD',
+    currency,
     notation: 'compact',
     maximumFractionDigits: 1,
   })
