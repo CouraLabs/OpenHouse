@@ -1,6 +1,7 @@
 import { ButtonLink } from '@/components/button-link.js'
 import { Tag } from '@/components/tag.js'
 import type { Plan } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 import { PerkList } from './perk-list.js'
 import { PlanPrice } from './plan-price.js'
@@ -10,12 +11,14 @@ import { PlanPrice } from './plan-price.js'
  * rest take the outline, so the page keeps a single dark accent per row.
  */
 export function PlanCard({ plan }: { plan: Plan }) {
+  const { featuredBadge } = useContent()
+
   return (
     <article className="border-line bg-surface flex h-full flex-col gap-8 rounded-xl border p-7 transition-shadow duration-200 hover:shadow-lift md:p-8">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-ink text-base font-medium">{plan.name}</h3>
-          {plan.featured && <Tag tone="blue">Most complete</Tag>}
+          {plan.featured && <Tag tone="blue">{featuredBadge}</Tag>}
         </div>
         <p className="text-sm text-pretty text-muted">{plan.tagline}</p>
       </div>

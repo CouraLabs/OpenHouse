@@ -1,13 +1,14 @@
 import { Reveal } from '@/components/reveal.js'
 import { Section } from '@/components/section.js'
 import { SectionHeading } from '@/components/section-heading.js'
-import { hostedPlans, pricingIntro } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 import { PlanCard } from './plan-card.js'
 import { SelfHostPlan } from './self-host-plan.js'
 
 /** The self-hosted plan as a wide card, then the three hosted plans in a row. */
 export function PricingSection() {
+  const { hostedPlans, pricingIntro } = useContent()
   return (
     <Section id="pricing" className="bg-bone/50">
       <SectionHeading {...pricingIntro} />

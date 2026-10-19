@@ -1,17 +1,13 @@
 import { Tag } from '@/components/tag.js'
-
-/** The recurring rules the card lists, in posting order. */
-const RULES = [
-  { name: 'Monthly rent', when: 'Nov 1', posted: true },
-  { name: 'Streaming plan', when: 'Nov 4', posted: false },
-  { name: 'City Power', when: 'Nov 12', posted: false },
-]
+import { useContent } from '@/lib/use-locale.js'
 
 /** Upcoming recurring rules — the first already posted by itself. */
 export function ScheduleVisual() {
+  const { sampleRules, ruleStatus } = useContent()
+
   return (
     <ul className="divide-line flex flex-col divide-y">
-      {RULES.map((rule) => (
+      {sampleRules.map((rule) => (
         <li
           key={rule.name}
           className="flex items-center justify-between gap-4 py-2.5"
@@ -20,7 +16,7 @@ export function ScheduleVisual() {
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs text-muted">{rule.when}</span>
             <Tag tone={rule.posted ? 'green' : 'blue'}>
-              {rule.posted ? 'Posted' : 'Scheduled'}
+              {rule.posted ? ruleStatus.posted : ruleStatus.scheduled}
             </Tag>
           </div>
         </li>

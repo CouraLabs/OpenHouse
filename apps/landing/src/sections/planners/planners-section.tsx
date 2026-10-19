@@ -1,11 +1,12 @@
 import { Section } from '@/components/section.js'
 import { SectionHeading } from '@/components/section-heading.js'
-import { planners, plannersIntro } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 import { PlannerRow } from './planner-row.js'
 
 /** The calculators and guides as a ruled list, read like a table of contents. */
 export function PlannersSection() {
+  const { planners, plannersIntro } = useContent()
   return (
     <Section id="planners">
       <SectionHeading {...plannersIntro} />

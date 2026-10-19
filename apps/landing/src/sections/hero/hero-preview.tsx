@@ -1,13 +1,14 @@
 import { LedgerRows } from '@/components/preview/ledger-rows.js'
 import { LimitBar } from '@/components/preview/limit-bar.js'
 import { WindowChrome } from '@/components/window-chrome.js'
-import { hero, sampleLedger } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 /**
  * A slice of the app in a window: the account balance and the sample ledger
  * on the left, a rail of two limits on the right (stacked below `md`).
  */
 export function HeroPreview() {
+  const { hero, sampleLedger, sampleLimits } = useContent()
   return (
     <WindowChrome title={hero.windowTitle}>
       <div className="grid md:grid-cols-[1fr_15rem]">
@@ -22,11 +23,11 @@ export function HeroPreview() {
         </div>
         <aside className="border-line bg-bone/60 flex flex-col gap-5 border-t p-6 md:border-t-0 md:border-l">
           <span className="font-mono text-[11px] tracking-[0.05em] text-muted uppercase">
-            Limits · October
+            {hero.limitsTitle}
           </span>
-          <LimitBar label="Groceries" spent="$486" cap="$600" percent={81} />
-          <LimitBar label="Transport" spent="$94" cap="$250" percent={38} />
-          <LimitBar label="Dining out" spent="$132" cap="$300" percent={44} />
+          {sampleLimits.map((limit) => (
+            <LimitBar key={limit.label} {...limit} />
+          ))}
         </aside>
       </div>
     </WindowChrome>

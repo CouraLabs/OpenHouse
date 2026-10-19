@@ -1,15 +1,17 @@
 import { House } from '@phosphor-icons/react'
 
 import { ButtonLink } from '@/components/button-link.js'
-import { navActions, navLinks } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
+import { LocaleToggle } from './locale-toggle.js'
 import { ThemeToggle } from './theme-toggle.js'
 
 /**
- * The sticky top bar: wordmark, section links (hidden below `md`), the theme
- * toggle, and the two account actions. The only blur on the page lives here.
+ * The sticky top bar: wordmark, section links (hidden below `md`), the locale
+ * and theme toggles, and the two account actions. The only blur on the page lives here.
  */
 export function SiteNav() {
+  const { navActions, navLinks } = useContent()
   return (
     <header className="border-line bg-canvas/80 sticky top-0 z-40 border-b backdrop-blur-md">
       <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-6 px-6">
@@ -33,6 +35,7 @@ export function SiteNav() {
           ))}
         </ul>
         <div className="flex items-center gap-4">
+          <LocaleToggle />
           <ThemeToggle />
           <a
             href={navActions.signIn.href}

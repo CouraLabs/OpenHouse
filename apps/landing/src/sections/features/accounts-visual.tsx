@@ -1,30 +1,12 @@
-/** The sample accounts the card lists, one per currency. */
-const ACCOUNTS = [
-  {
-    name: 'Main Street Checking',
-    kind: 'Bank',
-    amount: '$8,412.36',
-    currency: 'USD',
-  },
-  {
-    name: 'Nubank Mastercard',
-    kind: 'Card · due Nov 10',
-    amount: 'R$ 1.208,90',
-    currency: 'BRL',
-  },
-  {
-    name: 'Lisbon Savings',
-    kind: 'Bank',
-    amount: '€2,340.00',
-    currency: 'EUR',
-  },
-]
+import { useContent } from '@/lib/use-locale.js'
 
 /** Three accounts in three currencies, each with its balance. */
 export function AccountsVisual() {
+  const { sampleAccounts } = useContent()
+
   return (
     <ul className="divide-line flex flex-col divide-y">
-      {ACCOUNTS.map((account) => (
+      {sampleAccounts.map((account) => (
         <li
           key={account.name}
           className="flex items-center justify-between gap-4 py-2.5"

@@ -1,9 +1,10 @@
 import { House } from '@phosphor-icons/react'
 
-import { footer } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 /** Wordmark and tagline, the footer links, and the copyright line. */
 export function SiteFooter() {
+  const { footer } = useContent()
   return (
     <footer className="border-line border-t px-6 py-12">
       <div className="mx-auto flex max-w-5xl flex-col gap-8 md:flex-row md:items-end md:justify-between">

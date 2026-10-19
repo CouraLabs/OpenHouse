@@ -3,7 +3,7 @@ import { ArrowRight, GithubLogo } from '@phosphor-icons/react'
 import { ButtonLink } from '@/components/button-link.js'
 import { Reveal } from '@/components/reveal.js'
 import { Tag } from '@/components/tag.js'
-import { hero } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 import { HeroPreview } from './hero-preview.js'
 
@@ -12,6 +12,7 @@ import { HeroPreview } from './hero-preview.js'
  * over a faded hairline grid, then the app window below.
  */
 export function HeroSection() {
+  const { hero } = useContent()
   return (
     <section
       id="top"

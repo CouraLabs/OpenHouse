@@ -3,7 +3,7 @@ import { GithubLogo } from '@phosphor-icons/react'
 import { ButtonLink } from '@/components/button-link.js'
 import { Reveal } from '@/components/reveal.js'
 import { Tag } from '@/components/tag.js'
-import { selfHosted } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 import { PerkList } from './perk-list.js'
 import { PlanPrice } from './plan-price.js'
@@ -14,6 +14,7 @@ import { TerminalSnippet } from './terminal-snippet.js'
  * left; the three commands that start it on the right.
  */
 export function SelfHostPlan() {
+  const { selfHosted } = useContent()
   return (
     <Reveal>
       <article className="border-line bg-surface grid gap-10 rounded-xl border p-7 md:grid-cols-2 md:p-10">

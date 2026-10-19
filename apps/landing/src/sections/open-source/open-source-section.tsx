@@ -4,13 +4,14 @@ import { ButtonLink } from '@/components/button-link.js'
 import { Eyebrow } from '@/components/eyebrow.js'
 import { Reveal } from '@/components/reveal.js'
 import { Section } from '@/components/section.js'
-import { openSource } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 /**
  * The closing argument, centered over the hairline grid: serif title, body,
  * the three facts as a ruled row, and the call to star the repository.
  */
 export function OpenSourceSection() {
+  const { openSource } = useContent()
   return (
     <Section id="open-source" className="isolate">
       <div aria-hidden className="line-grid absolute inset-0 -z-10" />

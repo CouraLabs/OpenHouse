@@ -2,7 +2,7 @@ import { Moon, Sun } from '@phosphor-icons/react'
 
 import { useTheme } from '@workspace/ui/components/theme-provider'
 
-import { navActions } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 /**
  * Flips between light and dark. It reads the resolved theme off `<html>`, so
@@ -10,6 +10,7 @@ import { navActions } from '@/lib/content.js'
  * sticks. Both glyphs stay mounted and the `dark` variant cross-fades them.
  */
 export function ThemeToggle() {
+  const { navActions } = useContent()
   const { setTheme } = useTheme()
 
   const toggle = () => {

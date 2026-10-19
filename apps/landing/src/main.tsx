@@ -9,6 +9,7 @@ import '@fontsource-variable/geist-mono'
 import '@fontsource-variable/newsreader'
 import './landing.css'
 import { App } from './App.tsx'
+import { LocaleProvider } from './components/locale-provider.tsx'
 
 const rootElement = document.getElementById('root')
 
@@ -16,15 +17,17 @@ if (!rootElement) {
   throw new Error('Missing #root element in index.html')
 }
 
-// The theme follows the system until the visitor picks one with the nav
-// toggle; one icon weight for the whole page, so no glyph reads heavier than
+// The theme follows the system and the language the browser until the
+// visitor picks one with the nav toggles; one icon weight for the whole page, so no glyph reads heavier than
 // its neighbor.
 createRoot(rootElement).render(
   <StrictMode>
     <ThemeProvider>
-      <IconContext.Provider value={{ weight: 'bold', size: 16 }}>
-        <App />
-      </IconContext.Provider>
+      <LocaleProvider>
+        <IconContext.Provider value={{ weight: 'bold', size: 16 }}>
+          <App />
+        </IconContext.Provider>
+      </LocaleProvider>
     </ThemeProvider>
   </StrictMode>
 )

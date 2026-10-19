@@ -1,7 +1,7 @@
 import { LimitBar } from '@/components/preview/limit-bar.js'
 import { Section } from '@/components/section.js'
 import { SectionHeading } from '@/components/section-heading.js'
-import { features, featuresIntro } from '@/lib/content.js'
+import { useContent } from '@/lib/use-locale.js'
 
 import { AccountsVisual } from './accounts-visual.js'
 import { FeatureCard } from './feature-card.js'
@@ -17,6 +17,7 @@ import { TransactionsVisual } from './transactions-visual.js'
  * 2/4 and 4/2 of six columns. One column below `md`.
  */
 export function FeaturesSection() {
+  const { features, featuresIntro, sampleLimits } = useContent()
   return (
     <Section id="features">
       <SectionHeading {...featuresIntro} />
@@ -43,8 +44,9 @@ export function FeaturesSection() {
         </FeatureCard>
         <FeatureCard feature={features.limits} className="md:col-span-2">
           <div className="flex flex-col gap-4">
-            <LimitBar label="Groceries" spent="$486" cap="$600" percent={81} />
-            <LimitBar label="Transport" spent="$94" cap="$250" percent={38} />
+            {sampleLimits.slice(0, 2).map((limit) => (
+              <LimitBar key={limit.label} {...limit} />
+            ))}
           </div>
         </FeatureCard>
         <FeatureCard
