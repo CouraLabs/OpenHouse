@@ -212,7 +212,9 @@
     }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
+      /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override every animation, including inline ones */
       animation-duration: 1ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override every transition, including inline ones */
       transition-duration: 1ms !important;
       }
     }

@@ -34,6 +34,10 @@ export interface TransactionGridLabels {
 export interface TransactionRowActions {
   onEdit: (transaction: Transaction) => void
   onDelete: (transaction: Transaction) => void
+  /** Opens the menu of the installment purchase the row belongs to. */
+  onInstallments: (transaction: Transaction) => void
+  /** Opens the split of a single card charge into installments. */
+  onSplit: (transaction: Transaction) => void
   /** Moves the row straight to another review status, from the grid. */
   onStatusChange: (transaction: Transaction, status: TransactionStatus) => void
 }
@@ -141,7 +145,7 @@ export function TransactionGrid({
     <div className="flex min-h-0 flex-1 flex-col rounded-lg border">
       {/* The column titles sit above the viewport: they never scroll away,
        * so only the day groups need to stick. */}
-      <div className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_5rem] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground">
+      <div className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground">
         <Checkbox
           checked={allSelected}
           aria-label={labels.selectAll}

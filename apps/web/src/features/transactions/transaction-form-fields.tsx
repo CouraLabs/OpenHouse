@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
 import type {
   CreateTransactionBody,
+  InstallmentsBody,
   ReceiverRef,
   Transaction,
   TransactionStatus,
@@ -29,6 +30,8 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { BilledOnLine } from './billed-on-line.js'
 import { inferCategory } from './infer-category.js'
+import { InstallmentFields } from './installment-fields.js'
+import { PurchasePreview } from './purchase-preview.js'
 import { StringPick } from './string-pick.js'
 import {
   useActiveAccounts,
@@ -44,7 +47,7 @@ import {
 const transactionFormSchema = createTransactionSchema
 
 /** The form's values, before the schema's defaults apply. */
-type TransactionFormInput = z.input<typeof transactionFormSchema>
+export type TransactionFormInput = z.input<typeof transactionFormSchema>
 
 /** The props `TransactionFormFields` takes. */
 export interface TransactionFormFieldsProps {
@@ -53,6 +56,9 @@ export interface TransactionFormFieldsProps {
   /** The day a new transaction starts on — today, whatever month the grid
    * shows. */
   defaultDt: string
+  /** Values a new transaction starts from instead — a refund prefilled
+   * from the purchase it refunds. */
+  draft?: Partial<TransactionFormInput>
   /** What a submit should do; the page decides where it saves. */
   onSubmit: (body: CreateTransactionBody) => void
   onCancel: () => void
@@ -70,6 +76,7 @@ export interface TransactionFormFieldsProps {
 export function TransactionFormFields({
   transaction,
   defaultDt,
+  draft,
   onSubmit,
   onCancel,
   error,
@@ -86,7 +93,7 @@ export function TransactionFormFields({
     resolver: zodResolver(transactionFormSchema),
     defaultValues:
       transaction === null
-        ? newValues(defaultDt)
+        ? { ...newValues(defaultDt), ...draft }
         : {
             name: transaction.name,
             note: transaction.note ?? undefined,
@@ -114,10 +121,32 @@ export function TransactionFormFields({
   // rejects a change to either, so the form locks them.
   const isTransfer =
     transaction !== null && transaction.transferGroupId !== null
+  // One installment alone changes only its amount, category, note, and
+  // status; the rest is the purchase's, edited as a group.
+  const isInstallment =
+    transaction !== null && transaction.installmentGroupId !== null
+  // The form watches zod's input type, where `amountMode` is optional (it
+  // has a default); the split components need the parsed shape, so fill
+  // the defaults here.
+  const watchedInstallments = watch('installments')
+  const installments: InstallmentsBody = {
+    count: watchedInstallments?.count ?? 1,
+    amountMode: watchedInstallments?.amountMode ?? 'total',
+  }
+  const [cashPrice, setCashPrice] = useState('')
 
   const accounts = useActiveAccounts()
   const categories = useActiveCategories()
   const receivers = useActiveReceivers()
+  const account = (accounts.data ?? []).find(
+    (candidate) => candidate.id === accountId
+  )
+  // A new card expense may split into installments, and previews the limit
+  // it leaves.
+  const isCardPurchase =
+    transaction === null &&
+    type === 'Expense' &&
+    account?.type === 'Credit Card'
 
   // A new transaction starts in the tenant's default account. The accounts
   // may still be loading when the sheet opens, so this follows the query
@@ -155,7 +184,13 @@ export function TransactionFormFields({
 
   return (
     <form
-      onSubmit={handleSubmit((values) => onSubmit(values))}
+      onSubmit={handleSubmit(({ installments: split, ...values }) =>
+        onSubmit(
+          isCardPurchase && split !== undefined && split.count > 1
+            ? { ...values, installments: split }
+            : values
+        )
+      )}
       className="flex flex-col gap-4"
       noValidate
     >
@@ -165,6 +200,8 @@ export function TransactionFormFields({
         labelFor="transaction-name"
         placeholder={t('transactions.name-placeholder')}
         required
+        // readOnly, not disabled: a disabled input submits no value.
+        readOnly={isInstallment}
         error={errors.name}
         {...register('name', {
           onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -175,7 +212,7 @@ export function TransactionFormFields({
         <FieldLabel>{t('transactions.type')}</FieldLabel>
         <RadioGroup
           value={type}
-          disabled={isTransfer}
+          disabled={isTransfer || isInstallment}
           onValueChange={(value) =>
             setValue('type', value as TransactionType, {
               shouldValidate: true,
@@ -218,6 +255,7 @@ export function TransactionFormFields({
         </FieldLabel>
         <DatePicker
           id="transaction-dt"
+          disabled={isInstallment}
           locale={i18n.language}
           value={parseDateOnly(transactionDt)}
           onChange={(date) =>
@@ -238,7 +276,7 @@ export function TransactionFormFields({
         id="transaction-account"
         label={t('transactions.account')}
         required
-        disabled={isTransfer}
+        disabled={isTransfer || isInstallment}
         value={accountId === undefined ? undefined : String(accountId)}
         placeholder={t('transactions.filter-account-placeholder')}
         onChange={(value) =>
@@ -264,10 +302,28 @@ export function TransactionFormFields({
             label: account.name,
           }))}
       />
+      {isCardPurchase && account !== undefined ? (
+        <>
+          <InstallmentFields
+            value={installments}
+            onChange={(value) =>
+              setValue('installments', value, { shouldValidate: true })
+            }
+            cashPrice={cashPrice}
+            onCashPriceChange={setCashPrice}
+            error={errors.installments?.count}
+          />
+          <PurchasePreview
+            amount={amount}
+            installments={installments}
+            cashPrice={cashPrice}
+            availableLimit={account.availableLimit}
+            currency={account.currency}
+          />
+        </>
+      ) : null}
       <BilledOnLine
-        account={(accounts.data ?? []).find(
-          (account) => account.id === accountId
-        )}
+        account={account}
         transactionDt={transactionDt}
         // A charge pinned to its bill stays there through a date edit, as
         // long as it stays on the same card.
@@ -303,6 +359,7 @@ export function TransactionFormFields({
       <StringPick
         id="transaction-receiver"
         label={t('transactions.receiver')}
+        disabled={isInstallment}
         value={receiverId == null ? undefined : String(receiverId)}
         placeholder={t('transactions.receiver-placeholder')}
         onChange={(value) =>
@@ -327,6 +384,7 @@ export function TransactionFormFields({
         label={t('transactions.invoice')}
         labelFor="transaction-invoice"
         placeholder={t('transactions.invoice-placeholder')}
+        readOnly={isInstallment}
         error={errors.invoice}
         {...register('invoice', {
           // An empty field is no invoice: the wire carries nothing, not ''.

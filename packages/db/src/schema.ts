@@ -694,6 +694,13 @@ export const transactions = pgTable(
     paymentStatementId: integer('payment_statement_id').references(
       () => creditCardStatements.id
     ),
+    /** The id the installments of one card purchase share ("parcelado em
+     * Nx"), or nothing for a row that is not an installment. */
+    installmentGroupId: uuid('installment_group_id'),
+    /** Which installment this row is, 1-based. */
+    installmentNumber: smallint('installment_number'),
+    /** How many installments the purchase was split into. */
+    installmentCount: smallint('installment_count'),
   },
   (table) => [
     // Every query that lists or searches transactions starts from the
@@ -723,6 +730,16 @@ export const transactions = pgTable(
       .on(table.tenantId, table.paymentStatementId)
       .where(sql`status = 'ACTIVE' and payment_statement_id is not null`),
     // Only the card side of a transfer settles a bill, and it is on none.
+    // A purchase's installments are reached by their group.
+    index('transactions_installment_group_idx')
+      .on(table.tenantId, table.installmentGroupId)
+      .where(sql`installment_group_id is not null`),
+    // The three installment columns are all set or all null, the number
+    // within the count, the count at most 48.
+    check(
+      'transactions_installment_shape',
+      sql`(${table.installmentGroupId} is null and ${table.installmentNumber} is null and ${table.installmentCount} is null) or (${table.installmentGroupId} is not null and 1 <= ${table.installmentNumber} and ${table.installmentNumber} <= ${table.installmentCount} and ${table.installmentCount} <= 48)`
+    ),
     check(
       'transactions_payment_is_transfer_in',
       sql`${table.paymentStatementId} is null or (${table.type} = 'Income' and ${table.transferGroupId} is not null and ${table.statementId} is null)`

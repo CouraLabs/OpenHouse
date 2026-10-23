@@ -32,6 +32,7 @@ import { CreditModeToggle } from './credit-mode-toggle.js'
 import { CurrentBillCard } from './current-bill-card.js'
 import { ExpensePieCard } from './expense-pie-card.js'
 import { FilterChips } from './filter-chips.js'
+import { InstallmentGroupDialog } from './installment-group-dialog.js'
 import { forecastNextMonthExpenses } from './forecast-next-month.js'
 import { GoalGaugesCard } from './goal-gauges-card.js'
 import { LastMonthCard } from './last-month-card.js'
@@ -39,6 +40,7 @@ import { LimitUsageCard } from './limit-usage-card.js'
 import { MonthFilter } from './month-filter.js'
 import { NextDueCard } from './next-due-card.js'
 import { NextMonthCard } from './next-month-card.js'
+import { SplitInstallmentsDialog } from './split-installments-dialog.js'
 import { SummaryCards } from './summary-cards.js'
 import { mainCurrencyFirst } from '@/lib/main-currency-first.js'
 import { TransactionForm } from './transaction-form.js'
@@ -107,6 +109,11 @@ export function TransactionsPage() {
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [transferOpen, setTransferOpen] = useState(false)
   const [deleting, setDeleting] = useState<Transaction | null>(null)
+
+  // The installment dialogs: a purchase's menu (opened from any of its
+  // rows) and the split of one single card charge.
+  const [groupOf, setGroupOf] = useState<Transaction | null>(null)
+  const [splitting, setSplitting] = useState<Transaction | null>(null)
 
   // The rows the selection checkbox column holds.
   const [selection, setSelection] = useState<Set<number>>(new Set())
@@ -665,6 +672,22 @@ export function TransactionsPage() {
               save.reset()
               setDeleting(transaction)
             },
+            onInstallments: (transaction) => {
+              // The purchase's actions can delete rows: clear the form so the
+              // sheet never keeps editing one the grid no longer holds.
+              setFormOpen(false)
+              setEditing(null)
+              save.reset()
+              setSelection(new Set())
+              setGroupOf(transaction)
+            },
+            onSplit: (transaction) => {
+              setFormOpen(false)
+              setEditing(null)
+              save.reset()
+              setSelection(new Set())
+              setSplitting(transaction)
+            },
             onStatusChange: changeStatus,
           }}
           hasMore={hasMore}
@@ -711,6 +734,14 @@ export function TransactionsPage() {
       <ClosedBillDialog
         transaction={closedNotice}
         onClose={() => setClosedNotice(null)}
+      />
+      <InstallmentGroupDialog
+        transaction={groupOf}
+        onClose={() => setGroupOf(null)}
+      />
+      <SplitInstallmentsDialog
+        transaction={splitting}
+        onClose={() => setSplitting(null)}
       />
       <ConfirmDialog
         open={deleting !== null}

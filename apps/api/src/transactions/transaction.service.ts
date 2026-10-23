@@ -21,6 +21,7 @@ import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
+import { InstallmentService } from './installment.service.js'
 import {
   TransactionRepository,
   type TransactionRow,
@@ -43,23 +44,25 @@ export class TransactionService {
     private readonly accounts: AccountRepository,
     private readonly categories: CategoryRepository,
     private readonly receivers: ReceiverRepository,
-    private readonly statements: CreditCardStatementRepository
+    private readonly statements: CreditCardStatementRepository,
+    private readonly installments: InstallmentService
   ) {}
 
-  /** Creates a transaction, rejecting references the tenant cannot use. */
+  /** Creates a transaction, rejecting references the tenant cannot use. A
+   * card expense with `installments.count > 1` becomes one row per
+   * installment; the answer is the first. */
   async create(
     tenantId: number,
     userId: number,
     body: CreateTransactionBody
   ): Promise<TransactionRow> {
-    await this.assertReferencesUsable(tenantId, body)
+    const account = await this.assertReferencesUsable(tenantId, body)
 
     // The wire's `status` is the review workflow; the row's `status` is the
     // entity lifecycle, which only a soft delete changes — so the body's
     // field is named out before the spread, never allowed to override it.
-    const { status, ...rest } = body
-
-    return this.repository.insertWithBalance(tenantId, userId, {
+    const { status, installments, ...rest } = body
+    const write = {
       ...rest,
       note: body.note ?? null,
       invoice: body.invoice ?? null,
@@ -67,7 +70,22 @@ export class TransactionService {
       statusNote: body.statusNote ?? null,
       recurringId: null,
       reviewStatus: status,
-    })
+    }
+
+    if (installments !== undefined && installments.count > 1) {
+      const { amount, ...purchase } = write
+
+      return this.installments.create(
+        tenantId,
+        userId,
+        account,
+        purchase,
+        amount,
+        installments
+      )
+    }
+
+    return this.repository.insertWithBalance(tenantId, userId, write)
   }
 
   /** Runs the tenant's paged search. */
@@ -132,6 +150,10 @@ export class TransactionService {
       throw new ConflictException(
         "A transfer's type and account cannot be changed."
       )
+    }
+
+    if (row.installmentGroupId !== null) {
+      await this.assertInstallmentEdit(tenantId, row, body)
     }
 
     const account = await this.assertReferencesUsable(tenantId, body)
@@ -260,6 +282,12 @@ export class TransactionService {
 
     if (row.status === 'DELETED') {
       return
+    }
+
+    if (row.installmentGroupId !== null) {
+      throw new ConflictException(
+        "Delete an installment purchase as a whole, or its remaining installments."
+      )
     }
 
     await this.repository.softDeleteWithBalance(tenantId, id, userId)
@@ -392,6 +420,42 @@ export class TransactionService {
     }
 
     return statement.id
+  }
+
+  /**
+   * Rejects a row edit of one installment beyond what it may change on its
+   * own — its amount, category, note, and review status (a bank
+   * adjustment) — or once its bill is no longer Open: the bank billed it.
+   */
+  private async assertInstallmentEdit(
+    tenantId: number,
+    row: TransactionRow,
+    body: UpdateTransactionBody
+  ): Promise<void> {
+    if (
+      body.name !== row.name ||
+      body.transactionDt !== row.transactionDt ||
+      body.linkedAccountId !== row.linkedAccountId ||
+      body.type !== row.type ||
+      (body.receiverId ?? null) !== row.receiverId ||
+      (body.invoice ?? null) !== row.invoice
+    ) {
+      throw new ConflictException(
+        'Edit the whole purchase to change its name, day, account, or receiver.'
+      )
+    }
+
+    const statement =
+      row.statementId === null
+        ? undefined
+        : await this.statements.findById(tenantId, row.statementId)
+    const today = await this.statements.todayOf(tenantId)
+
+    if (statement !== undefined && statement.closeDate <= today) {
+      throw new ConflictException(
+        'This installment was already billed and can no longer change.'
+      )
+    }
   }
 
   /** Rejects an account, category, or — when set — receiver the tenant

@@ -313,7 +313,9 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   it('moves a payment to another bill of the card', async () => {
     const card = await createCard(agent)
     const checking = await createAccount(agent)
-    const older = await charge(agent, card, categoryId, addDays(today, -90))
+    // 40 days apart: a cycle spans at most 31, so the two charges can never
+    // share a bill whatever day the suite runs on.
+    const older = await charge(agent, card, categoryId, addDays(today, -100))
     const newer = await charge(agent, card, categoryId, addDays(today, -60))
     const [, cardSide] = await pay(agent, {
       fromAccountId: checking,

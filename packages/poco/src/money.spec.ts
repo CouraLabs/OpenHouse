@@ -6,6 +6,8 @@ import {
   formatCents,
   isZeroMoney,
   negateMoney,
+  splitInstallments,
+  sumMoney,
   toCents,
 } from './money.js'
 
@@ -59,5 +61,42 @@ describe('toCents and formatCents', () => {
     expect(toCents('-12.3')).toBe(-1230n)
     expect(formatCents(5n)).toBe('0.05')
     expect(formatCents(toCents('-0.07'))).toBe('-0.07')
+  })
+})
+
+describe('splitInstallments', () => {
+  it('puts the remainder cents on installment 1', () => {
+    expect(splitInstallments('1000.00', 3, 'total')).toEqual([
+      '333.34',
+      '333.33',
+      '333.33',
+    ])
+  })
+
+  it('always reconstructs the total exactly, for every count 2–48', () => {
+    for (const total of ['0.01', '1.00', '99.99', '1000.00', '12345.67']) {
+      for (let count = 2; count <= 48; count++) {
+        const parts = splitInstallments(total, count, 'total')
+
+        expect(parts).toHaveLength(count)
+        expect(sumMoney(parts)).toBe(formatCents(toCents(total)))
+        // Never more than one cent-remainder apart, the larger first.
+        expect(
+          parts.every((part) => toCents(parts[0]) - toCents(part) < BigInt(count))
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('repeats a per-installment amount', () => {
+    expect(splitInstallments('110.00', 3, 'perInstallment')).toEqual([
+      '110.00',
+      '110.00',
+      '110.00',
+    ])
+  })
+
+  it('keeps a single installment whole', () => {
+    expect(splitInstallments('10.05', 1, 'total')).toEqual(['10.05'])
   })
 })

@@ -58,3 +58,38 @@ export function compareMoney(a: string, b: string): -1 | 0 | 1 {
 
   return left > right ? 1 : 0
 }
+
+/**
+ * Splits a purchase into `count` installment amounts, installment 1 first.
+ * From a `total`: integer cents, `floor(total / count)` each, the remainder
+ * cents on installment 1 — so the parts always add up to the total exactly
+ * (`1000.00 / 3 → 333.34, 333.33, 333.33`). From a `perInstallment` amount
+ * (an interest-bearing plan): `count` equal parts, the total being
+ * `count × amount`.
+ */
+export function splitInstallments(
+  amount: string,
+  count: number,
+  mode: 'total' | 'perInstallment'
+): string[] {
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error(`${count} is not an installment count.`)
+  }
+
+  if (mode === 'perInstallment') {
+    return Array.from({ length: count }, () => formatCents(toCents(amount)))
+  }
+
+  const total = toCents(amount)
+  const base = total / BigInt(count)
+  const remainder = total - base * BigInt(count)
+
+  return Array.from({ length: count }, (_, index) =>
+    formatCents(index === 0 ? base + remainder : base)
+  )
+}
+
+/** Sums decimal money strings exactly. */
+export function sumMoney(amounts: readonly string[]): string {
+  return formatCents(amounts.reduce((sum, value) => sum + toCents(value), 0n))
+}

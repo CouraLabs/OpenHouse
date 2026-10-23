@@ -15,19 +15,15 @@ import {
 import type {
   ChangeTransactionStatusBody,
   CreateTransactionBody,
-  Currency,
-  EntityStatus,
   MoveToStatementBody,
   PagedResults,
   SearchTransactionsArgs,
-  StatementWarning,
   Transaction,
   TransactionBreakdown,
   TransactionBreakdownArgs,
   TransactionHistoryAction,
   TransactionHistoryEntry,
   TransactionSummary,
-  TransactionType,
   TransferBody,
   UpdateTransactionBody,
 } from '@workspace/poco'
@@ -46,6 +42,7 @@ import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
 import { LedgerConflictFilter } from './ledger-conflict.filter.js'
 import { TransactionService } from './transaction.service.js'
+import { toWire } from './transaction-wire.js'
 
 /**
  * The transaction routes. Everything here reads the tenant and the user
@@ -210,78 +207,6 @@ export class TransactionsController {
   ): Promise<void> {
     await this.transactions.softDelete(session.tenant.id, session.user.id, id)
   }
-}
-
-/** Maps a row onto the wire shape: dates cross HTTP as ISO strings, the
- * day as `YYYY-MM-DD`. The entity lifecycle travels as `lifecycle`, so the
- * transaction's business `status` stays unambiguous. The `currency` and the
- * `transferGroupId` ride along: the UI formats every amount in its own
- * denomination and keeps a transfer's two sides out of the totals. */
-function toWire(row: TransactionRowLike): Transaction {
-  return {
-    id: row.id,
-    name: row.name,
-    note: row.note,
-    invoice: row.invoice,
-    amount: row.amount,
-    transactionDt: row.transactionDt,
-    balanceOnDt: row.balanceOnDt,
-    linkedAccountId: row.linkedAccountId,
-    accountName: row.accountName,
-    currency: row.currency,
-    categoryId: row.categoryId,
-    categoryName: row.categoryName,
-    categoryColor: row.categoryColor,
-    receiverId: row.receiverId,
-    receiverName: row.receiverName,
-    recurringId: row.recurringId,
-    type: row.type,
-    status: row.reviewStatus,
-    statusNote: row.statusNote,
-    lifecycle: row.status,
-    transferGroupId: row.transferGroupId,
-    statementId: row.statementId,
-    statementPinned: row.statementPinned,
-    statementDueDate: row.statementDueDate,
-    paymentStatementId: row.paymentStatementId,
-    paymentStatementDueDate: row.paymentStatementDueDate,
-    warning: row.warning ?? null,
-    createdDt: row.createdDt.toISOString(),
-    updateDt: row.updateDt.toISOString(),
-  }
-}
-
-/** The columns `toWire` reads, whatever else the row carries. */
-interface TransactionRowLike {
-  id: number
-  name: string
-  note: string | null
-  invoice: string | null
-  amount: string
-  transactionDt: string
-  balanceOnDt: string
-  linkedAccountId: number
-  accountName: string
-  currency: Currency
-  categoryId: number
-  categoryName: string
-  categoryColor: string
-  receiverId: number | null
-  receiverName: string | null
-  recurringId: number | null
-  type: TransactionType
-  reviewStatus: Transaction['status']
-  statusNote: string | null
-  status: EntityStatus
-  transferGroupId: string | null
-  statementId: number | null
-  statementPinned: boolean
-  statementDueDate: string | null
-  paymentStatementId: number | null
-  paymentStatementDueDate: string | null
-  warning?: StatementWarning
-  createdDt: Date
-  updateDt: Date
 }
 
 /** Maps a history row onto the wire shape. */

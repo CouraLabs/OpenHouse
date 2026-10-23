@@ -4,6 +4,9 @@ import { AccountsModule } from '../accounts/accounts.module.js'
 import { CategoriesModule } from '../categories/categories.module.js'
 import { CreditCardStatementsModule } from '../credit-card-statements/credit-card-statements.module.js'
 import { ReceiversModule } from '../receivers/receivers.module.js'
+import { InstallmentRepository } from './installment.repository.js'
+import { InstallmentService } from './installment.service.js'
+import { InstallmentsController } from './installments.controller.js'
 import { TransactionRepository } from './transaction.repository.js'
 import { TransactionService } from './transaction.service.js'
 import { TransactionsController } from './transactions.controller.js'
@@ -13,7 +16,9 @@ import { TransactionsController } from './transactions.controller.js'
  * accounts, categories, and receivers modules are imported so the service
  * can validate the references through the repositories they export — the
  * one sanctioned crossing between features. The bills module is imported
- * so every card row lands on its bill inside the ledger write. The repository is exported so
+ * so every card row lands on its bill inside the ledger write. Installment
+ * purchases are a concern of their own (`InstallmentService`), written
+ * through the same ledger repository. The repository is exported so
  * the recurring rules' cron can materialize transactions through it.
  */
 @Module({
@@ -23,8 +28,13 @@ import { TransactionsController } from './transactions.controller.js'
     ReceiversModule,
     CreditCardStatementsModule,
   ],
-  controllers: [TransactionsController],
-  providers: [TransactionService, TransactionRepository],
+  controllers: [TransactionsController, InstallmentsController],
+  providers: [
+    TransactionService,
+    TransactionRepository,
+    InstallmentService,
+    InstallmentRepository,
+  ],
   exports: [TransactionRepository],
 })
 export class TransactionsModule {}

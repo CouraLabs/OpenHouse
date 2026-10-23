@@ -9,6 +9,10 @@ import type {
   AccountRef,
   CategoryRef,
   CreateTransactionBody,
+  InstallmentDeleteScope,
+  InstallmentGroup,
+  InstallmentRefund,
+  InstallmentsBody,
   PagedResults,
   ReceiverRef,
   SearchTransactionsArgs,
@@ -16,6 +20,7 @@ import type {
   TransactionStatus,
   TransactionSummary,
   TransferBody,
+  UpdateInstallmentGroupBody,
   UpdateTransactionBody,
 } from '@workspace/poco'
 
@@ -182,4 +187,82 @@ export function useActiveReceivers() {
     queryKey: ['receivers', 'active'],
     queryFn: ({ signal }) => api<ReceiverRef[]>('/receivers', { signal }),
   })
+}
+
+/** One installment purchase: its installments, total, and editability.
+ * Lives under the transactions key, so every mutation refreshes it. */
+export function useInstallmentGroup(groupId: string | null) {
+  return useQuery({
+    queryKey: [...TRANSACTIONS_KEY, 'installments', groupId],
+    queryFn: ({ signal }) =>
+      api<InstallmentGroup>(`/transactions/installments/${groupId}`, {
+        signal,
+      }),
+    enabled: groupId !== null,
+  })
+}
+
+/**
+ * The installment purchase writes: a group edit, a delete (`all` or the
+ * `remaining` ones), a full refund, a collapse back into one row, and a
+ * split of a single expense. Each moves the card's balance and its bills,
+ * so all three keys invalidate.
+ */
+export function useInstallmentActions() {
+  const queryClient = useQueryClient()
+  const onSuccess = () => {
+    void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
+    void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
+    void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
+  }
+
+  return {
+    update: useMutation({
+      mutationFn: ({
+        groupId,
+        ...body
+      }: UpdateInstallmentGroupBody & { groupId: string }) =>
+        api<InstallmentGroup>(`/transactions/installments/${groupId}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        }),
+      onSuccess,
+    }),
+    remove: useMutation({
+      mutationFn: ({
+        groupId,
+        scope,
+      }: {
+        groupId: string
+        scope: InstallmentDeleteScope
+      }) =>
+        api<void>(`/transactions/installments/${groupId}?scope=${scope}`, {
+          method: 'DELETE',
+        }),
+      onSuccess,
+    }),
+    refund: useMutation({
+      mutationFn: ({ groupId, name }: { groupId: string; name: string }) =>
+        api<InstallmentRefund>(`/transactions/installments/${groupId}/refund`, {
+          method: 'POST',
+          body: JSON.stringify({ name }),
+        }),
+      onSuccess,
+    }),
+    collapse: useMutation({
+      mutationFn: (groupId: string) =>
+        api<Transaction>(`/transactions/installments/${groupId}/collapse`, {
+          method: 'POST',
+        }),
+      onSuccess,
+    }),
+    split: useMutation({
+      mutationFn: ({ id, ...body }: InstallmentsBody & { id: number }) =>
+        api<InstallmentGroup>(`/transactions/${id}/installments`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      onSuccess,
+    }),
+  }
 }

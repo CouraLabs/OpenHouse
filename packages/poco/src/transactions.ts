@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import type { StatementWarning } from './credit-card-statements.js'
-import { type Currency } from './currencies.js'
+import type { Currency } from './currencies.js'
 import { dateOnlySchema } from './goals.js'
 import { amountSchema } from './limits.js'
 import {
@@ -53,6 +53,34 @@ export const transactionRangeSchema = z.object({
   transactionDtTo: transactionDtSchema.optional(),
 })
 
+/** The most installments a card purchase splits into. */
+export const MAX_INSTALLMENTS = 48
+
+/**
+ * How the amount of an installment purchase reads: the purchase's `total`,
+ * split by `splitInstallments` (the remainder cents on installment 1), or
+ * the amount of each installment (`perInstallment` — an interest-bearing
+ * plan, whose total is `count × amount`).
+ */
+export const installmentAmountModes = ['total', 'perInstallment'] as const
+
+export const installmentAmountModeSchema = z.enum(installmentAmountModes, {
+  error: 'Total or per installment.',
+})
+
+export type InstallmentAmountMode = (typeof installmentAmountModes)[number]
+
+/** How a card purchase splits: into `count` installments, each on the next
+ * bill. A count of 1 is a single charge. */
+export const installmentsSchema = z.object({
+  count: z
+    .number({ error: 'Enter how many installments.' })
+    .int('Enter a whole number of installments.')
+    .min(1, 'At least 1 installment.')
+    .max(MAX_INSTALLMENTS, `At most ${MAX_INSTALLMENTS} installments.`),
+  amountMode: installmentAmountModeSchema.prefault('total'),
+})
+
 /** The body creating a transaction accepts. */
 export const createTransactionSchema = z.object({
   name: z.string().min(1, 'Enter a name.').max(255),
@@ -78,11 +106,61 @@ export const createTransactionSchema = z.object({
     .string()
     .max(500, 'Keep the note under 500 characters.')
     .nullish(),
+  /** Splits a credit card expense into installments, one per bill; only a
+   * card expense accepts it (409 otherwise). */
+  installments: installmentsSchema.optional(),
 })
 
-/** The body updating a transaction accepts: the same fields, plus which row. */
-export const updateTransactionSchema = createTransactionSchema.extend({
-  id: z.number().int().positive(),
+/**
+ * The body updating a transaction accepts: the same fields, plus which row
+ * — never a split; a purchase's installments change through the group
+ * routes. On an installment the row route edits this installment only:
+ * its amount, category, and note, while its bill is Open.
+ */
+export const updateTransactionSchema = createTransactionSchema
+  .omit({ installments: true })
+  .extend({
+    id: z.number().int().positive(),
+  })
+
+/**
+ * The body a group edit of an installment purchase accepts. Name, note,
+ * category, and receiver move no money and apply to every installment,
+ * billed ones included. A new amount or count re-splits the purchase —
+ * only while every installment is on an Open bill (409 otherwise).
+ */
+export const updateInstallmentGroupSchema = createTransactionSchema
+  .pick({
+    name: true,
+    note: true,
+    categoryId: true,
+    receiverId: true,
+    amount: true,
+  })
+  .extend({ installments: installmentsSchema })
+
+/** Which installments a group delete removes: the whole purchase (only
+ * while none is billed), or those still on an Open bill. */
+export const installmentDeleteScopes = ['all', 'remaining'] as const
+
+export const installmentDeleteScopeSchema = z.enum(installmentDeleteScopes, {
+  error: 'All or remaining.',
+})
+
+export type InstallmentDeleteScope = (typeof installmentDeleteScopes)[number]
+
+/** The query a group delete reads its scope from. */
+export const deleteInstallmentGroupSchema = z.object({
+  scope: installmentDeleteScopeSchema.prefault('all'),
+})
+
+/**
+ * The body a full refund of an installment purchase accepts: the name of
+ * the refund — an Income on the card's open bill for what was already
+ * billed, the rest deleted.
+ */
+export const refundInstallmentGroupSchema = z.object({
+  name: z.string().min(1, 'Enter a name.').max(255),
 })
 
 /**
@@ -195,6 +273,16 @@ export const transferSchema = z
 
 export type CreateTransactionBody = z.infer<typeof createTransactionSchema>
 export type UpdateTransactionBody = z.infer<typeof updateTransactionSchema>
+export type InstallmentsBody = z.infer<typeof installmentsSchema>
+export type UpdateInstallmentGroupBody = z.infer<
+  typeof updateInstallmentGroupSchema
+>
+export type DeleteInstallmentGroupQuery = z.infer<
+  typeof deleteInstallmentGroupSchema
+>
+export type RefundInstallmentGroupBody = z.infer<
+  typeof refundInstallmentGroupSchema
+>
 export type ChangeTransactionStatusBody = z.infer<
   typeof changeTransactionStatusSchema
 >
@@ -251,12 +339,51 @@ export type Transaction = {
   paymentStatementId: number | null
   /** The due date of the bill the payment settles, joined. */
   paymentStatementDueDate: string | null
+  /** The purchase an installment belongs to, or nothing for a single row.
+   * The grid renders `installmentNumber/installmentCount` ("TV 3/10"). */
+  installmentGroupId: string | null
+  installmentNumber: number | null
+  installmentCount: number | null
   /** Set on a write's answer when the charge landed on a bill already
    * closed, so the form can offer to move it to the open one. */
   warning: StatementWarning | null
   createdDt: string
   updateDt: string
 }
+
+/**
+ * One installment purchase, as the group routes answer it: its shared
+ * fields, the total its installments add up to, whether every one is still
+ * on an Open bill (`editable` — the amount and the count can change, and
+ * the whole group can be deleted or collapsed), and the ACTIVE
+ * installments in order.
+ */
+export type InstallmentGroup = {
+  groupId: string
+  name: string
+  note: string | null
+  categoryId: number
+  receiverId: number | null
+  linkedAccountId: number
+  currency: Currency
+  /** The purchase day every installment keeps. */
+  transactionDt: string
+  count: number
+  total: string
+  editable: boolean
+  installments: Transaction[]
+}
+
+/** What a full refund answers: the refund Income on the open bill, or
+ * nothing when no installment was billed yet (the purchase is just gone). */
+export type InstallmentRefund = {
+  refund: Transaction | null
+}
+
+/** The 409 a money change or a full delete answers once an installment is
+ * billed. */
+export const INSTALLMENTS_BILLED =
+  "Some installments were already billed. Use 'Delete remaining' and create a new purchase for the rest."
 
 /**
  * One currency's slice of a summary: the totals of the transactions whose

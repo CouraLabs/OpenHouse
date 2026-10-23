@@ -87,14 +87,17 @@ export class CreditCardStatementRepository {
   ) {}
 
   /**
-   * Places a new row on the bill its day lands on: nothing off a card, on
-   * a card whose days are unset, or for the card side of a payment.
+   * Places a new row on the bill its day lands on, `offset` cycles later
+   * (installment `k` of a purchase lands on offset `k − 1`): nothing off a
+   * card, on a card whose days are unset, or for the card side of a
+   * payment.
    */
   async placeInTx(
     tx: DbOrTx,
     tenantId: number,
     userId: number | null,
-    key: StatementKey
+    key: StatementKey,
+    offset = 0
   ): Promise<StatementPlacement> {
     if (isCardPayment(key)) {
       return { statementId: null, statementPinned: false, closed: false }
@@ -106,7 +109,7 @@ export class CreditCardStatementRepository {
       return { statementId: null, statementPinned: false, closed: false }
     }
 
-    const window = resolveStatement(cycle, key.transactionDt)
+    const window = resolveStatement(cycle, key.transactionDt, offset)
     const statementId = await this.getOrCreateInTx(
       tx,
       tenantId,

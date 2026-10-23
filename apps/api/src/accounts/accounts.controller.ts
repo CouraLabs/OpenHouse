@@ -24,6 +24,7 @@ import type {
   UpdateAccountBody,
 } from '@workspace/poco'
 import {
+  availableLimit,
   createAccountSchema,
   deleteAccountQuerySchema,
   searchAccountsSchema,
@@ -82,6 +83,7 @@ export class AccountsController {
       closeDay: row.closeDay,
       dueDay: row.dueDay,
       closeDayInclusive: row.closeDayInclusive,
+      availableLimit: availableLimit(row),
     }))
   }
 
@@ -152,6 +154,7 @@ function toWire(row: {
     currency: row.currency,
     spreadPct: row.spreadPct,
     limit: row.limit,
+    availableLimit: availableLimit(row),
     closeDay: row.closeDay,
     dueDay: row.dueDay,
     closeDayInclusive: row.closeDayInclusive,

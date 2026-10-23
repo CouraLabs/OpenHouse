@@ -3,7 +3,7 @@ import type { Transaction } from '@workspace/poco'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Layers, Pencil, Split, Trash2 } from 'lucide-react'
 
 import { formatMoney } from '@/lib/format-money.js'
 import { StatusBadge } from './status-badge.js'
@@ -31,10 +31,18 @@ export function TransactionRow({
 }) {
   const { t } = useTranslation()
   const isIncome = transaction.type === 'Income'
+  const isInstallment = transaction.installmentGroupId !== null
+  // A card charge on a bill, not part of a purchase or a transfer, can still
+  // be split into installments.
+  const canSplit =
+    !isInstallment &&
+    transaction.type === 'Expense' &&
+    transaction.statementId !== null &&
+    transaction.transferGroupId === null
   const signed = `${isIncome ? '+' : '\u2212'}${formatMoney(transaction.amount, locale, transaction.currency)}`
 
   return (
-    <div className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_5rem] items-center gap-2 border-b px-3 py-2 text-sm hover:bg-muted/40">
+    <div className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b px-3 py-2 text-sm hover:bg-muted/40">
       <Checkbox
         checked={selected}
         aria-label={labels.selectRow}
@@ -69,6 +77,11 @@ export function TransactionRow({
       </span>
       <span className="truncate" title={transaction.name}>
         {transaction.name}
+        {isInstallment ? (
+          <span className="ml-1 text-muted-foreground tabular-nums">
+            {transaction.installmentNumber}/{transaction.installmentCount}
+          </span>
+        ) : null}
       </span>
       <span
         className={`text-right font-medium tabular-nums ${
@@ -86,6 +99,28 @@ export function TransactionRow({
         />
       </span>
       <div className="flex items-center justify-end gap-1">
+        {isInstallment ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t('transactions.group')}
+            title={t('transactions.group')}
+            onClick={() => actions.onInstallments(transaction)}
+          >
+            <Layers />
+          </Button>
+        ) : null}
+        {canSplit ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t('transactions.split')}
+            title={t('transactions.split')}
+            onClick={() => actions.onSplit(transaction)}
+          >
+            <Split />
+          </Button>
+        ) : null}
         <Button
           variant="ghost"
           size="icon-sm"

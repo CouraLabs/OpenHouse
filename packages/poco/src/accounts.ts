@@ -7,6 +7,7 @@ import {
   type EntityStatus,
 } from './fetch.js'
 import { amountSchema } from './limits.js'
+import { addMoney } from './money.js'
 
 /**
  * The account routes' contract: the bodies the write routes accept, the args
@@ -218,6 +219,28 @@ export type AccountRef = {
   closeDay: number | null
   dueDay: number | null
   closeDayInclusive: boolean
+  /** What a card can still spend, so the transaction form previews the
+   * limit left after a purchase; nothing off a card or without a limit. */
+  availableLimit: string | null
+}
+
+/**
+ * What a credit card can still spend: its limit plus its balance — a
+ * card's balance runs negative as it spends, and every installment of a
+ * purchase hits it at once, the way the bank holds the whole purchase
+ * against the limit. Nothing for a card with no limit, or another kind of
+ * account. Negative when over the limit (the form warns, never blocks).
+ */
+export function availableLimit(account: {
+  type: AccountType
+  limit: string | null
+  balance: string
+}): string | null {
+  if (account.type !== 'Credit Card' || account.limit === null) {
+    return null
+  }
+
+  return addMoney(account.limit, account.balance)
 }
 
 /**
@@ -235,6 +258,8 @@ export type Account = {
   /** The conversion spread, in percent, like `"4.00"`. */
   spreadPct: string
   limit: string | null
+  /** What a card can still spend: `availableLimit(limit, balance)`. */
+  availableLimit: string | null
   closeDay: number | null
   dueDay: number | null
   closeDayInclusive: boolean

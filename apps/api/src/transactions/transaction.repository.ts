@@ -105,6 +105,10 @@ export interface TransactionWrite {
   /** The bill a payment settles — set only by `insertTransfer`, on the
    * card side. */
   paymentStatementId?: number
+  /** Which installment of which purchase the row is — set only by the
+   * installment writes. The row lands on its first bill plus `number − 1`
+   * cycles, pinned there, so no later date logic moves it. */
+  installment?: { groupId: string; number: number; count: number }
 }
 
 /** A transfer writes two rows from one body. */
@@ -700,6 +704,11 @@ export class TransactionRepository {
    * feature never re-derives what a transaction is.
    * Transfer rows and Canceled review statuses never count, as in
    * `summary`.
+   *
+   * Installments count by accrual: every installment of a purchase keeps
+   * the purchase day, so a 10× purchase counts in full in the period it
+   * was bought — not one tenth per bill. A per-installment ("cash") view
+   * of limits is out of scope.
    */
   async expenseTotalsByCategory(
     tenantId: number,
@@ -784,13 +793,15 @@ export class TransactionRepository {
    * apply the delta, insert the row with the resulting balance stamped, and
    * record the CREATE history — all inside the caller's transaction. A row
    * created Canceled applies nothing and stamps the balance as it found it.
+   * An installment lands on its offset bill, pinned.
    */
-  private async insertInTx(
+  async insertInTx(
     tx: DbOrTx,
     tenantId: number,
     userId: number | null,
     write: TransactionWrite
   ): Promise<TransactionRow> {
+    const { installment, ...columns } = write
     const newBalance = await applyTransactionDelta(
       tx,
       tenantId,
@@ -800,12 +811,18 @@ export class TransactionRepository {
 
     // A card row lands on its bill in the same transaction, after the
     // account is locked — so recurring rules and transfers get bills too.
-    const placement = await this.statements.placeInTx(tx, tenantId, userId, {
-      linkedAccountId: write.linkedAccountId,
-      transactionDt: write.transactionDt,
-      type: write.type,
-      isTransferLeg: write.transferGroupId !== undefined,
-    })
+    const placement = await this.statements.placeInTx(
+      tx,
+      tenantId,
+      userId,
+      {
+        linkedAccountId: write.linkedAccountId,
+        transactionDt: write.transactionDt,
+        type: write.type,
+        isTransferLeg: write.transferGroupId !== undefined,
+      },
+      installment === undefined ? 0 : installment.number - 1
+    )
 
     const [row] = await tx
       .insert(transactions)
@@ -813,9 +830,17 @@ export class TransactionRepository {
         tenantId,
         createdBy: userId,
         updateBy: userId,
-        ...write,
+        ...columns,
         balanceOnDt: newBalance,
         statementId: placement.statementId,
+        ...(installment === undefined
+          ? {}
+          : {
+              installmentGroupId: installment.groupId,
+              installmentNumber: installment.number,
+              installmentCount: installment.count,
+              statementPinned: placement.statementId !== null,
+            }),
       })
       .returning()
 
@@ -828,7 +853,7 @@ export class TransactionRepository {
   }
 
   /** Records one append-only history row with the full snapshots. */
-  private async recordHistory(
+  async recordHistory(
     tx: DbOrTx,
     tenantId: number,
     transactionId: number,
@@ -848,7 +873,7 @@ export class TransactionRepository {
   }
 
   /** Re-reads one row with the joined names, inside the given handle. */
-  private async findByIdInTx(
+  async findByIdInTx(
     db: DbOrTx,
     tenantId: number,
     id: number
@@ -858,6 +883,24 @@ export class TransactionRepository {
     )
 
     return row
+  }
+
+  /** Reads the ACTIVE installments of one purchase with the joined names,
+   * in order. */
+  async findInstallments(
+    tenantId: number,
+    groupId: string,
+    db: DbOrTx = this.db
+  ): Promise<TransactionRow[]> {
+    return this.selectJoined(db)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.installmentGroupId, groupId),
+          eq(transactions.status, 'ACTIVE')
+        )
+      )
+      .orderBy(asc(transactions.installmentNumber))
   }
 
   /** The joined select every read shares. */
@@ -957,7 +1000,7 @@ export class TransactionRepository {
    * when Postgres aborts it for a deadlock or a serialization failure. The
    * ordered locks make those rare; the retry is the safety net.
    */
-  private inLedgerTx<T>(run: (tx: DbOrTx) => Promise<T>): Promise<T> {
+  inLedgerTx<T>(run: (tx: DbOrTx) => Promise<T>): Promise<T> {
     return retryOnLockConflict(() => this.db.transaction(run))
   }
 
@@ -1010,7 +1053,7 @@ export class TransactionRepository {
    * DELETED, and records the history — the body every soft delete shares.
    * The `where` re-checks the lifecycle so a row a concurrent write deleted
    * is left alone. */
-  private async softDeleteInTx(
+  async softDeleteInTx(
     tx: DbOrTx,
     tenantId: number,
     userId: number,

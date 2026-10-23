@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
+import { and, asc, count, eq, ne } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Account, Database, DbOrTx } from '@workspace/db'

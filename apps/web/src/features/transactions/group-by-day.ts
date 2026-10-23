@@ -90,7 +90,7 @@ function toCents(value: string): bigint {
 
   const [, whole, fraction = ''] = match
 
-  return BigInt(whole) * 100n + BigInt((fraction + '00').slice(0, 2))
+  return BigInt(whole) * 100n + BigInt(`${fraction}00`.slice(0, 2))
 }
 
 /** Formats BigInt cents back into the two-decimal string the rows carry. */
