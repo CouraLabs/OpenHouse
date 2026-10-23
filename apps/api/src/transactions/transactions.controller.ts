@@ -10,11 +10,13 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   UseFilters,
 } from '@nestjs/common'
 import type {
   ChangeTransactionStatusBody,
   CreateTransactionBody,
+  DeleteTransactionQuery,
   MoveToStatementBody,
   PagedResults,
   SearchTransactionsArgs,
@@ -30,6 +32,7 @@ import type {
 import {
   changeTransactionStatusSchema,
   createTransactionSchema,
+  deleteTransactionQuerySchema,
   moveToStatementSchema,
   searchTransactionsSchema,
   transactionBreakdownSchema,
@@ -203,9 +206,16 @@ export class TransactionsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async softDelete(
     @CurrentSession() session: Session,
-    @Param('id', ParseIntPipe) id: number
+    @Param('id', ParseIntPipe) id: number,
+    @Query(new ZodValidationPipe(deleteTransactionQuerySchema))
+    query: DeleteTransactionQuery
   ): Promise<void> {
-    await this.transactions.softDelete(session.tenant.id, session.user.id, id)
+    await this.transactions.softDelete(
+      session.tenant.id,
+      session.user.id,
+      id,
+      query.confirmReconciled
+    )
   }
 }
 

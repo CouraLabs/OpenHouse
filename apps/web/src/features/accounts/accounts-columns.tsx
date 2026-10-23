@@ -3,15 +3,20 @@ import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
 import { Link } from '@tanstack/react-router'
-import { Pencil, ReceiptText, Trash2 } from 'lucide-react'
+import { ChartLine, Pencil, ReceiptText, Scale, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 
 /** What the actions column can do to a row, reported upward. */
 export interface AccountRowActions {
   onEdit: (account: Account) => void
   onDelete: (account: Account) => void
+  /** Opens the reconciliation against the bank's balance. */
+  onReconcile: (account: Account) => void
+  /** Opens the daily end-of-day balance chart. */
+  onHistory: (account: Account) => void
 }
 
 /**
@@ -94,6 +99,14 @@ export function buildAccountsColumns(
                 </span>
               ) : null}
             </span>
+            {account.reconciledThrough !== null ? (
+              <span className="text-xs text-muted-foreground">
+                {t('accounts.reconciled-through')}{' '}
+                {formatDayLabel(account.reconciledThrough, locale, {
+                  dateStyle: 'medium',
+                })}
+              </span>
+            ) : null}
             {account.type === 'Credit Card' ? (
               account.closeDay === null || account.dueDay === null ? (
                 // A card from before the days were required has no bills
@@ -151,6 +164,24 @@ function AccountActionsCell({
           <ReceiptText />
         </Button>
       ) : null}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t('accounts.reconcile')}
+        title={t('accounts.reconcile')}
+        onClick={() => actions.onReconcile(account)}
+      >
+        <Scale />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t('accounts.history')}
+        title={t('accounts.history')}
+        onClick={() => actions.onHistory(account)}
+      >
+        <ChartLine />
+      </Button>
       <Button
         variant="ghost"
         size="icon-sm"

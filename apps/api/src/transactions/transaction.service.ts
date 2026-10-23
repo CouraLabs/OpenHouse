@@ -10,6 +10,7 @@ import type {
   ChangeTransactionStatusBody,
   CreateTransactionBody,
   MoveToStatementBody,
+  ReconciledEditConflict,
   SearchTransactionsArgs,
   TransactionBreakdownArgs,
   TransactionFilter,
@@ -27,6 +28,33 @@ import {
   type TransactionRow,
   type TransactionSearch,
 } from './transaction.repository.js'
+
+/**
+ * Answers 409 with the lock date when a day falls on or before the
+ * account's `reconciledThrough` and the caller has not confirmed. Dates are
+ * `YYYY-MM-DD`, so the string order is the calendar order.
+ */
+function assertDateOpen(
+  account: Account,
+  date: string,
+  confirmed: boolean | undefined
+): void {
+  if (
+    confirmed === true ||
+    account.reconciledThrough === null ||
+    date > account.reconciledThrough
+  ) {
+    return
+  }
+
+  const conflict: ReconciledEditConflict = {
+    message:
+      'This day was reconciled with the bank. Confirm to change it.',
+    reconciledThrough: account.reconciledThrough,
+  }
+
+  throw new ConflictException(conflict)
+}
 
 /**
  * The rules of transactions: every write moves the linked account's
@@ -58,10 +86,19 @@ export class TransactionService {
   ): Promise<TransactionRow> {
     const account = await this.assertReferencesUsable(tenantId, body)
 
+    // A backdated row inside a reconciled period changes a balance the
+    // bank already confirmed: it asks first, like an edit does.
+    assertDateOpen(account, body.transactionDt, body.confirmReconciled)
+
     // The wire's `status` is the review workflow; the row's `status` is the
     // entity lifecycle, which only a soft delete changes — so the body's
     // field is named out before the spread, never allowed to override it.
-    const { status, installments, ...rest } = body
+    const {
+      status,
+      installments,
+      confirmReconciled: _confirm,
+      ...rest
+    } = body
     const write = {
       ...rest,
       note: body.note ?? null,
@@ -126,6 +163,30 @@ export class TransactionService {
     return this.repository.findHistory(tenantId, id)
   }
 
+  /**
+   * A row on or before its account's `reconciledThrough` was matched to the
+   * bank: changing it answers 409 with the lock date until the caller
+   * confirms.
+   */
+  private async assertNotReconciled(
+    tenantId: number,
+    row: TransactionRow,
+    confirmed: boolean | undefined
+  ): Promise<void> {
+    if (!row.locked || confirmed === true) {
+      return
+    }
+
+    const account = await this.accounts.findById(tenantId, row.linkedAccountId)
+    const conflict: ReconciledEditConflict = {
+      message:
+        'This transaction was reconciled with the bank. Confirm to change it.',
+      reconciledThrough: account?.reconciledThrough ?? row.transactionDt,
+    }
+
+    throw new ConflictException(conflict)
+  }
+
   /** Updates a transaction, rejecting references it cannot use. A deleted
    * transaction updates like a missing one: it is gone for the UI. */
   async update(
@@ -152,11 +213,17 @@ export class TransactionService {
       )
     }
 
+    await this.assertNotReconciled(tenantId, row, body.confirmReconciled)
+
     if (row.installmentGroupId !== null) {
       await this.assertInstallmentEdit(tenantId, row, body)
     }
 
     const account = await this.assertReferencesUsable(tenantId, body)
+
+    // The row's new day and account count too: moving an open row into a
+    // reconciled period is as much a change to it as editing a locked one.
+    assertDateOpen(account, body.transactionDt, body.confirmReconciled)
 
     // A transaction has no currency of its own — it carries its account's.
     // Moving it to an account of another currency would keep the digits and
@@ -169,7 +236,12 @@ export class TransactionService {
     }
 
     // As in create: the wire's `status` names out before the spread.
-    const { status, id: _updateId, ...rest } = body
+    const {
+      status,
+      id: _updateId,
+      confirmReconciled: _confirm,
+      ...rest
+    } = body
 
     const updated = await this.repository.updateWithBalance(
       tenantId,
@@ -208,6 +280,8 @@ export class TransactionService {
     if (row.status === 'DELETED') {
       throw new NotFoundException(`No transaction with id ${body.id}.`)
     }
+
+    await this.assertNotReconciled(tenantId, row, body.confirmReconciled)
 
     const updated = await this.repository.updateStatus(
       tenantId,
@@ -276,13 +350,16 @@ export class TransactionService {
   async softDelete(
     tenantId: number,
     userId: number,
-    id: number
+    id: number,
+    confirmReconciled = false
   ): Promise<void> {
     const row = await this.find(tenantId, id)
 
     if (row.status === 'DELETED') {
       return
     }
+
+    await this.assertNotReconciled(tenantId, row, confirmReconciled)
 
     if (row.installmentGroupId !== null) {
       throw new ConflictException(

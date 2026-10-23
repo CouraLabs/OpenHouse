@@ -11,6 +11,7 @@ import {
   lte,
   ne,
   sql,
+  type SQL,
 } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { Injectable } from '@nestjs/common'
@@ -46,6 +47,7 @@ import type {
   TransactionType,
 } from '@workspace/poco'
 
+import { BalanceRepository } from '../balances/balance.repository.js'
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 import {
   CreditCardStatementRepository,
@@ -74,6 +76,11 @@ export type TransactionRow = Transaction & {
   statementDueDate: string | null
   /** The due date of the card bill the row pays, joined. */
   paymentStatementDueDate: string | null
+  /** The account's balance right after the row in `(transactionDt, id)`
+   * order: the opening balance plus every earlier applied delta. */
+  runningBalance: string
+  /** Whether the row is on or before its account's `reconciledThrough`. */
+  locked: boolean
   /** Set only on a write's answer: the row landed on a closed bill. */
   warning?: StatementWarning
 }
@@ -100,6 +107,9 @@ export interface TransactionWrite {
   type: TransactionType
   reviewStatus: TransactionStatus
   statusNote: string | null
+  /** Set only by a reconciliation: the row moves the balance but is no
+   * income or expense. */
+  isAdjustment?: boolean
   /** The id both sides of one transfer share — set only by `insertTransfer`. */
   transferGroupId?: string
   /** The bill a payment settles — set only by `insertTransfer`, on the
@@ -144,7 +154,8 @@ const paymentStatements = alias(creditCardStatements, 'payment_statement')
 export class TransactionRepository {
   constructor(
     @InjectDrizzle() private readonly db: Database,
-    private readonly statements: CreditCardStatementRepository
+    private readonly statements: CreditCardStatementRepository,
+    private readonly balances: BalanceRepository
   ) {}
 
   /**
@@ -558,8 +569,34 @@ export class TransactionRepository {
     // already names the id needs no tie-break — the id is unique.
     const sortsId = args.sort.some((clause) => clause.field === 'id')
 
+    // The window is computed over each whole account in the CTE; the
+    // filters, the sort, and the page apply only afterwards, on the joined
+    // rows — so a filtered or paged view still shows the true balance.
+    const running = this.balances.runningBalanceCte(
+      this.db,
+      tenantId,
+      args.filter.linkedAccountId
+    )
+
     const [rows, [counted]] = await Promise.all([
-      this.selectJoined(this.db)
+      this.db
+        .with(running)
+        .select(
+          this.joinedColumns(sql<string>`${running.runningBalance}`)
+        )
+        .from(transactions)
+        .innerJoin(running, eq(running.id, transactions.id))
+        .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
+        .innerJoin(categories, eq(transactions.categoryId, categories.id))
+        .leftJoin(receivers, eq(transactions.receiverId, receivers.id))
+        .leftJoin(
+          creditCardStatements,
+          eq(transactions.statementId, creditCardStatements.id)
+        )
+        .leftJoin(
+          paymentStatements,
+          eq(transactions.paymentStatementId, paymentStatements.id)
+        )
         .where(query.where)
         .orderBy(...query.orderBy, ...(sortsId ? [] : [asc(transactions.id)]))
         .limit(query.limit)
@@ -598,7 +635,9 @@ export class TransactionRepository {
    *
    * Transfer rows and Canceled review statuses never count: the two sides
    * of a transfer would count the same money as an income and an expense,
-   * and a canceled transaction is money that did not move.
+   * and a canceled transaction is money that did not move. A reconciliation
+   * adjustment moves the balance but is neither income nor expense, so it
+   * stays out too (the same in `breakdown` and the limit usage).
    */
   async summary(tenantId: number, filter: TransactionFilter) {
     const rows = await this.db
@@ -618,7 +657,8 @@ export class TransactionRepository {
         and(
           this.filterToSql(tenantId, filter),
           isNull(transactions.transferGroupId),
-          ne(transactions.reviewStatus, 'Canceled')
+          ne(transactions.reviewStatus, 'Canceled'),
+          eq(transactions.isAdjustment, false)
         )
       )
       .groupBy(accounts.currency)
@@ -668,7 +708,8 @@ export class TransactionRepository {
           this.filterToSql(tenantId, filter),
           eq(transactions.type, 'Expense'),
           isNull(transactions.transferGroupId),
-          ne(transactions.reviewStatus, 'Canceled')
+          ne(transactions.reviewStatus, 'Canceled'),
+          eq(transactions.isAdjustment, false)
         )
       )
       .groupBy(
@@ -739,7 +780,8 @@ export class TransactionRepository {
           gte(transactions.transactionDt, from),
           lte(transactions.transactionDt, to),
           isNull(transactions.transferGroupId),
-          ne(transactions.reviewStatus, 'Canceled')
+          ne(transactions.reviewStatus, 'Canceled'),
+          eq(transactions.isAdjustment, false)
         )
       )
       .groupBy(transactions.categoryId, accounts.currency)
@@ -903,19 +945,29 @@ export class TransactionRepository {
       .orderBy(asc(transactions.installmentNumber))
   }
 
-  /** The joined select every read shares. */
+  /** The columns every read answers: the row, the joined display fields,
+   * the chronological running balance, and the reconciliation lock. */
+  private joinedColumns(runningBalance: SQL<string>) {
+    return {
+      ...getTableColumns(transactions),
+      accountName: sql<string>`coalesce(${accounts.name}, '')`,
+      categoryName: sql<string>`coalesce(${categories.name}, '')`,
+      categoryColor: sql<string>`coalesce(${categories.color}, '')`,
+      receiverName: receivers.name,
+      currency: accounts.currency,
+      statementDueDate: creditCardStatements.dueDate,
+      paymentStatementDueDate: paymentStatements.dueDate,
+      runningBalance,
+      locked: sql<boolean>`coalesce(${transactions.transactionDt} <= ${accounts.reconciledThrough}, false)`,
+    }
+  }
+
+  /** The joined select the by-id reads share. The running balance is the
+   * correlated single-row form; a page of rows joins the window instead
+   * (`search`). */
   private selectJoined(db: DbOrTx) {
     return db
-      .select({
-        ...getTableColumns(transactions),
-        accountName: sql<string>`coalesce(${accounts.name}, '')`,
-        categoryName: sql<string>`coalesce(${categories.name}, '')`,
-        categoryColor: sql<string>`coalesce(${categories.color}, '')`,
-        receiverName: receivers.name,
-        currency: accounts.currency,
-        statementDueDate: creditCardStatements.dueDate,
-        paymentStatementDueDate: paymentStatements.dueDate,
-      })
+      .select(this.joinedColumns(this.balances.runningBalanceOfRowSql()))
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
       .innerJoin(categories, eq(transactions.categoryId, categories.id))

@@ -106,6 +106,9 @@ export const createTransactionSchema = z.object({
     .string()
     .max(500, 'Keep the note under 500 characters.')
     .nullish(),
+  /** Confirms an edit to a row on or before the account's
+   * `reconciledThrough`; without it the API answers 409. */
+  confirmReconciled: z.boolean().optional(),
   /** Splits a credit card expense into installments, one per bill; only a
    * card expense accepts it (409 otherwise). */
   installments: installmentsSchema.optional(),
@@ -172,7 +175,19 @@ export const refundInstallmentGroupSchema = z.object({
 export const changeTransactionStatusSchema = z.object({
   id: z.number().int().positive(),
   status: transactionStatusSchema,
+  /** Confirms a change to a reconciled (locked) row. */
+  confirmReconciled: z.boolean().optional(),
 })
+
+/** The query a transaction delete reads its confirmation from. */
+export const deleteTransactionQuerySchema = z.object({
+  confirmReconciled: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
+})
+
+export type DeleteTransactionQuery = z.infer<typeof deleteTransactionQuerySchema>
 
 /**
  * How month views date a card charge: by the day it was made (accrual,
@@ -306,7 +321,19 @@ export type Transaction = {
   invoice: string | null
   amount: string
   transactionDt: string
+  /** @deprecated Write-order snapshot, wrong after a backdated entry. Use
+   * `runningBalance`. */
   balanceOnDt: string
+  /** The linked account's balance right after this row in date order
+   * (`transactionDt`, then id): the opening balance plus every earlier
+   * applied delta, computed on read over the whole account. */
+  runningBalance: string
+  /** Whether the row is a reconciliation adjustment: it moves the balance
+   * but is no income or expense, so reports leave it out. */
+  isAdjustment: boolean
+  /** Whether the row is on or before its account's `reconciledThrough` —
+   * editing it asks for a confirmation. */
+  locked: boolean
   linkedAccountId: number
   accountName: string
   /** The currency the linked account denominates its money in. */

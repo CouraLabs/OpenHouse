@@ -334,8 +334,25 @@ export const accounts = pgTable(
     number: varchar({ length: 34 }),
     /** The kind of account, which decides which other fields apply. */
     type: text().$type<AccountType>().notNull(),
-    /** The current balance, carried as a string like "12.34". */
+    /** The cached current balance, carried as a string like "12.34". The
+     * ledger writes lock and move it; it always equals `openingBalance`
+     * plus the applied deltas of the account's rows (the consistency check
+     * asserts it). */
     balance: numeric({ precision: 16, scale: 2 }).notNull(),
+    /** What the account held before its first transaction: the running
+     * balance of every row starts from it. Editing it recomputes `balance`. */
+    openingBalance: numeric('opening_balance', {
+      precision: 16,
+      scale: 2,
+    }).notNull(),
+    /** The day the opening balance is stated for. */
+    openingDt: date('opening_dt')
+      .notNull()
+      .default(sql`current_date`),
+    /** The day through which the account was reconciled against the bank:
+     * rows on or before it are locked behind a confirmation. Nothing until
+     * the first reconciliation. */
+    reconciledThrough: date('reconciled_through'),
     /** The currency the account's money is denominated in — the only
      * currency column for money that moves. Never changes after creation. */
     currency: text().$type<Currency>().notNull(),
@@ -646,7 +663,9 @@ export const transactions = pgTable(
     amount: numeric({ precision: 16, scale: 2 }).notNull(),
     /** The day the transaction happened, without a time or timezone. */
     transactionDt: date('transaction_dt').notNull(),
-    /** The linked account's balance after the transaction applied. */
+    /** @deprecated The linked account's balance when the row was written —
+     * write order, not date order, so it is wrong after a backdated entry.
+     * Reads compute the chronological `runningBalance` instead. */
     balanceOnDt: numeric('balance_on_dt', {
       precision: 16,
       scale: 2,
@@ -701,8 +720,19 @@ export const transactions = pgTable(
     installmentNumber: smallint('installment_number'),
     /** How many installments the purchase was split into. */
     installmentCount: smallint('installment_count'),
+    /** Whether the row is a reconciliation adjustment: it moves the balance
+     * but is no income or expense, so the reports leave it out. */
+    isAdjustment: boolean('is_adjustment').notNull().default(false),
   },
   (table) => [
+    // The running-balance window partitions by account and walks the days,
+    // so it reads this index in order instead of sorting the table.
+    index('transactions_account_dt_idx').on(
+      table.tenantId,
+      table.linkedAccountId,
+      table.transactionDt,
+      table.id
+    ),
     // Every query that lists or searches transactions starts from the
     // tenant, and the month window plus the day grouping start from the day.
     index('transactions_tenant_id_idx').on(table.tenantId),

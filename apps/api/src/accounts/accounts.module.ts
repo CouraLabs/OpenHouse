@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 
+import { BalancesModule } from '../balances/balances.module.js'
 import { CreditCardStatementsModule } from '../credit-card-statements/credit-card-statements.module.js'
 
 import { AccountRepository } from './account.repository.js'
@@ -12,7 +13,7 @@ import { AccountsController } from './accounts.controller.js'
  * module provides the `CardCycleSync` port a card's day change calls, and
  * the bill repository the card-delete check reads. */
 @Module({
-  imports: [CreditCardStatementsModule],
+  imports: [CreditCardStatementsModule, BalancesModule],
   controllers: [AccountsController],
   providers: [AccountService, AccountRepository],
   exports: [AccountRepository],

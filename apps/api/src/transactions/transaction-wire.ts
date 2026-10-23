@@ -20,6 +20,9 @@ export function toWire(row: TransactionRowLike): Transaction {
     amount: row.amount,
     transactionDt: row.transactionDt,
     balanceOnDt: row.balanceOnDt,
+    runningBalance: row.runningBalance,
+    isAdjustment: row.isAdjustment,
+    locked: row.locked,
     linkedAccountId: row.linkedAccountId,
     accountName: row.accountName,
     currency: row.currency,
@@ -57,6 +60,9 @@ export interface TransactionRowLike {
   amount: string
   transactionDt: string
   balanceOnDt: string
+  runningBalance: string
+  isAdjustment: boolean
+  locked: boolean
   linkedAccountId: number
   accountName: string
   currency: Currency

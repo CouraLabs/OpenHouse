@@ -133,6 +133,9 @@ function toWire(row: {
   number: string | null
   type: AccountType
   balance: string
+  openingBalance: string
+  openingDt: string
+  reconciledThrough: string | null
   currency: Currency
   spreadPct: string
   limit: string | null
@@ -151,6 +154,9 @@ function toWire(row: {
     number: row.number,
     type: row.type,
     balance: row.balance,
+    openingBalance: row.openingBalance,
+    openingDt: row.openingDt,
+    reconciledThrough: row.reconciledThrough,
     currency: row.currency,
     spreadPct: row.spreadPct,
     limit: row.limit,

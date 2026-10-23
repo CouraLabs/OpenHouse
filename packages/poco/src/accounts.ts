@@ -6,6 +6,7 @@ import {
   fetchArgsSchema,
   type EntityStatus,
 } from './fetch.js'
+import { dateOnlySchema } from './goals.js'
 import { amountSchema } from './limits.js'
 import { addMoney } from './money.js'
 
@@ -78,7 +79,12 @@ export const createAccountSchema = z
       )
       .nullish(),
     type: accountTypeSchema,
+    /** On create, the balance the account starts with; on update, the
+     * account's *opening* balance — the current balance is recomputed from
+     * it plus the account's transactions. */
     balance: balanceSchema,
+    /** The day the opening balance is stated for; today when omitted. */
+    openingDt: dateOnlySchema.optional(),
     /** The currency the account's money is denominated in. */
     currency: currencySchema,
     /** The conversion spread, in percent. Optional on the wire — an
@@ -253,7 +259,14 @@ export type Account = {
   agency: string | null
   number: string | null
   type: AccountType
+  /** The cached current balance: `openingBalance` plus the applied deltas. */
   balance: string
+  /** What the account held on `openingDt`, before its first transaction. */
+  openingBalance: string
+  openingDt: string
+  /** The day through which the account was reconciled, or nothing. Rows on
+   * or before it are locked behind a confirmation. */
+  reconciledThrough: string | null
   currency: Currency
   /** The conversion spread, in percent, like `"4.00"`. */
   spreadPct: string

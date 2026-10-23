@@ -13,6 +13,7 @@ import { getPositiveInt, isProduction, validateEnv } from './config/env.js'
 import { CategoriesModule } from './categories/categories.module.js'
 import { LimitsModule } from './limits/limits.module.js'
 import { AccountsModule } from './accounts/accounts.module.js'
+import { BalancesModule } from './balances/balances.module.js'
 import { GoalsModule } from './goals/goals.module.js'
 import { TenantsModule } from './tenants/tenants.module.js'
 import { SettingsModule } from './settings/settings.module.js'
@@ -68,6 +69,7 @@ const THROTTLE_TTL_MS = 60_000
     PreferencesModule,
     CategoriesModule,
     LimitsModule,
+    BalancesModule,
     AccountsModule,
     GoalsModule,
     ReceiversModule,

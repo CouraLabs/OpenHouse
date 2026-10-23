@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common'
 
 import { AccountsModule } from '../accounts/accounts.module.js'
+import { BalancesModule } from '../balances/balances.module.js'
 import { CategoriesModule } from '../categories/categories.module.js'
 import { CreditCardStatementsModule } from '../credit-card-statements/credit-card-statements.module.js'
 import { ReceiversModule } from '../receivers/receivers.module.js'
 import { InstallmentRepository } from './installment.repository.js'
 import { InstallmentService } from './installment.service.js'
 import { InstallmentsController } from './installments.controller.js'
+import { ReconciliationController } from './reconciliation.controller.js'
+import { ReconciliationService } from './reconciliation.service.js'
 import { TransactionRepository } from './transaction.repository.js'
 import { TransactionService } from './transaction.service.js'
 import { TransactionsController } from './transactions.controller.js'
@@ -24,12 +27,18 @@ import { TransactionsController } from './transactions.controller.js'
 @Module({
   imports: [
     AccountsModule,
+    BalancesModule,
     CategoriesModule,
     ReceiversModule,
     CreditCardStatementsModule,
   ],
-  controllers: [TransactionsController, InstallmentsController],
+  controllers: [
+    TransactionsController,
+    InstallmentsController,
+    ReconciliationController,
+  ],
   providers: [
+    ReconciliationService,
     TransactionService,
     TransactionRepository,
     InstallmentService,

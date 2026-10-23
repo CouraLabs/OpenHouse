@@ -118,7 +118,9 @@ export function AccountForm({
               ? null
               : account.number,
             type: account.type,
-            balance: account.balance,
+            // On edit the field is the opening balance: the API rebuilds the
+            // current balance from it plus the account's transactions.
+            balance: account.openingBalance,
             currency: account.currency,
             spreadPct: account.spreadPct,
             limit: account.limit,
@@ -265,7 +267,11 @@ export function AccountForm({
         <MoneyField
           locale={i18n.language}
           className="h-8"
-          label={t('accounts.balance')}
+          label={
+            account === null
+              ? t('accounts.balance')
+              : t('accounts.opening-balance')
+          }
           labelFor="account-balance"
           placeholder={t('accounts.amount-placeholder')}
           value={balance}

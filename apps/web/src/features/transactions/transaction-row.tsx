@@ -3,7 +3,7 @@ import type { Transaction } from '@workspace/poco'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
-import { Layers, Pencil, Split, Trash2 } from 'lucide-react'
+import { Layers, Lock, Pencil, Split, Trash2 } from 'lucide-react'
 
 import { formatMoney } from '@/lib/format-money.js'
 import { StatusBadge } from './status-badge.js'
@@ -77,22 +77,49 @@ export function TransactionRow({
       </span>
       <span className="truncate" title={transaction.name}>
         {transaction.name}
+        {transaction.isAdjustment ? (
+          <Badge variant="secondary" className="ml-2">
+            {t('transactions.adjustment-badge')}
+          </Badge>
+        ) : null}
         {isInstallment ? (
           <span className="ml-1 text-muted-foreground tabular-nums">
             {transaction.installmentNumber}/{transaction.installmentCount}
           </span>
         ) : null}
       </span>
-      <span
-        className={`text-right font-medium tabular-nums ${
-          isIncome
-            ? 'text-emerald-600 dark:text-emerald-400'
-            : 'text-red-600 dark:text-red-400'
-        }`}
-      >
-        {signed}
+      <span className="flex flex-col items-end">
+        <span
+          className={`font-medium tabular-nums ${
+            isIncome
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : 'text-red-600 dark:text-red-400'
+          }`}
+        >
+          {signed}
+        </span>
+        {/* The account's balance after this row in date order — computed on
+         * read, so a backdated entry never leaves a stale figure behind. */}
+        <span
+          className="text-xs text-muted-foreground tabular-nums"
+          title={t('transactions.running-balance')}
+          data-testid="running-balance"
+        >
+          {formatMoney(
+            transaction.runningBalance,
+            locale,
+            transaction.currency
+          )}
+        </span>
       </span>
-      <span>
+      <span className="flex items-center gap-1">
+        {transaction.locked ? (
+          <Lock
+            className="size-3.5 shrink-0 text-muted-foreground"
+            aria-label={t('transactions.reconciled-lock')}
+            role="img"
+          />
+        ) : null}
         <StatusBadge
           status={transaction.status}
           onChange={(status) => actions.onStatusChange(transaction, status)}

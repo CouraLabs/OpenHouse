@@ -23,7 +23,9 @@ export interface DayGroup {
 /** Groups consecutive rows by day, newest first, totaling each day. The
  * totals never count the two sides of a transfer — the pair books the same
  * money once as an expense and once as an income — nor a Canceled row:
- * money that did not move is not money spent. Rows of different currencies
+ * money that did not move is not money spent — nor a reconciliation
+ * adjustment, which moves the balance but is no income or expense. Rows of
+ * different currencies
  * total separately, one entry per currency. */
 export function groupByDay(rows: Transaction[]): DayGroup[] {
   const groups: DayGroup[] = []
@@ -50,7 +52,8 @@ export function groupByDay(rows: Transaction[]): DayGroup[] {
     for (const transaction of group.transactions) {
       if (
         transaction.transferGroupId !== null ||
-        transaction.status === 'Canceled'
+        transaction.status === 'Canceled' ||
+        transaction.isAdjustment
       ) {
         continue
       }

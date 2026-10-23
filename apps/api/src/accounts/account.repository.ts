@@ -1,10 +1,11 @@
-import { and, asc, count, eq, ne } from 'drizzle-orm'
+import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Account, Database, DbOrTx } from '@workspace/db'
 import { accounts, transactions } from '@workspace/db'
 import type { SearchAccountsArgs } from '@workspace/poco'
 
+import { BalanceRepository } from '../balances/balance.repository.js'
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 
 /** What a search answers with: the page's rows and how many match in all. */
@@ -19,7 +20,12 @@ export interface AccountWrite {
   agency: string | null
   number: string | null
   type: Account['type']
-  balance: string
+  /** The opening balance: on create the account starts at it, on update the
+   * cached balance is recomputed from it plus the account's transactions. */
+  openingBalance: string
+  /** The day the opening balance is stated for; the database's today when
+   * absent on create, unchanged when absent on update. */
+  openingDt?: string
   currency: Account['currency']
   spreadPct: string
   limit: string | null
@@ -36,7 +42,10 @@ export interface AccountWrite {
  */
 @Injectable()
 export class AccountRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(
+    @InjectDrizzle() private readonly db: Database,
+    private readonly balances: BalanceRepository
+  ) {}
 
   /**
    * Inserts an account, stamping the audit trail with the acting user. A
@@ -61,6 +70,8 @@ export class AccountRepository {
           createdBy: userId,
           updateBy: userId,
           ...data,
+          // A new account has no rows yet: it holds exactly what it opens at.
+          balance: data.openingBalance,
         })
         .returning()
 
@@ -135,6 +146,25 @@ export class AccountRepository {
         await this.clearDefaultInTx(tx, tenantId, id)
       }
 
+      // The account row is locked first, like every ledger write, so a
+      // transaction landing at the same time serializes with the recompute
+      // instead of being lost under it.
+      await tx
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id)))
+        .for('update')
+
+      // Editing the opening balance moves the current one by the same
+      // amount: the cached balance is rebuilt from the ledger in this very
+      // database transaction, so the two never disagree.
+      const balance = await this.balances.ledgerBalance(
+        tx,
+        tenantId,
+        id,
+        data.openingBalance
+      )
+
       const [row] = await tx
         .update(accounts)
         .set({
@@ -142,7 +172,9 @@ export class AccountRepository {
           agency: data.agency,
           number: data.number,
           type: data.type,
-          balance: data.balance,
+          openingBalance: data.openingBalance,
+          ...(data.openingDt === undefined ? {} : { openingDt: data.openingDt }),
+          balance,
           currency: data.currency,
           // Editable at any time, unlike the currency: the spread only
           // affects future conversions; the audit stamps record the change.
@@ -184,6 +216,27 @@ export class AccountRepository {
       .returning()
 
     return row
+  }
+
+  /** Stamps the day the account was reconciled through — never moving it
+   * backwards — and answers the stored day. */
+  async stampReconciledThrough(
+    tenantId: number,
+    id: number,
+    userId: number,
+    date: string
+  ): Promise<string | null> {
+    const [row] = await this.db
+      .update(accounts)
+      .set({
+        reconciledThrough: sql`greatest(${accounts.reconciledThrough}, ${date}::date)`,
+        updateBy: userId,
+        updateDt: new Date(),
+      })
+      .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id)))
+      .returning({ reconciledThrough: accounts.reconciledThrough })
+
+    return row?.reconciledThrough ?? null
   }
 
   /** Clears the default flag from every account of the tenant but `keepId`

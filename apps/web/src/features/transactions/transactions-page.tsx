@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type {
   CreateTransactionBody,
   CreditMode,
+  ReconciledEditConflict,
   SearchTransactionsArgs,
   Transaction,
   TransactionStatus,
@@ -40,6 +41,8 @@ import { LimitUsageCard } from './limit-usage-card.js'
 import { MonthFilter } from './month-filter.js'
 import { NextDueCard } from './next-due-card.js'
 import { NextMonthCard } from './next-month-card.js'
+import { reconciledConflictOf } from './reconciled-conflict.js'
+import { ReconciledEditDialog } from './reconciled-edit-dialog.js'
 import { SplitInstallmentsDialog } from './split-installments-dialog.js'
 import { SummaryCards } from './summary-cards.js'
 import { mainCurrencyFirst } from '@/lib/main-currency-first.js'
@@ -129,6 +132,13 @@ export function TransactionsPage() {
   // A saved card charge that landed on an already-closed bill — the page
   // asks whether to keep it there or move it to the open one.
   const [closedNotice, setClosedNotice] = useState<Transaction | null>(null)
+
+  // A change to a reconciled (locked) row waits here for the user's yes: the
+  // conflict the API answered, and the call to replay with `confirmReconciled`.
+  const [lockedChange, setLockedChange] = useState<{
+    conflict: ReconciledEditConflict
+    retry: () => void
+  } | null>(null)
 
   const accounts = useActiveAccounts()
   const categories = useActiveCategories()
@@ -327,18 +337,39 @@ export function TransactionsPage() {
 
   // Saving needs no confirmation: the sheet's submit is the intent. A
   // failure leaves the sheet open, holding the values, with the error shown.
-  const submitSave = (body: CreateTransactionBody) => {
-    save.mutate(editing === null ? body : { ...body, id: editing.id }, {
-      onSuccess: (saved) => {
-        setFormOpen(false)
-        setEditing(null)
-        setSelection(new Set())
+  const submitSave = (
+    body: CreateTransactionBody,
+    confirmReconciled = false
+  ) => {
+    const payload = editing === null ? body : { ...body, id: editing.id }
 
-        if (saved.warning === 'STATEMENT_CLOSED') {
-          setClosedNotice(saved)
-        }
-      },
-    })
+    save.mutate(
+      confirmReconciled ? { ...payload, confirmReconciled } : payload,
+      {
+        onSuccess: (saved) => {
+          setFormOpen(false)
+          setEditing(null)
+          setSelection(new Set())
+          setLockedChange(null)
+
+          if (saved.warning === 'STATEMENT_CLOSED') {
+            setClosedNotice(saved)
+          }
+        },
+        onError: (error) => {
+          const conflict = reconciledConflictOf(error)
+
+          if (conflict !== null) {
+            // A question, not an error: the form stays open with its values.
+            save.reset()
+            setLockedChange({
+              conflict,
+              retry: () => submitSave(body, true),
+            })
+          }
+        },
+      }
+    )
   }
 
   // A status change from the grid skips the form: only the review status
@@ -347,9 +378,26 @@ export function TransactionsPage() {
   // The ledger mirrors the status to the transfer's other side API-side.
   const changeStatus = (
     transaction: Transaction,
-    status: TransactionStatus
+    status: TransactionStatus,
+    confirmReconciled = false
   ) => {
-    statusChange.mutate({ id: transaction.id, status })
+    statusChange.mutate(
+      { id: transaction.id, status, confirmReconciled },
+      {
+        onSuccess: () => setLockedChange(null),
+        onError: (error) => {
+          const conflict = reconciledConflictOf(error)
+
+          if (conflict !== null) {
+            statusChange.reset()
+            setLockedChange({
+              conflict,
+              retry: () => changeStatus(transaction, status, true),
+            })
+          }
+        },
+      }
+    )
   }
 
   const submitTransfer = (body: TransferBody) => {
@@ -361,21 +409,38 @@ export function TransactionsPage() {
     })
   }
 
-  const confirmDelete = () => {
-    if (deleting === null) {
+  const confirmDelete = (target = deleting, confirmReconciled = false) => {
+    if (target === null) {
       return
     }
 
-    remove.mutate(deleting.id, {
-      onSuccess: () => {
-        setDeleting(null)
-        // A destructive row action clears the page's form state too: the
-        // sheet would otherwise keep editing a row the grid no longer holds.
-        setFormOpen(false)
-        setEditing(null)
-        save.reset()
-      },
-    })
+    remove.mutate(
+      { id: target.id, confirmReconciled },
+      {
+        onSuccess: () => {
+          setDeleting(null)
+          setLockedChange(null)
+          // A destructive row action clears the page's form state too: the
+          // sheet would otherwise keep editing a row the grid no longer holds.
+          setFormOpen(false)
+          setEditing(null)
+          save.reset()
+        },
+        onError: (error) => {
+          const conflict = reconciledConflictOf(error)
+
+          if (conflict !== null) {
+            // The delete dialog gives way to the reconciliation question.
+            remove.reset()
+            setDeleting(null)
+            setLockedChange({
+              conflict,
+              retry: () => confirmDelete(target, true),
+            })
+          }
+        },
+      }
+    )
   }
 
   const toggleRow = (transaction: Transaction) => {
@@ -758,7 +823,13 @@ export function TransactionsPage() {
           setDeleting(null)
           remove.reset()
         }}
-        onConfirm={confirmDelete}
+        onConfirm={() => confirmDelete()}
+      />
+      <ReconciledEditDialog
+        conflict={lockedChange?.conflict ?? null}
+        isPending={save.isPending || remove.isPending || statusChange.isPending}
+        onCancel={() => setLockedChange(null)}
+        onConfirm={() => lockedChange?.retry()}
       />
     </main>
   )

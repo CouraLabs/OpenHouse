@@ -109,13 +109,24 @@ export function useSaveTransaction() {
   })
 }
 
-/** Soft-deletes a transaction: the API reverts the account's balance. */
+/** Soft-deletes a transaction: the API reverts the account's balance. A row
+ * on or before its account's `reconciledThrough` answers 409 until the call
+ * confirms it. */
 export function useDeleteTransaction() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: number) =>
-      api<void>(`/transactions/${id}`, { method: 'DELETE' }),
+    mutationFn: ({
+      id,
+      confirmReconciled = false,
+    }: {
+      id: number
+      confirmReconciled?: boolean
+    }) =>
+      api<void>(
+        `/transactions/${id}${confirmReconciled ? '?confirmReconciled=true' : ''}`,
+        { method: 'DELETE' }
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
       void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
@@ -152,10 +163,18 @@ export function useChangeTransactionStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: TransactionStatus }) =>
+    mutationFn: ({
+      id,
+      status,
+      confirmReconciled,
+    }: {
+      id: number
+      status: TransactionStatus
+      confirmReconciled?: boolean
+    }) =>
       api<Transaction>(`/transactions/${id}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ id, status }),
+        body: JSON.stringify({ id, status, confirmReconciled }),
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })

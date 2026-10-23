@@ -25,6 +25,8 @@ import { ApiError } from '@/lib/api.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { buildAccountsColumns } from './accounts-columns.js'
 import { AccountForm } from './account-form.js'
+import { BalanceHistoryDialog } from './balance-history-dialog.js'
+import { ReconcileDialog } from './reconcile-dialog.js'
 import {
   useAccountsSearch,
   useDeleteAccount,
@@ -63,6 +65,9 @@ export function AccountsPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
   const [deleting, setDeleting] = useState<Account | null>(null)
+  // The account the reconcile and the balance-history dialogs are open for.
+  const [reconciling, setReconciling] = useState<Account | null>(null)
+  const [viewingHistory, setViewingHistory] = useState<Account | null>(null)
   // The filter the dialog applies; the args derive from it.
   const [filter, setFilter] = useState<FilterValues>({})
 
@@ -126,6 +131,8 @@ export function AccountsPage() {
           save.reset()
           setDeleting(account)
         },
+        onReconcile: setReconciling,
+        onHistory: setViewingHistory,
       }),
     [t, i18n.language, save.reset]
   )
@@ -238,6 +245,14 @@ export function AccountsPage() {
           previous: t('accounts.previous-page'),
           next: t('accounts.next-page'),
         }}
+      />
+      <ReconcileDialog
+        account={reconciling}
+        onClose={() => setReconciling(null)}
+      />
+      <BalanceHistoryDialog
+        account={viewingHistory}
+        onClose={() => setViewingHistory(null)}
       />
       {deleteError ? (
         <p className="text-sm text-destructive">{deleteError}</p>
