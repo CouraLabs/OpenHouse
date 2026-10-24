@@ -12,7 +12,12 @@ import { accountTypes, createAccountSchema, currencies } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
-import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
 import {
   Select,
@@ -66,6 +71,7 @@ const newAccount = (mainCurrency: Currency): AccountFormValues => ({
   dueDay: null,
   closeDayInclusive: false,
   isDefault: false,
+  ownership: 'personal',
 })
 
 /** The fields only a Credit Card carries; the other types never keep them. */
@@ -128,6 +134,7 @@ export function AccountForm({
             dueDay: account.dueDay,
             closeDayInclusive: account.closeDayInclusive,
             isDefault: account.isDefault,
+            ownership: account.ownership,
           },
   })
 
@@ -139,6 +146,7 @@ export function AccountForm({
   const dueDay = watch('dueDay')
   const closeDayInclusive = watch('closeDayInclusive') ?? false
   const isDefault = watch('isDefault')
+  const ownership = watch('ownership')
   const spreadPct = watch('spreadPct')
   const isCard = type === 'Credit Card'
   const hasAgency = !AGENCY_LESS_TYPES.includes(type)
@@ -327,6 +335,21 @@ export function AccountForm({
               setValue('isDefault', checked === true, { shouldValidate: true })
             }
           />
+        </Field>
+        <Field>
+          {/* A shared (joint) account creates no debts between members. */}
+          <FieldLabel htmlFor="account-shared">
+            {t('accounts.shared')}
+          </FieldLabel>
+          <Checkbox
+            id="account-shared"
+            className="mt-1"
+            checked={ownership === 'shared'}
+            onCheckedChange={(checked) =>
+              setValue('ownership', checked === true ? 'shared' : 'personal')
+            }
+          />
+          <FieldDescription>{t('accounts.shared-hint')}</FieldDescription>
         </Field>
         {isCard ? (
           <>

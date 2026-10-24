@@ -11,6 +11,7 @@ import type {
   Receiver,
 } from '@workspace/db'
 import { CARD_PAYMENT_CATEGORY } from '@workspace/poco'
+import { HouseholdMembers } from '../common/household/household-members.js'
 
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
@@ -42,6 +43,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   dueDay: null,
   closeDayInclusive: false,
   isDefault: false,
+  ownership: 'personal',
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -56,6 +58,7 @@ const category = (overrides: Partial<Category> = {}): Category => ({
   tenantId: 1,
   name: 'Groceries',
   color: '#1D4ED8',
+  defaultSplit: null,
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -108,6 +111,10 @@ const row = (overrides: Partial<TransactionRow> = {}): TransactionRow => ({
   installmentGroupId: null,
   installmentNumber: null,
   installmentCount: null,
+  paidByUserId: 7,
+  isSettlement: false,
+  paidByName: 'Ana',
+  splits: [],
   createdBy: 7,
   createdDt: new Date('2026-01-01T00:00:00Z'),
   updateBy: 7,
@@ -181,12 +188,20 @@ const statement = (
   ...overrides,
 })
 
+/** A household of three active members (1, 2, 7) and a removed one (3). */
+const members = () => ({
+  activeMemberIds: vi.fn(async () => [1, 2, 7]),
+  allMemberIds: vi.fn(async () => [1, 2, 3, 7]),
+  nameOf: vi.fn(async (_tenant: number, id: number) => `Member ${id}`),
+})
+
 const service = (
   repo = repository(),
   accs = accounts(),
   cats = categories(),
   rcv = receivers(),
-  bills = statements()
+  bills = statements(),
+  household = members()
 ) =>
   new TransactionService(
     repo as unknown as TransactionRepository,
@@ -194,7 +209,8 @@ const service = (
     cats as unknown as CategoryRepository,
     rcv as unknown as ReceiverRepository,
     bills as unknown as CreditCardStatementRepository,
-    {} as InstallmentService
+    {} as InstallmentService,
+    household as unknown as HouseholdMembers
   )
 
 const createBody = {
@@ -223,10 +239,258 @@ describe('TransactionService', () => {
     // column is never written from a body.
     const { status: _status, ...bodyRest } = createBody
 
+    // Whoever enters the expense paid it.
     expect(repo.insertWithBalance).toHaveBeenCalledWith(1, 7, {
       ...bodyRest,
+      paidByUserId: 7,
       recurringId: null,
       reviewStatus: 'Verify',
+    })
+  })
+
+  describe('splits', () => {
+    const equal = {
+      mode: 'equal' as const,
+      entries: [{ userId: 7 }, { userId: 2 }, { userId: 1 }],
+    }
+
+    it('stores equal shares with the remainder cents on the payer', async () => {
+      const repo = repository()
+      repo.insertWithBalance.mockResolvedValue(row())
+
+      await service(repo).create(1, 7, {
+        ...createBody,
+        amount: '100.00',
+        paidByUserId: 2,
+        split: equal,
+      })
+
+      expect(repo.insertWithBalance).toHaveBeenCalledWith(
+        1,
+        7,
+        expect.objectContaining({
+          paidByUserId: 2,
+          splits: [
+            { userId: 7, share: '33.33' },
+            { userId: 2, share: '33.34' },
+            { userId: 1, share: '33.33' },
+          ],
+        })
+      )
+    })
+
+    it('leaves a create with no split unsplit', async () => {
+      const repo = repository()
+      repo.insertWithBalance.mockResolvedValue(row())
+
+      await service(repo).create(1, 7, createBody)
+
+      const [, , write] = repo.insertWithBalance.mock.calls[0] as unknown[] as [
+        number,
+        number,
+        { splits?: unknown },
+      ]
+
+      expect(write.splits).toBeUndefined()
+    })
+
+    it('rejects shares that do not add up to the amount', async () => {
+      await expect(
+        service().create(1, 7, {
+          ...createBody,
+          split: {
+            mode: 'exact',
+            entries: [
+              { userId: 7, value: '5.00' },
+              { userId: 2, value: '5.00' },
+            ],
+          },
+        })
+      ).rejects.toThrow(BadRequestException)
+    })
+
+    it('rejects a payer or a member outside the household', async () => {
+      await expect(
+        service().create(1, 7, { ...createBody, paidByUserId: 99 })
+      ).rejects.toThrow(BadRequestException)
+      await expect(
+        service().create(1, 7, {
+          ...createBody,
+          split: { mode: 'equal', entries: [{ userId: 3 }] },
+        })
+      ).rejects.toThrow(BadRequestException)
+    })
+
+    it('does not split an income, or what a shared account pays', async () => {
+      await expect(
+        service().create(1, 7, { ...createBody, type: 'Income', split: equal })
+      ).rejects.toThrow(BadRequestException)
+
+      const accs = accounts()
+      accs.findById.mockResolvedValue(account({ ownership: 'shared' }))
+
+      await expect(
+        service(repository(), accs).create(1, 7, {
+          ...createBody,
+          split: equal,
+        })
+      ).rejects.toThrow(ConflictException)
+    })
+
+    it('rescales the shares when an edit changes the amount', async () => {
+      const repo = repository()
+      repo.findById.mockResolvedValue(
+        row({
+          splits: [
+            { userId: 7, userName: 'Ana', share: '6.17' },
+            { userId: 2, userName: 'Bruno', share: '6.17' },
+          ],
+        })
+      )
+      repo.updateWithBalance.mockResolvedValue(row())
+
+      await service(repo).update(1, 7, { ...createBody, id: 1, amount: '20.00' })
+
+      expect(repo.updateWithBalance).toHaveBeenCalledWith(
+        1,
+        1,
+        7,
+        expect.objectContaining({
+          splits: [
+            { userId: 7, share: '10.00' },
+            { userId: 2, share: '10.00' },
+          ],
+        })
+      )
+    })
+
+    it('keeps the shares when the amount is unchanged, and clears on null', async () => {
+      const repo = repository()
+      repo.findById.mockResolvedValue(
+        row({ splits: [{ userId: 7, userName: 'Ana', share: '12.34' }] })
+      )
+      repo.updateWithBalance.mockResolvedValue(row())
+
+      await service(repo).update(1, 7, { ...createBody, id: 1 })
+      await service(repo).update(1, 7, { ...createBody, id: 1, split: null })
+
+      const [first, second] = repo.updateWithBalance.mock.calls.map(
+        (call) => call[3] as { splits?: unknown }
+      )
+
+      expect(first.splits).toBeUndefined()
+      expect(second.splits).toEqual([])
+    })
+
+    it('does not edit a settlement', async () => {
+      const repo = repository()
+      repo.findById.mockResolvedValue(row({ isSettlement: true }))
+
+      await expect(
+        service(repo).update(1, 7, { ...createBody, id: 1 })
+      ).rejects.toThrow(ConflictException)
+    })
+
+    it('does not split a transfer side', async () => {
+      const repo = repository()
+      repo.findById.mockResolvedValue(row({ transferGroupId: 'group-1' }))
+
+      await expect(
+        service(repo).update(1, 7, { ...createBody, id: 1, split: equal })
+      ).rejects.toThrow(ConflictException)
+    })
+  })
+
+  describe('settle up', () => {
+    const settleBody = {
+      fromUserId: 2,
+      toUserId: 1,
+      amount: '120.00',
+      currency: 'USD' as const,
+      fromAccountId: 10,
+      transactionDt: '2026-10-14',
+    }
+
+    it('records a transfer flagged as a settlement between two accounts', async () => {
+      const repo = repository()
+      repo.insertTransfer.mockResolvedValue([row(), row()])
+      const accs = {
+        findById: vi.fn(async (_t: number, id: number) => account({ id })),
+      } as unknown as ReturnType<typeof accounts>
+
+      await service(repo, accs).settle(1, 7, { ...settleBody, toAccountId: 11 })
+
+      expect(repo.insertTransfer).toHaveBeenCalledWith(
+        1,
+        7,
+        expect.objectContaining({
+          fromAccountId: 10,
+          toAccountId: 11,
+          amount: '120.00',
+          settlement: { fromUserId: 2, toUserId: 1 },
+          paymentStatementId: null,
+        })
+      )
+    })
+
+    it('falls back to an expense paid to the member as receiver', async () => {
+      const repo = repository()
+      repo.insertWithBalance.mockResolvedValue(row())
+      const rcv = {
+        ...receivers(),
+        getOrCreatePerson: vi.fn(async () => receiver({ id: 8 })),
+      }
+
+      await service(repo, accounts(), categories(), rcv).settle(
+        1,
+        7,
+        settleBody
+      )
+
+      expect(rcv.getOrCreatePerson).toHaveBeenCalledWith(1, 7, 'Member 1')
+      expect(repo.insertWithBalance).toHaveBeenCalledWith(
+        1,
+        7,
+        expect.objectContaining({
+          type: 'Expense',
+          receiverId: 8,
+          isSettlement: true,
+          paidByUserId: 2,
+          splits: [{ userId: 1, share: '120.00' }],
+        })
+      )
+    })
+
+    it('settles with a removed member', async () => {
+      const repo = repository()
+      repo.insertWithBalance.mockResolvedValue(row())
+      const rcv = {
+        ...receivers(),
+        getOrCreatePerson: vi.fn(async () => receiver({ id: 8 })),
+      }
+
+      await service(repo, accounts(), categories(), rcv).settle(1, 7, {
+        ...settleBody,
+        fromUserId: 3,
+      })
+
+      expect(repo.insertWithBalance).toHaveBeenCalled()
+    })
+
+    it('rejects strangers, cards, and another currency', async () => {
+      await expect(
+        service().settle(1, 7, { ...settleBody, fromUserId: 99 })
+      ).rejects.toThrow(BadRequestException)
+
+      const card = accounts()
+      card.findById.mockResolvedValue(account({ type: 'Credit Card' }))
+
+      await expect(
+        service(repository(), card).settle(1, 7, settleBody)
+      ).rejects.toThrow(ConflictException)
+      await expect(
+        service().settle(1, 7, { ...settleBody, currency: 'BRL' })
+      ).rejects.toThrow(ConflictException)
     })
   })
 

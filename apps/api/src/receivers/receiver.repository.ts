@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ilike } from 'drizzle-orm'
+import { and, asc, count, eq, ilike, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Receiver, Database } from '@workspace/db'
@@ -47,6 +47,32 @@ export class ReceiverRepository {
       .returning()
 
     return row
+  }
+
+  /**
+   * Answers the tenant's ACTIVE person receiver with this name
+   * (case-insensitive), creating it the first time — the receiver a
+   * settle-up recorded as an expense pays.
+   */
+  async getOrCreatePerson(
+    tenantId: number,
+    userId: number,
+    name: string
+  ): Promise<Receiver> {
+    const [existing] = await this.db
+      .select()
+      .from(receivers)
+      .where(
+        and(
+          eq(receivers.tenantId, tenantId),
+          eq(receivers.status, 'ACTIVE'),
+          eq(receivers.type, 'Person'),
+          sql`lower(${receivers.name}) = lower(${name})`
+        )
+      )
+      .limit(1)
+
+    return existing ?? (await this.insert(tenantId, userId, { name, type: 'Person' }))
   }
 
   /** Runs the paged search a `FetchArgs` describes, over the tenant's rows. */

@@ -7,6 +7,8 @@ import {
   eq,
   getTableColumns,
   gte,
+  inArray,
+  isNotNull,
   isNull,
   lte,
   ne,
@@ -27,12 +29,16 @@ import {
   categories,
   creditCardStatements,
   receivers,
+  tenantSettings,
   transactionHistory,
+  transactionSplits,
   transactions,
+  users,
 } from '@workspace/db'
 import {
   addMoney,
   compareMoney,
+  householdShares,
   isZeroMoney,
   negateMoney,
   STATEMENT_CLOSED,
@@ -40,8 +46,10 @@ import {
 import type {
   Currency,
   SearchTransactionsArgs,
+  SplitShare,
   StatementWarning,
   TransactionBreakdownArgs,
+  TransactionSplitShare,
   TransactionFilter,
   TransactionStatus,
   TransactionType,
@@ -71,6 +79,10 @@ export type TransactionRow = Transaction & {
   categoryName: string
   categoryColor: string
   receiverName: string | null
+  /** The payer's name, joined. */
+  paidByName: string | null
+  /** How the row is shared; empty when unsplit. */
+  splits: TransactionSplitShare[]
   currency: Currency
   /** The due date of the card bill the row is on, joined. */
   statementDueDate: string | null
@@ -110,6 +122,17 @@ export interface TransactionWrite {
   /** Set only by a reconciliation: the row moves the balance but is no
    * income or expense. */
   isAdjustment?: boolean
+  /** The member who paid. Left out on an insert it defaults to the acting
+   * user; left out on an update the stored payer is kept. */
+  paidByUserId?: number | null
+  /** Whether the row settles a debt between members — set only by a
+   * settle-up. */
+  isSettlement?: boolean
+  /** The resolved shares to store. Left out on an insert, an unsplit
+   * expense under the household-wide setting is shared equally between the
+   * active members; left out on an update, the stored shares are kept.
+   * Empty clears them. */
+  splits?: SplitShare[]
   /** The id both sides of one transfer share — set only by `insertTransfer`. */
   transferGroupId?: string
   /** The bill a payment settles — set only by `insertTransfer`, on the
@@ -145,11 +168,18 @@ export interface TransferWrite {
   /** The bill of the destination card the transfer pays, or nothing when
    * the destination is no card (or a card with no bills). */
   paymentStatementId: number | null
+  /** Set when the transfer settles a debt: the paying leg is paid by
+   * `fromUserId` and shared in full with `toUserId`, and both legs are
+   * flagged as settlements. */
+  settlement?: { fromUserId: number; toUserId: number }
 }
 
 /** The bills a payment row joins its due date from — the row's own bill
  * keeps the plain table name, which the cash-mode filter dates by. */
 const paymentStatements = alias(creditCardStatements, 'payment_statement')
+
+/** The payer's user row, joined for the name. */
+const payers = alias(users, 'payer')
 
 /**
  * The transaction rows, reached only through the tenant of the session.
@@ -232,6 +262,8 @@ export class TransactionRepository {
     userId: number,
     write: TransactionWrite
   ): Promise<TransactionRow | undefined> {
+    const { splits, ...columns } = write
+
     return this.inLedgerTx(async (tx) => {
       const locked = await this.lockInTx(tx, tenantId, id)
 
@@ -282,7 +314,7 @@ export class TransactionRepository {
       const [row] = await tx
         .update(transactions)
         .set({
-          ...write,
+          ...columns,
           balanceOnDt: newBalance,
           statementId: placement.statementId,
           statementPinned: placement.statementPinned,
@@ -299,6 +331,10 @@ export class TransactionRepository {
         .returning()
 
       await this.recordHistory(tx, tenantId, id, userId, 'UPDATE', before, row)
+
+      if (splits !== undefined) {
+        await this.replaceSplitsInTx(tx, tenantId, userId, id, splits)
+      }
 
       if (sibling !== undefined) {
         await this.updateTransferSibling(tx, tenantId, userId, sibling, write)
@@ -530,6 +566,17 @@ export class TransactionRepository {
         reviewStatus: 'Verify',
         statusNote: null,
         transferGroupId,
+        // A transfer is nobody's expense — except a settle-up, which the
+        // debtor pays and the creditor receives in full.
+        paidByUserId: write.settlement?.fromUserId ?? null,
+        isSettlement: write.settlement !== undefined,
+        ...(write.settlement === undefined
+          ? {}
+          : {
+              splits: [
+                { userId: write.settlement.toUserId, share: write.amount },
+              ],
+            }),
       })
 
       const to = await this.insertInTx(tx, tenantId, userId, {
@@ -546,6 +593,9 @@ export class TransactionRepository {
         reviewStatus: 'Verify',
         statusNote: null,
         transferGroupId,
+        paidByUserId: null,
+        isSettlement: write.settlement !== undefined,
+        splits: [],
         ...(write.paymentStatementId === null
           ? {}
           : { paymentStatementId: write.paymentStatementId }),
@@ -600,6 +650,7 @@ export class TransactionRepository {
         .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
         .innerJoin(categories, eq(transactions.categoryId, categories.id))
         .leftJoin(receivers, eq(transactions.receiverId, receivers.id))
+        .leftJoin(payers, eq(transactions.paidByUserId, payers.id))
         .leftJoin(
           creditCardStatements,
           eq(transactions.statementId, creditCardStatements.id)
@@ -625,7 +676,10 @@ export class TransactionRepository {
         .where(query.where),
     ])
 
-    return { rows, total: counted.value }
+    return {
+      rows: await this.withSplits(this.db, tenantId, rows),
+      total: counted.value,
+    }
   }
 
   /**
@@ -669,7 +723,8 @@ export class TransactionRepository {
           this.filterToSql(tenantId, filter),
           isNull(transactions.transferGroupId),
           ne(transactions.reviewStatus, 'Canceled'),
-          eq(transactions.isAdjustment, false)
+          eq(transactions.isAdjustment, false),
+          eq(transactions.isSettlement, false)
         )
       )
       .groupBy(accounts.currency)
@@ -720,7 +775,8 @@ export class TransactionRepository {
           eq(transactions.type, 'Expense'),
           isNull(transactions.transferGroupId),
           ne(transactions.reviewStatus, 'Canceled'),
-          eq(transactions.isAdjustment, false)
+          eq(transactions.isAdjustment, false),
+          eq(transactions.isSettlement, false)
         )
       )
       .groupBy(
@@ -792,7 +848,8 @@ export class TransactionRepository {
           lte(transactions.transactionDt, to),
           isNull(transactions.transferGroupId),
           ne(transactions.reviewStatus, 'Canceled'),
-          eq(transactions.isAdjustment, false)
+          eq(transactions.isAdjustment, false),
+          eq(transactions.isSettlement, false)
         )
       )
       .groupBy(transactions.categoryId, accounts.currency)
@@ -841,6 +898,26 @@ export class TransactionRepository {
     return row
   }
 
+  /** The ids of the recurring rules that already generated an ACTIVE
+   * transaction on a day — what the upcoming list must not count twice. */
+  async recurringIdsOn(tenantId: number, day: string): Promise<Set<number>> {
+    const rows = await this.db
+      .selectDistinct({ recurringId: transactions.recurringId })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.transactionDt, day),
+          eq(transactions.status, 'ACTIVE'),
+          isNotNull(transactions.recurringId)
+        )
+      )
+
+    return new Set(
+      rows.flatMap((row) => (row.recurringId === null ? [] : [row.recurringId]))
+    )
+  }
+
   /**
    * The one insert path every write shares: read the account `FOR UPDATE`,
    * apply the delta, insert the row with the resulting balance stamped, and
@@ -873,7 +950,7 @@ export class TransactionRepository {
     write: TransactionWrite,
     options: { readBack: boolean } = { readBack: true }
   ): Promise<TransactionRow | undefined> {
-    const { installment, ...columns } = write
+    const { installment, splits, ...columns } = write
     const newBalance = await applyTransactionDelta(
       tx,
       tenantId,
@@ -905,6 +982,10 @@ export class TransactionRepository {
         createdBy: userId,
         updateBy: userId,
         ...columns,
+        // Whoever enters an expense paid it, unless the write names the
+        // payer (or states that nobody did).
+        paidByUserId:
+          write.paidByUserId === undefined ? userId : write.paidByUserId,
         balanceOnDt: newBalance,
         statementId: placement.statementId,
         ...(installment === undefined
@@ -919,6 +1000,12 @@ export class TransactionRepository {
       .returning()
 
     await this.recordHistory(tx, tenantId, row.id, userId, 'CREATE', null, row)
+
+    const shares = await this.sharesForInsert(tx, tenantId, row, splits)
+
+    if (shares.length > 0) {
+      await this.replaceSplitsInTx(tx, tenantId, userId, row.id, shares)
+    }
 
     if (!options.readBack) {
       return undefined
@@ -960,7 +1047,9 @@ export class TransactionRepository {
       and(eq(transactions.tenantId, tenantId), eq(transactions.id, id))
     )
 
-    return row
+    return row === undefined
+      ? undefined
+      : (await this.withSplits(db, tenantId, [row]))[0]
   }
 
   /** Reads the ACTIVE installments of one purchase with the joined names,
@@ -970,7 +1059,7 @@ export class TransactionRepository {
     groupId: string,
     db: DbOrTx = this.db
   ): Promise<TransactionRow[]> {
-    return this.selectJoined(db)
+    const rows = await this.selectJoined(db)
       .where(
         and(
           eq(transactions.tenantId, tenantId),
@@ -979,6 +1068,168 @@ export class TransactionRepository {
         )
       )
       .orderBy(asc(transactions.installmentNumber))
+
+    return this.withSplits(db, tenantId, rows)
+  }
+
+  /**
+   * Replaces a transaction's shares: the ACTIVE ones are marked DELETED —
+   * split rows are never removed — and the new ones inserted. The caller
+   * holds the transaction's locks and validated the shares.
+   */
+  async replaceSplitsInTx(
+    tx: DbOrTx,
+    tenantId: number,
+    userId: number | null,
+    transactionId: number,
+    shares: readonly SplitShare[]
+  ): Promise<void> {
+    await tx
+      .update(transactionSplits)
+      .set({ status: 'DELETED', updateBy: userId, updateDt: new Date() })
+      .where(
+        and(
+          eq(transactionSplits.tenantId, tenantId),
+          eq(transactionSplits.transactionId, transactionId),
+          eq(transactionSplits.status, 'ACTIVE')
+        )
+      )
+
+    if (shares.length === 0) {
+      return
+    }
+
+    await tx.insert(transactionSplits).values(
+      shares.map((entry) => ({
+        tenantId,
+        transactionId,
+        userId: entry.userId,
+        share: entry.share,
+        createdBy: userId,
+        updateBy: userId,
+      }))
+    )
+  }
+
+  /** The ACTIVE shares of one transaction, in member order. */
+  async sharesOfInTx(
+    tx: DbOrTx,
+    tenantId: number,
+    transactionId: number
+  ): Promise<SplitShare[]> {
+    const rows = await tx
+      .select({ userId: transactionSplits.userId, share: transactionSplits.share })
+      .from(transactionSplits)
+      .where(
+        and(
+          eq(transactionSplits.tenantId, tenantId),
+          eq(transactionSplits.transactionId, transactionId),
+          eq(transactionSplits.status, 'ACTIVE')
+        )
+      )
+      .orderBy(asc(transactionSplits.userId))
+
+    return rows
+  }
+
+  /**
+   * The shares a new row is stored with: the ones the write names, or — for
+   * a real expense nobody split — equal shares between the active members
+   * when the tenant reads unsplit expenses as household-wide. The shares
+   * are stored then, so a later change of setting or of membership never
+   * rewrites what the household already agreed to.
+   */
+  private async sharesForInsert(
+    tx: DbOrTx,
+    tenantId: number,
+    row: Transaction,
+    splits: SplitShare[] | undefined
+  ): Promise<SplitShare[]> {
+    if (splits !== undefined) {
+      return splits
+    }
+
+    if (
+      row.type !== 'Expense' ||
+      row.paidByUserId === null ||
+      row.transferGroupId !== null ||
+      row.isAdjustment ||
+      row.isSettlement
+    ) {
+      return []
+    }
+
+    const [settings] = await tx
+      .select({ unsplitMode: tenantSettings.unsplitMode })
+      .from(tenantSettings)
+      .where(eq(tenantSettings.tenantId, tenantId))
+
+    if (settings?.unsplitMode !== 'household') {
+      return []
+    }
+
+    const [account] = await tx
+      .select({ ownership: accounts.ownership })
+      .from(accounts)
+      .where(eq(accounts.id, row.linkedAccountId))
+
+    if (account?.ownership === 'shared') {
+      return []
+    }
+
+    const members = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.tenantId, tenantId), eq(users.isActive, true)))
+      .orderBy(asc(users.id))
+
+    return householdShares(
+      row.amount,
+      members.map((member) => member.id),
+      row.paidByUserId
+    )
+  }
+
+  /** Attaches each row's ACTIVE shares, names joined. */
+  private async withSplits(
+    db: DbOrTx,
+    tenantId: number,
+    rows: Array<Omit<TransactionRow, 'splits'>>
+  ): Promise<TransactionRow[]> {
+    if (rows.length === 0) {
+      return []
+    }
+
+    const shares = await db
+      .select({
+        transactionId: transactionSplits.transactionId,
+        userId: transactionSplits.userId,
+        userName: users.name,
+        share: transactionSplits.share,
+      })
+      .from(transactionSplits)
+      .innerJoin(users, eq(transactionSplits.userId, users.id))
+      .where(
+        and(
+          eq(transactionSplits.tenantId, tenantId),
+          eq(transactionSplits.status, 'ACTIVE'),
+          inArray(
+            transactionSplits.transactionId,
+            rows.map((row) => row.id)
+          )
+        )
+      )
+      .orderBy(asc(transactionSplits.userId))
+    const byTransaction = new Map<number, TransactionSplitShare[]>()
+
+    for (const { transactionId, ...share } of shares) {
+      byTransaction.set(transactionId, [
+        ...(byTransaction.get(transactionId) ?? []),
+        share,
+      ])
+    }
+
+    return rows.map((row) => ({ ...row, splits: byTransaction.get(row.id) ?? [] }))
   }
 
   /** The columns every read answers: the row, the joined display fields,
@@ -990,6 +1241,7 @@ export class TransactionRepository {
       categoryName: sql<string>`coalesce(${categories.name}, '')`,
       categoryColor: sql<string>`coalesce(${categories.color}, '')`,
       receiverName: receivers.name,
+      paidByName: payers.name,
       currency: accounts.currency,
       statementDueDate: creditCardStatements.dueDate,
       paymentStatementDueDate: paymentStatements.dueDate,
@@ -1008,6 +1260,7 @@ export class TransactionRepository {
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
       .innerJoin(categories, eq(transactions.categoryId, categories.id))
       .leftJoin(receivers, eq(transactions.receiverId, receivers.id))
+      .leftJoin(payers, eq(transactions.paidByUserId, payers.id))
       .leftJoin(
         creditCardStatements,
         eq(transactions.statementId, creditCardStatements.id)

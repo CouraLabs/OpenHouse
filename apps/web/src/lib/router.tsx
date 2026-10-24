@@ -13,6 +13,7 @@ import { SignUpPage } from '@/features/sign-up/sign-up-page.js'
 import { ResetPasswordPage } from '@/features/reset-password/reset-password-page.js'
 import { CategoriesPage } from '@/features/categories/categories-page.js'
 import { LimitsPage } from '@/features/limits/limits-page.js'
+import { HouseholdPage } from '@/features/household/household-page.js'
 import { GoalsPage } from '@/features/goals/goals-page.js'
 import { AccountsPage } from '@/features/accounts/accounts-page.js'
 import { TransactionsPage } from '@/features/transactions/transactions-page.js'
@@ -23,6 +24,7 @@ import { ReceiversPage } from '@/features/receivers/receivers-page.js'
 import { TransactionLinkersPage } from '@/features/transaction-linkers/transaction-linkers-page.js'
 import { RecurringTransactionsPage } from '@/features/recurring-transactions/recurring-transactions-page.js'
 import { MainPage } from '@/features/main/main-page.js'
+import { UpcomingPage } from '@/features/upcoming/upcoming-page.js'
 import { TipsPage } from '@/features/tips/tips-page.js'
 import { InterestComparisonPage } from '@/features/interest-comparison/interest-comparison-page.js'
 import { RateConversionPage } from '@/features/rate-conversion/rate-conversion-page.js'
@@ -123,6 +125,13 @@ const goalsRoute = createRoute({
   component: GoalsPage,
 })
 
+/** The page where members see balances and settle up. */
+const householdRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'household',
+  component: HouseholdPage,
+})
+
 /** The page the tenant's accounts are managed from. */
 const accountsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
@@ -187,6 +196,13 @@ const recurringTransactionsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'recurring-transactions',
   component: RecurringTransactionsPage,
+})
+
+/** What is coming due, with the projected balances. */
+const upcomingRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'upcoming',
+  component: UpcomingPage,
 })
 
 /** The page with the financial tips guides. */
@@ -258,6 +274,7 @@ const routeTree = rootRoute.addChildren([
     categoriesRoute,
     limitsRoute,
     goalsRoute,
+    householdRoute,
     accountsRoute,
     accountImportRoute,
     transactionsRoute,
@@ -266,6 +283,7 @@ const routeTree = rootRoute.addChildren([
     receiversRoute,
     transactionLinkersRoute,
     recurringTransactionsRoute,
+    upcomingRoute,
     tipsRoute,
     interestComparisonRoute,
     rateConversionRoute,

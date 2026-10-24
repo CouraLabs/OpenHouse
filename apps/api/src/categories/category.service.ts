@@ -4,6 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import type { Category } from '@workspace/db'
+import {
+  HouseholdMembers,
+} from '../common/household/household-members.js'
+import { assertMembers } from '../common/household/split-members.js'
 import type {
   CreateCategoryBody,
   SearchCategoriesArgs,
@@ -23,7 +27,10 @@ import {
  */
 @Injectable()
 export class CategoryService {
-  constructor(private readonly repository: CategoryRepository) {}
+  constructor(
+    private readonly repository: CategoryRepository,
+    private readonly members: HouseholdMembers
+  ) {}
 
   /** Creates a category for the tenant, rejecting a name already ACTIVE. */
   async create(
@@ -32,9 +39,10 @@ export class CategoryService {
     body: CreateCategoryBody
   ): Promise<Category> {
     await this.assertNameFree(tenantId, body.name)
+    await this.assertSplitMembers(tenantId, body.defaultSplit)
 
     try {
-      return await this.repository.insert(tenantId, userId, body)
+      return await this.repository.insert(tenantId, userId, writeOf(body))
     } catch (error) {
       // The partial unique index is the backstop for a race the check above
       // can lose; the check is what makes the common case a friendly 409.
@@ -86,12 +94,15 @@ export class CategoryService {
     }
 
     await this.assertNameFree(tenantId, body.name, body.id)
+    await this.assertSplitMembers(tenantId, body.defaultSplit)
 
     try {
-      const row = await this.repository.update(tenantId, body.id, userId, {
-        name: body.name,
-        color: body.color,
-      })
+      const row = await this.repository.update(
+        tenantId,
+        body.id,
+        userId,
+        writeOf(body)
+      )
 
       if (row === undefined) {
         throw new NotFoundException(`No category with id ${body.id}.`)
@@ -119,6 +130,16 @@ export class CategoryService {
     await this.repository.softDelete(tenantId, id, userId)
   }
 
+  /** A default split names active members only. */
+  private async assertSplitMembers(
+    tenantId: number,
+    split: CreateCategoryBody['defaultSplit']
+  ): Promise<void> {
+    if (split != null) {
+      assertMembers(await this.members.activeMemberIds(tenantId), null, split)
+    }
+  }
+
   /** Rejects a name an ACTIVE category of the tenant already holds. */
   private async assertNameFree(
     tenantId: number,
@@ -134,6 +155,18 @@ export class CategoryService {
     if (taken > 0) {
       throw new ConflictException(`A category named "${name}" already exists.`)
     }
+  }
+}
+
+/** The columns a category body writes; the default split only when the
+ * body states it (`null` clears it). */
+function writeOf(body: CreateCategoryBody) {
+  return {
+    name: body.name,
+    color: body.color,
+    ...(body.defaultSplit === undefined
+      ? {}
+      : { defaultSplit: body.defaultSplit }),
   }
 }
 

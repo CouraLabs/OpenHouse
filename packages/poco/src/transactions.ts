@@ -6,6 +6,7 @@ import type { StatementWarning } from './credit-card-statements.js'
 import type { Currency } from './currencies.js'
 import { dateOnlySchema } from './goals.js'
 import { amountSchema } from './limits.js'
+import { splitInputSchema } from './splits.js'
 import {
   entityStatusSchema,
   fetchArgsSchema,
@@ -114,6 +115,14 @@ export const createTransactionSchema = z.object({
   /** Splits a credit card expense into installments, one per bill; only a
    * card expense accepts it (409 otherwise). */
   installments: installmentsSchema.optional(),
+  /** The member who paid; the creator when left out. On an update, left out
+   * keeps the row's payer. */
+  paidByUserId: z.number().int().positive().nullish(),
+  /** How the expense is shared between members. On a create, nothing means
+   * unsplit; on an update, nothing keeps the shares (scaled to a new
+   * amount) and `null` clears them. Income, transfers, and bill payments
+   * cannot be split. An installment purchase splits once, as a whole. */
+  split: splitInputSchema.nullish(),
 })
 
 /**
@@ -141,6 +150,8 @@ export const updateInstallmentGroupSchema = createTransactionSchema
     categoryId: true,
     receiverId: true,
     amount: true,
+    paidByUserId: true,
+    split: true,
   })
   .extend({ installments: installmentsSchema })
 
@@ -283,6 +294,11 @@ export const transferSchema = z
       .int()
       .positive('Pick a bill.')
       .optional(),
+    /** Never accepted: a transfer, a bill payment included, moves money
+     * between the household's own accounts and cannot be split. */
+    split: z
+      .never({ error: 'Transfers and bill payments cannot be split.' })
+      .optional(),
   })
   .superRefine((body, ctx) => {
     if (body.fromAccountId === body.toAccountId) {
@@ -380,11 +396,28 @@ export type Transaction = {
   installmentGroupId: string | null
   installmentNumber: number | null
   installmentCount: number | null
+  /** The member who paid, or nothing for a row no member paid. */
+  paidByUserId: number | null
+  /** The payer's name, joined. */
+  paidByName: string | null
+  /** Whether the row settles a debt between two members; reports leave it
+   * out like a transfer. */
+  isSettlement: boolean
+  /** How the row is shared: each member's share, name joined. Empty for an
+   * unsplit row. The shares add up to the amount. */
+  splits: TransactionSplitShare[]
   /** Set on a write's answer when the charge landed on a bill already
    * closed, so the form can offer to move it to the open one. */
   warning: StatementWarning | null
   createdDt: string
   updateDt: string
+}
+
+/** One member's share of a transaction, with the name joined. */
+export type TransactionSplitShare = {
+  userId: number
+  userName: string
+  share: string
 }
 
 /**

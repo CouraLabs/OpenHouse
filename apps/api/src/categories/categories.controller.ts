@@ -22,6 +22,7 @@ import type {
 } from '@workspace/poco'
 import {
   createCategorySchema,
+  parseSplit,
   searchCategoriesSchema,
   updateCategorySchema,
 } from '@workspace/poco'
@@ -109,7 +110,11 @@ export class CategoriesController {
   async list(@CurrentSession() session: Session): Promise<CategoryRef[]> {
     const rows = await this.categories.listActive(session.tenant.id)
 
-    return rows.map((row) => ({ id: row.id, name: row.name }))
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      defaultSplit: parseSplit(row.defaultSplit),
+    }))
   }
 
   /** Reads one category, deleted rows included. */
@@ -152,6 +157,7 @@ function toWire(row: {
   id: number
   name: string
   color: string
+  defaultSplit: unknown
   status: EntityStatus
   createdDt: Date
   updateDt: Date
@@ -160,6 +166,7 @@ function toWire(row: {
     id: row.id,
     name: row.name,
     color: row.color,
+    defaultSplit: parseSplit(row.defaultSplit),
     status: row.status,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 
+import { HouseholdModule } from '../household/household.module.js'
 import { CategoriesController } from './categories.controller.js'
 import { CategoryRepository } from './category.repository.js'
 import { CategoryService } from './category.service.js'
@@ -9,6 +10,7 @@ import { CategoryService } from './category.service.js'
  * context comes from the session, never from the request.
  */
 @Module({
+  imports: [HouseholdModule],
   controllers: [CategoriesController],
   providers: [CategoryRepository, CategoryService],
   exports: [CategoryRepository],

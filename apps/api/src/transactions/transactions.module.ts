@@ -4,6 +4,7 @@ import { AccountsModule } from '../accounts/accounts.module.js'
 import { BalancesModule } from '../balances/balances.module.js'
 import { CategoriesModule } from '../categories/categories.module.js'
 import { CreditCardStatementsModule } from '../credit-card-statements/credit-card-statements.module.js'
+import { HouseholdModule } from '../household/household.module.js'
 import { ReceiversModule } from '../receivers/receivers.module.js'
 import { InstallmentRepository } from './installment.repository.js'
 import { InstallmentService } from './installment.service.js'
@@ -31,6 +32,7 @@ import { TransactionsController } from './transactions.controller.js'
     CategoriesModule,
     ReceiversModule,
     CreditCardStatementsModule,
+    HouseholdModule,
   ],
   controllers: [
     TransactionsController,

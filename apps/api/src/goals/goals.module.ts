@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common'
 
 import { AccountsModule } from '../accounts/accounts.module.js'
+import { GoalSource } from '../common/upcoming/upcoming-sources.js'
 import { SettingsModule } from '../settings/settings.module.js'
+import { GoalProgressSource } from './goal-progress.source.js'
 import { GoalsController } from './goals.controller.js'
 import { GoalRepository } from './goal.repository.js'
 import { GoalService } from './goal.service.js'
@@ -16,6 +18,12 @@ import { GoalService } from './goal.service.js'
 @Module({
   imports: [AccountsModule, SettingsModule],
   controllers: [GoalsController],
-  providers: [GoalRepository, GoalService],
+  providers: [
+    GoalRepository,
+    GoalService,
+    GoalProgressSource,
+    { provide: GoalSource, useExisting: GoalProgressSource },
+  ],
+  exports: [GoalSource],
 })
 export class GoalsModule {}

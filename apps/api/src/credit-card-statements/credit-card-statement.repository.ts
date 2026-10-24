@@ -36,6 +36,7 @@ import {
   type Currency,
   type SearchStatementsArgs,
   type StatementBankFiguresBody,
+  type StatementStatus,
   type StatementWindow,
 } from '@workspace/poco'
 
@@ -245,6 +246,39 @@ export class CreditCardStatementRepository {
     ])
 
     return { rows, total: counted.value }
+  }
+
+  /**
+   * Reads the bills still asking for money — Open, Closed, PartiallyPaid or
+   * Overdue — due on or before `dueBy`, of ACTIVE cards, soonest due first.
+   * The carry-over is computed over every bill of each card, never just the
+   * ones returned. Bills nothing landed on are left out.
+   */
+  async listPending(
+    tenantId: number,
+    today: string,
+    dueBy: string
+  ): Promise<StatementTotalsRow[]> {
+    const { net, run } = statementTotals(this.db, tenantId)
+
+    return this.db
+      .with(net, run)
+      .select(this.joinedFields(run))
+      .from(run)
+      .innerJoin(accounts, eq(accounts.id, run.accountId))
+      .where(
+        and(
+          hasActivity(run),
+          eq(accounts.status, 'ACTIVE'),
+          lte(run.dueDate, dueBy),
+          or(
+            ...pendingStatuses.map((status) =>
+              statusCondition(run, today, status)
+            )
+          )
+        )
+      )
+      .orderBy(asc(run.dueDate), asc(run.id))
   }
 
   /** Reads one bill of the tenant with its derived totals — the carry-over
@@ -875,6 +909,14 @@ export class CreditCardStatementRepository {
     }
   }
 }
+
+/** The statuses of a bill that still asks for money. */
+const pendingStatuses: readonly StatementStatus[] = [
+  'Open',
+  'Closed',
+  'PartiallyPaid',
+  'Overdue',
+]
 
 /** Whether anything landed on a bill: a charge, or a payment settling it. */
 function hasActivity(run: StatementRun) {

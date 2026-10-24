@@ -28,7 +28,7 @@ import {
   updateRecurringTransactionSchema,
 } from '@workspace/poco'
 import type { ExportRecurringTransactionsArgs } from '@workspace/poco'
-import { exportRecurringTransactionsSchema } from '@workspace/poco'
+import { exportRecurringTransactionsSchema, parseSplit } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
 import { CsvExporter } from '../common/csv/csv-exporter.js'
@@ -147,6 +147,9 @@ function toWire(row: {
   frequency: Frequency
   frequencyDay: number | null
   frequencyMonth: number | null
+  paidByUserId: number | null
+  paidByName: string | null
+  defaultSplit: unknown
   status: EntityStatus
   createdDt: Date
   updateDt: Date
@@ -165,6 +168,9 @@ function toWire(row: {
     frequency: row.frequency,
     frequencyDay: row.frequencyDay,
     frequencyMonth: row.frequencyMonth,
+    paidByUserId: row.paidByUserId,
+    paidByName: row.paidByName,
+    defaultSplit: parseSplit(row.defaultSplit),
     status: row.status,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),

@@ -5,12 +5,17 @@ import { useTranslation } from 'react-i18next'
 import type {
   Currency,
   CurrencyChangeConflict,
+  UnsplitMode,
   UpdateSettingsBody,
 } from '@workspace/poco'
-import { currencies, updateSettingsSchema } from '@workspace/poco'
+import { currencies, unsplitModes, updateSettingsSchema } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from '@workspace/ui/components/radio-group'
 import { TimeZoneCombobox } from '@workspace/ui/components/time-zone-combobox'
 
 import { ApiError } from '@/lib/api.js'
@@ -56,11 +61,13 @@ export function GeneralSettingsForm() {
     defaultValues: {
       timezone: settings.timezone,
       mainCurrency: settings.mainCurrency,
+      unsplitMode: settings.unsplitMode,
     },
   })
 
   const timezone = watch('timezone')
   const mainCurrency = watch('mainCurrency')
+  const unsplitMode = watch('unsplitMode') ?? settings.unsplitMode
   // The save the API asked to confirm, with what it would re-denominate.
   const [unconfirmed, setUnconfirmed] = useState<{
     values: UpdateSettingsBody
@@ -153,6 +160,29 @@ export function GeneralSettingsForm() {
             />
           </Field>
         </div>
+        <Field>
+          <FieldLabel>{t('settings.general.unsplit')}</FieldLabel>
+          <RadioGroup
+            value={unsplitMode}
+            onValueChange={(value) =>
+              setValue('unsplitMode', value as UnsplitMode)
+            }
+            className="grid-cols-2"
+          >
+            {unsplitModes.map((value) => (
+              <span
+                key={value}
+                className="flex items-center gap-2 rounded-lg border p-2 text-sm has-[[data-checked]]:border-primary"
+              >
+                <RadioGroupItem value={value} />
+                {t(`settings.general.unsplit-${value}`)}
+              </span>
+            ))}
+          </RadioGroup>
+          <p className="text-sm text-muted-foreground">
+            {t('settings.general.unsplit-hint')}
+          </p>
+        </Field>
         {saveError !== undefined ? (
           <p className="text-sm text-destructive">{saveError}</p>
         ) : null}

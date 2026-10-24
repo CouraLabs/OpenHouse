@@ -45,6 +45,7 @@ describe('tenant settings (e2e, #15)', () => {
       timezone: 'America/Sao_Paulo',
       mainCurrency: 'BRL',
       timezoneConfirmed: true,
+      unsplitMode: 'personal',
     })
     const me = await agent.get('/auth/me').expect(200)
     expect(me.body.settings.mainCurrency).toBe('BRL')
@@ -76,6 +77,7 @@ describe('tenant settings (e2e, #15)', () => {
       timezone: 'Europe/Lisbon',
       mainCurrency: 'EUR',
       timezoneConfirmed: true,
+      unsplitMode: 'personal',
     })
 
     await owner
@@ -120,6 +122,7 @@ describe('tenant settings (e2e, #15)', () => {
       timezone: 'UTC',
       mainCurrency: 'BRL',
       timezoneConfirmed: false,
+      unsplitMode: 'personal',
     })
   })
 })

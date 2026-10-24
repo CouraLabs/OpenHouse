@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { LimitType } from '@workspace/poco'
-
+import type { LimitType } from './limits.js'
 import { periodWindow } from './limit-period.js'
 
 /** The types the windows cover, and the days the windows are asked about:

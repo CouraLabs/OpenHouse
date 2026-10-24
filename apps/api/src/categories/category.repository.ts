@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Category, Database } from '@workspace/db'
 import { categories } from '@workspace/db'
-import type { SearchCategoriesArgs } from '@workspace/poco'
+import type { SearchCategoriesArgs, SplitInput } from '@workspace/poco'
 
 import {
   buildPagedQuery,
@@ -20,6 +20,9 @@ export interface CategorySearch {
 export interface CategoryWrite {
   name: string
   color: string
+  /** The split new expenses start with, or null for none. Left out on an
+   * update, the stored split is kept. */
+  defaultSplit?: SplitInput | null
 }
 
 /**
@@ -171,6 +174,9 @@ export class CategoryRepository {
       .set({
         name: data.name,
         color: data.color,
+        ...(data.defaultSplit === undefined
+          ? {}
+          : { defaultSplit: data.defaultSplit }),
         updateBy: userId,
         updateDt: new Date(),
       })

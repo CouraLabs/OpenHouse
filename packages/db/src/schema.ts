@@ -52,6 +52,23 @@ export function tenantEntityColumns() {
 }
 
 /**
+ * How a tenant reads an expense that carries no split. The wire spelling
+ * lives in `@workspace/poco` (`unsplitModes`) — keep the two in step.
+ */
+export const unsplitModes = ['personal', 'household'] as const
+
+export type UnsplitMode = (typeof unsplitModes)[number]
+
+/**
+ * Who an account belongs to. A `shared` (joint) account's expenses create
+ * no debts between members. The wire spelling lives in `@workspace/poco`
+ * (`accountOwnerships`) — keep the two in step.
+ */
+export const accountOwnerships = ['personal', 'shared'] as const
+
+export type AccountOwnership = (typeof accountOwnerships)[number]
+
+/**
  * A tenant is the isolation boundary of the application: every user belongs
  * to exactly one, and every piece of tenant data is reached through the user
  * the session was issued to.
@@ -219,6 +236,12 @@ export const tenantSettings = pgTable('tenant_settings', {
   mainCurrency: text('main_currency').$type<Currency>().notNull(),
   /** False while a migrated tenant still runs on the `UTC` placeholder. */
   timezoneConfirmed: boolean('timezone_confirmed').notNull().default(false),
+  /** How an expense with no split reads: `personal` (the payer's own, no
+   * debts) or `household` (shared equally by every active member). */
+  unsplitMode: text('unsplit_mode')
+    .$type<UnsplitMode>()
+    .notNull()
+    .default('personal'),
   updateBy: integer('update_by'),
   updateDt: timestamp('update_dt', { withTimezone: true })
     .notNull()
@@ -239,6 +262,9 @@ export const categories = pgTable(
     name: varchar({ length: 255 }).notNull(),
     /** A hex color, `#RRGGBB` or `#RRGGBBAA` — the column holds 9 characters. */
     color: varchar({ length: 9 }).notNull(),
+    /** The split new expenses of the category start with ("Rent: 60/40"),
+     * as the poco `SplitInput` JSON, or nothing. Validated on every write. */
+    defaultSplit: jsonb('default_split').$type<Record<string, unknown>>(),
   },
   (table) => [
     // Every query that lists or searches categories starts from the tenant.
@@ -389,6 +415,9 @@ export const accounts = pgTable(
      * transactions start in. At most one account of a tenant carries the
      * flag; the write paths clear the previous holder first. */
     isDefault: boolean('is_default').notNull().default(false),
+    /** Whether the account is one member's or the household's joint one.
+     * Expenses paid from a shared account create no debts. */
+    ownership: text().$type<AccountOwnership>().notNull().default('personal'),
   },
   (table) => [
     // Every query that lists or searches accounts starts from the tenant.
@@ -624,6 +653,11 @@ export const recurringTransactions = pgTable(
     frequencyDay: integer('frequency_day'),
     /** Yearly only: month 1–12. */
     frequencyMonth: integer('frequency_month'),
+    /** The member who pays the generated transactions, or nothing. */
+    paidByUserId: integer('paid_by_user_id').references(() => users.id),
+    /** The shares the generated transactions are split with, as the poco
+     * `SplitInput` JSON, or nothing. */
+    defaultSplit: jsonb('default_split').$type<Record<string, unknown>>(),
   },
   (table) => [
     // Every query that lists or searches recurring rules starts from the
@@ -742,6 +776,13 @@ export const transactions = pgTable(
     /** The statement import that wrote the row, or nothing for a row not
      * imported. Undoing the import soft-deletes the rows sharing it. */
     importBatchId: uuid('import_batch_id'),
+    /** The member who paid, or nothing for a row no member paid (a system
+     * write with no payer). Defaults to the creator. Never cleared. */
+    paidByUserId: integer('paid_by_user_id').references(() => users.id),
+    /** Whether the row settles a debt between two members: it moves money
+     * (or is paid to a member) but is no income or expense, so reports
+     * leave it out. */
+    isSettlement: boolean('is_settlement').notNull().default(false),
   },
   (table) => [
     // The running-balance window partitions by account and walks the days,
@@ -808,6 +849,39 @@ export const transactions = pgTable(
 
 export type Transaction = typeof transactions.$inferSelect
 export type NewTransaction = typeof transactions.$inferInsert
+
+/**
+ * One member's share of a transaction. The shares of a transaction add up
+ * to its amount exactly. Rows are never removed: replacing a split marks
+ * the old rows DELETED, and a removed member's rows stay for the books.
+ */
+export const transactionSplits = pgTable(
+  'transaction_splits',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    ...tenantEntityColumns(),
+    transactionId: integer('transaction_id')
+      .notNull()
+      .references(() => transactions.id),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    /** The member's share, carried as a string like "12.34". */
+    share: numeric({ precision: 16, scale: 2 }).notNull(),
+  },
+  (table) => [
+    index('transaction_splits_transaction_id_idx').on(table.transactionId),
+    index('transaction_splits_tenant_id_idx').on(table.tenantId),
+    // One ACTIVE share per member per transaction.
+    uniqueIndex('transaction_splits_member_key')
+      .on(table.transactionId, table.userId)
+      .where(sql`status = 'ACTIVE'`),
+    check('transaction_splits_share_positive', sql`${table.share} > 0`),
+  ]
+)
+
+export type TransactionSplit = typeof transactionSplits.$inferSelect
+export type NewTransactionSplit = typeof transactionSplits.$inferInsert
 
 /**
  * How an account's CSV statement files read, saved the first time one is
@@ -936,3 +1010,164 @@ export const auditLog = pgTable(
 
 export type AuditLogRow = typeof auditLog.$inferSelect
 export type NewAuditLogRow = typeof auditLog.$inferInsert
+
+/**
+ * How a reminder reaches the user: one message each, or one daily digest.
+ * The wire spelling lives in `@workspace/poco` (`reminderDeliveries`) —
+ * keep the two in step.
+ */
+export const reminderDeliveries = ['individual', 'digest'] as const
+
+export type ReminderDelivery = (typeof reminderDeliveries)[number]
+
+/**
+ * One user's reminder preferences, one row per user, created the first time
+ * the user saves them (a user with no row gets the poco defaults). Channels
+ * are boolean columns — there is no email yet, and adding one is a new
+ * column by migration. A per-user singleton like `tenant_settings`, it has
+ * no lifecycle: no status, no soft delete.
+ */
+export const notificationPreferences = pgTable('notification_preferences', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id),
+  tenantId: integer('tenant_id')
+    .notNull()
+    .references(() => tenants.id),
+  /** The bell in the header. */
+  inAppEnabled: boolean('in_app_enabled').notNull().default(true),
+  /** Web push to the user's subscribed browsers. */
+  pushEnabled: boolean('push_enabled').notNull().default(true),
+  /** Whether a push payload carries amounts and names. Quiet by default. */
+  pushDetails: boolean('push_details').notNull().default(false),
+  /** Days before a card bill's due date. */
+  billLeadDays: smallint('bill_lead_days').notNull().default(3),
+  /** Days before a recurring expense fires. */
+  recurringLeadDays: smallint('recurring_lead_days').notNull().default(1),
+  limitAlert80: boolean('limit_alert_80').notNull().default(true),
+  limitAlert100: boolean('limit_alert_100').notNull().default(true),
+  delivery: text().$type<ReminderDelivery>().notNull().default('individual'),
+  updateDt: timestamp('update_dt', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+/**
+ * A browser or device a user subscribed to web push from: one row per
+ * endpoint. The push service answering 404 or 410 means the subscription is
+ * dead, and the row is deleted.
+ */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    tenantId: integer('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    endpoint: text().notNull(),
+    p256dh: text().notNull(),
+    auth: text().notNull(),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // One endpoint is one browser: re-subscribing replaces the row.
+    uniqueIndex('push_subscriptions_endpoint_key').on(table.endpoint),
+    index('push_subscriptions_user_id_idx').on(table.userId),
+  ]
+)
+
+/**
+ * An entry of a user's notification centre. `body` is the structured
+ * reminder (kind, names, amounts), rendered by the web in the user's
+ * language; the table never stores prose.
+ */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    tenantId: integer('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    body: jsonb().$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** When the user read it, or nothing while it is unread. */
+    readAt: timestamp('read_at', { withTimezone: true }),
+  },
+  (table) => [index('notifications_user_id_idx').on(table.userId, table.id)]
+)
+
+/**
+ * The idempotency log of the reminder cron: one row per reminder ever
+ * claimed, keyed `(userId, kind, refId, dueDate)`. The unique index turns
+ * the claim into an atomic insert — a restart or a second replica inserting
+ * the same key finds it taken and sends nothing — the same pattern as the
+ * recurring materialization. `dueDate` is the day the reminder is about (a
+ * bill's due date, a rule's firing day, a limit period's first day), so the
+ * next cycle is a new key. Rows are kept: the log is the proof a reminder
+ * was sent.
+ */
+export const notificationLog = pgTable(
+  'notification_log',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    tenantId: integer('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    kind: text().notNull(),
+    refId: integer('ref_id').notNull(),
+    dueDate: date('due_date').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('notification_log_claim_key').on(
+      table.userId,
+      table.kind,
+      table.refId,
+      table.dueDate
+    ),
+  ]
+)
+
+/**
+ * A user's secret calendar feed: the token in the `.ics` URL is the only
+ * credential, so it is random, unique, and replaceable. At most one per user.
+ */
+export const calendarFeeds = pgTable(
+  'calendar_feeds',
+  {
+    userId: integer('user_id')
+      .primaryKey()
+      .references(() => users.id),
+    tenantId: integer('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    token: text().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [uniqueIndex('calendar_feeds_token_key').on(table.token)]
+)
+
+export type NotificationPreferencesRow =
+  typeof notificationPreferences.$inferSelect
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect
+export type NotificationRow = typeof notifications.$inferSelect
+export type NotificationLogRow = typeof notificationLog.$inferSelect
+export type CalendarFeedRow = typeof calendarFeeds.$inferSelect

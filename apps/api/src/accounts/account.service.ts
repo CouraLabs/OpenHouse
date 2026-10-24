@@ -205,5 +205,6 @@ function toWrite(body: CreateAccountBody): AccountWrite {
     dueDay: body.dueDay ?? null,
     closeDayInclusive: body.closeDayInclusive,
     isDefault: body.isDefault,
+    ownership: body.ownership,
   }
 }

@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 
+import { SplitSection } from '@/components/split-section.js'
+import { useMainCurrency } from '@/lib/settings.js'
 import {
   useActiveAccounts,
   useActiveCategories,
@@ -65,6 +67,7 @@ const NEW_RULE: RecurringFormValues = {
   frequency: undefined as unknown as Frequency,
   frequencyDay: undefined,
   frequencyMonth: undefined,
+  defaultSplit: null,
 }
 
 /**
@@ -80,6 +83,7 @@ export function RecurringForm({
   isSaving = false,
 }: RecurringFormProps) {
   const { t, i18n } = useTranslation()
+  const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
     watch,
@@ -101,6 +105,8 @@ export function RecurringForm({
             frequency: rule.frequency,
             frequencyDay: rule.frequencyDay ?? undefined,
             frequencyMonth: rule.frequencyMonth ?? undefined,
+            paidByUserId: rule.paidByUserId,
+            defaultSplit: rule.defaultSplit,
           },
   })
 
@@ -112,6 +118,8 @@ export function RecurringForm({
   const amount = watch('amount')
   const frequencyDay = watch('frequencyDay')
   const frequencyMonth = watch('frequencyMonth')
+  const defaultSplit = watch('defaultSplit') ?? null
+  const paidByUserId = watch('paidByUserId') ?? null
 
   const receivers = useActiveReceivers()
   const categories = useActiveCategories()
@@ -144,7 +152,11 @@ export function RecurringForm({
 
   return (
     <form
-      onSubmit={handleSubmit((values) => onSubmit(values))}
+      onSubmit={handleSubmit((values) =>
+        onSubmit(
+          type === 'Expense' ? values : { ...values, defaultSplit: null }
+        )
+      )}
       className="flex flex-col gap-4 rounded-lg border p-4"
       noValidate
     >
@@ -400,6 +412,21 @@ export function RecurringForm({
           </Field>
         ) : null}
       </div>
+      {type === 'Expense' ? (
+        <SplitSection
+          idPrefix="recurring-split"
+          value={defaultSplit}
+          onChange={(next) =>
+            setValue('defaultSplit', next, { shouldValidate: true })
+          }
+          amount={amount}
+          currency={
+            accounts.data?.find((account) => account.id === accountId)
+              ?.currency ?? mainCurrency
+          }
+          payerUserId={paidByUserId}
+        />
+      ) : null}
       {error !== undefined ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : null}

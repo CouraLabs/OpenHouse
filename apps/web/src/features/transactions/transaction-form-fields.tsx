@@ -7,6 +7,7 @@ import type {
   CreateTransactionBody,
   InstallmentsBody,
   ReceiverRef,
+  SplitInput,
   Transaction,
   TransactionStatus,
   TransactionType,
@@ -32,6 +33,10 @@ import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { BilledOnLine } from './billed-on-line.js'
 import { InstallmentFields } from './installment-fields.js'
 import { PurchasePreview } from './purchase-preview.js'
+import { SplitSection } from '@/components/split-section.js'
+import { useSession } from '@/lib/auth.js'
+import { useMainCurrency } from '@/lib/settings.js'
+import { useHouseholdMembers } from '@/lib/household.js'
 import { StringPick } from './string-pick.js'
 import {
   useActiveAccounts,
@@ -83,6 +88,8 @@ export function TransactionFormFields({
   isSaving = false,
 }: TransactionFormFieldsProps) {
   const { t, i18n } = useTranslation()
+  const session = useSession()
+  const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
     watch,
@@ -93,7 +100,11 @@ export function TransactionFormFields({
     resolver: zodResolver(transactionFormSchema),
     defaultValues:
       transaction === null
-        ? { ...newValues(defaultDt), ...draft }
+        ? {
+            ...newValues(defaultDt),
+            paidByUserId: session.data?.user.id,
+            ...draft,
+          }
         : {
             name: transaction.name,
             note: transaction.note ?? undefined,
@@ -103,6 +114,7 @@ export function TransactionFormFields({
             linkedAccountId: transaction.linkedAccountId,
             categoryId: transaction.categoryId,
             receiverId: transaction.receiverId ?? undefined,
+            paidByUserId: transaction.paidByUserId ?? undefined,
             type: transaction.type,
             status: transaction.status,
             statusNote: transaction.statusNote ?? undefined,
@@ -116,6 +128,12 @@ export function TransactionFormFields({
   const accountId = watch('linkedAccountId')
   const categoryId = watch('categoryId')
   const receiverId = watch('receiverId')
+  const paidByUserId = watch('paidByUserId')
+  // Undefined is "untouched": a new expense is unsplit, an edit keeps the
+  // shares it has (the API scales them to a new amount). Once the user
+  // touches the editor the value is theirs; null clears it.
+  const touchedSplit = watch('split')
+  const members = useHouseholdMembers()
 
   // A transfer side's type and account pair it with its sibling; the API
   // rejects a change to either, so the form locks them.
@@ -134,6 +152,17 @@ export function TransactionFormFields({
     amountMode: watchedInstallments?.amountMode ?? 'total',
   }
   const [cashPrice, setCashPrice] = useState('')
+  const existingSplit: SplitInput | null =
+    transaction !== null && transaction.splits.length > 0
+      ? {
+          mode: 'exact',
+          entries: transaction.splits.map((share) => ({
+            userId: share.userId,
+            value: share.share,
+          })),
+        }
+      : null
+  const shownSplit = touchedSplit === undefined ? existingSplit : touchedSplit
 
   const accounts = useActiveAccounts()
   const categories = useActiveCategories()
@@ -143,6 +172,7 @@ export function TransactionFormFields({
   )
   // A new card expense may split into installments, and previews the limit
   // it leaves.
+  const isShareable = type === 'Expense' && !isTransfer && !isInstallment
   const isCardPurchase =
     transaction === null &&
     type === 'Expense' &&
@@ -184,12 +214,17 @@ export function TransactionFormFields({
 
   return (
     <form
-      onSubmit={handleSubmit(({ installments: split, ...values }) =>
-        onSubmit(
-          isCardPurchase && split !== undefined && split.count > 1
-            ? { ...values, installments: split }
-            : values
-        )
+      onSubmit={handleSubmit(
+        ({ installments: split, split: shares, ...values }) => {
+          // Only an expense is shared; a type switched away drops the split.
+          const body = isShareable ? { ...values, split: shares } : values
+
+          onSubmit(
+            isCardPurchase && split !== undefined && split.count > 1
+              ? { ...body, installments: split }
+              : body
+          )
+        }
       )}
       className="flex flex-col gap-4"
       noValidate
@@ -349,6 +384,15 @@ export function TransactionFormFields({
               : Number(value),
             { shouldValidate: true }
           )
+          // A category's default split ("Rent: 60/40") seeds a new expense
+          // the user has not shaped yet.
+          const preset = (categories.data ?? []).find(
+            (category) => String(category.id) === value
+          )?.defaultSplit
+
+          if (transaction === null && touchedSplit == null && preset != null) {
+            setValue('split', preset)
+          }
         }}
         error={errors.categoryId?.message}
         options={(categories.data ?? []).map((category) => ({
@@ -379,6 +423,36 @@ export function TransactionFormFields({
           })),
         ]}
       />
+      {isShareable ? (
+        <>
+          <StringPick
+            id="transaction-paid-by"
+            label={t('split.paid-by')}
+            value={paidByUserId == null ? undefined : String(paidByUserId)}
+            placeholder={t('split.paid-by-placeholder')}
+            onChange={(value) =>
+              setValue(
+                'paidByUserId',
+                value === undefined ? undefined : Number(value)
+              )
+            }
+            options={(members.data ?? [])
+              .filter((member) => member.isActive || member.id === paidByUserId)
+              .map((member) => ({
+                value: String(member.id),
+                label: member.name,
+              }))}
+          />
+          <SplitSection
+            idPrefix="transaction-split"
+            value={shownSplit}
+            onChange={(next) => setValue('split', next)}
+            amount={touchedSplit === undefined ? undefined : amount}
+            currency={account?.currency ?? mainCurrency}
+            payerUserId={paidByUserId ?? null}
+          />
+        </>
+      ) : null}
       <TextField
         type="text"
         label={t('transactions.invoice')}

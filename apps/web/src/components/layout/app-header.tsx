@@ -3,6 +3,7 @@ import type { SessionUser } from '@workspace/poco'
 import { Separator } from '@workspace/ui/components/separator'
 import { SidebarTrigger } from '@workspace/ui/components/sidebar'
 
+import { NotificationBell } from '@/components/layout/notification-bell.js'
 import { LocaleSwitcher } from '@/components/layout/locale-switcher.js'
 import { RouteBreadcrumbs } from '@/components/layout/route-breadcrumbs.js'
 import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
@@ -26,6 +27,7 @@ export function AppHeader({ user }: { user: SessionUser }) {
       <div className="ml-auto flex items-center gap-1">
         <ThemeSwitcher />
         <LocaleSwitcher />
+        <NotificationBell />
         <UserMenu user={user} />
       </div>
     </header>

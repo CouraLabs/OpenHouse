@@ -1,72 +1,28 @@
-import { Injectable, Logger } from '@nestjs/common'
+import {
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common'
 import { Cron } from '@nestjs/schedule'
 import type { RecurringTransaction } from '@workspace/db'
-import { dayIn, todayIn, type Frequency } from '@workspace/poco'
+import {
+  dayIn,
+  isDueOn,
+  parseSplit,
+  resolveSplit,
+  shiftDay,
+  todayIn,
+} from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { Clock } from '../common/clock/clock.js'
+import { HouseholdMembers } from '../common/household/household-members.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import { TransactionRepository } from '../transactions/transaction.repository.js'
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
-
-/** The shape of a rule the due check reads. */
-export interface DueRule {
-  frequency: Frequency
-  frequencyDay: number | null
-  frequencyMonth: number | null
-}
-
-/**
- * Answers whether a rule is due on a day, as a pure function of the rule
- * and the `YYYY-MM-DD` day — no clock, no database, fully unit-testable.
- *
- * Daily is due every day. Weekly compares the ISO weekday (1–7, Monday is
- * 1). Monthly and Yearly compare the day of the month, clamped: a rule on
- * day 31 runs on the last day of a 30-day month, and a rule on February 29
- * runs on February 28 of a common year.
- */
-export function isDueOn(rule: DueRule, day: string): boolean {
-  const [year, month, date] = day.split('-').map(Number)
-  const at = new Date(Date.UTC(year, month - 1, date))
-
-  if (rule.frequency === 'Daily') {
-    return true
-  }
-
-  if (rule.frequency === 'Weekly') {
-    // JavaScript's Sunday-first weekday becomes the ISO Monday-first one.
-    const isoWeekday = ((at.getUTCDay() + 6) % 7) + 1
-
-    return rule.frequencyDay === isoWeekday
-  }
-
-  if (rule.frequencyDay === null) {
-    return false
-  }
-
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
-  const dueDay = Math.min(rule.frequencyDay, lastDay)
-
-  if (date !== dueDay) {
-    return false
-  }
-
-  return rule.frequency !== 'Yearly' || rule.frequencyMonth === month
-}
-
-/**
- * Shifts a `YYYY-MM-DD` day by a number of days. Pure calendar arithmetic
- * on a UTC midnight — no timezone offset or DST boundary can move it.
- */
-export function shiftDay(day: string, days: number): string {
-  const [year, month, date] = day.split('-').map(Number)
-
-  return new Date(Date.UTC(year, month - 1, date + days))
-    .toISOString()
-    .slice(0, 10)
-}
 
 /**
  * The background service that materializes due recurring rules into real
@@ -83,8 +39,11 @@ export function shiftDay(day: string, days: number): string {
  * and a boot after downtime runs the same window immediately.
  */
 @Injectable()
-export class RecurringRunService {
+export class RecurringRunService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RecurringRunService.name)
+
+  /** The boot catch-up, kept so shutdown can wait for it to finish. */
+  private bootRun: Promise<void> | undefined
 
   constructor(
     private readonly rules: RecurringTransactionRepository,
@@ -93,7 +52,8 @@ export class RecurringRunService {
     private readonly categories: CategoryRepository,
     private readonly receivers: ReceiverRepository,
     private readonly settings: SettingsRepository,
-    private readonly clock: Clock
+    private readonly clock: Clock,
+    private readonly members: HouseholdMembers
   ) {}
 
   /** How many days back a run looks for days it missed — the downtime a
@@ -113,9 +73,40 @@ export class RecurringRunService {
   /** A boot is a run too: the process may have been down over the cron's
    * minute. The idempotency check makes re-running the window harmless. */
   onModuleInit(): void {
-    void this.runDue().catch((error) => {
-      this.logger.error('The recurring catch-up on boot failed.', error)
-    })
+    this.bootRun = this.runDue().then(
+      () => undefined,
+      (error: unknown) => {
+        this.logger.error('The recurring catch-up on boot failed.', error)
+      }
+    )
+  }
+
+  /** Shutdown waits for the boot catch-up, so it never queries a pool the
+   * database module has already closed. Nest destroys this service before
+   * the module that owns the pool. */
+  async onModuleDestroy(): Promise<void> {
+    await this.bootRun
+  }
+
+  /** The member a rule's expenses are paid by. A removed member can no longer
+   * pay, so a rule still naming one is paid by the tenant's owner from then on. */
+  private async payerOf(rule: RecurringTransaction): Promise<number | null> {
+    if (rule.paidByUserId === null) {
+      return null
+    }
+
+    const active = await this.members.activeMemberIds(rule.tenantId)
+
+    if (active.includes(rule.paidByUserId)) {
+      return rule.paidByUserId
+    }
+
+    const owner = await this.members.ownerId(rule.tenantId)
+    this.logger.warn(
+      `Recurring rule ${rule.id} of tenant ${rule.tenantId} names a removed member as payer; its expenses are paid by the owner.`
+    )
+
+    return owner ?? rule.paidByUserId
   }
 
   /** Materializes every due rule over the last `days` days of its
@@ -192,7 +183,35 @@ export class RecurringRunService {
     // The rule row carries no display names; the joined read answers them.
     const named = await this.rules.findById(rule.tenantId, rule.id)
 
+    const paidByUserId = await this.payerOf(rule)
+
+    // The rule's default shares are copied onto the transaction it makes
+    // (an income, or an account that turned shared, carries none).
+    const split = parseSplit(rule.defaultSplit)
+    const shares =
+      split === null || rule.type !== 'Expense'
+        ? undefined
+        : resolveSplit(rule.amount, split, paidByUserId)
+    const account = await this.accounts.findById(
+      rule.tenantId,
+      rule.linkedAccountId
+    )
+
+    // A default split that no longer resolves must not quietly become an
+    // unsplit expense: skip and say why, as for a deleted account.
+    if (shares?.ok === false && account?.ownership !== 'shared') {
+      this.logger.error(
+        `Recurring rule ${rule.id} of tenant ${rule.tenantId} has a default split that no longer resolves (${shares.message}); skipping until the rule is fixed.`
+      )
+
+      return 0
+    }
+
     const inserted = await this.transactions.insertGenerated(rule.tenantId, {
+      paidByUserId,
+      ...(shares?.ok === true && account?.ownership !== 'shared'
+        ? { splits: shares.shares }
+        : {}),
       name: named === undefined ? `Recurring #${rule.id}` : named.receiverName,
       note: null,
       invoice: 'RECURRING',

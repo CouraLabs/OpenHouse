@@ -385,6 +385,7 @@ export class AuthService {
         timezone: settings.timezone,
         mainCurrency: settings.mainCurrency,
         timezoneConfirmed: settings.timezoneConfirmed,
+        unsplitMode: settings.unsplitMode,
       },
     }
   }

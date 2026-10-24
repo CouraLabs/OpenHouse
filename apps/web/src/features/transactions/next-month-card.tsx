@@ -7,7 +7,7 @@ import {
 import { CalendarClock } from 'lucide-react'
 
 import { formatMoney } from '@/lib/format-money.js'
-import type { ForecastSlice } from './forecast-next-month.js'
+import type { ForecastSlice } from '@workspace/poco'
 
 /**
  * The next month's card: what the recurring rules expect to spend, per

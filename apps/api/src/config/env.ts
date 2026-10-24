@@ -33,6 +33,7 @@ const RESERVED_PREFIXES = [
   'DB_',
   'EXPORT_',
   'JWT_',
+  'PUSH_',
   'THROTTLE_',
 ]
 
@@ -45,6 +46,8 @@ type VariableSpec =
   /** A string a production deployment must set and development may leave out. */
   | { kind: 'secret'; requiredInProduction: boolean }
   | { kind: 'positiveInteger' }
+  /** A VAPID key: URL-safe base64 of `bytes` raw bytes. */
+  | { kind: 'vapidKey'; bytes: number }
 
 /**
  * Every variable the API reads. A declared variable that is unset falls back
@@ -83,6 +86,15 @@ const VARIABLES: Record<string, VariableSpec> = {
   // Read by `@workspace/db`, not by this application directly. It is declared
   // so that the API knows the variable the database module needs.
   DATABASE_URL: { kind: 'text' },
+  // The VAPID key pair web push is signed with. Optional as a PAIR: both set
+  // enables push, both absent disables it, one alone is a boot error. The
+  // public key is also handed to browsers, which subscribe against it.
+  // Generate a pair with `npx web-push generate-vapid-keys`.
+  PUSH_VAPID_PUBLIC_KEY: { kind: 'vapidKey', bytes: 65 },
+  PUSH_VAPID_PRIVATE_KEY: { kind: 'vapidKey', bytes: 32 },
+  // Who the push services can contact about this sender: a `mailto:` or
+  // `https:` URL. Defaults to a placeholder when push is enabled.
+  PUSH_VAPID_SUBJECT: { kind: 'text' },
 }
 
 /**
@@ -101,6 +113,7 @@ export function validateEnv(
   for (const [name, spec] of Object.entries(VARIABLES)) {
     assertUsable(name, spec, text(config[name]), nodeEnv)
   }
+  assertVapidPair(config)
 
   return { ...config, NODE_ENV: nodeEnv }
 }
@@ -172,6 +185,34 @@ export function getExportDir(): string {
   return text(process.env.EXPORT_DIR) ?? join(tmpdir(), 'openhouse-exports')
 }
 
+/** The VAPID keys and contact web push signs with. */
+export interface PushConfig {
+  publicKey: string
+  privateKey: string
+  subject: string
+}
+
+/**
+ * Returns the web push configuration, or `undefined` when the VAPID pair is
+ * absent — push is then disabled, and the rest of the application runs as
+ * usual. `validateEnv` has already rejected a half-set pair.
+ */
+export function getPushConfig(): PushConfig | undefined {
+  const publicKey = text(process.env.PUSH_VAPID_PUBLIC_KEY)
+  const privateKey = text(process.env.PUSH_VAPID_PRIVATE_KEY)
+
+  if (publicKey === undefined || privateKey === undefined) {
+    return undefined
+  }
+
+  return {
+    publicKey,
+    privateKey,
+    subject:
+      text(process.env.PUSH_VAPID_SUBJECT) ?? 'mailto:admin@openhouse.invalid',
+  }
+}
+
 /** Returns a value as a string, treating an empty one as unset. */
 function text(value: unknown): string | undefined {
   if (value === undefined || value === null) {
@@ -224,6 +265,18 @@ function assertUsable(
     throw new Error(`${name} must be a positive integer, got "${value}".`)
   }
 
+  if (spec.kind === 'vapidKey' && value !== undefined) {
+    const decoded = /^[A-Za-z0-9_-]+$/.test(value)
+      ? Buffer.from(value, 'base64url')
+      : undefined
+
+    if (decoded?.length !== spec.bytes) {
+      throw new Error(
+        `${name} must be a URL-safe base64 VAPID key of ${spec.bytes} bytes (npx web-push generate-vapid-keys).`
+      )
+    }
+  }
+
   if (
     spec.kind === 'secret' &&
     spec.requiredInProduction &&
@@ -241,6 +294,18 @@ function assertUsable(
   ) {
     throw new Error(
       `${name} must list at least one origin when NODE_ENV is production.`
+    )
+  }
+}
+
+/** Rejects one VAPID key set without the other. */
+function assertVapidPair(config: Record<string, unknown>): void {
+  const hasPublic = text(config.PUSH_VAPID_PUBLIC_KEY) !== undefined
+  const hasPrivate = text(config.PUSH_VAPID_PRIVATE_KEY) !== undefined
+
+  if (hasPublic !== hasPrivate) {
+    throw new Error(
+      'PUSH_VAPID_PUBLIC_KEY and PUSH_VAPID_PRIVATE_KEY must be set together, or both left out to disable web push.'
     )
   }
 }

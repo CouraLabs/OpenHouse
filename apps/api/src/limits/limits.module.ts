@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common'
 
 import { CategoriesModule } from '../categories/categories.module.js'
+import { LimitSource } from '../common/upcoming/upcoming-sources.js'
 import { SettingsModule } from '../settings/settings.module.js'
 import { TransactionsModule } from '../transactions/transactions.module.js'
+import { LimitUsageSource } from './limit-usage.source.js'
 import { LimitsController } from './limits.controller.js'
 import { LimitRepository } from './limit.repository.js'
 import { LimitService } from './limit.service.js'
@@ -18,6 +20,12 @@ import { LimitService } from './limit.service.js'
 @Module({
   imports: [CategoriesModule, SettingsModule, TransactionsModule],
   controllers: [LimitsController],
-  providers: [LimitRepository, LimitService],
+  providers: [
+    LimitRepository,
+    LimitService,
+    LimitUsageSource,
+    { provide: LimitSource, useExisting: LimitUsageSource },
+  ],
+  exports: [LimitSource],
 })
 export class LimitsModule {}

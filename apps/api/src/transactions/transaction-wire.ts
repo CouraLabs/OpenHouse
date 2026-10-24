@@ -3,6 +3,7 @@ import type {
   EntityStatus,
   StatementWarning,
   Transaction,
+  TransactionSplitShare,
   TransactionType,
 } from '@workspace/poco'
 
@@ -45,6 +46,10 @@ export function toWire(row: TransactionRowLike): Transaction {
     installmentGroupId: row.installmentGroupId,
     installmentNumber: row.installmentNumber,
     installmentCount: row.installmentCount,
+    paidByUserId: row.paidByUserId,
+    paidByName: row.paidByName,
+    isSettlement: row.isSettlement,
+    splits: row.splits,
     warning: row.warning ?? null,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),
@@ -85,6 +90,10 @@ export interface TransactionRowLike {
   installmentGroupId: string | null
   installmentNumber: number | null
   installmentCount: number | null
+  paidByUserId: number | null
+  paidByName: string | null
+  isSettlement: boolean
+  splits: TransactionSplitShare[]
   warning?: StatementWarning
   createdDt: Date
   updateDt: Date

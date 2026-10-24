@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   ArrowLeftRight,
+  CalendarClock,
+  HeartHandshake,
   House,
   Landmark,
   LayoutDashboard,
@@ -55,6 +57,7 @@ export const FINANCIAL_GROUP: NavGroup = {
       key: 'nav.subgroup.activity',
       items: [
         { key: 'nav.transactions', to: '/transactions', icon: ArrowLeftRight },
+        { key: 'nav.upcoming', to: '/upcoming', icon: CalendarClock },
         { key: 'nav.bills', to: '/bills', icon: ReceiptText },
         {
           key: 'nav.recurring-transactions',
@@ -81,6 +84,7 @@ export const FINANCIAL_GROUP: NavGroup = {
       items: [
         { key: 'nav.limits', to: '/limits', icon: PiggyBank },
         { key: 'nav.goals', to: '/goals', icon: Target },
+        { key: 'nav.household', to: '/household', icon: HeartHandshake },
       ],
     },
     {

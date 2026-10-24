@@ -1,4 +1,5 @@
 import { and, asc, count, eq, getTableColumns, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Currency, Database, RecurringTransaction } from '@workspace/db'
@@ -7,8 +8,12 @@ import {
   categories,
   receivers,
   recurringTransactions,
+  users,
 } from '@workspace/db'
-import type { SearchRecurringTransactionsArgs } from '@workspace/poco'
+import type {
+  SearchRecurringTransactionsArgs,
+  SplitInput,
+} from '@workspace/poco'
 
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 
@@ -22,6 +27,8 @@ export type RecurringTransactionRow = RecurringTransaction & {
   categoryName: string
   accountName: string
   accountCurrency: Currency
+  /** The payer's name, joined; nothing for a rule with no payer. */
+  paidByName: string | null
 }
 
 /** What a search answers with: the page's rows and how many match in all. */
@@ -40,7 +47,14 @@ export interface RecurringTransactionWrite {
   frequency: RecurringTransaction['frequency']
   frequencyDay: number | null
   frequencyMonth: number | null
+  paidByUserId: number | null
+  /** The shares generated transactions are split with; left out on an
+   * update, the stored shares are kept, and null clears them. */
+  defaultSplit?: SplitInput | null
 }
+
+/** The payer's user row, joined for the name. */
+const payers = alias(users, 'payer')
 
 /**
  * The recurring rule rows, reached only through the tenant of the session
@@ -149,6 +163,10 @@ export class RecurringTransactionRepository {
         frequency: data.frequency,
         frequencyDay: data.frequencyDay,
         frequencyMonth: data.frequencyMonth,
+        paidByUserId: data.paidByUserId,
+        ...(data.defaultSplit === undefined
+          ? {}
+          : { defaultSplit: data.defaultSplit }),
         updateBy: userId,
         updateDt: new Date(),
       })
@@ -183,6 +201,20 @@ export class RecurringTransactionRepository {
     return row
   }
 
+  /** Lists the tenant's ACTIVE rules of ACTIVE accounts, names joined —
+   * what the upcoming list projects. */
+  async listActive(tenantId: number): Promise<RecurringTransactionRow[]> {
+    return this.selectJoined()
+      .where(
+        and(
+          eq(recurringTransactions.tenantId, tenantId),
+          eq(recurringTransactions.status, 'ACTIVE'),
+          eq(accounts.status, 'ACTIVE')
+        )
+      )
+      .orderBy(asc(recurringTransactions.id))
+  }
+
   /** Lists every tenant's ACTIVE rules — what the daily cron iterates. */
   async listActiveAllTenants(): Promise<RecurringTransaction[]> {
     return this.db
@@ -210,6 +242,7 @@ export class RecurringTransactionRepository {
         categoryName: sql<string>`coalesce(${categories.name}, '')`,
         accountName: sql<string>`coalesce(${accounts.name}, '')`,
         accountCurrency: accounts.currency,
+        paidByName: payers.name,
       })
       .from(recurringTransactions)
       .innerJoin(receivers, eq(recurringTransactions.receiverId, receivers.id))
@@ -221,6 +254,7 @@ export class RecurringTransactionRepository {
         accounts,
         eq(recurringTransactions.linkedAccountId, accounts.id)
       )
+      .leftJoin(payers, eq(recurringTransactions.paidByUserId, payers.id))
   }
 
   /** Translates the wire filter into SQL, always inside the tenant. */

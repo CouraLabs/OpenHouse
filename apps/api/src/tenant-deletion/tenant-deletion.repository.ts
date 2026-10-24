@@ -4,12 +4,17 @@ import { eq, inArray, isNotNull } from 'drizzle-orm'
 import type { Database, DbOrTx } from '@workspace/db'
 import {
   accounts,
+  calendarFeeds,
   categories,
   creditCardStatements,
   goals,
   importMappings,
   limits,
+  notificationLog,
+  notificationPreferences,
+  notifications,
   passwordResetCodes,
+  pushSubscriptions,
   receivers,
   recurringTransactions,
   tenantCodes,
@@ -17,6 +22,7 @@ import {
   tenants,
   transactionHistory,
   transactionLinkers,
+  transactionSplits,
   transactions,
   users,
 } from '@workspace/db'
@@ -77,9 +83,24 @@ export class TenantDeletionRepository {
    * caller's transaction. The audit log has no foreign key and is kept.
    */
   async hardDelete(tenantId: number, tx: DbOrTx): Promise<void> {
+    // The reminders and their per-user settings point at users: first.
+    await tx.delete(notifications).where(eq(notifications.tenantId, tenantId))
+    await tx
+      .delete(notificationLog)
+      .where(eq(notificationLog.tenantId, tenantId))
+    await tx
+      .delete(notificationPreferences)
+      .where(eq(notificationPreferences.tenantId, tenantId))
+    await tx
+      .delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.tenantId, tenantId))
+    await tx.delete(calendarFeeds).where(eq(calendarFeeds.tenantId, tenantId))
     await tx
       .delete(transactionHistory)
       .where(eq(transactionHistory.tenantId, tenantId))
+    await tx
+      .delete(transactionSplits)
+      .where(eq(transactionSplits.tenantId, tenantId))
     await tx.delete(transactions).where(eq(transactions.tenantId, tenantId))
     await tx.delete(importMappings).where(eq(importMappings.tenantId, tenantId))
     await tx

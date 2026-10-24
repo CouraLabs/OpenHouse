@@ -16,6 +16,7 @@ import {
   tenantSettings,
   tenants,
   transactionHistory,
+  transactionSplits,
   transactionLinkers,
   transactions,
   users,
@@ -43,6 +44,7 @@ const ENTITY_TABLES: Readonly<Record<string, TenantTable>> = {
   'transaction-linkers': transactionLinkers,
   'credit-card-statements': creditCardStatements,
   transactions,
+  'transaction-splits': transactionSplits,
   'transaction-history': transactionHistory,
   'import-mappings': importMappings,
 }

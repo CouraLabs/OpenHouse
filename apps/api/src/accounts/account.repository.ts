@@ -33,6 +33,7 @@ export interface AccountWrite {
   dueDay: number | null
   closeDayInclusive: boolean
   isDefault: boolean
+  ownership: Account['ownership']
 }
 
 /**
@@ -184,6 +185,7 @@ export class AccountRepository {
           dueDay: data.dueDay,
           closeDayInclusive: data.closeDayInclusive,
           isDefault: data.isDefault,
+          ownership: data.ownership,
           updateBy: userId,
           updateDt: new Date(),
         })

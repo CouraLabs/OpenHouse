@@ -2,7 +2,13 @@ import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, asc, eq, gt, isNull, or } from 'drizzle-orm'
 import type { Database, DbOrTx, User } from '@workspace/db'
-import { passwordResetCodes, users } from '@workspace/db'
+import {
+  calendarFeeds,
+  notifications,
+  passwordResetCodes,
+  pushSubscriptions,
+  users,
+} from '@workspace/db'
 
 /** A user row without its secrets — what the Users section reads. */
 export type TenantUserRow = Pick<
@@ -120,6 +126,12 @@ export class TenantUserRepository {
       })
       .where(and(eq(users.tenantId, tenantId), eq(users.id, id)))
       .returning(PUBLIC_COLUMNS)
+
+    // Nothing may reach an erased member: their push subscriptions and
+    // calendar feed go, and so does their notification centre.
+    await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, id))
+    await tx.delete(calendarFeeds).where(eq(calendarFeeds.userId, id))
+    await tx.delete(notifications).where(eq(notifications.userId, id))
 
     await tx
       .update(passwordResetCodes)

@@ -1,16 +1,22 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
 import type { Account } from '@workspace/db'
-import type {
-  CreateRecurringTransactionBody,
-  SearchRecurringTransactionsArgs,
-  UpdateRecurringTransactionBody,
+import {
+  parseSplit,
+  resolveSplit,
+  type CreateRecurringTransactionBody,
+  type SearchRecurringTransactionsArgs,
+  type SplitInput,
+  type UpdateRecurringTransactionBody,
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { HouseholdMembers } from '../common/household/household-members.js'
+import { assertMembers } from '../common/household/split-members.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
 import {
@@ -33,7 +39,8 @@ export class RecurringTransactionService {
     private readonly repository: RecurringTransactionRepository,
     private readonly receivers: ReceiverRepository,
     private readonly categories: CategoryRepository,
-    private readonly accounts: AccountRepository
+    private readonly accounts: AccountRepository,
+    private readonly members: HouseholdMembers
   ) {}
 
   /** Creates a rule for the tenant, rejecting references it cannot use. */
@@ -42,12 +49,19 @@ export class RecurringTransactionService {
     userId: number,
     body: CreateRecurringTransactionBody
   ): Promise<RecurringTransactionRow> {
-    await this.assertReferencesUsable(tenantId, body)
+    const account = await this.assertReferencesUsable(tenantId, body)
+    const payer = body.paidByUserId ?? userId
+
+    await this.assertShares(tenantId, account, body, body.defaultSplit, payer)
+
+    const { paidByUserId: _payer, defaultSplit, ...rule } = body
 
     return this.repository.insert(tenantId, userId, {
-      ...body,
+      ...rule,
       frequencyDay: body.frequencyDay ?? null,
       frequencyMonth: body.frequencyMonth ?? null,
+      paidByUserId: payer,
+      defaultSplit: defaultSplit ?? null,
     })
   }
 
@@ -104,7 +118,24 @@ export class RecurringTransactionService {
       }
     }
 
+    // Left out, the stored shares stay — but they must still fit an edited
+    // amount or type.
+    const payer = body.paidByUserId ?? row.paidByUserId
+    const split =
+      body.defaultSplit === undefined
+        ? parseSplit(row.defaultSplit)
+        : body.defaultSplit
+
+    await this.assertShares(tenantId, account, body, split, payer, {
+      checkMembers:
+        body.defaultSplit !== undefined || body.paidByUserId != null,
+    })
+
     const updated = await this.repository.update(tenantId, body.id, userId, {
+      paidByUserId: payer,
+      ...(body.defaultSplit === undefined
+        ? {}
+        : { defaultSplit: body.defaultSplit }),
       receiverId: body.receiverId,
       categoryId: body.categoryId,
       linkedAccountId: body.linkedAccountId,
@@ -132,6 +163,48 @@ export class RecurringTransactionService {
   ): Promise<void> {
     await this.find(tenantId, id)
     await this.repository.softDelete(tenantId, id, userId)
+  }
+
+  /**
+   * Rejects a payer or shares the rule cannot carry: members must be active,
+   * only an expense on a personal account splits, and the shares must
+   * resolve against the rule's amount (exact amounts must add up to it).
+   */
+  private async assertShares(
+    tenantId: number,
+    account: Account,
+    body: CreateRecurringTransactionBody,
+    split: SplitInput | null | undefined,
+    payer: number | null,
+    options: { checkMembers: boolean } = { checkMembers: true }
+  ): Promise<void> {
+    if (options.checkMembers) {
+      assertMembers(
+        await this.members.activeMemberIds(tenantId),
+        body.paidByUserId,
+        split
+      )
+    }
+
+    if (split == null) {
+      return
+    }
+
+    if (body.type !== 'Expense') {
+      throw new BadRequestException('Only an expense can be split.')
+    }
+
+    if (account.ownership === 'shared') {
+      throw new ConflictException(
+        'Expenses from a shared account create no debts.'
+      )
+    }
+
+    const resolved = resolveSplit(body.amount, split, payer)
+
+    if (!resolved.ok) {
+      throw new BadRequestException(resolved.message)
+    }
   }
 
   /** Rejects a receiver, category, or account that is missing or no longer

@@ -5,7 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import type { Account } from '@workspace/db'
-import { CARD_PAYMENT_CATEGORY } from '@workspace/poco'
+import {
+  CARD_PAYMENT_CATEGORY,
+  inheritShares,
+  resolveSplit,
+  SETTLEMENT_CATEGORY,
+  toCents,
+  type SettleUpBody,
+  type SplitInput,
+  type SplitShare,
+} from '@workspace/poco'
 import type {
   ChangeTransactionStatusBody,
   CreateTransactionBody,
@@ -19,6 +28,8 @@ import type {
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { HouseholdMembers } from '../common/household/household-members.js'
+import { assertMembers } from '../common/household/split-members.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
@@ -56,6 +67,35 @@ function assertDateOpen(
   throw new ConflictException(conflict)
 }
 
+/** Only an expense of the household's own splits: not an income, and not
+ * what a shared account pays (it creates no debts). */
+function assertSplittable(account: Account, type: string): void {
+  if (type !== 'Expense') {
+    throw new BadRequestException('Only an expense can be split.')
+  }
+
+  if (account.ownership === 'shared') {
+    throw new ConflictException(
+      'Expenses from a shared account create no debts.'
+    )
+  }
+}
+
+/** Resolves a split of an amount, answering 400 when it does not fit. */
+function sharesOf(
+  amount: string,
+  split: SplitInput,
+  payerUserId: number | null
+): SplitShare[] {
+  const resolved = resolveSplit(amount, split, payerUserId)
+
+  if (!resolved.ok) {
+    throw new BadRequestException(resolved.message)
+  }
+
+  return resolved.shares
+}
+
 /**
  * The rules of transactions: every write moves the linked account's
  * balance in the same database transaction as the row, every change is
@@ -73,7 +113,8 @@ export class TransactionService {
     private readonly categories: CategoryRepository,
     private readonly receivers: ReceiverRepository,
     private readonly statements: CreditCardStatementRepository,
-    private readonly installments: InstallmentService
+    private readonly installments: InstallmentService,
+    private readonly members: HouseholdMembers
   ) {}
 
   /** Creates a transaction, rejecting references the tenant cannot use. A
@@ -90,6 +131,8 @@ export class TransactionService {
     // bank already confirmed: it asks first, like an edit does.
     assertDateOpen(account, body.transactionDt, body.confirmReconciled)
 
+    await this.assertPayerAndSplit(tenantId, body.paidByUserId, body.split)
+
     // The wire's `status` is the review workflow; the row's `status` is the
     // entity lifecycle, which only a soft delete changes — so the body's
     // field is named out before the spread, never allowed to override it.
@@ -97,16 +140,24 @@ export class TransactionService {
       status,
       installments,
       confirmReconciled: _confirm,
+      split,
+      paidByUserId,
       ...rest
     } = body
+    const payer = paidByUserId ?? userId
     const write = {
       ...rest,
+      paidByUserId: payer,
       note: body.note ?? null,
       invoice: body.invoice ?? null,
       receiverId: body.receiverId ?? null,
       statusNote: body.statusNote ?? null,
       recurringId: null,
       reviewStatus: status,
+    }
+
+    if (split != null) {
+      assertSplittable(account, body.type)
     }
 
     if (installments !== undefined && installments.count > 1) {
@@ -118,11 +169,35 @@ export class TransactionService {
         account,
         purchase,
         amount,
-        installments
+        installments,
+        split
       )
     }
 
-    return this.repository.insertWithBalance(tenantId, userId, write)
+    return this.repository.insertWithBalance(tenantId, userId, {
+      ...write,
+      ...(split == null
+        ? {}
+        : { splits: sharesOf(body.amount, split, payer) }),
+    })
+  }
+
+  /** Rejects (400) a payer or a split naming someone who is not an active
+   * member of the household. */
+  private async assertPayerAndSplit(
+    tenantId: number,
+    payerUserId: number | null | undefined,
+    split: SplitInput | null | undefined
+  ): Promise<void> {
+    if (payerUserId == null && split == null) {
+      return
+    }
+
+    assertMembers(
+      await this.members.activeMemberIds(tenantId),
+      payerUserId,
+      split
+    )
   }
 
   /** Runs the tenant's paged search. */
@@ -213,6 +288,14 @@ export class TransactionService {
       )
     }
 
+    // A settlement moves a debt between two members: it is deleted and
+    // recorded again, never edited into a different one.
+    if (row.isSettlement) {
+      throw new ConflictException(
+        'A settlement cannot be edited. Delete it and settle up again.'
+      )
+    }
+
     await this.assertNotReconciled(tenantId, row, body.confirmReconciled)
 
     if (row.installmentGroupId !== null) {
@@ -220,6 +303,8 @@ export class TransactionService {
     }
 
     const account = await this.assertReferencesUsable(tenantId, body)
+
+    await this.assertPayerAndSplit(tenantId, body.paidByUserId, body.split)
 
     // The row's new day and account count too: moving an open row into a
     // reconciled period is as much a change to it as editing a locked one.
@@ -240,8 +325,12 @@ export class TransactionService {
       status,
       id: _updateId,
       confirmReconciled: _confirm,
+      split,
+      paidByUserId,
       ...rest
     } = body
+    const payer = paidByUserId ?? row.paidByUserId
+    const splits = this.splitsForUpdate(row, account, body, split, payer)
 
     const updated = await this.repository.updateWithBalance(
       tenantId,
@@ -249,6 +338,9 @@ export class TransactionService {
       userId,
       {
         ...rest,
+        // Left out, the stored payer and shares are kept.
+        ...(paidByUserId == null ? {} : { paidByUserId }),
+        ...(splits === undefined ? {} : { splits }),
         note: body.note ?? null,
         invoice: body.invoice ?? null,
         receiverId: body.receiverId ?? null,
@@ -263,6 +355,177 @@ export class TransactionService {
     }
 
     return updated
+  }
+
+  /**
+   * The shares an edit stores. A new split replaces them (and only an
+   * expense of the household's own, entered by hand, takes one); `null`
+   * clears them; left out, the shares follow the amount — each member keeps
+   * their proportion — and an income or a shared account carries none.
+   * `undefined` means "leave the stored shares alone".
+   */
+  private splitsForUpdate(
+    row: TransactionRow,
+    account: Account,
+    body: UpdateTransactionBody,
+    split: SplitInput | null | undefined,
+    payer: number | null
+  ): SplitShare[] | undefined {
+    if (split === null) {
+      return []
+    }
+
+    if (split !== undefined) {
+      if (row.transferGroupId !== null) {
+        throw new ConflictException(
+          'Transfers and bill payments cannot be split.'
+        )
+      }
+
+      if (row.installmentGroupId !== null) {
+        throw new ConflictException(
+          'Edit the whole purchase to change how it is split.'
+        )
+      }
+
+      assertSplittable(account, body.type)
+
+      return sharesOf(body.amount, split, payer)
+    }
+
+    if (row.splits.length === 0) {
+      return undefined
+    }
+
+    if (body.type !== 'Expense' || account.ownership === 'shared') {
+      return []
+    }
+
+    return toCents(body.amount) === toCents(row.amount)
+      ? undefined
+      : inheritShares(
+          row.splits.map((entry) => ({
+            userId: entry.userId,
+            share: entry.share,
+          })),
+          body.amount,
+          payer
+        )
+  }
+
+  /**
+   * Records a settle-up between two members: `fromUserId` pays `toUserId`.
+   * With both accounts it is a transfer between them (the same path as any
+   * transfer, flagged as a settlement); with only the paying account it is
+   * an Expense on it with the receiving member as receiver. Either way the
+   * rows stay out of income and expense reports and move the pair's
+   * balance by exactly the amount. A removed member can still be settled.
+   */
+  async settle(
+    tenantId: number,
+    userId: number,
+    body: SettleUpBody
+  ): Promise<TransactionRow[]> {
+    const memberIds = await this.members.allMemberIds(tenantId)
+
+    if (
+      !memberIds.includes(body.fromUserId) ||
+      !memberIds.includes(body.toUserId)
+    ) {
+      throw new BadRequestException('Settle up between members only.')
+    }
+
+    const from = await this.usableSettleAccount(
+      tenantId,
+      body.fromAccountId,
+      body.currency
+    )
+    const category = await this.categories.getOrCreateByName(
+      tenantId,
+      userId,
+      SETTLEMENT_CATEGORY
+    )
+    const settlement = { fromUserId: body.fromUserId, toUserId: body.toUserId }
+
+    if (body.toAccountId != null) {
+      const to = await this.usableSettleAccount(
+        tenantId,
+        body.toAccountId,
+        body.currency
+      )
+
+      if (to.id === from.id) {
+        throw new ConflictException('Pick two different accounts.')
+      }
+
+      const rows = await this.repository.insertTransfer(tenantId, userId, {
+        amount: body.amount,
+        transactionDt: body.transactionDt,
+        categoryId: category.id,
+        fromAccountId: from.id,
+        toAccountId: to.id,
+        note: body.note ?? null,
+        paymentStatementId: null,
+        settlement,
+      })
+
+      return rows ?? []
+    }
+
+    // The receiving member's account is not one the payer can use: the
+    // payment leaves the paying account as an expense to the member.
+    const receiverName = await this.members.nameOf(tenantId, body.toUserId)
+    const receiver = await this.receivers.getOrCreatePerson(
+      tenantId,
+      userId,
+      receiverName ?? 'Member'
+    )
+
+    return [
+      await this.repository.insertWithBalance(tenantId, userId, {
+        name: 'SETTLEMENT',
+        note: body.note ?? null,
+        invoice: 'SETTLEMENT',
+        amount: body.amount,
+        transactionDt: body.transactionDt,
+        linkedAccountId: from.id,
+        categoryId: category.id,
+        receiverId: receiver.id,
+        recurringId: null,
+        type: 'Expense',
+        reviewStatus: 'Verify',
+        statusNote: null,
+        paidByUserId: body.fromUserId,
+        isSettlement: true,
+        splits: [{ userId: body.toUserId, share: body.amount }],
+      }),
+    ]
+  }
+
+  /** An ACTIVE account in the settlement's currency that is not a card
+   * (paying a card is a bill payment, not a settle-up). */
+  private async usableSettleAccount(
+    tenantId: number,
+    accountId: number,
+    currency: Account['currency']
+  ): Promise<Account> {
+    const account = await this.accounts.findById(tenantId, accountId)
+
+    if (account === undefined || account.status === 'DELETED') {
+      throw new NotFoundException(`No account with id ${accountId}.`)
+    }
+
+    if (account.type === 'Credit Card') {
+      throw new ConflictException('A settle-up cannot use a credit card.')
+    }
+
+    if (account.currency !== currency) {
+      throw new ConflictException(
+        `Pick an account in ${currency}: settlements are not converted.`
+      )
+    }
+
+    return account
   }
 
   /**

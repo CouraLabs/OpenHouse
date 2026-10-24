@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -13,11 +14,15 @@ import type {
 import {
   cardCycleOf,
   INSTALLMENTS_BILLED,
+  resolveSplit,
   splitInstallments,
   sumMoney,
+  type SplitShare,
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { HouseholdMembers } from '../common/household/household-members.js'
+import { assertMembers } from '../common/household/split-members.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
@@ -55,7 +60,8 @@ export class InstallmentService {
     private readonly accounts: AccountRepository,
     private readonly categories: CategoryRepository,
     private readonly receivers: ReceiverRepository,
-    private readonly statements: CreditCardStatementRepository
+    private readonly statements: CreditCardStatementRepository,
+    private readonly members: HouseholdMembers
   ) {}
 
   /**
@@ -69,15 +75,26 @@ export class InstallmentService {
     account: Account,
     purchase: PurchaseWrite,
     amount: string,
-    installments: InstallmentsBody
+    installments: InstallmentsBody,
+    split?: CreateTransactionBody['split']
   ): Promise<TransactionRow> {
     assertSplittable(account, purchase.type)
 
+    const parts = splitInstallments(
+      amount,
+      installments.count,
+      installments.amountMode
+    )
+    // The split is defined once, on the purchase as a whole.
+    const groupShares =
+      split == null
+        ? undefined
+        : sharesOf(sumMoney(parts), split, purchase.paidByUserId ?? null)
     const rows = await this.repository.create(
       tenantId,
       userId,
-      purchase,
-      splitInstallments(amount, installments.count, installments.amountMode)
+      groupShares === undefined ? purchase : { ...purchase, groupShares },
+      parts
     )
 
     return rows[0]
@@ -109,6 +126,33 @@ export class InstallmentService {
   ): Promise<InstallmentGroupView> {
     await this.assertReferencesUsable(tenantId, body)
 
+    const parts = splitInstallments(
+      body.amount,
+      body.installments.count,
+      body.installments.amountMode
+    )
+    const current = await this.find(tenantId, groupId)
+    const [first] = current.rows
+    const payer = body.paidByUserId ?? first.paidByUserId
+
+    if (body.paidByUserId != null || body.split != null) {
+      assertMembers(
+        await this.members.activeMemberIds(tenantId),
+        body.paidByUserId,
+        body.split
+      )
+    }
+
+    if (body.split != null) {
+      const account = await this.accounts.findById(tenantId, first.linkedAccountId)
+
+      if (account?.ownership === 'shared') {
+        throw new ConflictException(
+          'Expenses from a shared account create no debts.'
+        )
+      }
+    }
+
     const outcome = await this.repository.updateGroup(
       tenantId,
       userId,
@@ -118,13 +162,18 @@ export class InstallmentService {
         note: body.note ?? null,
         categoryId: body.categoryId,
         receiverId: body.receiverId ?? null,
+        ...(body.paidByUserId == null ? {} : { paidByUserId: body.paidByUserId }),
       },
-      splitInstallments(
-        body.amount,
-        body.installments.count,
-        body.installments.amountMode
-      ),
-      await this.statements.todayOf(tenantId)
+      parts,
+      await this.statements.todayOf(tenantId),
+      body.split === undefined
+        ? undefined
+        : {
+            shares:
+              body.split === null
+                ? null
+                : sharesOf(sumMoney(parts), body.split, payer),
+          }
     )
 
     unwrap(outcome, groupId)
@@ -262,6 +311,22 @@ export class InstallmentService {
       }
     }
   }
+}
+
+/** Resolves a split of a purchase's total, answering 400 when it does not
+ * fit. */
+function sharesOf(
+  total: string,
+  split: NonNullable<CreateTransactionBody['split']>,
+  payerUserId: number | null
+): SplitShare[] {
+  const resolved = resolveSplit(total, split, payerUserId)
+
+  if (!resolved.ok) {
+    throw new BadRequestException(resolved.message)
+  }
+
+  return resolved.shares
 }
 
 /** Only a credit card expense splits, and only on a card whose bills

@@ -4,7 +4,16 @@ import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { Database, DbOrTx, Transaction } from '@workspace/db'
 import { creditCardStatements, transactions } from '@workspace/db'
-import { isZeroMoney, negateMoney, sumMoney } from '@workspace/poco'
+import {
+  divideGroupShares,
+  formatCents,
+  inheritShares,
+  isZeroMoney,
+  negateMoney,
+  sumMoney,
+  toCents,
+  type SplitShare,
+} from '@workspace/poco'
 
 import {
   isOpenInstallment,
@@ -22,8 +31,15 @@ import {
   lockAccounts,
 } from './transaction-ledger.js'
 
-/** The fields every installment of a purchase shares. */
-export type PurchaseWrite = Omit<TransactionWrite, 'amount' | 'installment'>
+/**
+ * The fields every installment of a purchase shares. `groupShares` is how
+ * the whole purchase is split, defined once: each installment inherits it,
+ * divided the same way as the amount.
+ */
+export type PurchaseWrite = Omit<
+  TransactionWrite,
+  'amount' | 'installment' | 'splits'
+> & { groupShares?: SplitShare[] }
 
 /** What a group write answered: done, the group is gone, or a row the
  * rule needs Open was already billed. */
@@ -36,6 +52,14 @@ export interface GroupMeta {
   note: string | null
   categoryId: number
   receiverId: number | null
+  /** A new payer for every installment; left out, the payer is kept. */
+  paidByUserId?: number
+}
+
+/** A group edit's new split: `shares` is the whole purchase's split, or
+ * null to clear it. */
+export interface GroupSplitChange {
+  shares: SplitShare[] | null
 }
 
 /** A purchase's locked installments, in order, each with its bill's close. */
@@ -114,7 +138,8 @@ export class InstallmentRepository {
     groupId: string,
     meta: GroupMeta,
     parts: readonly string[],
-    today: string
+    today: string,
+    splitChange?: GroupSplitChange
   ): Promise<GroupOutcome<TransactionRow[]>> {
     return this.ledger.inLedgerTx(async (tx) => {
       const group = await this.lockGroupInTx(tx, tenantId, groupId, today)
@@ -124,6 +149,10 @@ export class InstallmentRepository {
       }
 
       const [first] = group.rows
+      const stored = await this.groupSharesInTx(tx, tenantId, group.rows)
+      const groupShares =
+        splitChange === undefined ? stored : (splitChange.shares ?? undefined)
+      const payer = meta.paidByUserId ?? first.paidByUserId
       const plan = planGroupEdit(
         group.states,
         first.installmentCount ?? group.rows.length,
@@ -143,16 +172,41 @@ export class InstallmentRepository {
           tx,
           tenantId,
           userId,
-          { ...purchaseOf(first), ...meta },
+          { ...purchaseOf(first, groupShares), ...meta },
           parts,
           groupId
         )
       } else {
+        // All installments are divided together, so the group's cents add up.
+        const amounts =
+          plan === 'amounts' ? parts : group.rows.map((row) => row.amount)
+        const divided =
+          groupShares === undefined
+            ? undefined
+            : divideGroupShares(groupShares, amounts, payer)
+
         for (const [index, row] of group.rows.entries()) {
+          const amount = amounts[index]
+
           await this.rewriteInTx(tx, tenantId, userId, row, {
             ...meta,
-            amount: plan === 'amounts' ? parts[index] : row.amount,
+            amount,
           })
+
+          // The shares follow the amount, and a new split replaces them.
+          if (
+            splitChange !== undefined ||
+            plan === 'amounts' ||
+            amount !== row.amount
+          ) {
+            await this.ledger.replaceSplitsInTx(
+              tx,
+              tenantId,
+              userId,
+              row.id,
+              divided === undefined ? [] : (divided[index] ?? [])
+            )
+          }
         }
       }
 
@@ -275,6 +329,8 @@ export class InstallmentRepository {
         return { kind: 'billed' }
       }
 
+      const shares = await this.groupSharesInTx(tx, tenantId, [row])
+
       await this.ledger.softDeleteInTx(tx, tenantId, userId, row)
 
       return {
@@ -283,7 +339,7 @@ export class InstallmentRepository {
           tx,
           tenantId,
           userId,
-          purchaseOf(row),
+          purchaseOf(row, shares),
           parts
         ),
       }
@@ -312,17 +368,30 @@ export class InstallmentRepository {
         return { kind: 'billed' }
       }
 
+      const shares = await this.groupSharesInTx(tx, tenantId, group.rows)
+
       for (const row of group.rows) {
         await this.ledger.softDeleteInTx(tx, tenantId, userId, row)
       }
 
       const [first] = group.rows
+      const { groupShares, ...purchase } = purchaseOf(first, shares)
+      const amount = sumMoney(group.rows.map((row) => row.amount))
 
       return {
         kind: 'done',
         value: await this.ledger.insertInTx(tx, tenantId, userId, {
-          ...purchaseOf(first),
-          amount: sumMoney(group.rows.map((row) => row.amount)),
+          ...purchase,
+          amount,
+          ...(groupShares === undefined
+            ? {}
+            : {
+                splits: inheritShares(
+                  groupShares,
+                  amount,
+                  purchase.paidByUserId ?? null
+                ),
+              }),
         }),
       }
     })
@@ -340,11 +409,21 @@ export class InstallmentRepository {
   ): Promise<TransactionRow[]> {
     const rows: TransactionRow[] = []
 
+    const { groupShares, ...columns } = purchase
+    // Every installment inherits the purchase's split, divided across the
+    // whole group so no member's cents drift; each installment's shares add
+    // up to its own amount.
+    const divided =
+      groupShares === undefined
+        ? undefined
+        : divideGroupShares(groupShares, parts, columns.paidByUserId ?? null)
+
     for (const [index, amount] of parts.entries()) {
       rows.push(
         await this.ledger.insertInTx(tx, tenantId, userId, {
-          ...purchase,
+          ...columns,
           amount,
+          ...(divided === undefined ? {} : { splits: divided[index] }),
           installment: { groupId, number: index + 1, count: parts.length },
         })
       )
@@ -394,6 +473,31 @@ export class InstallmentRepository {
       allOpen: states.every((state) => isOpenInstallment(state, today)),
       today,
     }
+  }
+
+  /** The split of the whole purchase: every member's shares summed over the
+   * given rows. Nothing for an unsplit purchase. */
+  private async groupSharesInTx(
+    tx: DbOrTx,
+    tenantId: number,
+    rows: readonly Transaction[]
+  ): Promise<SplitShare[] | undefined> {
+    const totals = new Map<number, bigint>()
+
+    for (const row of rows) {
+      for (const entry of await this.ledger.sharesOfInTx(tx, tenantId, row.id)) {
+        totals.set(
+          entry.userId,
+          (totals.get(entry.userId) ?? 0n) + toCents(entry.share)
+        )
+      }
+    }
+
+    return totals.size === 0
+      ? undefined
+      : [...totals]
+          .sort(([a], [b]) => a - b)
+          .map(([userId, cents]) => ({ userId, share: formatCents(cents) }))
   }
 
   /** Each row with the close of the bill it is on. */
@@ -503,8 +607,13 @@ export class InstallmentRepository {
 
 /** The purchase fields of a stored installment (or single row), as the
  * next write of the purchase reuses them. */
-function purchaseOf(row: Transaction): PurchaseWrite {
+function purchaseOf(
+  row: Transaction,
+  groupShares?: SplitShare[]
+): PurchaseWrite {
   return {
+    ...(groupShares === undefined ? {} : { groupShares }),
+    paidByUserId: row.paidByUserId,
     name: row.name,
     note: row.note,
     invoice: row.invoice,

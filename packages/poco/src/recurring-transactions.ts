@@ -4,6 +4,7 @@ import { csvLocaleField } from './csv-export.js'
 
 import type { Currency } from './currencies.js'
 import { amountSchema } from './limits.js'
+import { splitInputSchema, type SplitInput } from './splits.js'
 import {
   entityStatusSchema,
   fetchArgsSchema,
@@ -64,6 +65,12 @@ export const createRecurringTransactionSchema = z
       .min(1, 'The month must be 1 or more.')
       .max(12, 'The month must be 12 or less.')
       .nullish(),
+    /** The member who pays the generated transactions; the creator when
+     * left out. */
+    paidByUserId: z.number().int().positive().nullish(),
+    /** The shares copied onto each generated transaction; `null` for none.
+     * Exact amounts must add up to the rule's amount. */
+    defaultSplit: splitInputSchema.nullish(),
   })
   .superRefine((rule, ctx) => {
     const { frequency, frequencyDay, frequencyMonth } = rule
@@ -189,6 +196,10 @@ export type RecurringTransaction = {
   frequency: Frequency
   frequencyDay: number | null
   frequencyMonth: number | null
+  paidByUserId: number | null
+  paidByName: string | null
+  /** The shares each generated transaction is split with, or nothing. */
+  defaultSplit: SplitInput | null
   status: EntityStatus
   createdDt: string
   updateDt: string

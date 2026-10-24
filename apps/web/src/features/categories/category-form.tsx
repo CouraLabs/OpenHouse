@@ -8,6 +8,9 @@ import { Button } from '@workspace/ui/components/button'
 import { ColorField } from '@workspace/ui/components/color-field'
 import { TextField } from '@workspace/ui/components/text-field'
 
+import { SplitSection } from '@/components/split-section.js'
+import { useMainCurrency } from '@/lib/settings.js'
+
 /**
  * The fields the category form holds. The rules come straight from the
  * shared poco schema — the same check the API runs, whose messages are
@@ -43,6 +46,7 @@ export function CategoryForm({
   isSaving = false,
 }: CategoryFormProps) {
   const { t } = useTranslation()
+  const mainCurrency = useMainCurrency()
   const {
     register,
     handleSubmit,
@@ -55,11 +59,16 @@ export function CategoryForm({
     // remounts it with that row's values.
     defaultValues:
       category === null
-        ? { name: '', color: '#1D4ED8' }
-        : { name: category.name, color: category.color },
+        ? { name: '', color: '#1D4ED8', defaultSplit: null }
+        : {
+            name: category.name,
+            color: category.color,
+            defaultSplit: category.defaultSplit,
+          },
   })
 
   const color = watch('color')
+  const defaultSplit = watch('defaultSplit') ?? null
 
   return (
     <form
@@ -90,6 +99,18 @@ export function CategoryForm({
           required
         />
       </div>
+      {/* "Rent: 60/40" — new expenses of the category start with it. A
+          default has no fixed amount, so exact amounts are not offered. */}
+      <SplitSection
+        idPrefix="category-split"
+        value={defaultSplit}
+        onChange={(next) =>
+          setValue('defaultSplit', next, { shouldValidate: true })
+        }
+        currency={mainCurrency}
+        payerUserId={null}
+        allowExact={false}
+      />
       {error !== undefined ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : null}

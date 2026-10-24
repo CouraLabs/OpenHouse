@@ -25,8 +25,12 @@ import { RecurringTransactionsModule } from './recurring-transactions/recurring-
 import { CreditCardStatementsModule } from './credit-card-statements/credit-card-statements.module.js'
 import { DataExportsModule } from './data-exports/data-exports.module.js'
 import { TenantDeletionModule } from './tenant-deletion/tenant-deletion.module.js'
+import { HouseholdModule } from './household/household.module.js'
 import { TransactionsModule } from './transactions/transactions.module.js'
 import { StatementImportsModule } from './statement-imports/statement-imports.module.js'
+import { NotificationsModule } from './notifications/notifications.module.js'
+import { CalendarModule } from './calendar/calendar.module.js'
+import { UpcomingModule } from './upcoming/upcoming.module.js'
 import { TransactionLinkersModule } from './transaction-linkers/transaction-linkers.module.js'
 
 /**
@@ -48,7 +52,7 @@ const THROTTLE_TTL_MS = 60_000
       cache: true,
       validate: validateEnv,
     }),
-    // Powers the recurring rules' background cron.
+    // Powers the background crons: recurring rules, reminders, deletions.
     ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       // A factory rather than `forRoot`, so the limits are read after
@@ -82,11 +86,15 @@ const THROTTLE_TTL_MS = 60_000
     ReceiversModule,
     TransactionLinkersModule,
     CreditCardStatementsModule,
+    HouseholdModule,
     TransactionsModule,
     StatementImportsModule,
     DataExportsModule,
     TenantDeletionModule,
     RecurringTransactionsModule,
+    UpcomingModule,
+    NotificationsModule,
+    CalendarModule,
   ],
   controllers: [AppController],
   providers: [

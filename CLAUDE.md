@@ -54,11 +54,19 @@ apps/
         card-cycle/             # card-cycle-sync.ts: the abstract CardCycleSync port
                                 #   accounts/ calls when a card's close/due days
                                 #   change and credit-card-statements/ implements
+        household/              # household-members.ts: the abstract HouseholdMembers
+                                #   port splits and settle-up read the tenant's
+                                #   members through; the household feature implements
+                                #   it. split-members.ts: pure member helpers
+        upcoming/               # upcoming-sources.ts: abstract ports the upcoming
+                                #   panel and reminders read bills, rules, limits and
+                                #   goals through; each owning feature implements
       <feature>/                # a domain feature (auth/, tenants/, settings/, preferences/, accounts/,
                                 #   categories/, limits/, goals/, receivers/, transactions/,
                                 #   recurring-transactions/, transaction-linkers/,
                                 #   credit-card-statements/, statement-imports/, data-exports/,
-                                #   tenant-deletion/, audit/):
+                                #   tenant-deletion/, audit/, household/, upcoming/,
+                                #   notifications/, calendar/):
         <feature>.module.ts     #   Nest module — wires the feature's providers; exports
                                 #   a repository when another feature may need its rows
         <feature>.controller.ts #   routes: HTTP shape, status codes, DTO mapping (toWire)
@@ -182,6 +190,13 @@ packages/
    no soft delete, no `createdBy`); it keeps `updateBy`/`updateDt`. Settings
    are typed columns, never key/value rows: a new global setting is a new
    column by migration, validated by poco and the database.
+   **Sanctioned exception — user-scoped rows.** Rows that belong to one user
+   inside a tenant (`notification_preferences`, keyed by `userId`;
+   `push_subscriptions`, one per browser; `notifications`, `notification_log`,
+   `calendar_feeds`) carry `tenantId` and `userId`, spread no
+   `tenantEntityColumns()`, and take the tenant as an explicit argument. They
+   are not business entities: no status, no soft delete. Their rows are
+   deleted only as credentials or delivery state (see 6g).
 6c. **Time is the tenant's.** "Today" is `todayIn(settings.timezone)` (poco),
    never the server's or the device's zone: the recurring job evaluates each
    tenant against its own calendar day, and web forms default dates through
@@ -229,7 +244,12 @@ packages/
    typing the tenant name; 30 days later (the tenant's own calendar day) an
    hourly job removes the tenant and everything it owns in one transaction,
    children first, `import_mappings` and the append-only `transaction_history`
-   included. Nothing else ever removes rows. `audit_log` is append-only, has
+   included. Nothing else ever removes business rows. The sanctioned exception
+   is credentials that carry no history: a `push_subscriptions` row is deleted
+   when its browser unsubscribes or the push service answers 404/410, and a
+   `calendar_feeds` row when its token is regenerated or revoked. No
+   transaction, settlement, or notification row is ever removed this way.
+   `audit_log` is append-only, has
    no foreign key to `tenants`, and keeps the `tenant.deleted` line. Full
    exports (`data-exports/`) and CSV exports are owner-facing and audited;
    the ZIP lives in `EXPORT_DIR` (read in `config/`) for 24 hours or one

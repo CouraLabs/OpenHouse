@@ -1,4 +1,4 @@
-import type { LimitType } from '@workspace/poco'
+import type { LimitType } from './limits.js'
 
 /**
  * The window a limit's period covers, as inclusive `YYYY-MM-DD` ends — the

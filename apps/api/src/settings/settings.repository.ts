@@ -6,6 +6,7 @@ import type {
   Database,
   DbOrTx,
   TenantSettingsRow,
+  UnsplitMode,
 } from '@workspace/db'
 import { accounts, goals, limits, tenantSettings } from '@workspace/db'
 
@@ -13,6 +14,8 @@ import { accounts, goals, limits, tenantSettings } from '@workspace/db'
 export interface SettingsWrite {
   timezone: string
   mainCurrency: Currency
+  /** Left out, the stored mode is kept (and a new tenant starts personal). */
+  unsplitMode?: UnsplitMode
 }
 
 /**

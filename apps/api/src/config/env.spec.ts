@@ -3,6 +3,7 @@ import {
   getExportDir,
   getJwtSecret,
   getJwtTtls,
+  getPushConfig,
   getPositiveInt,
   isProduction,
   validateEnv,
@@ -151,5 +152,57 @@ describe('getExportDir', () => {
     expect(() => validateEnv({ EXPORT_DIR: '/x', EXPORT_DIRS: '1' })).toThrow(
       'EXPORT_DIRS is not read'
     )
+  })
+})
+
+describe('web push keys', () => {
+  // 65 and 32 raw bytes, URL-safe base64 — the shape web-push generates.
+  const publicKey = Buffer.alloc(65, 4).toString('base64url')
+  const privateKey = Buffer.alloc(32, 7).toString('base64url')
+
+  afterEach(() => {
+    delete process.env.PUSH_VAPID_PUBLIC_KEY
+    delete process.env.PUSH_VAPID_PRIVATE_KEY
+    delete process.env.PUSH_VAPID_SUBJECT
+  })
+
+  it('boots with push disabled when neither key is set', () => {
+    expect(() => validateEnv({})).not.toThrow()
+    expect(getPushConfig()).toBeUndefined()
+  })
+
+  it('accepts a full pair and exposes it', () => {
+    const config = {
+      PUSH_VAPID_PUBLIC_KEY: publicKey,
+      PUSH_VAPID_PRIVATE_KEY: privateKey,
+    }
+
+    expect(() => validateEnv(config)).not.toThrow()
+    Object.assign(process.env, config)
+    expect(getPushConfig()).toMatchObject({ publicKey, privateKey })
+  })
+
+  it('rejects one key without the other', () => {
+    expect(() => validateEnv({ PUSH_VAPID_PUBLIC_KEY: publicKey })).toThrow(
+      'must be set together'
+    )
+    expect(() => validateEnv({ PUSH_VAPID_PRIVATE_KEY: privateKey })).toThrow(
+      'must be set together'
+    )
+  })
+
+  it('rejects a key of the wrong shape', () => {
+    expect(() =>
+      validateEnv({
+        PUSH_VAPID_PUBLIC_KEY: 'not-a-key',
+        PUSH_VAPID_PRIVATE_KEY: privateKey,
+      })
+    ).toThrow('PUSH_VAPID_PUBLIC_KEY must be a URL-safe base64 VAPID key')
+    expect(() =>
+      validateEnv({
+        PUSH_VAPID_PUBLIC_KEY: publicKey,
+        PUSH_VAPID_PRIVATE_KEY: publicKey,
+      })
+    ).toThrow('PUSH_VAPID_PRIVATE_KEY must be')
   })
 })

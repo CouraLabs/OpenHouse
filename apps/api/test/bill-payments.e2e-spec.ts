@@ -68,10 +68,15 @@ async function pay(
     categoryId?: number
   }
 ) {
+  // A failure reports the response body, so a flaky 500 names its cause.
   const response = await agent
     .post('/transactions/transfer')
     .send(body)
-    .expect(201)
+    .expect((res) => {
+      if (res.status !== 201) {
+        throw new Error(`transfer ${res.status}: ${JSON.stringify(res.body)}`)
+      }
+    })
 
   return response.body as [{ id: number }, { id: number; categoryId: number }]
 }

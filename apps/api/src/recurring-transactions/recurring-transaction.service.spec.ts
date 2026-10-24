@@ -1,8 +1,13 @@
-import { ConflictException, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import type { Account, Category, Receiver } from '@workspace/db'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { HouseholdMembers } from '../common/household/household-members.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
@@ -28,6 +33,7 @@ const category = (overrides: Partial<Category> = {}): Category => ({
   tenantId: 1,
   name: 'Utilities',
   color: '#1D4ED8',
+  defaultSplit: null,
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -55,6 +61,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   dueDay: null,
   closeDayInclusive: false,
   isDefault: false,
+  ownership: 'personal',
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -84,6 +91,9 @@ const row = {
   frequency: 'Monthly',
   frequencyDay: 14,
   frequencyMonth: null,
+  paidByUserId: 7,
+  paidByName: 'Ana',
+  defaultSplit: null,
   status: 'ACTIVE' as const,
   receiverName: 'City Power',
   categoryName: 'Utilities',
@@ -127,7 +137,10 @@ const service = (
       findById: vi.fn(async (_t: number, id: number) =>
         [acc].flat().find((candidate) => candidate.id === id)
       ),
-    } as unknown as AccountRepository
+    } as unknown as AccountRepository,
+    {
+      activeMemberIds: vi.fn(async () => [1, 2, 7]),
+    } as unknown as HouseholdMembers
   )
 
 describe('RecurringTransactionService', () => {
@@ -142,7 +155,62 @@ describe('RecurringTransactionService', () => {
       ...createBody,
       frequencyDay: 14,
       frequencyMonth: null,
+      paidByUserId: 7,
+      defaultSplit: null,
     })
+  })
+
+  it('stores the payer and the default shares the rule carries', async () => {
+    const repo = repository()
+    repo.insert.mockResolvedValue(row)
+    const defaultSplit = {
+      mode: 'equal' as const,
+      entries: [{ userId: 1 }, { userId: 2 }],
+    }
+
+    await service(repo).create(1, 7, {
+      ...createBody,
+      paidByUserId: 2,
+      defaultSplit,
+    })
+
+    expect(repo.insert).toHaveBeenCalledWith(
+      1,
+      7,
+      expect.objectContaining({ paidByUserId: 2, defaultSplit })
+    )
+  })
+
+  it('rejects default shares that do not fit the amount, or an income', async () => {
+    const repo = repository()
+    const exact = {
+      mode: 'exact' as const,
+      entries: [
+        { userId: 1, value: '10.00' },
+        { userId: 2, value: '10.00' },
+      ],
+    }
+
+    await expect(
+      service(repo).create(1, 7, { ...createBody, defaultSplit: exact })
+    ).rejects.toThrow(BadRequestException)
+    await expect(
+      service(repo).create(1, 7, {
+        ...createBody,
+        type: 'Income',
+        defaultSplit: { mode: 'equal', entries: [{ userId: 1 }] },
+      })
+    ).rejects.toThrow(BadRequestException)
+    expect(repo.insert).not.toHaveBeenCalled()
+  })
+
+  it('rejects a split naming someone outside the household', async () => {
+    await expect(
+      service().create(1, 7, {
+        ...createBody,
+        defaultSplit: { mode: 'equal', entries: [{ userId: 99 }] },
+      })
+    ).rejects.toThrow(BadRequestException)
   })
 
   it('rejects a create whose account the tenant does not hold', async () => {

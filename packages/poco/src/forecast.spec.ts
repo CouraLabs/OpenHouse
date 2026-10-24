@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { RecurringTransaction } from '@workspace/poco'
-
-import { forecastNextMonthExpenses } from './forecast-next-month.js'
+import {
+  forecastExpenses,
+  forecastNextMonthExpenses,
+  forecastOccurrences,
+} from './forecast.js'
+import type { RecurringTransaction } from './recurring-transactions.js'
 
 /** A rule the tests reshape per case — every field the forecast reads. */
 function rule(overrides: Partial<RecurringTransaction>): RecurringTransaction {
@@ -19,6 +22,9 @@ function rule(overrides: Partial<RecurringTransaction>): RecurringTransaction {
     frequency: 'Monthly',
     frequencyDay: 1,
     frequencyMonth: null,
+    paidByUserId: null,
+    paidByName: null,
+    defaultSplit: null,
     status: 'ACTIVE',
     createdDt: '2026-01-01T00:00:00.000Z',
     updateDt: '2026-01-01T00:00:00.000Z',
@@ -113,5 +119,36 @@ describe('forecastNextMonthExpenses', () => {
       { currency: 'BRL', total: '5.00' },
       { currency: 'USD', total: '10.00' },
     ])
+  })
+})
+
+describe('arbitrary horizons', () => {
+  it('lists each firing across a window that crosses months', () => {
+    const occurrences = forecastOccurrences(
+      [rule({ frequency: 'Monthly', frequencyDay: 31 })],
+      '2026-10-25',
+      '2026-12-05'
+    )
+
+    // Day 31 clamps to November's 30th and skips nothing in October.
+    expect(occurrences.map((occurrence) => occurrence.date)).toEqual([
+      '2026-10-31',
+      '2026-11-30',
+    ])
+  })
+
+  it('totals a 30-day window and ignores incomes', () => {
+    const slices = forecastExpenses(
+      [
+        rule({ id: 1, frequency: 'Weekly', frequencyDay: 1, amount: '10.00' }),
+        rule({ id: 2, type: 'Income', amount: '5000.00' }),
+      ],
+      '2026-10-24',
+      '2026-11-22',
+      currencyOf
+    )
+
+    // Mondays: Oct 26, Nov 2, 9, 16.
+    expect(slices).toEqual([{ currency: 'USD', total: '40.00' }])
   })
 })

@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { RecurringTransaction } from '@workspace/db'
+import { shiftDay } from '@workspace/poco'
 
 import type { AccountRepository } from '../accounts/account.repository.js'
 import type { CategoryRepository } from '../categories/category.repository.js'
 import type { Clock } from '../common/clock/clock.js'
+import type { HouseholdMembers } from '../common/household/household-members.js'
 import type { ReceiverRepository } from '../receivers/receiver.repository.js'
 import type { SettingsRepository } from '../settings/settings.repository.js'
 import type {
@@ -12,98 +14,7 @@ import type {
   TransactionWrite,
 } from '../transactions/transaction.repository.js'
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
-import {
-  isDueOn,
-  RecurringRunService,
-  shiftDay,
-} from './recurring-run.service.js'
-
-describe('isDueOn', () => {
-  it('is due every day', () => {
-    expect(
-      isDueOn(
-        { frequency: 'Daily', frequencyDay: null, frequencyMonth: null },
-        '2026-10-14'
-      )
-    ).toBe(true)
-    expect(
-      isDueOn(
-        { frequency: 'Daily', frequencyDay: null, frequencyMonth: null },
-        '2027-02-28'
-      )
-    ).toBe(true)
-  })
-
-  it('matches the ISO weekday, Monday first', () => {
-    const weekly = (day: number) => ({
-      frequency: 'Weekly' as const,
-      frequencyDay: day,
-      frequencyMonth: null,
-    })
-
-    // 2026-10-14 is a Wednesday (ISO weekday 3).
-    expect(isDueOn(weekly(3), '2026-10-14')).toBe(true)
-    expect(isDueOn(weekly(1), '2026-10-14')).toBe(false)
-    expect(isDueOn(weekly(7), '2026-10-18')).toBe(true)
-  })
-
-  it('matches the day of the month', () => {
-    const monthly = {
-      frequency: 'Monthly' as const,
-      frequencyDay: 14,
-      frequencyMonth: null,
-    }
-
-    expect(isDueOn(monthly, '2026-10-14')).toBe(true)
-    expect(isDueOn(monthly, '2026-10-15')).toBe(false)
-  })
-
-  it("clamps a day past the month's end to the last day", () => {
-    const monthly = {
-      frequency: 'Monthly' as const,
-      frequencyDay: 31,
-      frequencyMonth: null,
-    }
-
-    // September has 30 days: the rule runs on the 30th.
-    expect(isDueOn(monthly, '2026-09-30')).toBe(true)
-    expect(isDueOn(monthly, '2026-09-29')).toBe(false)
-    // October has 31: it runs on the 31st.
-    expect(isDueOn(monthly, '2026-10-31')).toBe(true)
-  })
-
-  it('clamps February 29 to February 28 of a common year', () => {
-    const yearly = {
-      frequency: 'Yearly' as const,
-      frequencyDay: 29,
-      frequencyMonth: 2,
-    }
-
-    expect(isDueOn(yearly, '2028-02-29')).toBe(true)
-    expect(isDueOn(yearly, '2027-02-28')).toBe(true)
-    expect(isDueOn(yearly, '2027-02-27')).toBe(false)
-  })
-
-  it('matches the month and the day for a yearly rule', () => {
-    const yearly = {
-      frequency: 'Yearly' as const,
-      frequencyDay: 25,
-      frequencyMonth: 12,
-    }
-
-    expect(isDueOn(yearly, '2026-12-25')).toBe(true)
-    expect(isDueOn(yearly, '2027-12-25')).toBe(true)
-    expect(isDueOn(yearly, '2026-11-25')).toBe(false)
-  })
-})
-
-describe('shiftDay', () => {
-  it('shifts across month and year boundaries without losing a day', () => {
-    expect(shiftDay('2026-10-01', -1)).toBe('2026-09-30')
-    expect(shiftDay('2027-01-01', -1)).toBe('2026-12-31')
-    expect(shiftDay('2026-02-28', 1)).toBe('2026-03-01')
-  })
-})
+import { RecurringRunService } from './recurring-run.service.js'
 
 /** A rule the cron can read, ACTIVE by default. */
 const rule = (
@@ -119,6 +30,8 @@ const rule = (
   frequency: 'Monthly',
   frequencyDay: 14,
   frequencyMonth: null,
+  paidByUserId: null,
+  defaultSplit: null,
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -141,6 +54,12 @@ const settingsIn = (timezone = 'UTC') => ({
   ),
 })
 
+/** Members 1 and 2 are active; 1 is the owner. */
+const household = {
+  activeMemberIds: async () => [1, 2],
+  ownerId: async () => 1,
+}
+
 describe('RecurringRunService.runDue', () => {
   const today = '2026-10-15'
   const dueRule = rule({
@@ -155,7 +74,8 @@ describe('RecurringRunService.runDue', () => {
     rules: RecurringTransaction[],
     existing: boolean,
     timezone = 'UTC',
-    now = NOW
+    now = NOW,
+    members = household
   ) => {
     const rulesRepo = {
       listActiveAllTenants: vi.fn(async () => rules),
@@ -193,7 +113,8 @@ describe('RecurringRunService.runDue', () => {
       categoriesRepo as unknown as CategoryRepository,
       receiversRepo as unknown as ReceiverRepository,
       settingsIn(timezone) as unknown as SettingsRepository,
-      fixedClock(now)
+      fixedClock(now),
+      members as unknown as HouseholdMembers
     )
 
     return {
@@ -205,6 +126,23 @@ describe('RecurringRunService.runDue', () => {
       receiversRepo,
     }
   }
+
+  it('pays a rule whose payer was removed through the owner', async () => {
+    const removed = rule({
+      frequency: 'Daily',
+      frequencyDay: null,
+      frequencyMonth: null,
+      paidByUserId: 7,
+    })
+    const { svc, transactionsRepo } = run([removed], false, 'UTC', NOW, household)
+
+    await svc.runDue(1)
+
+    expect(transactionsRepo.insertGenerated).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ paidByUserId: 1 })
+    )
+  })
 
   it('materializes a due rule that has no transaction today', async () => {
     const { svc, transactionsRepo } = run([dueRule], false)
@@ -223,6 +161,46 @@ describe('RecurringRunService.runDue', () => {
         name: 'City Power',
       })
     )
+  })
+
+  it("copies the rule's payer and default shares onto the transaction", async () => {
+    const shared = rule({
+      frequency: 'Daily',
+      frequencyDay: null,
+      frequencyMonth: null,
+      paidByUserId: 2,
+      defaultSplit: {
+        mode: 'percentage',
+        entries: [
+          { userId: 1, value: '60' },
+          { userId: 2, value: '40' },
+        ],
+      },
+    })
+    const { svc, transactionsRepo } = run([shared], false)
+
+    await svc.runDue(1)
+
+    expect(transactionsRepo.insertGenerated).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        paidByUserId: 2,
+        splits: [
+          { userId: 1, share: '59.94' },
+          { userId: 2, share: '39.96' },
+        ],
+      })
+    )
+  })
+
+  it('leaves a rule with no default split unsplit', async () => {
+    const { svc, transactionsRepo } = run([dueRule], false)
+
+    await svc.runDue(1)
+
+    const [, write] = transactionsRepo.insertGenerated.mock.calls[0]
+
+    expect(write.splits).toBeUndefined()
   })
 
   it("dates by the tenant's zone: 01:00 UTC is still yesterday at UTC−03:00", async () => {
@@ -383,7 +361,8 @@ describe('RecurringRunService.runDue', () => {
       categoriesRepo as unknown as CategoryRepository,
       receiversRepo as unknown as ReceiverRepository,
       settingsIn() as unknown as SettingsRepository,
-      fixedClock()
+      fixedClock(),
+      household as unknown as HouseholdMembers
     )
 
     const created = await svc.runDue(1)

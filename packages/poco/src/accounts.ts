@@ -11,6 +11,7 @@ import {
 import { dateOnlySchema } from './goals.js'
 import { amountSchema } from './limits.js'
 import { addMoney } from './money.js'
+import { accountOwnershipSchema, type AccountOwnership } from './household.js'
 
 /**
  * The account routes' contract: the bodies the write routes accept, the args
@@ -102,6 +103,8 @@ export const createAccountSchema = z
      * transactions start in. Only one account carries the flag; the API
      * clears the previous holder. */
     isDefault: z.boolean().prefault(false),
+    /** A shared (joint) account creates no debts between members. */
+    ownership: accountOwnershipSchema.prefault('personal'),
   })
   .superRefine((account, ctx) => {
     if (account.type === 'Checking' || account.type === 'Savings') {
@@ -226,6 +229,8 @@ export type AccountRef = {
   /** Whether the account is the tenant's default — the one a new
    * transaction starts in. */
   isDefault: boolean
+  /** A shared account creates no debts between members. */
+  ownership: AccountOwnership
   /** A card's cycle, so the transaction form previews the bill a purchase
    * lands on; nothing on the other kinds. */
   closeDay: number | null
@@ -283,6 +288,7 @@ export type Account = {
   dueDay: number | null
   closeDayInclusive: boolean
   isDefault: boolean
+  ownership: AccountOwnership
   status: EntityStatus
   createdDt: string
   updateDt: string

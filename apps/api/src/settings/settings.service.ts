@@ -18,6 +18,7 @@ export function toWireSettings(row: TenantSettingsRow): TenantSettings {
     timezone: row.timezone,
     mainCurrency: row.mainCurrency,
     timezoneConfirmed: row.timezoneConfirmed,
+    unsplitMode: row.unsplitMode,
   }
 }
 
@@ -77,6 +78,9 @@ export class SettingsService {
     const row = await this.settings.update(tenantId, userId, {
       timezone: body.timezone,
       mainCurrency: body.mainCurrency,
+      ...(body.unsplitMode === undefined
+        ? {}
+        : { unsplitMode: body.unsplitMode }),
     })
     if (row === undefined) {
       throw new NotFoundException('Settings not found.')

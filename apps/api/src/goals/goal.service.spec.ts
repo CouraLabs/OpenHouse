@@ -49,6 +49,7 @@ const account = (overrides: Partial<Account> = {}): Account => ({
   dueDay: null,
   closeDayInclusive: false,
   isDefault: false,
+  ownership: 'personal',
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),

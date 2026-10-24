@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import type { Currency } from '@workspace/db'
 import {
+  periodWindow,
   todayIn,
   type CreateLimitBody,
   type SearchLimitsArgs,
@@ -16,7 +17,6 @@ import {
   type LimitRow,
   type LimitSearch,
 } from './limit.repository.js'
-import { periodWindow } from './limit-period.js'
 
 /** A limit row denominated: the tenant's main currency, which every limit
  * is in, filled in for the wire. */

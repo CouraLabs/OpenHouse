@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { currencySchema, type Currency } from './currencies.js'
+import { unsplitModeSchema, type UnsplitMode } from './household.js'
 
 /**
  * The tenant's global settings: the time zone that decides what "today" is,
@@ -35,6 +36,8 @@ export const updateSettingsSchema = z.object({
   timezone: timeZoneSchema,
   mainCurrency: currencySchema,
   confirmCurrencyChange: z.boolean().optional(),
+  /** How an expense with no split reads; left out, the setting is kept. */
+  unsplitMode: unsplitModeSchema.optional(),
 })
 
 export type UpdateSettingsBody = z.infer<typeof updateSettingsSchema>
@@ -59,6 +62,9 @@ export interface TenantSettings {
   /** False while a migrated tenant still runs on the `UTC` placeholder;
    * the owner is asked to confirm the zone until it is saved once. */
   timezoneConfirmed: boolean
+  /** How an expense with no split reads: the payer's own (`personal`) or
+   * shared equally by every active member (`household`). */
+  unsplitMode: UnsplitMode
 }
 
 /**
@@ -76,6 +82,19 @@ export function dayIn(instant: Date, timeZone: string): string {
     parts.find((candidate) => candidate.type === type)?.value ?? ''
 
   return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+/** The hour of the day, 0–23, an instant falls on in a time zone. */
+export function hourIn(instant: Date, timeZone: string): number {
+  const hour = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: 'numeric',
+    hourCycle: 'h23',
+  })
+    .formatToParts(instant)
+    .find((part) => part.type === 'hour')?.value
+
+  return Number(hour ?? 0) % 24
 }
 
 /** Today, as a `YYYY-MM-DD` day, in the tenant's time zone. */

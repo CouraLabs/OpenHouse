@@ -27,7 +27,8 @@ const row = (overrides: Partial<Account> = {}): Account => ({
   dueDay: null,
   closeDayInclusive: false,
   isDefault: false,
-  status: 'ACTIVE',
+  ownership: 'personal' as const,
+    status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
   updateBy: null,
@@ -87,6 +88,7 @@ const cardBody = {
   dueDay: 5,
   closeDayInclusive: false,
   isDefault: false,
+  ownership: 'personal' as const,
 }
 
 describe('AccountService', () => {
@@ -104,6 +106,7 @@ describe('AccountService', () => {
       spreadPct: '0',
       closeDayInclusive: false,
       isDefault: false,
+      ownership: 'personal' as const,
     })
 
     expect(repo.insert).toHaveBeenCalledWith(1, 7, {
@@ -119,6 +122,7 @@ describe('AccountService', () => {
       dueDay: null,
       closeDayInclusive: false,
       isDefault: false,
+      ownership: 'personal' as const,
     })
   })
 
@@ -163,6 +167,7 @@ describe('AccountService', () => {
       spreadPct: '0',
       closeDayInclusive: false,
       isDefault: false,
+      ownership: 'personal' as const,
     })
 
     expect(updated.balance).toBe('99.00')
@@ -185,6 +190,7 @@ describe('AccountService', () => {
         dueDay: null,
         closeDayInclusive: false,
         isDefault: false,
+        ownership: 'personal' as const,
       },
       undefined
     )
@@ -206,6 +212,7 @@ describe('AccountService', () => {
         spreadPct: '0',
         closeDayInclusive: false,
         isDefault: false,
+        ownership: 'personal' as const,
       })
     ).rejects.toThrow(NotFoundException)
     expect(repo.update).not.toHaveBeenCalled()
@@ -226,6 +233,7 @@ describe('AccountService', () => {
       spreadPct: '0',
       closeDayInclusive: false,
       isDefault: false,
+      ownership: 'personal' as const,
     })
 
     expect(repo.insert).toHaveBeenCalledWith(1, 7, {
@@ -241,6 +249,7 @@ describe('AccountService', () => {
       dueDay: null,
       closeDayInclusive: false,
       isDefault: false,
+      ownership: 'personal' as const,
     })
   })
 
@@ -340,6 +349,7 @@ describe('createAccountSchema', () => {
     balance: '12.34',
     currency: 'USD',
     isDefault: false,
+    ownership: 'personal' as const,
   }
 
   it('accepts a bank account carrying its agency and number', () => {
@@ -397,6 +407,7 @@ describe('createAccountSchema', () => {
       spreadPct: '0',
       closeDayInclusive: false,
       isDefault: false,
+      ownership: 'personal' as const,
     })
     expect(parsed.success).toBe(true)
   })
@@ -412,6 +423,7 @@ describe('createAccountSchema', () => {
       spreadPct: '0',
       closeDayInclusive: false,
       isDefault: false,
+      ownership: 'personal' as const,
     })
     expect(parsed.success).toBe(false)
     if (!parsed.success) {

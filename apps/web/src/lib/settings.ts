@@ -40,6 +40,7 @@ export function useTenantSettings(): TenantSettings {
       timezone: browserTimeZone() ?? 'UTC',
       mainCurrency: browserCurrency(),
       timezoneConfirmed: true,
+      unsplitMode: 'personal' as const,
     }
   )
 }

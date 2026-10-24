@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { InviteCode, TenantUser } from '@workspace/poco'
+import { compareMoney, type InviteCode, type TenantUser } from '@workspace/poco'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
@@ -8,6 +8,8 @@ import { DataTable } from '@workspace/ui/components/data-table'
 import { UserPlus } from 'lucide-react'
 
 import { useSession } from '@/lib/auth.js'
+import { formatMoney } from '@/lib/format-money.js'
+import { useMemberBalanceCheck } from '@/lib/household.js'
 import { useTenantSettings } from '@/lib/settings.js'
 import { AddUserDialog } from './add-user-dialog.js'
 import { MemberExportDialog } from './member-export-dialog.js'
@@ -42,6 +44,7 @@ export function UsersSection() {
   const invites = useInviteCodes()
   const setActive = useSetUserActive()
   const anonymize = useAnonymizeUser()
+  const balanceCheck = useMemberBalanceCheck()
   const revoke = useRevokeInviteCode()
 
   const [pagination, setPagination] = useState<PaginationState>({
@@ -63,6 +66,8 @@ export function UsersSection() {
         {
           onRemove: (user) => {
             setActive.reset()
+            // Removal is never blocked, but a balance is worth a warning.
+            balanceCheck.mutate(user.id)
             setRemoving(user)
           },
           onReactivate: (user) =>
@@ -82,6 +87,7 @@ export function UsersSection() {
       session.data?.user.id,
       setActive.reset,
       setActive.mutate,
+      balanceCheck.mutate,
       anonymize.reset,
     ]
   )
@@ -186,9 +192,30 @@ export function UsersSection() {
         open={removing !== null}
         destructive
         title={t('settings.users.remove-title')}
-        description={t('settings.users.remove-description', {
-          name: removing?.name ?? '',
-        })}
+        description={[
+          t('settings.users.remove-description', {
+            name: removing?.name ?? '',
+          }),
+          ...(balanceCheck.data?.lines ?? []).map((line) =>
+            compareMoney(line.balance, '0') < 0
+              ? t('settings.users.remove-owes', {
+                  name: removing?.name ?? '',
+                  amount: formatMoney(
+                    line.balance.replace('-', ''),
+                    i18n.language,
+                    line.currency
+                  ),
+                })
+              : t('settings.users.remove-owed', {
+                  name: removing?.name ?? '',
+                  amount: formatMoney(
+                    line.balance,
+                    i18n.language,
+                    line.currency
+                  ),
+                })
+          ),
+        ].join(' ')}
         confirmLabel={t('settings.users.remove-confirm')}
         pendingLabel={t('settings.users.removing')}
         cancelLabel={t('settings.cancel')}

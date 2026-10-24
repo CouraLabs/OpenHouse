@@ -60,7 +60,11 @@
         "JWT_REMEMBER_REFRESH_TTL_S",
         "DB_POOL_MAX",
         "DB_CONNECTION_TIMEOUT_MS",
-        "DB_IDLE_TIMEOUT_MS"
+        "DB_IDLE_TIMEOUT_MS",
+        "EXPORT_DIR",
+        "PUSH_VAPID_PUBLIC_KEY",
+        "PUSH_VAPID_PRIVATE_KEY",
+        "PUSH_VAPID_SUBJECT"
       ]
     }
   }

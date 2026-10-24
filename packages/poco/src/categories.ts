@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { csvLocaleField } from './csv-export.js'
 
+import { splitInputSchema, type SplitInput } from './splits.js'
 import {
   entityStatusSchema,
   fetchArgsSchema,
@@ -26,6 +27,9 @@ export const categoryColorSchema = z
 export const createCategorySchema = z.object({
   name: z.string().min(1, 'Name is required.').max(255),
   color: categoryColorSchema,
+  /** The split new expenses of the category start with ("Rent: 60/40"); for
+   * percentage and equal modes it applies to any amount. `null` clears it. */
+  defaultSplit: splitInputSchema.nullish(),
 })
 
 /** The body updating a category accepts: the same fields, plus which row. */
@@ -57,6 +61,8 @@ export type ExportCategoriesArgs = z.infer<typeof exportCategoriesSchema>
 export type CategoryRef = {
   id: number
   name: string
+  /** The split new expenses of the category start with, or nothing. */
+  defaultSplit?: SplitInput | null
 }
 
 /** What the category routes return: the wire shape, dates as ISO strings. */
@@ -64,6 +70,8 @@ export type Category = {
   id: number
   name: string
   color: string
+  /** The split new expenses of the category start with, or nothing. */
+  defaultSplit: SplitInput | null
   status: EntityStatus
   createdDt: string
   updateDt: string

@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "biome lint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.sw.json",
     "test": "vitest run",
     "preview": "vite preview"
   },
@@ -26,6 +26,9 @@
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.89.0",
     "react-i18next": "^17.0.16",
+    "workbox-core": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {

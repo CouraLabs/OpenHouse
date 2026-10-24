@@ -9,10 +9,13 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    // Installable web app: manifest + precaching service worker. The worker
-    // auto-updates (every reload checks for a new deployment); requests still
-    // go network-first in dev.
+    // Installable web app: manifest + our own service worker (src/sw/sw.ts),
+    // which precaches the build and handles web push. The worker
+    // auto-updates (every reload checks for a new deployment).
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src/sw',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: [
         'favicon.ico',
@@ -58,6 +61,8 @@ export default defineConfig({
         // Serve the worker in dev too, so reload behaves exactly like
         // production and stale registrations never 404.
         enabled: true,
+        // The worker is an ES module in dev (it imports workbox).
+        type: 'module',
       },
     }),
   ],

@@ -30,6 +30,7 @@ const category = (overrides: Partial<Category> = {}): Category => ({
   tenantId: 1,
   name: 'Office',
   color: '#1D4ED8',
+  defaultSplit: null,
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),

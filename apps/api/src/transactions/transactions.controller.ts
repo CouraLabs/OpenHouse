@@ -22,6 +22,7 @@ import type {
   MoveToStatementBody,
   PagedResults,
   SearchTransactionsArgs,
+  SettleUpBody,
   Transaction,
   TransactionBreakdown,
   TransactionBreakdownArgs,
@@ -38,6 +39,7 @@ import {
   exportTransactionsSchema,
   moveToStatementSchema,
   searchTransactionsSchema,
+  settleUpSchema,
   transactionBreakdownSchema,
   transferSchema,
   updateTransactionSchema,
@@ -162,6 +164,22 @@ export class TransactionsController {
     )
 
     return [from, to].map(toWire)
+  }
+
+  /** Records a settle-up between two members: a transfer between their
+   * accounts (or an expense to the member), flagged as a settlement. */
+  @Post('settle')
+  async settle(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(settleUpSchema)) body: SettleUpBody
+  ): Promise<Transaction[]> {
+    const rows = await this.transactions.settle(
+      session.tenant.id,
+      session.user.id,
+      body
+    )
+
+    return rows.map(toWire)
   }
 
   /** Reads one transaction, deleted rows included. */

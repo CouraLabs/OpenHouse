@@ -101,6 +101,29 @@ export class GoalRepository {
     return { rows, total: counted.value }
   }
 
+  /** Lists the tenant's ACTIVE goals of ACTIVE accounts, with the balance
+   * the linked account holds now. */
+  async listActiveWithBalance(
+    tenantId: number
+  ): Promise<Array<GoalRow & { accountBalance: string }>> {
+    return this.db
+      .select({
+        ...getTableColumns(goals),
+        ...ACCOUNT_COLUMNS,
+        accountBalance: accounts.balance,
+      })
+      .from(goals)
+      .innerJoin(accounts, eq(goals.linkedAccountId, accounts.id))
+      .where(
+        and(
+          eq(goals.tenantId, tenantId),
+          eq(goals.status, 'ACTIVE'),
+          eq(accounts.status, 'ACTIVE')
+        )
+      )
+      .orderBy(asc(goals.id))
+  }
+
   /** Reads one goal of the tenant — deleted rows included. */
   async findById(tenantId: number, id: number): Promise<GoalRow | undefined> {
     const [row] = await this.db

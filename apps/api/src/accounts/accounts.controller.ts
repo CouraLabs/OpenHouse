@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common'
 import type {
   Account,
+  AccountOwnership,
   AccountRef,
   AccountType,
   CreateAccountBody,
@@ -113,6 +114,7 @@ export class AccountsController {
       type: row.type,
       currency: row.currency,
       isDefault: row.isDefault,
+      ownership: row.ownership,
       closeDay: row.closeDay,
       dueDay: row.dueDay,
       closeDayInclusive: row.closeDayInclusive,
@@ -176,6 +178,7 @@ function toWire(row: {
   dueDay: number | null
   closeDayInclusive: boolean
   isDefault: boolean
+  ownership: AccountOwnership
   status: EntityStatus
   createdDt: Date
   updateDt: Date
@@ -198,6 +201,7 @@ function toWire(row: {
     dueDay: row.dueDay,
     closeDayInclusive: row.closeDayInclusive,
     isDefault: row.isDefault,
+    ownership: row.ownership,
     status: row.status,
     createdDt: row.createdDt.toISOString(),
     updateDt: row.updateDt.toISOString(),
