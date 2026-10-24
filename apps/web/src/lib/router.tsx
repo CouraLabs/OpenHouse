@@ -16,6 +16,7 @@ import { LimitsPage } from '@/features/limits/limits-page.js'
 import { GoalsPage } from '@/features/goals/goals-page.js'
 import { AccountsPage } from '@/features/accounts/accounts-page.js'
 import { TransactionsPage } from '@/features/transactions/transactions-page.js'
+import { ImportPage } from '@/features/statement-imports/import-page.js'
 import { BillDetailPage } from '@/features/bills/bill-detail-page.js'
 import { BillsPage } from '@/features/bills/bills-page.js'
 import { ReceiversPage } from '@/features/receivers/receivers-page.js'
@@ -127,6 +128,14 @@ const accountsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'accounts',
   component: AccountsPage,
+})
+
+/** The statement import of one account, opened from the account's Import
+ * action: upload, map, preview, commit, undo. */
+const accountImportRoute = createRoute({
+  getParentRoute: () => mainLayoutRoute,
+  path: 'accounts/$accountId/import',
+  component: ImportPage,
 })
 
 /** The page the tenant's transactions are managed from. */
@@ -250,6 +259,7 @@ const routeTree = rootRoute.addChildren([
     limitsRoute,
     goalsRoute,
     accountsRoute,
+    accountImportRoute,
     transactionsRoute,
     billsRoute,
     billDetailRoute,

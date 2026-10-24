@@ -19,6 +19,7 @@ import {
 } from '@workspace/ui/components/filter-dialog'
 import { Plus } from 'lucide-react'
 
+import { ExportCsvButton } from '@/components/export-csv-button.js'
 import { PageHeader } from '@/components/page-header.js'
 import { buildReceiverColumns } from './receivers-columns.js'
 import { ReceiverForm } from './receiver-form.js'
@@ -132,6 +133,7 @@ export function ReceiversPage() {
   // The page's actions, on the header line: the filter and the insert.
   const toolbar = (
     <>
+      <ExportCsvButton path="/receivers/export" args={args} />
       <FilterDialog
         fields={[
           {

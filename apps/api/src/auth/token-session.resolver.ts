@@ -43,6 +43,7 @@ export class TokenSessionResolver extends SessionResolver {
         name: true,
         role: true,
         isActive: true,
+        anonymizedAt: true,
         startPage: true,
         createdAt: true,
         updatedAt: true,

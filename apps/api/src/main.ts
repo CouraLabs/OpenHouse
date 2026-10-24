@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
+import { IMPORT_COMMIT_MAX_BYTES } from '@workspace/poco'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import { AppModule } from './app.module.js'
@@ -20,6 +21,11 @@ async function bootstrap() {
   if (proxyHops !== undefined) {
     app.set('trust proxy', proxyHops)
   }
+
+  // A statement import commits up to 5,000 rows as one JSON body, which the
+  // default 100 kb parser would refuse.
+  // biome-ignore lint/correctness/useHookAtTopLevel: a Nest method, not a React hook
+  app.useBodyParser('json', { limit: IMPORT_COMMIT_MAX_BYTES })
 
   // Added before the routes are mounted, so every response carries the
   // security headers.

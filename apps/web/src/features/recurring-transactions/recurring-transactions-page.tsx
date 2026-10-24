@@ -19,6 +19,7 @@ import {
 } from '@workspace/ui/components/filter-dialog'
 import { Plus } from 'lucide-react'
 
+import { ExportCsvButton } from '@/components/export-csv-button.js'
 import { PageHeader } from '@/components/page-header.js'
 import { buildRecurringColumns } from './recurring-transactions-columns.js'
 import { RecurringForm } from './recurring-form.js'
@@ -152,6 +153,7 @@ export function RecurringTransactionsPage() {
   // The page's actions, on the header line: the filter and the insert.
   const toolbar = (
     <>
+      <ExportCsvButton path="/recurring-transactions/export" args={args} />
       <FilterDialog
         fields={[
           {

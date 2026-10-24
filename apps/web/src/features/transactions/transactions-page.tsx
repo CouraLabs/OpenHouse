@@ -25,6 +25,7 @@ import {
   FilterDialog,
   type FilterValues,
 } from '@workspace/ui/components/filter-dialog'
+import { ExportCsvButton } from '@/components/export-csv-button.js'
 import { PageHeader } from '@/components/page-header.js'
 import { formatDateOnly } from '@/lib/format-date-only.js'
 import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
@@ -495,6 +496,7 @@ export function TransactionsPage() {
               onPrevious={() => setAnchor((current) => shiftMonth(current, -1))}
               onNext={() => setAnchor((current) => shiftMonth(current, 1))}
             />
+            <ExportCsvButton path="/transactions/export" args={args} />
             <FilterDialog
               fields={[
                 {

@@ -120,8 +120,14 @@ function endSession(): void {
 function request(path: string, init?: RequestInit): Promise<Response> {
   // Merged, not spread: a caller's own headers add to the JSON content type
   // instead of silently replacing it.
+  // A multipart upload is left to the browser: it writes the boundary into
+  // the content type itself.
   const headers = new Headers(init?.headers)
-  if (init?.body !== undefined && !headers.has('content-type')) {
+  if (
+    init?.body !== undefined &&
+    !(init.body instanceof FormData) &&
+    !headers.has('content-type')
+  ) {
     headers.set('content-type', 'application/json')
   }
 
@@ -158,19 +164,20 @@ async function toError(response: Response): Promise<ApiError> {
 }
 
 /**
- * Calls the API. When the API rejects the call with 401, the refresh cookie
- * gets one chance to renew the session before the failure is reported: the
- * request is replayed once against the fresh cookies. If the refresh is
- * refused too, the session is over — the cache is cleared and the user is
- * sent to the sign-in page. A refresh that never reaches a verdict (the
- * API unreachable, the request timing out) is not a refusal: the session
- * stands, and the failure surfaces as the error the callers catch.
+ * Sends a call and answers its successful response. When the API rejects the
+ * call with 401, the refresh cookie gets one chance to renew the session
+ * before the failure is reported: the request is replayed once against the
+ * fresh cookies. If the refresh is refused too, the session is over — the
+ * cache is cleared and the user is sent to the sign-in page. A refresh that
+ * never reaches a verdict (the API unreachable, the request timing out) is
+ * not a refusal: the session stands, and the failure surfaces as the error
+ * the callers catch.
  */
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+async function send(path: string, init?: RequestInit): Promise<Response> {
   const response = await request(path, init)
 
   if (response.ok) {
-    return parse<T>(response)
+    return response
   }
 
   if (REFRESHABLE_STATUSES.has(response.status) && !AUTH_PATHS.has(path)) {
@@ -189,7 +196,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
       const retried = await request(path, init)
 
       if (retried.ok) {
-        return parse<T>(retried)
+        return retried
       }
 
       throw await toError(retried)
@@ -199,4 +206,37 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   throw await toError(response)
+}
+
+/** Calls the API and answers its JSON body (nothing for a 204). */
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  return parse<T>(await send(path, init))
+}
+
+/** A file the API answered with, ready to be saved. */
+export interface ApiFile {
+  blob: Blob
+  /** The name the API suggested, or the fallback. */
+  filename: string
+}
+
+/**
+ * Calls the API for a file (a CSV or a ZIP). The download is a request like
+ * any other, so the session refresh applies; the body is read as a blob and
+ * the name comes from `Content-Disposition`. Downloads run longer than the
+ * ten-second default: a large export is streamed.
+ */
+export async function apiFile(
+  path: string,
+  init?: RequestInit,
+  fallbackName = 'download'
+): Promise<ApiFile> {
+  const response = await send(path, {
+    signal: AbortSignal.timeout(120_000),
+    ...init,
+  })
+  const disposition = response.headers.get('content-disposition') ?? ''
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? fallbackName
+
+  return { blob: await response.blob(), filename }
 }

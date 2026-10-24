@@ -95,6 +95,23 @@ export class TenantsController {
     return toWireUser(row)
   }
 
+  /** Anonymizes a removed member: name, email, and password hash go, the
+   * rows they created stay. */
+  @HttpCode(200)
+  @Post('users/:id/anonymize')
+  async anonymizeUser(
+    @CurrentSession() session: Session,
+    @Param('id', ParseIntPipe) id: number
+  ): Promise<TenantUser> {
+    const row = await this.tenantUsers.anonymize(
+      session.tenant.id,
+      session.user.id,
+      id
+    )
+
+    return toWireUser(row)
+  }
+
   /** Restores a removed user. */
   @HttpCode(200)
   @Post('users/:id/reactivate')
@@ -127,6 +144,7 @@ function toWireUser(row: TenantUserRow): TenantUser {
     email: row.email,
     role: row.role,
     isActive: row.isActive,
+    anonymizedAt: row.anonymizedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   }
 }

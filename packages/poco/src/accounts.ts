@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { csvLocaleField } from './csv-export.js'
+
 import { currencySchema, type Currency } from './currencies.js'
 import {
   entityStatusSchema,
@@ -203,9 +205,13 @@ export const searchAccountsSchema = fetchArgsSchema.extend({
   filter: accountFilterSchema.prefault({}),
 })
 
+/** The body `POST accounts/export` accepts: the search, plus the CSV locale. */
+export const exportAccountsSchema = searchAccountsSchema.extend(csvLocaleField)
+
 export type CreateAccountBody = z.infer<typeof createAccountSchema>
 export type UpdateAccountBody = z.infer<typeof updateAccountSchema>
 export type SearchAccountsArgs = z.infer<typeof searchAccountsSchema>
+export type ExportAccountsArgs = z.infer<typeof exportAccountsSchema>
 
 /** The lightweight shape pickers read — what `GET /accounts` returns. The
  * `type` rides along so a picker can offer only the kinds it means — the

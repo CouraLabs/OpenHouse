@@ -50,6 +50,7 @@ export interface PublicTenant {
   id: number
   name: string
   expiresIn: Date | null
+  deletionDate: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -376,6 +377,7 @@ export class AuthService {
         id: tenant.id,
         name: tenant.name,
         expiresIn: tenant.expiresIn?.toISOString() ?? null,
+        deletionDate: tenant.deletionDate,
         createdAt: tenant.createdAt.toISOString(),
         updatedAt: tenant.updatedAt.toISOString(),
       },

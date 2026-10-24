@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { csvLocaleField } from './csv-export.js'
+
 import {
   entityStatusSchema,
   fetchArgsSchema,
@@ -42,9 +44,14 @@ export const searchCategoriesSchema = fetchArgsSchema.extend({
   filter: categoryFilterSchema.prefault({}),
 })
 
+/** The body `POST categories/export` accepts: the search, plus the CSV locale. */
+export const exportCategoriesSchema =
+  searchCategoriesSchema.extend(csvLocaleField)
+
 export type CreateCategoryBody = z.infer<typeof createCategorySchema>
 export type UpdateCategoryBody = z.infer<typeof updateCategorySchema>
 export type SearchCategoriesArgs = z.infer<typeof searchCategoriesSchema>
+export type ExportCategoriesArgs = z.infer<typeof exportCategoriesSchema>
 
 /** The lightweight shape pickers read — what `GET /categories` returns. */
 export type CategoryRef = {

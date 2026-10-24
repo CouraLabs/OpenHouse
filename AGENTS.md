@@ -103,3 +103,13 @@ Read `docs/README.md` inside that installed package first, then read the relevan
 
 This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
 <!-- END:turborepo-agent-rules -->
+
+## Data lifecycle exception
+
+Deletion is a status change everywhere except one place: an owner may delete
+the whole tenant. It is scheduled with the typed tenant name, waits 30 days
+(cancelable from the banner or Settings -> Data), then a daily-per-zone job
+hard-deletes every row of the tenant in one transaction, children first. The
+export ZIPs (`EXPORT_DIR`) and in-memory export jobs are single-process: a
+second API replica would need shared storage, as the throttler cache would.
+See `docs/data-export.md`.

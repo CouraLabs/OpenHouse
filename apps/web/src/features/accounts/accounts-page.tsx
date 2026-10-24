@@ -20,6 +20,7 @@ import {
 } from '@workspace/ui/components/filter-dialog'
 import { Plus } from 'lucide-react'
 
+import { ExportCsvButton } from '@/components/export-csv-button.js'
 import { PageHeader } from '@/components/page-header.js'
 import { ApiError } from '@/lib/api.js'
 import { formatMoney } from '@/lib/format-money.js'
@@ -167,6 +168,7 @@ export function AccountsPage() {
   // The page's actions, on the header line: the filter and the insert.
   const toolbar = (
     <>
+      <ExportCsvButton path="/accounts/export" args={args} />
       <FilterDialog
         fields={[
           {

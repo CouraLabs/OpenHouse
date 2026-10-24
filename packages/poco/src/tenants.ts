@@ -31,5 +31,11 @@ export type TenantUser = {
   role: 'owner' | 'user'
   /** False once an owner removed the user; their history stays. */
   isActive: boolean
+  /** When an owner anonymized the user at their request, or nothing. An
+   * anonymized user cannot sign in or be restored. */
+  anonymizedAt: string | null
   createdAt: string
 }
+
+/** The name an anonymized member is known by from then on. */
+export const ANONYMIZED_USER_NAME = 'Former member'

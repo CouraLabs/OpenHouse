@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/page-header.js'
 import { useSession } from '@/lib/auth.js'
 import { ChangePasswordForm } from './change-password-form.js'
+import { DataSection } from './data-section.js'
 import { GeneralSettingsForm } from './general-settings-form.js'
 import { PreferencesForm } from './preferences-form.js'
 import { RecoveryCodesSection } from './recovery-codes-section.js'
@@ -14,7 +15,8 @@ import { UsersSection } from './users-section.js'
 /**
  * The Settings page, laid out as an account page: the sections the role
  * may open in a side navigation, the selected one beside it. An owner sees
- * General (time zone, main currency), Users, Preferences, and Security
+ * General (time zone, main currency), Users, Data (export and
+ * tenant deletion), Preferences, and Security
  * (password and recovery codes); a member sees Preferences and Security
  * (password only). Each section has its own URL,
  * `/settings/<section>`; `/settings` opens the first one the role may see.
@@ -43,6 +45,7 @@ export function SettingsPage() {
         <section className="min-w-0 flex-1">
           {active === 'general' ? <GeneralSettingsForm /> : null}
           {active === 'users' ? <UsersSection /> : null}
+          {active === 'data' ? <DataSection /> : null}
           {active === 'preferences' ? <PreferencesForm /> : null}
           {active === 'security' ? (
             <div className="flex flex-col gap-6">

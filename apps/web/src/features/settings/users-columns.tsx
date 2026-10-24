@@ -2,7 +2,7 @@ import type { TenantUser } from '@workspace/poco'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
-import { KeyRound, RotateCcw, UserMinus } from 'lucide-react'
+import { Download, KeyRound, RotateCcw, UserMinus, UserX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 /** What the actions column can do to a row, reported upward. */
@@ -10,6 +10,8 @@ export interface UserRowActions {
   onRemove: (user: TenantUser) => void
   onReactivate: (user: TenantUser) => void
   onResetPassword: (user: TenantUser) => void
+  onExport: (user: TenantUser) => void
+  onAnonymize: (user: TenantUser) => void
 }
 
 /**
@@ -54,6 +56,8 @@ export function buildUserColumns(
       cell: (context) =>
         context.row.original.isActive ? (
           <Badge variant="secondary">{t('settings.users.active')}</Badge>
+        ) : context.row.original.anonymizedAt !== null ? (
+          <Badge variant="outline">{t('settings.users.anonymized')}</Badge>
         ) : (
           <Badge variant="destructive">{t('settings.users.removed')}</Badge>
         ),
@@ -91,6 +95,15 @@ function UserActionsCell({
 
   return (
     <div className="flex items-center justify-end gap-1">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t('settings.users.export-data')}
+        title={t('settings.users.export-data')}
+        onClick={() => actions.onExport(user)}
+      >
+        <Download />
+      </Button>
       {user.isActive && user.role === 'user' ? (
         <Button
           variant="ghost"
@@ -113,17 +126,29 @@ function UserActionsCell({
         >
           <UserMinus />
         </Button>
-      ) : (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t('settings.users.reactivate')}
-          title={t('settings.users.reactivate')}
-          onClick={() => actions.onReactivate(user)}
-        >
-          <RotateCcw />
-        </Button>
-      )}
+      ) : user.anonymizedAt === null ? (
+        <>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t('settings.users.reactivate')}
+            title={t('settings.users.reactivate')}
+            onClick={() => actions.onReactivate(user)}
+          >
+            <RotateCcw />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-destructive hover:text-destructive"
+            aria-label={t('settings.users.anonymize')}
+            title={t('settings.users.anonymize')}
+            onClick={() => actions.onAnonymize(user)}
+          >
+            <UserX />
+          </Button>
+        </>
+      ) : null}
     </div>
   )
 }

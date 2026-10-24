@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   appliedDeltaFor,
   deltaFor,
-  LedgerConflictError,
   lockOrder,
   retryOnLockConflict,
 } from './transaction-ledger.js'
+import { LedgerConflictError } from '../common/ledger/ledger-conflict.js'
 
 describe('deltaFor', () => {
   it('adds an income and subtracts an expense', () => {

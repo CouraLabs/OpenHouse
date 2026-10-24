@@ -10,6 +10,7 @@ import {
   Post,
   Put,
   Query,
+  StreamableFile,
 } from '@nestjs/common'
 import type {
   Account,
@@ -30,9 +31,13 @@ import {
   searchAccountsSchema,
   updateAccountSchema,
 } from '@workspace/poco'
+import type { ExportAccountsArgs } from '@workspace/poco'
+import { exportAccountsSchema } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
+import { CsvExporter } from '../common/csv/csv-exporter.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
+import { ACCOUNT_CSV_COLUMNS } from './account-csv.js'
 
 import { AccountService } from './account.service.js'
 
@@ -43,7 +48,10 @@ import { AccountService } from './account.service.js'
  */
 @Controller('accounts')
 export class AccountsController {
-  constructor(private readonly accounts: AccountService) {}
+  constructor(
+    private readonly accounts: AccountService,
+    private readonly csv: CsvExporter
+  ) {}
 
   /** Creates an account for the tenant. */
   @Post()
@@ -65,6 +73,31 @@ export class AccountsController {
     const { rows, total } = await this.accounts.search(session.tenant.id, args)
 
     return { total, items: rows.map(toWire) }
+  }
+
+  /** Streams the tenant's accounts as a CSV: every row the
+   * search matches, unpaged, written in the locale of the body. */
+  @Post('export')
+  @HttpCode(200)
+  async exportCsv(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(exportAccountsSchema)) args: ExportAccountsArgs
+  ): Promise<StreamableFile> {
+    return this.csv.download({
+      session,
+      entity: 'accounts',
+      locale: args.locale,
+      columns: ACCOUNT_CSV_COLUMNS,
+      read: async (skip, limit) => {
+        const { rows } = await this.accounts.search(session.tenant.id, {
+          ...args,
+          skip,
+          limit,
+        })
+
+        return rows.map(toWire)
+      },
+    })
   }
 
   /** Lists the tenant's ACTIVE accounts by name, for pickers. The `type`

@@ -15,6 +15,7 @@ import {
 } from '@workspace/ui/components/filter-dialog'
 import { Plus } from 'lucide-react'
 
+import { ExportCsvButton } from '@/components/export-csv-button.js'
 import { PageHeader } from '@/components/page-header.js'
 import { buildLimitColumns } from './limits-columns.js'
 import { LimitForm } from './limit-form.js'
@@ -134,6 +135,7 @@ export function LimitsPage() {
   // The page's actions, on the header line: the filter and the insert.
   const toolbar = (
     <>
+      <ExportCsvButton path="/limits/export" args={args} />
       <FilterDialog
         fields={[
           {

@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, gt, isNull, or } from 'drizzle-orm'
 import type { Database, DbOrTx, User } from '@workspace/db'
-import { users } from '@workspace/db'
+import { passwordResetCodes, users } from '@workspace/db'
 
 /** A user row without its secrets — what the Users section reads. */
 export type TenantUserRow = Pick<
   User,
-  'id' | 'name' | 'email' | 'role' | 'isActive' | 'createdAt'
+  'id' | 'name' | 'email' | 'role' | 'isActive' | 'anonymizedAt' | 'createdAt'
 >
 
 /** The columns a `TenantUserRow` selects. */
@@ -17,6 +17,7 @@ const PUBLIC_COLUMNS = {
   email: users.email,
   role: users.role,
   isActive: users.isActive,
+  anonymizedAt: users.anonymizedAt,
   createdAt: users.createdAt,
 }
 
@@ -90,6 +91,49 @@ export class TenantUserRepository {
       .set({ isActive, refreshTokenHash: null, updatedAt: new Date() })
       .where(and(eq(users.tenantId, tenantId), eq(users.id, id)))
       .returning(PUBLIC_COLUMNS)
+
+    return row
+  }
+
+  /**
+   * Anonymizes a user: the name and email are replaced, the password hash and
+   * the refresh hash are cleared, and the open reset codes expire — nothing
+   * can sign them back in. The rows they created are not touched.
+   */
+  async anonymize(
+    tenantId: number,
+    id: number,
+    identity: { name: string; email: string },
+    now: Date,
+    tx: DbOrTx = this.db
+  ): Promise<TenantUserRow | undefined> {
+    const [row] = await tx
+      .update(users)
+      .set({
+        name: identity.name,
+        email: identity.email,
+        password: '',
+        refreshTokenHash: null,
+        isActive: false,
+        anonymizedAt: now,
+        updatedAt: now,
+      })
+      .where(and(eq(users.tenantId, tenantId), eq(users.id, id)))
+      .returning(PUBLIC_COLUMNS)
+
+    await tx
+      .update(passwordResetCodes)
+      .set({ expiresAt: now })
+      .where(
+        and(
+          eq(passwordResetCodes.userId, id),
+          isNull(passwordResetCodes.usedAt),
+          or(
+            isNull(passwordResetCodes.expiresAt),
+            gt(passwordResetCodes.expiresAt, now)
+          )
+        )
+      )
 
     return row
   }

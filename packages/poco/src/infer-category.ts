@@ -1,4 +1,4 @@
-import type { CategoryRef } from '@workspace/poco'
+import type { CategoryRef } from './categories.js'
 
 /**
  * Infers the category a transaction's description most likely lands in,

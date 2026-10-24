@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import type { INestApplication } from '@nestjs/common'
+import type { NestExpressApplication } from '@nestjs/platform-express'
 import { Test } from '@nestjs/testing'
+import { IMPORT_COMMIT_MAX_BYTES } from '@workspace/poco'
 import cookieParser from 'cookie-parser'
 import request from 'supertest'
 import type { App } from 'supertest/types.js'
@@ -16,7 +18,9 @@ export async function startApp(): Promise<INestApplication<App>> {
     imports: [AppModule],
   }).compile()
 
-  const app = moduleFixture.createNestApplication<INestApplication<App>>()
+  const app = moduleFixture.createNestApplication<NestExpressApplication>()
+  // biome-ignore lint/correctness/useHookAtTopLevel: a Nest method, not a React hook
+  app.useBodyParser('json', { limit: IMPORT_COMMIT_MAX_BYTES })
   app.use(cookieParser())
   await app.init()
 

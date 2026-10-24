@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  StreamableFile,
 } from '@nestjs/common'
 import type {
   CreateGoalBody,
@@ -24,9 +25,13 @@ import {
   searchGoalsSchema,
   updateGoalSchema,
 } from '@workspace/poco'
+import type { ExportGoalsArgs } from '@workspace/poco'
+import { exportGoalsSchema } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
+import { CsvExporter } from '../common/csv/csv-exporter.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
+import { GOAL_CSV_COLUMNS } from './goal-csv.js'
 
 import { GoalService } from './goal.service.js'
 
@@ -37,7 +42,10 @@ import { GoalService } from './goal.service.js'
  */
 @Controller('goals')
 export class GoalsController {
-  constructor(private readonly goals: GoalService) {}
+  constructor(
+    private readonly goals: GoalService,
+    private readonly csv: CsvExporter
+  ) {}
 
   /** Creates a goal for the tenant. */
   @Post()
@@ -59,6 +67,31 @@ export class GoalsController {
     const { rows, total } = await this.goals.search(session.tenant.id, args)
 
     return { total, items: rows.map(toWire) }
+  }
+
+  /** Streams the tenant's goals as a CSV: every row the
+   * search matches, unpaged, written in the locale of the body. */
+  @Post('export')
+  @HttpCode(200)
+  async exportCsv(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(exportGoalsSchema)) args: ExportGoalsArgs
+  ): Promise<StreamableFile> {
+    return this.csv.download({
+      session,
+      entity: 'goals',
+      locale: args.locale,
+      columns: GOAL_CSV_COLUMNS,
+      read: async (skip, limit) => {
+        const { rows } = await this.goals.search(session.tenant.id, {
+          ...args,
+          skip,
+          limit,
+        })
+
+        return rows.map(toWire)
+      },
+    })
   }
 
   /** Reads one goal, deleted rows included. */

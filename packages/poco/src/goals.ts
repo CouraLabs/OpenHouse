@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { csvLocaleField } from './csv-export.js'
+
 import type { Currency } from './currencies.js'
 import {
   entityStatusSchema,
@@ -49,9 +51,13 @@ export const searchGoalsSchema = fetchArgsSchema.extend({
   filter: goalFilterSchema.prefault({}),
 })
 
+/** The body `POST goals/export` accepts: the search, plus the CSV locale. */
+export const exportGoalsSchema = searchGoalsSchema.extend(csvLocaleField)
+
 export type CreateGoalBody = z.infer<typeof createGoalSchema>
 export type UpdateGoalBody = z.infer<typeof updateGoalSchema>
 export type SearchGoalsArgs = z.infer<typeof searchGoalsSchema>
+export type ExportGoalsArgs = z.infer<typeof exportGoalsSchema>
 
 /**
  * What the goal routes return: the wire shape, dates as ISO strings —

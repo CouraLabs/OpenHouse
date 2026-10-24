@@ -19,7 +19,7 @@ import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
 
-import { LedgerConflictFilter } from './ledger-conflict.filter.js'
+import { LedgerConflictFilter } from '../common/ledger/ledger-conflict.js'
 import { ReconciliationService } from './reconciliation.service.js'
 import { toWire } from './transaction-wire.js'
 
@@ -78,7 +78,8 @@ export class ReconciliationController {
     return {
       reconciledThrough: outcome.reconciledThrough,
       balance: outcome.balance,
-      adjustment: outcome.adjustment === null ? null : toWire(outcome.adjustment),
+      adjustment:
+        outcome.adjustment === null ? null : toWire(outcome.adjustment),
       checkedCount: outcome.checkedCount,
     }
   }

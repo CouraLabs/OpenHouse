@@ -29,3 +29,16 @@ export function useSetUserActive() {
     },
   })
 }
+
+/** Anonymizes a removed member: name, email, and password go, rows stay. */
+export function useAnonymizeUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) =>
+      api<TenantUser>(`/tenants/users/${id}/anonymize`, { method: 'POST' }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: TENANT_USERS_KEY })
+    },
+  })
+}

@@ -117,8 +117,21 @@ export interface TransactionWrite {
   paymentStatementId?: number
   /** Which installment of which purchase the row is — set only by the
    * installment writes. The row lands on its first bill plus `number − 1`
-   * cycles, pinned there, so no later date logic moves it. */
-  installment?: { groupId: string; number: number; count: number }
+   * cycles, pinned there, so no later date logic moves it. An imported
+   * installment already sits in the cycle its own day names, so it passes
+   * `billOffset: 0` instead. */
+  installment?: {
+    groupId: string
+    number: number
+    count: number
+    billOffset?: number
+  }
+  /** The bank's own id for the row (OFX `FITID`) — set only by a statement
+   * import. */
+  externalId?: string
+  /** The statement import that wrote the row — set only by a statement
+   * import. */
+  importBatchId?: string
 }
 
 /** A transfer writes two rows from one body. */
@@ -581,9 +594,7 @@ export class TransactionRepository {
     const [rows, [counted]] = await Promise.all([
       this.db
         .with(running)
-        .select(
-          this.joinedColumns(sql<string>`${running.runningBalance}`)
-        )
+        .select(this.joinedColumns(sql<string>`${running.runningBalance}`))
         .from(transactions)
         .innerJoin(running, eq(running.id, transactions.id))
         .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
@@ -842,7 +853,26 @@ export class TransactionRepository {
     tenantId: number,
     userId: number | null,
     write: TransactionWrite
-  ): Promise<TransactionRow> {
+  ): Promise<TransactionRow>
+  /**
+   * The same write without the joined re-read of the stored row, for a
+   * caller that inserts thousands of rows and does not answer them (the
+   * statement import): the re-read is the most expensive query of the path.
+   */
+  async insertInTx(
+    tx: DbOrTx,
+    tenantId: number,
+    userId: number | null,
+    write: TransactionWrite,
+    options: { readBack: false }
+  ): Promise<undefined>
+  async insertInTx(
+    tx: DbOrTx,
+    tenantId: number,
+    userId: number | null,
+    write: TransactionWrite,
+    options: { readBack: boolean } = { readBack: true }
+  ): Promise<TransactionRow | undefined> {
     const { installment, ...columns } = write
     const newBalance = await applyTransactionDelta(
       tx,
@@ -863,7 +893,9 @@ export class TransactionRepository {
         type: write.type,
         isTransferLeg: write.transferGroupId !== undefined,
       },
-      installment === undefined ? 0 : installment.number - 1
+      installment === undefined
+        ? 0
+        : (installment.billOffset ?? installment.number - 1)
     )
 
     const [row] = await tx
@@ -887,6 +919,10 @@ export class TransactionRepository {
       .returning()
 
     await this.recordHistory(tx, tenantId, row.id, userId, 'CREATE', null, row)
+
+    if (!options.readBack) {
+      return undefined
+    }
 
     return withWarning(
       (await this.findByIdInTx(tx, tenantId, row.id)) as TransactionRow,
@@ -1054,6 +1090,20 @@ export class TransactionRepository {
    */
   inLedgerTx<T>(run: (tx: DbOrTx) => Promise<T>): Promise<T> {
     return retryOnLockConflict(() => this.db.transaction(run))
+  }
+
+  /**
+   * Locks accounts `FOR UPDATE` in the ledger's global order, inside the
+   * caller's ledger transaction — for a writer outside this feature (the
+   * statement import) that takes the lock once and then calls `insertInTx`
+   * per row.
+   */
+  async lockAccountsInTx(
+    tx: DbOrTx,
+    tenantId: number,
+    accountIds: readonly number[]
+  ): Promise<void> {
+    await lockAccounts(tx, tenantId, accountIds)
   }
 
   /** Writes one row's review status and moves its account by the difference

@@ -4,6 +4,8 @@ import { accounts } from '@workspace/db'
 import type { TransactionStatus, TransactionType } from '@workspace/poco'
 import { addMoney, negateMoney } from '@workspace/poco'
 
+import { LedgerConflictError } from '../common/ledger/ledger-conflict.js'
+
 /** The delta a transaction applies to its account: income adds, expense
  * subtracts. A credit card's expense subtracts like any other — spending
  * reduces what is available the same way. */
@@ -60,18 +62,6 @@ export async function lockAccounts(
     .where(and(eq(accounts.tenantId, tenantId), inArray(accounts.id, ids)))
     .orderBy(asc(accounts.id))
     .for('update')
-}
-
-/** Raised when a ledger write kept losing to concurrent writes on the same
- * accounts after every retry. */
-export class LedgerConflictError extends Error {
-  constructor(options?: { cause?: unknown }) {
-    super(
-      'Another change to these accounts happened at the same time. Try again.',
-      options
-    )
-    this.name = 'LedgerConflictError'
-  }
 }
 
 /**

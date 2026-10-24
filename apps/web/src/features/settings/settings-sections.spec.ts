@@ -7,6 +7,7 @@ describe('settings sections', () => {
     expect(sectionsFor('owner')).toEqual([
       'general',
       'users',
+      'data',
       'preferences',
       'security',
     ])
@@ -16,6 +17,7 @@ describe('settings sections', () => {
   it('refuses the owner sections to a member', () => {
     expect(isSectionFor('user', 'general')).toBe(false)
     expect(isSectionFor('user', 'users')).toBe(false)
+    expect(isSectionFor('user', 'data')).toBe(false)
     expect(isSectionFor('user', 'preferences')).toBe(true)
     expect(isSectionFor('user', 'security')).toBe(true)
     expect(isSectionFor('owner', 'nope')).toBe(false)

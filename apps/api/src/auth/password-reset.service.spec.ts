@@ -27,6 +27,7 @@ const user = (overrides: Partial<User> = {}): User => ({
   role: 'user',
   refreshTokenHash: 'refresh-hash',
   isActive: true,
+  anonymizedAt: null,
   startPage: '/',
   createdAt: NOW,
   updatedAt: NOW,

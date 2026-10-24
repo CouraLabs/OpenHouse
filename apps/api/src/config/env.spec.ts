@@ -1,5 +1,6 @@
 import {
   getCorsOrigins,
+  getExportDir,
   getJwtSecret,
   getJwtTtls,
   getPositiveInt,
@@ -134,5 +135,21 @@ describe('the parsing helpers', () => {
 
     process.env.NODE_ENV = 'test'
     expect(isProduction()).toBe(false)
+  })
+})
+
+describe('getExportDir', () => {
+  afterEach(() => {
+    delete process.env.EXPORT_DIR
+  })
+
+  it('uses EXPORT_DIR, falling back to a folder under the temp directory', () => {
+    expect(getExportDir()).toMatch(/openhouse-exports$/)
+
+    process.env.EXPORT_DIR = '/var/tmp/exports'
+    expect(getExportDir()).toBe('/var/tmp/exports')
+    expect(() => validateEnv({ EXPORT_DIR: '/x', EXPORT_DIRS: '1' })).toThrow(
+      'EXPORT_DIRS is not read'
+    )
   })
 })

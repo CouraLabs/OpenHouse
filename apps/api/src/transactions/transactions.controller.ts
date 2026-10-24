@@ -11,10 +11,12 @@ import {
   Post,
   Put,
   Query,
+  StreamableFile,
   UseFilters,
 } from '@nestjs/common'
 import type {
   ChangeTransactionStatusBody,
+  ExportTransactionsArgs,
   CreateTransactionBody,
   DeleteTransactionQuery,
   MoveToStatementBody,
@@ -33,6 +35,7 @@ import {
   changeTransactionStatusSchema,
   createTransactionSchema,
   deleteTransactionQuerySchema,
+  exportTransactionsSchema,
   moveToStatementSchema,
   searchTransactionsSchema,
   transactionBreakdownSchema,
@@ -41,10 +44,12 @@ import {
 } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
+import { CsvExporter } from '../common/csv/csv-exporter.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
 
-import { LedgerConflictFilter } from './ledger-conflict.filter.js'
+import { LedgerConflictFilter } from '../common/ledger/ledger-conflict.js'
 import { TransactionService } from './transaction.service.js'
+import { TRANSACTION_CSV_COLUMNS } from './transaction-csv.js'
 import { toWire } from './transaction-wire.js'
 
 /**
@@ -57,7 +62,10 @@ import { toWire } from './transaction-wire.js'
 @Controller('transactions')
 @UseFilters(LedgerConflictFilter)
 export class TransactionsController {
-  constructor(private readonly transactions: TransactionService) {}
+  constructor(
+    private readonly transactions: TransactionService,
+    private readonly csv: CsvExporter
+  ) {}
 
   /** Creates a transaction for the tenant, moving the account's balance. */
   @Post()
@@ -84,6 +92,32 @@ export class TransactionsController {
     )
 
     return { total, items: rows.map(toWire) }
+  }
+
+  /** Streams the transactions the filter matches as a CSV, unpaged: the
+   * page's own search args, written in the locale of the body. */
+  @Post('export')
+  @HttpCode(HttpStatus.OK)
+  async exportCsv(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(exportTransactionsSchema))
+    args: ExportTransactionsArgs
+  ): Promise<StreamableFile> {
+    return this.csv.download({
+      session,
+      entity: 'transactions',
+      locale: args.locale,
+      columns: TRANSACTION_CSV_COLUMNS,
+      read: async (skip, limit) => {
+        const { rows } = await this.transactions.search(session.tenant.id, {
+          ...args,
+          skip,
+          limit,
+        })
+
+        return rows.map(toWire)
+      },
+    })
   }
 
   /** Totals the tenant's transactions over a filter, grouped by currency. */

@@ -106,6 +106,21 @@ export class TransactionLinkerRepository {
     return { rows, total: counted.value }
   }
 
+  /** Lists the tenant's ACTIVE linkers, oldest first — what the statement
+   * import matches a row's description against. */
+  async listActive(tenantId: number): Promise<TransactionLinker[]> {
+    return this.db
+      .select()
+      .from(transactionLinkers)
+      .where(
+        and(
+          eq(transactionLinkers.tenantId, tenantId),
+          eq(transactionLinkers.status, 'ACTIVE')
+        )
+      )
+      .orderBy(asc(transactionLinkers.id))
+  }
+
   /** Reads one linker of the tenant — deleted rows included. */
   async findById(
     tenantId: number,

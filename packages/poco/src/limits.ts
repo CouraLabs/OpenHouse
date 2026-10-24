@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { csvLocaleField } from './csv-export.js'
+
 import type { Currency } from './currencies.js'
 import {
   entityStatusSchema,
@@ -57,9 +59,13 @@ export const searchLimitsSchema = fetchArgsSchema.extend({
   filter: limitFilterSchema.prefault({}),
 })
 
+/** The body `POST limits/export` accepts: the search, plus the CSV locale. */
+export const exportLimitsSchema = searchLimitsSchema.extend(csvLocaleField)
+
 export type CreateLimitBody = z.infer<typeof createLimitSchema>
 export type UpdateLimitBody = z.infer<typeof updateLimitSchema>
 export type SearchLimitsArgs = z.infer<typeof searchLimitsSchema>
+export type ExportLimitsArgs = z.infer<typeof exportLimitsSchema>
 
 /**
  * One limit with what the tenant has already spent against it in the period

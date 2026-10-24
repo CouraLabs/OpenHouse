@@ -36,7 +36,7 @@ import {
   InstallmentService,
   type InstallmentGroupView,
 } from './installment.service.js'
-import { LedgerConflictFilter } from './ledger-conflict.filter.js'
+import { LedgerConflictFilter } from '../common/ledger/ledger-conflict.js'
 import { toWire } from './transaction-wire.js'
 
 /**

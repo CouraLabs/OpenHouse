@@ -90,6 +90,8 @@ const row = (overrides: Partial<TransactionRow> = {}): TransactionRow => ({
   balanceOnDt: '87.66',
   runningBalance: '87.66',
   isAdjustment: false,
+  externalId: null,
+  importBatchId: null,
   locked: false,
   linkedAccountId: 10,
   categoryId: 3,

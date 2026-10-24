@@ -62,6 +62,13 @@ export const tenants = pgTable('tenants', {
   name: text().notNull().unique(),
   /** When the tenant's access ends, or nothing while it is active. */
   expiresIn: timestamp('expires_in', { withTimezone: true }),
+  /**
+   * The calendar day, in the tenant's time zone, the tenant and everything
+   * it owns are hard-deleted — the owner scheduled it 30 days ahead and can
+   * cancel until then. Nothing while no deletion is scheduled. The one
+   * sanctioned exception to soft delete.
+   */
+  deletionDate: date('deletion_date'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -95,6 +102,12 @@ export const users = pgTable(
      */
     refreshTokenHash: text('refresh_token_hash'),
     isActive: boolean('is_active').notNull().default(true),
+    /**
+     * When an owner anonymized the user at their request (LGPD/GDPR
+     * erasure): the name, email, and password hash are gone, the rows they
+     * created stay for the household's books. Nothing for a normal user.
+     */
+    anonymizedAt: timestamp('anonymized_at', { withTimezone: true }),
     /**
      * The page the user opens on after signing in — a web route path. The
      * vocabulary lives in `@workspace/poco` (`startPages`); a value it no
@@ -723,6 +736,12 @@ export const transactions = pgTable(
     /** Whether the row is a reconciliation adjustment: it moves the balance
      * but is no income or expense, so the reports leave it out. */
     isAdjustment: boolean('is_adjustment').notNull().default(false),
+    /** The bank's own id for the row — the OFX `FITID` — or nothing for a
+     * row typed in or imported from a file that carries none. */
+    externalId: varchar('external_id', { length: 255 }),
+    /** The statement import that wrote the row, or nothing for a row not
+     * imported. Undoing the import soft-deletes the rows sharing it. */
+    importBatchId: uuid('import_batch_id'),
   },
   (table) => [
     // The running-balance window partitions by account and walks the days,
@@ -747,6 +766,16 @@ export const transactions = pgTable(
     uniqueIndex('transactions_recurring_materialized_key')
       .on(table.tenantId, table.recurringId, table.transactionDt)
       .where(sql`status = 'ACTIVE' and recurring_id is not null`),
+    // Importing the same bank file twice adds nothing: one ACTIVE row per
+    // bank id per account. The `ACTIVE` condition is what lets an undone
+    // import (a soft delete) be imported again.
+    uniqueIndex('transactions_external_id_key')
+      .on(table.tenantId, table.linkedAccountId, table.externalId)
+      .where(sql`status = 'ACTIVE' and external_id is not null`),
+    // Undoing an import reads its rows by batch.
+    index('transactions_import_batch_idx')
+      .on(table.tenantId, table.importBatchId)
+      .where(sql`import_batch_id is not null`),
     // A bill's totals sum its transactions.
     index('transactions_statement_id_idx')
       .on(table.tenantId, table.statementId)
@@ -779,6 +808,35 @@ export const transactions = pgTable(
 
 export type Transaction = typeof transactions.$inferSelect
 export type NewTransaction = typeof transactions.$inferInsert
+
+/**
+ * How an account's CSV statement files read, saved the first time one is
+ * imported and reused on the next: which column is which, the date format,
+ * the decimal separator, and the sign convention. One row per account; the
+ * JSON is the poco `importMappingSchema`, validated on every read and write.
+ */
+export const importMappings = pgTable(
+  'import_mappings',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    ...tenantEntityColumns(),
+    /** The account the mapping belongs to. */
+    accountId: integer('account_id')
+      .notNull()
+      .references(() => accounts.id),
+    /** The mapping, as the poco `ImportMapping` JSON. */
+    mapping: jsonb().$type<Record<string, unknown>>().notNull(),
+  },
+  (table) => [
+    uniqueIndex('import_mappings_account_key').on(
+      table.tenantId,
+      table.accountId
+    ),
+  ]
+)
+
+export type ImportMappingRow = typeof importMappings.$inferSelect
+export type NewImportMappingRow = typeof importMappings.$inferInsert
 
 /**
  * The actions a history row records. The wire spelling lives in
@@ -827,3 +885,54 @@ export const transactionHistory = pgTable(
 
 export type TransactionHistoryRow = typeof transactionHistory.$inferSelect
 export type NewTransactionHistoryRow = typeof transactionHistory.$inferInsert
+
+/**
+ * What the audit log records. Not a wire vocabulary: nothing renders the
+ * log, it is read back only by the full export.
+ */
+export const auditActions = [
+  'csv.export',
+  'tenant.export',
+  'member.export',
+  'member.anonymize',
+  'tenant.deletion_scheduled',
+  'tenant.deletion_canceled',
+  'tenant.deleted',
+] as const
+
+export type AuditAction = (typeof auditActions)[number]
+
+/**
+ * An append-only record of a sensitive action: who exported what, who
+ * anonymized whom, when a deletion was scheduled, canceled, or carried out.
+ * Rows hold ids and names of things, never personal data, so the log can
+ * outlive what it describes.
+ *
+ * `tenantId` is deliberately not a foreign key: hard-deleting a tenant
+ * (the sanctioned exception to soft delete) leaves its `tenant.deleted`
+ * line behind, so the deletion itself stays on record. For the same reason
+ * `actorId` is a plain id — nothing here breaks when a user goes away.
+ */
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    tenantId: integer('tenant_id').notNull(),
+    /** The user who acted, or nothing for the system (the deletion cron). */
+    actorId: integer('actor_id'),
+    action: text().$type<AuditAction>().notNull(),
+    /** What the action was about: the entity exported, the member id, the
+     * deletion date. Ids and labels only. */
+    details: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    createdDt: timestamp('created_dt', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // The full export reads a tenant's log in order.
+    index('audit_log_tenant_id_idx').on(table.tenantId, table.id),
+  ]
+)
+
+export type AuditLogRow = typeof auditLog.$inferSelect
+export type NewAuditLogRow = typeof auditLog.$inferInsert

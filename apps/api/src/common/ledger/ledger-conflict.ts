@@ -6,7 +6,17 @@ import {
 } from '@nestjs/common'
 import { BaseExceptionFilter } from '@nestjs/core'
 
-import { LedgerConflictError } from './transaction-ledger.js'
+/** Raised when a ledger write kept losing to concurrent writes on the same
+ * accounts after every retry. */
+export class LedgerConflictError extends Error {
+  constructor(options?: { cause?: unknown }) {
+    super(
+      'Another change to these accounts happened at the same time. Try again.',
+      options
+    )
+    this.name = 'LedgerConflictError'
+  }
+}
 
 /**
  * Answers a ledger write that kept losing to concurrent writes on the same

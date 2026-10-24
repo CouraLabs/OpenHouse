@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { csvLocaleField } from './csv-export.js'
+
 import {
   entityStatusSchema,
   fetchArgsSchema,
@@ -53,9 +55,14 @@ export const searchReceiversSchema = fetchArgsSchema.extend({
   filter: receiverFilterSchema.prefault({}),
 })
 
+/** The body `POST receivers/export` accepts: the search, plus the CSV locale. */
+export const exportReceiversSchema =
+  searchReceiversSchema.extend(csvLocaleField)
+
 export type CreateReceiverBody = z.infer<typeof createReceiverSchema>
 export type UpdateReceiverBody = z.infer<typeof updateReceiverSchema>
 export type SearchReceiversArgs = z.infer<typeof searchReceiversSchema>
+export type ExportReceiversArgs = z.infer<typeof exportReceiversSchema>
 
 /** The lightweight shape pickers read — what `GET /receivers` returns. */
 export type ReceiverRef = {

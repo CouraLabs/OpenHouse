@@ -6,7 +6,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { DatabaseModule } from '@workspace/db'
 import { AuthModule } from './auth/auth.module.js'
 import { AuthGuard } from './common/session/auth.guard.js'
+import { AuditModule } from './audit/audit.module.js'
 import { ClockModule } from './common/clock/clock.module.js'
+import { CsvModule } from './common/csv/csv.module.js'
 import { AppController } from './app.controller.js'
 import { AppService } from './app.service.js'
 import { getPositiveInt, isProduction, validateEnv } from './config/env.js'
@@ -21,7 +23,10 @@ import { PreferencesModule } from './preferences/preferences.module.js'
 import { ReceiversModule } from './receivers/receivers.module.js'
 import { RecurringTransactionsModule } from './recurring-transactions/recurring-transactions.module.js'
 import { CreditCardStatementsModule } from './credit-card-statements/credit-card-statements.module.js'
+import { DataExportsModule } from './data-exports/data-exports.module.js'
+import { TenantDeletionModule } from './tenant-deletion/tenant-deletion.module.js'
 import { TransactionsModule } from './transactions/transactions.module.js'
+import { StatementImportsModule } from './statement-imports/statement-imports.module.js'
 import { TransactionLinkersModule } from './transaction-linkers/transaction-linkers.module.js'
 
 /**
@@ -63,6 +68,8 @@ const THROTTLE_TTL_MS = 60_000
     }),
     DatabaseModule,
     ClockModule,
+    AuditModule,
+    CsvModule,
     AuthModule,
     TenantsModule,
     SettingsModule,
@@ -76,6 +83,9 @@ const THROTTLE_TTL_MS = 60_000
     TransactionLinkersModule,
     CreditCardStatementsModule,
     TransactionsModule,
+    StatementImportsModule,
+    DataExportsModule,
+    TenantDeletionModule,
     RecurringTransactionsModule,
   ],
   controllers: [AppController],

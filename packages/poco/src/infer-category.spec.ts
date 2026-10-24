@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { CategoryRef } from '@workspace/poco'
 
+import type { CategoryRef } from './categories.js'
 import { inferCategory } from './infer-category.js'
 
 /** A category the matcher can score against, from a name alone. */

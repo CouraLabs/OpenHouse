@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  StreamableFile,
 } from '@nestjs/common'
 import type {
   CreateRecurringTransactionBody,
@@ -26,9 +27,13 @@ import {
   searchRecurringTransactionsSchema,
   updateRecurringTransactionSchema,
 } from '@workspace/poco'
+import type { ExportRecurringTransactionsArgs } from '@workspace/poco'
+import { exportRecurringTransactionsSchema } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
+import { CsvExporter } from '../common/csv/csv-exporter.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
+import { RECURRING_CSV_COLUMNS } from './recurring-transaction-csv.js'
 
 import { RecurringTransactionService } from './recurring-transaction.service.js'
 
@@ -40,7 +45,10 @@ import { RecurringTransactionService } from './recurring-transaction.service.js'
  */
 @Controller('recurring-transactions')
 export class RecurringTransactionsController {
-  constructor(private readonly recurring: RecurringTransactionService) {}
+  constructor(
+    private readonly recurring: RecurringTransactionService,
+    private readonly csv: CsvExporter
+  ) {}
 
   /** Creates a recurring rule for the tenant. */
   @Post()
@@ -64,6 +72,32 @@ export class RecurringTransactionsController {
     const { rows, total } = await this.recurring.search(session.tenant.id, args)
 
     return { total, items: rows.map(toWire) }
+  }
+
+  /** Streams the tenant's recurring transactions as a CSV: every row the
+   * search matches, unpaged, written in the locale of the body. */
+  @Post('export')
+  @HttpCode(200)
+  async exportCsv(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(exportRecurringTransactionsSchema))
+    args: ExportRecurringTransactionsArgs
+  ): Promise<StreamableFile> {
+    return this.csv.download({
+      session,
+      entity: 'recurring-transactions',
+      locale: args.locale,
+      columns: RECURRING_CSV_COLUMNS,
+      read: async (skip, limit) => {
+        const { rows } = await this.recurring.search(session.tenant.id, {
+          ...args,
+          skip,
+          limit,
+        })
+
+        return rows.map(toWire)
+      },
+    })
   }
 
   /** Reads one rule, deleted rows included. */

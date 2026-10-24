@@ -3,7 +3,14 @@ import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
 import { Link } from '@tanstack/react-router'
-import { ChartLine, Pencil, ReceiptText, Scale, Trash2 } from 'lucide-react'
+import {
+  ChartLine,
+  FileUp,
+  Pencil,
+  ReceiptText,
+  Scale,
+  Trash2,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
@@ -164,6 +171,21 @@ function AccountActionsCell({
           <ReceiptText />
         </Button>
       ) : null}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t('accounts.import')}
+        title={t('accounts.import')}
+        nativeButton={false}
+        render={
+          <Link
+            to="/accounts/$accountId/import"
+            params={{ accountId: String(account.id) }}
+          />
+        }
+      >
+        <FileUp />
+      </Button>
       <Button
         variant="ghost"
         size="icon-sm"

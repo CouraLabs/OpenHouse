@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { csvLocaleField } from './csv-export.js'
+
 import type { StatementWarning } from './credit-card-statements.js'
 import type { Currency } from './currencies.js'
 import { dateOnlySchema } from './goals.js'
@@ -187,7 +189,9 @@ export const deleteTransactionQuerySchema = z.object({
     .transform((value) => value === 'true'),
 })
 
-export type DeleteTransactionQuery = z.infer<typeof deleteTransactionQuerySchema>
+export type DeleteTransactionQuery = z.infer<
+  typeof deleteTransactionQuerySchema
+>
 
 /**
  * How month views date a card charge: by the day it was made (accrual,
@@ -227,6 +231,10 @@ export const transactionFilterSchema = transactionRangeSchema.extend({
 export const searchTransactionsSchema = fetchArgsSchema.extend({
   filter: transactionFilterSchema.prefault({}),
 })
+
+/** The body `POST transactions/export` accepts: the search, plus the CSV locale. */
+export const exportTransactionsSchema =
+  searchTransactionsSchema.extend(csvLocaleField)
 
 /**
  * The category a bill payment lands in when the transfer names none:
@@ -302,6 +310,7 @@ export type ChangeTransactionStatusBody = z.infer<
   typeof changeTransactionStatusSchema
 >
 export type SearchTransactionsArgs = z.infer<typeof searchTransactionsSchema>
+export type ExportTransactionsArgs = z.infer<typeof exportTransactionsSchema>
 export type TransactionFilter = z.infer<typeof transactionFilterSchema>
 export type TransferBody = z.infer<typeof transferSchema>
 

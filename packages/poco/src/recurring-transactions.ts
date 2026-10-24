@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { csvLocaleField } from './csv-export.js'
+
 import type { Currency } from './currencies.js'
 import { amountSchema } from './limits.js'
 import {
@@ -150,6 +152,10 @@ export const searchRecurringTransactionsSchema = fetchArgsSchema.extend({
   filter: recurringTransactionFilterSchema.prefault({}),
 })
 
+/** The body `POST recurring-transactions/export` accepts: the search, plus the CSV locale. */
+export const exportRecurringTransactionsSchema =
+  searchRecurringTransactionsSchema.extend(csvLocaleField)
+
 export type CreateRecurringTransactionBody = z.infer<
   typeof createRecurringTransactionSchema
 >
@@ -158,6 +164,9 @@ export type UpdateRecurringTransactionBody = z.infer<
 >
 export type SearchRecurringTransactionsArgs = z.infer<
   typeof searchRecurringTransactionsSchema
+>
+export type ExportRecurringTransactionsArgs = z.infer<
+  typeof exportRecurringTransactionsSchema
 >
 
 /**

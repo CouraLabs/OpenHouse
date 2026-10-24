@@ -13,6 +13,9 @@
  * `validateEnv` normalizes every value they read back into `process.env`.
  */
 
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 /** Environments the API runs in. Anything else is a typo in a deployment. */
 const NODE_ENVIRONMENTS = ['development', 'test', 'production'] as const
 
@@ -24,7 +27,14 @@ type NodeEnvironment = (typeof NODE_ENVIRONMENTS)[number]
  * instead of being ignored. Variables a host injects (`PATH`, `HOSTNAME`, …)
  * do not use these prefixes and pass through untouched.
  */
-const RESERVED_PREFIXES = ['APP_', 'CORS_', 'DB_', 'JWT_', 'THROTTLE_']
+const RESERVED_PREFIXES = [
+  'APP_',
+  'CORS_',
+  'DB_',
+  'EXPORT_',
+  'JWT_',
+  'THROTTLE_',
+]
 
 /** What a declared variable accepts. */
 type VariableSpec =
@@ -51,6 +61,10 @@ const VARIABLES: Record<string, VariableSpec> = {
   APP_TRUST_PROXY_HOPS: { kind: 'positiveInteger' },
   THROTTLE_TTL_MS: { kind: 'positiveInteger' },
   THROTTLE_LIMIT: { kind: 'positiveInteger' },
+  // Where the full-export ZIPs wait for their download. Unset, a folder under
+  // the OS temp directory. One process owns it: a second replica would need
+  // shared storage.
+  EXPORT_DIR: { kind: 'text' },
   DB_POOL_MAX: { kind: 'positiveInteger' },
   DB_CONNECTION_TIMEOUT_MS: { kind: 'positiveInteger' },
   DB_IDLE_TIMEOUT_MS: { kind: 'positiveInteger' },
@@ -151,6 +165,11 @@ export function getJwtTtls() {
       2_592_000
     ),
   }
+}
+
+/** Returns the folder the full-export ZIPs are written to. */
+export function getExportDir(): string {
+  return text(process.env.EXPORT_DIR) ?? join(tmpdir(), 'openhouse-exports')
 }
 
 /** Returns a value as a string, treating an empty one as unset. */

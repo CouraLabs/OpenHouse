@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  StreamableFile,
 } from '@nestjs/common'
 import type {
   Category,
@@ -24,9 +25,13 @@ import {
   searchCategoriesSchema,
   updateCategorySchema,
 } from '@workspace/poco'
+import type { ExportCategoriesArgs } from '@workspace/poco'
+import { exportCategoriesSchema } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
+import { CsvExporter } from '../common/csv/csv-exporter.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
+import { CATEGORY_CSV_COLUMNS } from './category-csv.js'
 
 import { CategoryService } from './category.service.js'
 
@@ -38,7 +43,10 @@ import { CategoryService } from './category.service.js'
  */
 @Controller('categories')
 export class CategoriesController {
-  constructor(private readonly categories: CategoryService) {}
+  constructor(
+    private readonly categories: CategoryService,
+    private readonly csv: CsvExporter
+  ) {}
 
   /** Creates a category for the tenant. */
   @Post()
@@ -68,6 +76,32 @@ export class CategoriesController {
     )
 
     return { total, items: rows.map(toWire) }
+  }
+
+  /** Streams the tenant's categories as a CSV: every row the
+   * search matches, unpaged, written in the locale of the body. */
+  @Post('export')
+  @HttpCode(200)
+  async exportCsv(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(exportCategoriesSchema))
+    args: ExportCategoriesArgs
+  ): Promise<StreamableFile> {
+    return this.csv.download({
+      session,
+      entity: 'categories',
+      locale: args.locale,
+      columns: CATEGORY_CSV_COLUMNS,
+      read: async (skip, limit) => {
+        const { rows } = await this.categories.search(session.tenant.id, {
+          ...args,
+          skip,
+          limit,
+        })
+
+        return rows.map(toWire)
+      },
+    })
   }
 
   /** Lists the tenant's ACTIVE categories by name, for pickers. */

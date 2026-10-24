@@ -10,6 +10,7 @@ import { UserPlus } from 'lucide-react'
 import { useSession } from '@/lib/auth.js'
 import { useTenantSettings } from '@/lib/settings.js'
 import { AddUserDialog } from './add-user-dialog.js'
+import { MemberExportDialog } from './member-export-dialog.js'
 import { PendingInvites } from './pending-invites.js'
 import { ResetCodeDialog } from './reset-code-dialog.js'
 import {
@@ -17,7 +18,11 @@ import {
   useInviteCodes,
   useRevokeInviteCode,
 } from './use-invite-codes.js'
-import { useSetUserActive, useTenantUsers } from './use-tenant-users.js'
+import {
+  useAnonymizeUser,
+  useSetUserActive,
+  useTenantUsers,
+} from './use-tenant-users.js'
 import { buildUserColumns } from './users-columns.js'
 
 /** The table never sorts; the API answers oldest first. */
@@ -36,6 +41,7 @@ export function UsersSection() {
   const users = useTenantUsers()
   const invites = useInviteCodes()
   const setActive = useSetUserActive()
+  const anonymize = useAnonymizeUser()
   const revoke = useRevokeInviteCode()
 
   const [pagination, setPagination] = useState<PaginationState>({
@@ -45,6 +51,8 @@ export function UsersSection() {
   const [adding, setAdding] = useState(false)
   const [removing, setRemoving] = useState<TenantUser | null>(null)
   const [resetting, setResetting] = useState<TenantUser | null>(null)
+  const [exporting, setExporting] = useState<TenantUser | null>(null)
+  const [anonymizing, setAnonymizing] = useState<TenantUser | null>(null)
 
   const columns = useMemo(
     () =>
@@ -60,6 +68,11 @@ export function UsersSection() {
           onReactivate: (user) =>
             setActive.mutate({ id: user.id, active: true }),
           onResetPassword: setResetting,
+          onExport: setExporting,
+          onAnonymize: (user) => {
+            anonymize.reset()
+            setAnonymizing(user)
+          },
         }
       ),
     [
@@ -69,6 +82,7 @@ export function UsersSection() {
       session.data?.user.id,
       setActive.reset,
       setActive.mutate,
+      anonymize.reset,
     ]
   )
 
@@ -89,7 +103,7 @@ export function UsersSection() {
     timeZone: timezone,
   })
 
-  const actionError = [setActive, revoke].find(
+  const actionError = [setActive, revoke, anonymize].find(
     (mutation) => mutation.isError
   )?.error
 
@@ -144,6 +158,30 @@ export function UsersSection() {
       />
       <AddUserDialog open={adding} onClose={() => setAdding(false)} />
       <ResetCodeDialog user={resetting} onClose={() => setResetting(null)} />
+      <MemberExportDialog user={exporting} onClose={() => setExporting(null)} />
+      <ConfirmDialog
+        open={anonymizing !== null}
+        destructive
+        title={t('settings.users.anonymize-title')}
+        description={t('settings.users.anonymize-description', {
+          name: anonymizing?.name ?? '',
+        })}
+        confirmLabel={t('settings.users.anonymize-confirm')}
+        pendingLabel={t('settings.users.anonymizing')}
+        cancelLabel={t('settings.cancel')}
+        isPending={anonymize.isPending}
+        onCancel={() => {
+          setAnonymizing(null)
+          anonymize.reset()
+        }}
+        onConfirm={() => {
+          if (anonymizing !== null) {
+            anonymize.mutate(anonymizing.id, {
+              onSuccess: () => setAnonymizing(null),
+            })
+          }
+        }}
+      />
       <ConfirmDialog
         open={removing !== null}
         destructive

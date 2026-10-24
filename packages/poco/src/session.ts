@@ -25,6 +25,9 @@ export interface SessionTenant {
   id: number
   name: string
   expiresIn: string | null
+  /** The `YYYY-MM-DD` day (the tenant's calendar) the tenant and all its
+   * data are hard-deleted, or nothing while no deletion is scheduled. */
+  deletionDate: string | null
   createdAt: string
   updatedAt: string
 }

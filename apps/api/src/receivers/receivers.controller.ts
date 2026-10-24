@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  StreamableFile,
 } from '@nestjs/common'
 import type {
   CreateReceiverBody,
@@ -25,9 +26,13 @@ import {
   searchReceiversSchema,
   updateReceiverSchema,
 } from '@workspace/poco'
+import type { ExportReceiversArgs } from '@workspace/poco'
+import { exportReceiversSchema } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { CurrentSession } from '../common/session/session.js'
+import { CsvExporter } from '../common/csv/csv-exporter.js'
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js'
+import { RECEIVER_CSV_COLUMNS } from './receiver-csv.js'
 
 import { ReceiverService } from './receiver.service.js'
 
@@ -38,7 +43,10 @@ import { ReceiverService } from './receiver.service.js'
  */
 @Controller('receivers')
 export class ReceiversController {
-  constructor(private readonly receivers: ReceiverService) {}
+  constructor(
+    private readonly receivers: ReceiverService,
+    private readonly csv: CsvExporter
+  ) {}
 
   /** Creates a receiver for the tenant. */
   @Post()
@@ -61,6 +69,32 @@ export class ReceiversController {
     const { rows, total } = await this.receivers.search(session.tenant.id, args)
 
     return { total, items: rows.map(toWire) }
+  }
+
+  /** Streams the tenant's receivers as a CSV: every row the
+   * search matches, unpaged, written in the locale of the body. */
+  @Post('export')
+  @HttpCode(200)
+  async exportCsv(
+    @CurrentSession() session: Session,
+    @Body(new ZodValidationPipe(exportReceiversSchema))
+    args: ExportReceiversArgs
+  ): Promise<StreamableFile> {
+    return this.csv.download({
+      session,
+      entity: 'receivers',
+      locale: args.locale,
+      columns: RECEIVER_CSV_COLUMNS,
+      read: async (skip, limit) => {
+        const { rows } = await this.receivers.search(session.tenant.id, {
+          ...args,
+          skip,
+          limit,
+        })
+
+        return rows.map(toWire)
+      },
+    })
   }
 
   /** Lists the tenant's ACTIVE receivers by name, for pickers. */

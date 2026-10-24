@@ -13,6 +13,7 @@ import type {
 } from '@workspace/poco'
 import {
   createTransactionSchema,
+  inferCategory,
   transactionStatuses,
   transactionTypes,
 } from '@workspace/poco'
@@ -29,7 +30,6 @@ import { TextField } from '@workspace/ui/components/text-field'
 
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { BilledOnLine } from './billed-on-line.js'
-import { inferCategory } from './infer-category.js'
 import { InstallmentFields } from './installment-fields.js'
 import { PurchasePreview } from './purchase-preview.js'
 import { StringPick } from './string-pick.js'

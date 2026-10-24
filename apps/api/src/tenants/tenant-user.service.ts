@@ -4,6 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 
+import { randomUUID } from 'node:crypto'
+import { ANONYMIZED_USER_NAME } from '@workspace/poco'
+
+import { AuditRecorder } from '../common/audit/audit-recorder.js'
+import { Clock } from '../common/clock/clock.js'
 import {
   TenantUserRepository,
   type TenantUserRow,
@@ -12,11 +17,17 @@ import {
 /**
  * The owner's user management: listing the tenant's users and removing or
  * restoring them. Removal is a deactivation — nothing a user created is
- * deleted, and their name stays on the history they left.
+ * deleted, and their name stays on the history they left. A removed member
+ * who asks for erasure is anonymized: their identity goes, their rows stay
+ * for the household's books.
  */
 @Injectable()
 export class TenantUserService {
-  constructor(private readonly users: TenantUserRepository) {}
+  constructor(
+    private readonly users: TenantUserRepository,
+    private readonly audit: AuditRecorder,
+    private readonly clock: Clock
+  ) {}
 
   list(tenantId: number): Promise<TenantUserRow[]> {
     return this.users.list(tenantId)
@@ -59,11 +70,64 @@ export class TenantUserService {
 
   /** Restores a removed user; they sign in again to get a session. */
   async reactivate(tenantId: number, id: number): Promise<TenantUserRow> {
+    const target = await this.users.findById(tenantId, id)
+    if (target?.anonymizedAt != null) {
+      throw new ConflictException('An anonymized member cannot be restored.')
+    }
+
     const updated = await this.users.setActive(tenantId, id, true)
     if (updated === undefined) {
       throw new NotFoundException('User not found.')
     }
 
     return updated
+  }
+
+  /**
+   * Anonymizes a removed member at their request (LGPD/GDPR erasure): the
+   * name becomes "Former member", the email a random placeholder, the
+   * password hash is cleared. The rows they created stay. Only a removed
+   * member can be anonymized — an active one is still using the account —
+   * and anonymizing twice changes nothing.
+   */
+  async anonymize(
+    tenantId: number,
+    actingUserId: number,
+    id: number
+  ): Promise<TenantUserRow> {
+    return this.users.transaction(async (tx) => {
+      const target = await this.users.findById(tenantId, id, tx)
+      if (target === undefined) {
+        throw new NotFoundException('User not found.')
+      }
+      if (target.anonymizedAt !== null) {
+        return target
+      }
+      if (target.isActive) {
+        throw new ConflictException('Remove the member before anonymizing.')
+      }
+
+      const updated = await this.users.anonymize(
+        tenantId,
+        id,
+        {
+          name: ANONYMIZED_USER_NAME,
+          email: `former-member-${randomUUID()}@anonymized.invalid`,
+        },
+        this.clock.now(),
+        tx
+      )
+      await this.audit.record(
+        {
+          tenantId,
+          actorId: actingUserId,
+          action: 'member.anonymize',
+          details: { userId: id },
+        },
+        tx
+      )
+
+      return updated ?? target
+    })
   }
 }

@@ -49,13 +49,16 @@ apps/
         clock/                  # Clock (injectable "now"; specs pass a fixed one)
                                 #   + global ClockModule — never `new Date()` in a
                                 #   service whose logic depends on the day
+        ledger/                 # ledger-conflict.ts: LedgerConflictError + the filter
+                                #   answering it 409 (shared by every ledger writer)
         card-cycle/             # card-cycle-sync.ts: the abstract CardCycleSync port
                                 #   accounts/ calls when a card's close/due days
                                 #   change and credit-card-statements/ implements
       <feature>/                # a domain feature (auth/, tenants/, settings/, preferences/, accounts/,
                                 #   categories/, limits/, goals/, receivers/, transactions/,
                                 #   recurring-transactions/, transaction-linkers/,
-                                #   credit-card-statements/):
+                                #   credit-card-statements/, statement-imports/, data-exports/,
+                                #   tenant-deletion/, audit/):
         <feature>.module.ts     #   Nest module — wires the feature's providers; exports
                                 #   a repository when another feature may need its rows
         <feature>.controller.ts #   routes: HTTP shape, status codes, DTO mapping (toWire)
@@ -222,6 +225,15 @@ packages/
    (`previousBalance`, `amountDue`, `carriedTo`) is derived on read too —
    no cache. `minimumDue`/`bankTotal` are typed in from the bank's bill and
    `reconciledAt`, like `closedAt`, is an audit stamp.
+6g. **Tenant deletion is the one hard delete.** An owner schedules it by
+   typing the tenant name; 30 days later (the tenant's own calendar day) an
+   hourly job removes the tenant and everything it owns in one transaction,
+   children first, `import_mappings` and the append-only `transaction_history`
+   included. Nothing else ever removes rows. `audit_log` is append-only, has
+   no foreign key to `tenants`, and keeps the `tenant.deleted` line. Full
+   exports (`data-exports/`) and CSV exports are owner-facing and audited;
+   the ZIP lives in `EXPORT_DIR` (read in `config/`) for 24 hours or one
+   download — single-process storage, see `docs/data-export.md`.
 6e. **Password recovery never needs email.** A one-time reset code — issued
    by an owner for a member, generated in advance as an owner's recovery
    codes, or printed by the server's `reset-code` command — sets a new
