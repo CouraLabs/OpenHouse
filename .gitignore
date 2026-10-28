@@ -38,3 +38,7 @@ coverage
 .claude/settings.local.json
 .verify-scratch/
 plans/
+
+# local agent tooling (skills, harness agents)
+.agents/
+.claude/
