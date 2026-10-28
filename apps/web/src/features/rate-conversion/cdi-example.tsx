@@ -14,6 +14,7 @@ import { NumberField } from '@workspace/ui/components/number-field'
 import { formatPercent } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The CDI example the sheet walked: a CDI-linked investment pays a share
@@ -22,7 +23,7 @@ import { useMainCurrency } from '@/lib/settings.js'
  * savings projection runs on.
  */
 export function CdiExample() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const [diRate, setDiRate] = useState('13')
   const [share, setShare] = useState('90')
@@ -70,7 +71,7 @@ export function CdiExample() {
             onValueChange={setShare}
           />
           <MoneyField
-            locale={i18n.language}
+            locale={formattingLocale()}
             className="h-8"
             label={t('rate-conversion.cdi.deposit')}
             labelFor="cdi-deposit"
@@ -88,15 +89,15 @@ export function CdiExample() {
         <div className="grid gap-3 md:grid-cols-3">
           <ResultTile
             label={t('rate-conversion.cdi.daily-rate')}
-            value={formatPercent(dailyRate, i18n.language)}
+            value={formatPercent(dailyRate, formattingLocale())}
           />
           <ResultTile
             label={t('rate-conversion.cdi.daily-net')}
-            value={formatPercent(dailyNet, i18n.language)}
+            value={formatPercent(dailyNet, formattingLocale())}
           />
           <ResultTile
             label={t('rate-conversion.cdi.effective-annual')}
-            value={formatPercent(effectiveAnnual, i18n.language)}
+            value={formatPercent(effectiveAnnual, formattingLocale())}
           />
         </div>
         <div className="rounded-md border p-3">
@@ -104,7 +105,7 @@ export function CdiExample() {
             {t('rate-conversion.cdi.future-value', { count })}
           </span>
           <p className="text-2xl font-semibold">
-            {formatMoney(String(futureValue), i18n.language, mainCurrency)}
+            {formatMoney(String(futureValue), formattingLocale(), mainCurrency)}
           </p>
         </div>
       </CardContent>

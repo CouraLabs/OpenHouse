@@ -43,13 +43,13 @@ export function SummaryRow({
             icon={<TrendingUp aria-hidden className="size-4" />}
             label={labels.incomes}
             amount={formatMoney(group.incomes, locale, group.currency)}
-            className="text-emerald-600 dark:text-emerald-400"
+            className="text-primary"
           />
           <SummaryLine
             icon={<TrendingDown aria-hidden className="size-4" />}
             label={labels.expenses}
             amount={formatMoney(group.expenses, locale, group.currency)}
-            className="text-red-600 dark:text-red-400"
+            className="text-destructive"
           />
           <SummaryLine
             icon={<Scale aria-hidden className="size-4" />}
@@ -58,8 +58,8 @@ export function SummaryRow({
             className={cn(
               'border-t pt-2',
               netNegative
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-emerald-600 dark:text-emerald-400'
+                ? 'text-destructive'
+                : 'text-primary'
             )}
           />
         </CardContent>

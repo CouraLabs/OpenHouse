@@ -3,6 +3,7 @@ import { FaqSection } from '@/sections/faq/faq-section.js'
 import { FeaturesSection } from '@/sections/features/features-section.js'
 import { SiteFooter } from '@/sections/footer/site-footer.js'
 import { HeroSection } from '@/sections/hero/hero-section.js'
+import { HouseIndexSection } from '@/sections/house/house-index-section.js'
 import { SiteNav } from '@/sections/nav/site-nav.js'
 import { OpenSourceSection } from '@/sections/open-source/open-source-section.js'
 import { PlannersSection } from '@/sections/planners/planners-section.js'
@@ -20,6 +21,7 @@ export function App() {
       <SiteNav />
       <main>
         <HeroSection />
+        <HouseIndexSection />
         <FeaturesSection />
         <PlannersSection />
         <PricingSection />

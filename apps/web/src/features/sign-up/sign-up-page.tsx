@@ -1,4 +1,6 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+
 import { AuthLayout } from '@/components/layout/auth-layout.js'
 import { SignUpForm } from './sign-up-form.js'
 
@@ -7,6 +9,7 @@ import { SignUpForm } from './sign-up-form.js'
  * centered, and the link back to sign-in beside it.
  */
 export function SignUpPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { code } = useSearch({ from: '/sign-up' })
 
@@ -18,12 +21,12 @@ export function SignUpPage() {
           onSuccess={() => void navigate({ to: '/' })}
         />
         <p className="text-sm text-muted-foreground">
-          Already have an account?{' '}
+          {t('sign-up.have-account')}{' '}
           <Link
             to="/sign-in"
             className="text-foreground underline underline-offset-4"
           >
-            Sign in
+            {t('sign-up.sign-in-link')}
           </Link>
         </p>
       </div>

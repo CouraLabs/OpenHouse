@@ -11,6 +11,7 @@ import {
 import { formatMoney } from '@/lib/format-money.js'
 import { InstallmentGroupBody } from './installment-group-body.js'
 import { useInstallmentGroup } from './use-transactions.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The menu of an installment purchase, opened from any of its rows: the
@@ -25,7 +26,7 @@ export function InstallmentGroupDialog({
   transaction: Transaction | null
   onClose: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const group = useInstallmentGroup(transaction?.installmentGroupId ?? null)
 
   return (
@@ -47,7 +48,7 @@ export function InstallmentGroupDialog({
                   count: group.data.count,
                   total: formatMoney(
                     group.data.total,
-                    i18n.language,
+                    formattingLocale(),
                     group.data.currency
                   ),
                 })}

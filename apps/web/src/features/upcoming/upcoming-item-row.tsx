@@ -12,6 +12,7 @@ import { Badge } from '@workspace/ui/components/badge'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The icon each kind of line carries. */
 const ICONS: Record<UpcomingItem['kind'], LucideIcon> = {
@@ -27,11 +28,11 @@ const ICONS: Record<UpcomingItem['kind'], LucideIcon> = {
  * estimate, a bill past due as overdue.
  */
 export function UpcomingItemRow({ item }: { item: UpcomingItem }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const Icon = ICONS[item.kind]
   const money = (amount: string) =>
-    formatMoney(amount, i18n.language, item.currency)
-  const day = (value: string) => formatDayLabel(value, i18n.language)
+    formatMoney(amount, formattingLocale(), item.currency)
+  const day = (value: string) => formatDayLabel(value, formattingLocale())
 
   const { label, amount, badge, tone } = describe(item, t, money, day)
 
@@ -62,7 +63,7 @@ export function UpcomingItemRow({ item }: { item: UpcomingItem }) {
         <Badge variant="destructive">{t('upcoming.overdue')}</Badge>
       ) : null}
       <span
-        className={`text-sm font-medium tabular-nums ${tone === 'in' ? 'text-emerald-600 dark:text-emerald-400' : ''}`}
+        className={`text-sm font-medium tabular-nums ${tone === 'in' ? 'text-primary' : ''}`}
       >
         {amount}
       </span>

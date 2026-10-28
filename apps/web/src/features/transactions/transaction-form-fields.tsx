@@ -43,6 +43,7 @@ import {
   useActiveCategories,
   useActiveReceivers,
 } from './use-transactions.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The fields the transaction form holds. The rules come straight from the
@@ -87,7 +88,7 @@ export function TransactionFormFields({
   error,
   isSaving = false,
 }: TransactionFormFieldsProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const session = useSession()
   const mainCurrency = useMainCurrency()
   const {
@@ -270,7 +271,7 @@ export function TransactionFormFields({
         ) : null}
       </Field>
       <MoneyField
-        locale={i18n.language}
+        locale={formattingLocale()}
         label={t('transactions.amount')}
         labelFor="transaction-amount"
         placeholder={t('transactions.amount-placeholder')}
@@ -291,7 +292,7 @@ export function TransactionFormFields({
         <DatePicker
           id="transaction-dt"
           disabled={isInstallment}
-          locale={i18n.language}
+          locale={formattingLocale()}
           value={parseDateOnly(transactionDt)}
           onChange={(date) =>
             setValue('transactionDt', formatDateOnly(date), {

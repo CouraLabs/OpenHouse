@@ -14,6 +14,7 @@ import { NumberField } from '@workspace/ui/components/number-field'
 import { pmt, realRate } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * Living off the accumulation: the constant monthly withdrawal an
@@ -22,7 +23,7 @@ import { useMainCurrency } from '@/lib/settings.js'
  * the first month's net interest is quoted beside the withdrawal.
  */
 export function WithdrawalCard() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const [balance, setBalance] = useState('2000000.00')
   const [rate, setRate] = useState('0.6')
@@ -56,7 +57,7 @@ export function WithdrawalCard() {
       <CardContent className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <MoneyField
-            locale={i18n.language}
+            locale={formattingLocale()}
             className="h-8"
             label={t('financial-independence.withdrawal.balance')}
             labelFor="withdrawal-balance"
@@ -105,7 +106,7 @@ export function WithdrawalCard() {
               {t('financial-independence.withdrawal.result')}
             </span>
             <p className="text-2xl font-semibold">
-              {formatMoney(String(withdrawal), i18n.language, mainCurrency)}
+              {formatMoney(String(withdrawal), formattingLocale(), mainCurrency)}
             </p>
           </div>
           <div className="flex justify-between gap-2 text-sm">
@@ -113,7 +114,7 @@ export function WithdrawalCard() {
               {t('financial-independence.withdrawal.first-interest')}
             </span>
             <span className="font-medium tabular-nums">
-              {formatMoney(String(firstInterest), i18n.language, mainCurrency)}
+              {formatMoney(String(firstInterest), formattingLocale(), mainCurrency)}
             </span>
           </div>
         </div>

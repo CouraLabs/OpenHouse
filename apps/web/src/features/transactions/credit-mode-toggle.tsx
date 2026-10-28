@@ -32,13 +32,13 @@ export function CreditModeToggle({
         if (mode) onChange(mode)
       }}
     >
-      <ToggleGroupItem value="accrual" title={labels.accrual}>
+      <ToggleGroupItem value="accrual" title={labels.accrual} aria-label={labels.accrual}>
         <ShoppingCart data-icon="inline-start" />
-        {labels.accrual}
+        <span className="hidden min-[1100px]:inline">{labels.accrual}</span>
       </ToggleGroupItem>
-      <ToggleGroupItem value="cash" title={labels.cash}>
+      <ToggleGroupItem value="cash" title={labels.cash} aria-label={labels.cash}>
         <CalendarClock data-icon="inline-start" />
-        {labels.cash}
+        <span className="hidden min-[1100px]:inline">{labels.cash}</span>
       </ToggleGroupItem>
     </ToggleGroup>
   )

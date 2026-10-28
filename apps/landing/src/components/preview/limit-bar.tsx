@@ -22,9 +22,9 @@ export function LimitBar({
 
   return (
     <div ref={ref} className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between text-sm">
-        <span className="text-ink">{label}</span>
-        <span className="font-mono text-xs text-muted tabular-nums">
+      <div className="flex items-baseline justify-between gap-4 text-sm">
+        <span className="text-ink min-w-0 truncate">{label}</span>
+        <span className="font-mono text-xs text-muted shrink-0 whitespace-nowrap tabular-nums">
           {spent} / {cap}
         </span>
       </div>

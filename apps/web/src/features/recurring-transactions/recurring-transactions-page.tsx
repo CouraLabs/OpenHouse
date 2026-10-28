@@ -31,11 +31,12 @@ import {
   useActiveReceivers,
   useActiveAccounts,
 } from './use-recurring.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The page the tenant's recurring rules are managed from: the form above
  * the table, the table below, and the delete confirmation in between. */
 export function RecurringTransactionsPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   // The table's state, held here so the search args derive from it.
   const [sorting, setSorting] = useState<SortingState>([])
@@ -112,7 +113,7 @@ export function RecurringTransactionsPage() {
 
   const columns: Array<DataTableColumn<RecurringTransaction>> = useMemo(
     () =>
-      buildRecurringColumns(t, i18n.language, {
+      buildRecurringColumns(t, formattingLocale(), {
         onEdit: (rule) => {
           setEditing(rule)
           setFormOpen(true)
@@ -126,7 +127,7 @@ export function RecurringTransactionsPage() {
           setDeleting(rule)
         },
       }),
-    [t, i18n.language, save.reset]
+    [t, formattingLocale(), save.reset]
   )
 
   // Saving needs no confirmation: the form's submit is the intent. A failure

@@ -11,7 +11,7 @@ export interface CategoryRowActions {
 }
 
 /**
- * The columns the categories grid shows: the id, the name, the color as a
+ * The columns the categories grid shows: the name, the color as a
  * swatch with its hex, and the row actions. The caller owns what edit and
  * delete do; the columns only route the events. Called during the page's
  * render, so the labels arrive translated.
@@ -21,12 +21,6 @@ export function buildCategoryColumns(
   actions: CategoryRowActions
 ): Array<DataTableColumn<Category>> {
   return [
-    {
-      id: 'id',
-      header: '#',
-      enableSorting: false,
-      cell: (context) => context.row.original.id,
-    },
     {
       accessorKey: 'name',
       header: t('categories.name'),

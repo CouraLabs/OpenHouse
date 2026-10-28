@@ -8,6 +8,7 @@ import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { useTenantToday } from '@/lib/settings.js'
 import { BalanceHistoryChart } from './balance-history-chart.js'
 import { useBalanceHistory } from './use-reconciliation.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The days the range opens on: the last 30, today included. */
 const DEFAULT_DAYS = 30
@@ -23,7 +24,7 @@ function shiftDay(day: string, days: number): string {
 /** The range pickers and the chart of one account's balance history. The
  * range defaults through the tenant's today, never the device's. */
 export function BalanceHistoryBody({ account }: { account: Account }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const today = useTenantToday()
   const [from, setFrom] = useState(() => shiftDay(today, 1 - DEFAULT_DAYS))
   const [to, setTo] = useState(today)
@@ -38,7 +39,7 @@ export function BalanceHistoryBody({ account }: { account: Account }) {
           </FieldLabel>
           <DatePicker
             id="history-from"
-            locale={i18n.language}
+            locale={formattingLocale()}
             value={parseDateOnly(from)}
             onChange={(picked) => setFrom(formatDateOnly(picked))}
             labels={{
@@ -53,7 +54,7 @@ export function BalanceHistoryBody({ account }: { account: Account }) {
           </FieldLabel>
           <DatePicker
             id="history-to"
-            locale={i18n.language}
+            locale={formattingLocale()}
             value={parseDateOnly(to)}
             onChange={(picked) => setTo(formatDateOnly(picked))}
             labels={{

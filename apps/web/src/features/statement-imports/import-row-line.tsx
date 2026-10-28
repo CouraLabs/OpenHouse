@@ -12,6 +12,7 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { ImportRowFlags } from './import-row-flags.js'
 import type { ResolvedRow, RowEdit } from './import-rows.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * One row of the preview table: the tick, the day, the description with its
@@ -34,7 +35,7 @@ export function ImportRowLine({
   receivers: ReceiverRef[]
   onEdit: (index: number, edit: RowEdit) => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { row } = entry
   const signed = row.type === 'Expense' ? `-${row.amount}` : row.amount
 
@@ -50,7 +51,7 @@ export function ImportRowLine({
         />
       </TableCell>
       <TableCell className="whitespace-nowrap">
-        {formatDayLabel(row.transactionDt, i18n.language, {
+        {formatDayLabel(row.transactionDt, formattingLocale(), {
           day: 'numeric',
           month: 'short',
           year: 'numeric',
@@ -67,11 +68,11 @@ export function ImportRowLine({
       <TableCell
         className={
           row.type === 'Income'
-            ? 'text-right whitespace-nowrap text-emerald-700 dark:text-emerald-400'
+            ? 'text-right whitespace-nowrap text-primary'
             : 'text-right whitespace-nowrap'
         }
       >
-        {formatMoney(signed, i18n.language, currency)}
+        {formatMoney(signed, formattingLocale(), currency)}
       </TableCell>
       <TableCell>
         <NativeSelect
@@ -125,7 +126,7 @@ export function ImportRowLine({
           {row.statement === null
             ? '—'
             : t('imports.bill-due', {
-                date: formatDayLabel(row.statement.dueDate, i18n.language, {
+                date: formatDayLabel(row.statement.dueDate, formattingLocale(), {
                   day: 'numeric',
                   month: 'short',
                   year: 'numeric',

@@ -18,6 +18,7 @@ import {
 } from '@workspace/ui/components/select'
 
 import type { AmortizationSystem } from './simulate.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The amortization systems the sheet compared. */
 const SYSTEMS: Array<{ value: AmortizationSystem; labelKey: string }> = [
@@ -72,7 +73,7 @@ export function RentVsBuyParams({
   onAnnualReturnChange,
   onRentIncreaseChange,
 }: RentVsBuyParamsProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   // The trigger's label is rendered here, not derived by base-ui from
   // `items`: a prefilled value set while the popup was closed would
   // otherwise fall back to the placeholder.
@@ -87,7 +88,7 @@ export function RentVsBuyParams({
       </CardHeader>
       <CardContent className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 lg:grid-cols-5">
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={t('rent-vs-buy.params.property-value')}
           labelFor="rent-vs-buy-property"
@@ -95,7 +96,7 @@ export function RentVsBuyParams({
           onValueChange={onPropertyValueChange}
         />
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={t('rent-vs-buy.params.down-payment')}
           labelFor="rent-vs-buy-down"
@@ -154,7 +155,7 @@ export function RentVsBuyParams({
           </Select>
         </Field>
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={t('rent-vs-buy.params.rent')}
           labelFor="rent-vs-buy-rent"

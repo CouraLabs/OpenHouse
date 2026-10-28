@@ -7,6 +7,7 @@ import {
 } from '@workspace/poco'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The live line under a card charge's day: which bill it lands on, computed
@@ -24,7 +25,7 @@ export function BilledOnLine({
   /** The due date of the bill a pinned charge stays on, or nothing. */
   pinnedDueDate: string | null
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   if (account === undefined || account.type !== 'Credit Card') {
     return null
@@ -44,7 +45,7 @@ export function BilledOnLine({
     return (
       <p className="text-sm text-muted-foreground">
         {t('transactions.billed-on-pinned', {
-          due: formatDayLabel(pinnedDueDate, i18n.language),
+          due: formatDayLabel(pinnedDueDate, formattingLocale()),
         })}
       </p>
     )
@@ -59,8 +60,8 @@ export function BilledOnLine({
   return (
     <p className="text-sm text-muted-foreground">
       {t('transactions.billed-on', {
-        due: formatDayLabel(window.dueDate, i18n.language),
-        close: formatDayLabel(displayCloseDate(cycle, window), i18n.language),
+        due: formatDayLabel(window.dueDate, formattingLocale()),
+        close: formatDayLabel(displayCloseDate(cycle, window), formattingLocale()),
       })}
     </p>
   )

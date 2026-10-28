@@ -34,6 +34,7 @@ import {
   useActiveCategories,
   useActiveReceivers,
 } from './use-recurring.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The fields the recurring form holds. The rules come straight from the
@@ -82,7 +83,7 @@ export function RecurringForm({
   error,
   isSaving = false,
 }: RecurringFormProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
@@ -260,7 +261,7 @@ export function RecurringForm({
           ) : null}
         </Field>
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           label={t('recurring.amount')}
           labelFor="recurring-amount"
           placeholder={t('recurring.amount-placeholder')}

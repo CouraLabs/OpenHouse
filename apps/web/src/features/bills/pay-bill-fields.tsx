@@ -18,6 +18,7 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { useTenantToday } from '@/lib/settings.js'
 import { useActiveCategories, usePayBill } from './use-bills.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The payment form of one bill: a transfer into its card that names the
@@ -38,7 +39,7 @@ export function PayBillFields({
   accounts: AccountRef[]
   onClose: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const today = useTenantToday()
   const categories = useActiveCategories()
   const pay = usePayBill()
@@ -82,7 +83,7 @@ export function PayBillFields({
         }
       />
       <MoneyField
-        locale={i18n.language}
+        locale={formattingLocale()}
         label={t('bills.pay-amount')}
         labelFor="pay-amount"
         placeholder={t('bills.pay-amount-placeholder')}
@@ -102,7 +103,7 @@ export function PayBillFields({
         </FieldLabel>
         <DatePicker
           id="pay-dt"
-          locale={i18n.language}
+          locale={formattingLocale()}
           value={parseDateOnly(watch('transactionDt'))}
           onChange={(date) =>
             setValue('transactionDt', formatDateOnly(date), {

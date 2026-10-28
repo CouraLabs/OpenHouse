@@ -15,7 +15,7 @@ export interface GoalRowActions {
   onDelete: (goal: Goal) => void
 }
 
-/** The columns the goals grid shows: the id, the name, the linked account's
+/** The columns the goals grid shows: the name, the linked account's
  * name (joined on by the API — never a bare `linkedAccountId`) with a
  * mismatch badge when the account is no longer in the main currency the
  * goal is denominated in, the gauge
@@ -28,12 +28,6 @@ export function buildGoalColumns(
   actions: GoalRowActions
 ): Array<DataTableColumn<Goal>> {
   return [
-    {
-      id: 'id',
-      header: '#',
-      enableSorting: false,
-      cell: (context) => context.row.original.id,
-    },
     {
       accessorKey: 'name',
       header: t('goals.name'),

@@ -11,6 +11,7 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 
 import type { RentVsBuyRow } from './simulate.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The props `RentVsBuyTable` takes. */
 interface RentVsBuyTableProps {
@@ -22,10 +23,10 @@ interface RentVsBuyTableProps {
  * balance, the installment, and the property the equity sits in.
  */
 export function RentVsBuyTable({ rows }: RentVsBuyTableProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const format = (value: number) =>
-    formatMoney(String(value), i18n.language, mainCurrency)
+    formatMoney(String(value), formattingLocale(), mainCurrency)
 
   return (
     <Card>

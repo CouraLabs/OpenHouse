@@ -13,7 +13,7 @@ export interface NavLink {
 }
 
 /** The four washed-out pastels; the only color the page spends. */
-export type Tone = 'red' | 'blue' | 'green' | 'yellow'
+export type Tone = 'red' | 'blue' | 'green' | 'yellow' | 'bone'
 
 /** A section's kicker, serif title, and optional lede. */
 export interface Intro {
@@ -91,6 +91,17 @@ export interface Planner {
   body: string
 }
 
+/** One row of the house index: a module of the shared home and its status. */
+export interface HouseModule {
+  name: string
+  /** The domain's kind, shown as a wash tag — the room of the house it is. */
+  kind: string
+  description: string
+  tone: Tone
+  /** `live` renders the green Live badge; `coming` the quiet one. */
+  status: 'live' | 'coming'
+}
+
 /** One perk line on a plan card; `included: false` renders it struck. */
 export interface Perk {
   label: string
@@ -150,6 +161,10 @@ export interface Content {
     balance: { label: string; amount: string }
     limitsTitle: string
   }
+  /** The house index: the ledger live today, the announced rooms on the way. */
+  houseIntro: Intro
+  houseStatus: { live: string; coming: string }
+  houseModules: HouseModule[]
   sampleLedger: LedgerDay[]
   sampleLimits: SampleLimit[]
   sampleTotals: SampleTotal[]

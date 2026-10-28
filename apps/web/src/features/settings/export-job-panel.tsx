@@ -5,6 +5,7 @@ import type { CreateDataExportBody } from '@workspace/poco'
 
 import { useTenantSettings } from '@/lib/settings.js'
 import { useDataExport } from './use-data-export.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The props `ExportJobPanel` takes. */
 interface ExportJobPanelProps {
@@ -21,13 +22,13 @@ interface ExportJobPanelProps {
  * 24 hours.
  */
 export function ExportJobPanel({ body, startLabel }: ExportJobPanelProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { timezone } = useTenantSettings()
   const run = useDataExport()
   const failed = run.start.isError || run.job?.status === 'failed'
 
   if (run.job?.status === 'ready') {
-    const expires = new Intl.DateTimeFormat(i18n.language, {
+    const expires = new Intl.DateTimeFormat(formattingLocale(), {
       dateStyle: 'medium',
       timeStyle: 'short',
       timeZone: timezone,

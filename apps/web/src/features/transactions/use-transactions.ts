@@ -26,6 +26,8 @@ import type {
 
 import { api } from '@/lib/api.js'
 import { STATEMENTS_KEY } from '@/lib/statements.js'
+import { toast } from '@workspace/ui/components/toast'
+import i18next from 'i18next'
 
 /** The key every transaction query and mutation lives under. */
 const TRANSACTIONS_KEY = ['transactions'] as const
@@ -105,6 +107,7 @@ export function useSaveTransaction() {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
       void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
+      toast.add({ title: i18next.t('transactions.toast-saved') })
     },
   })
 }
@@ -131,6 +134,7 @@ export function useDeleteTransaction() {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
       void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
+      toast.add({ title: i18next.t('transactions.toast-deleted') })
     },
   })
 }
@@ -149,6 +153,7 @@ export function useTransfer() {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
       void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
+      toast.add({ title: i18next.t('transactions.toast-transferred') })
     },
   })
 }
@@ -179,6 +184,7 @@ export function useChangeTransactionStatus() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
       void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
+      toast.add({ title: i18next.t('transactions.toast-status-updated') })
     },
   })
 }
@@ -233,6 +239,7 @@ export function useInstallmentActions() {
     void queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
     void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
     void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY })
+    toast.add({ title: i18next.t('transactions.toast-installments-updated') })
   }
 
   return {

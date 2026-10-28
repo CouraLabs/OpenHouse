@@ -17,6 +17,7 @@ import {
 
 import { useMainCurrency } from '@/lib/settings.js'
 import { useActiveCategories } from './use-limits.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The fields the limit form holds. The rules come straight from the shared
@@ -61,7 +62,7 @@ export function LimitForm({
   error,
   isSaving = false,
 }: LimitFormProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
@@ -188,7 +189,7 @@ export function LimitForm({
           />
         </Field>
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={t('limits.amount-in', { currency: mainCurrency })}
           labelFor="limit-amount"

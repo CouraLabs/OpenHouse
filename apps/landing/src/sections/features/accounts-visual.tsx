@@ -19,7 +19,7 @@ export function AccountsVisual() {
             <span className="text-ink font-mono text-[13px] tabular-nums">
               {account.amount}
             </span>
-            <span className="border-line bg-bone rounded border px-1 font-mono text-[10px] text-muted">
+            <span className="border-line bg-bone rounded border px-1 font-mono text-[11px] text-muted">
               {account.currency}
             </span>
           </div>

@@ -23,12 +23,6 @@ export function buildLinkerColumns(
 ): Array<DataTableColumn<TransactionLinker>> {
   return [
     {
-      id: 'id',
-      header: '#',
-      enableSorting: false,
-      cell: (context) => context.row.original.id,
-    },
-    {
       accessorKey: 'description',
       header: t('linkers.description'),
     },

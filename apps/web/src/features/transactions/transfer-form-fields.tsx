@@ -22,6 +22,7 @@ import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { RefPick } from '@workspace/ui/components/ref-pick'
 import { PaymentBillPick } from './payment-bill-pick.js'
 import { useActiveCategories } from './use-transactions.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The fields the transfer form holds. The rules come straight from the
@@ -63,7 +64,7 @@ export function TransferFormFields({
   error,
   isSaving = false,
 }: TransferFormFieldsProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const {
     handleSubmit,
     watch,
@@ -154,7 +155,7 @@ export function TransferFormFields({
         </p>
       ) : null}
       <MoneyField
-        locale={i18n.language}
+        locale={formattingLocale()}
         label={t('transactions.transfer-amount')}
         labelFor="transfer-amount"
         placeholder={t('transactions.amount-placeholder')}
@@ -174,7 +175,7 @@ export function TransferFormFields({
         </FieldLabel>
         <DatePicker
           id="transfer-dt"
-          locale={i18n.language}
+          locale={formattingLocale()}
           value={parseDateOnly(transactionDt)}
           onChange={(date) =>
             setValue('transactionDt', formatDateOnly(date), {

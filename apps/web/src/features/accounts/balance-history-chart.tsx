@@ -5,6 +5,7 @@ import { ProjectionLineChart } from '@workspace/ui/components/projection-line-ch
 import { compactMoney } from '@/lib/finance.js'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The series color: the validated categorical palette's first slot. */
 const BALANCE_COLOR = '#2a78d6'
@@ -15,13 +16,13 @@ const BALANCE_COLOR = '#2a78d6'
  * line's height — the tooltip and axis format the exact string's currency.
  */
 export function BalanceHistoryChart({ history }: { history: BalanceHistory }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <ProjectionLineChart
       ariaLabel={t('accounts.history-chart-label')}
       xLabels={history.points.map((point) =>
-        formatDayLabel(point.date, i18n.language)
+        formatDayLabel(point.date, formattingLocale())
       )}
       series={[
         {
@@ -32,9 +33,9 @@ export function BalanceHistoryChart({ history }: { history: BalanceHistory }) {
         },
       ]}
       formatValue={(value) =>
-        formatMoney(value.toFixed(2), i18n.language, history.currency)
+        formatMoney(value.toFixed(2), formattingLocale(), history.currency)
       }
-      formatTick={compactMoney(i18n.language, history.currency)}
+      formatTick={compactMoney(formattingLocale(), history.currency)}
     />
   )
 }

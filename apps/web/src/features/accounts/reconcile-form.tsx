@@ -14,6 +14,7 @@ import { useTenantToday } from '@/lib/settings.js'
 import { useDebouncedValue } from '@/lib/use-debounced-value.js'
 import { ReconcilePreviewSummary } from './reconcile-preview-summary.js'
 import { useReconcile, useReconcilePreview } from './use-reconciliation.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The reconciliation form: the bank's balance on a day, what the ledger
@@ -31,7 +32,7 @@ export function ReconcileForm({
   onDone: () => void
   onCancel: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const today = useTenantToday()
   const [date, setDate] = useState(today)
   const [bankBalance, setBankBalance] = useState('')
@@ -76,7 +77,7 @@ export function ReconcileForm({
           </FieldLabel>
           <DatePicker
             id="reconcile-date"
-            locale={i18n.language}
+            locale={formattingLocale()}
             value={parseDateOnly(date)}
             onChange={(picked) => setDate(formatDateOnly(picked))}
             labels={{
@@ -86,7 +87,7 @@ export function ReconcileForm({
           />
         </Field>
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={t('accounts.reconcile-bank-balance')}
           labelFor="reconcile-bank-balance"

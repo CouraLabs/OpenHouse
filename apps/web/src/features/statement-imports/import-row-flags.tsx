@@ -3,10 +3,11 @@ import type { ImportPreviewRow } from '@workspace/poco'
 import { Badge } from '@workspace/ui/components/badge'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The badges under a preview row's description: why it is flagged. */
 export function ImportRowFlags({ row }: { row: ImportPreviewRow }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -18,7 +19,7 @@ export function ImportRowFlags({ row }: { row: ImportPreviewRow }) {
           variant="outline"
           title={t('imports.flag-probable-title', {
             name: row.duplicate.name,
-            date: formatDayLabel(row.duplicate.transactionDt, i18n.language),
+            date: formatDayLabel(row.duplicate.transactionDt, formattingLocale()),
           })}
         >
           {t('imports.flag-probable')}

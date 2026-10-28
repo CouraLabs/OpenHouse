@@ -53,7 +53,8 @@
   --ink-hover: #333333;
   --on-ink: #ffffff;
   --body: #2f3437;
-  --muted: #787774;
+  /* 4.5:1+ on canvas, bone, and surface (the old #787774 was 4.1-4.5). */
+  --muted: #6b6a67;
   --line: #eaeaea;
 
   --red-wash: #fdebec;

@@ -7,6 +7,7 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useMoveToStatement } from '@/lib/statements.js'
 import { useBillTransactions, useMarkChecked } from './use-bills.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** How far from the close a late posting is looked for, in days. */
 const LATE_POSTING_DAYS = 3
@@ -18,7 +19,7 @@ const LATE_POSTING_DAYS = 3
  * rows of this bill still in Verify — offered "Mark checked".
  */
 export function ReconcileCandidates({ bill }: { bill: CreditCardStatement }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const move = useMoveToStatement()
   const check = useMarkChecked()
   const nearClose = useBillTransactions({
@@ -78,11 +79,11 @@ export function ReconcileCandidates({ bill }: { bill: CreditCardStatement }) {
             <span className="flex flex-col">
               <span className="text-sm">{row.name}</span>
               <span className="text-xs text-muted-foreground">
-                {formatDayLabel(row.transactionDt, i18n.language)}
+                {formatDayLabel(row.transactionDt, formattingLocale())}
                 {' · '}
                 {formatMoney(
                   row.type === 'Income' ? `-${row.amount}` : row.amount,
-                  i18n.language,
+                  formattingLocale(),
                   row.currency
                 )}
               </span>

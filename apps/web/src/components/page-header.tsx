@@ -23,13 +23,13 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
           {title}
         </h1>
         {subtitle !== undefined ? (
-          <p className="max-w-prose text-[0.95rem] text-pretty text-muted-foreground">
+          <p className="max-w-prose text-sm text-pretty text-muted-foreground">
             {subtitle}
           </p>
         ) : null}
       </div>
       {actions !== undefined ? (
-        <div className="flex items-center gap-2">{actions}</div>
+        <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
       ) : null}
     </header>
   )

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Transaction, TransactionStatus } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
@@ -8,7 +8,10 @@ import { useTranslation } from 'react-i18next'
 
 import { DayHeader } from './day-header.js'
 import { groupByDay, type DayGroup } from './group-by-day.js'
-import { TransactionRow } from './transaction-row.js'
+import {
+  TransactionCardRow,
+  TransactionRow,
+} from './transaction-row.js'
 
 /** A row of the virtual list: a day's header, or one transaction. */
 type GridItem =
@@ -44,6 +47,30 @@ export interface TransactionRowActions {
 
 const HEADER_HEIGHT = 40
 const ROW_HEIGHT = 44
+// A card row is two lines tall — its measure corrects the estimate.
+const CARD_ROW_HEIGHT = 68
+// The desktop grid's fixed columns need ~1100px of viewport once the
+// sidebar is counted; below that the rows render as cards instead.
+const DESKTOP_MIN = 1100
+
+/** Whether the viewport fits the desktop grid — the inverse of a mobile
+ * check, at the grid's own breakpoint (the shell's sidebar eats 256px of
+ * every width, so the usual `md` line sits too low). */
+function useIsWide(): boolean {
+  const [isWide, setIsWide] = useState(true)
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(min-width: ${DESKTOP_MIN}px)`)
+    const onChange = () => setIsWide(window.innerWidth >= DESKTOP_MIN)
+
+    mql.addEventListener('change', onChange)
+    onChange()
+
+    return () => mql.removeEventListener('change', onChange)
+  }, [])
+
+  return isWide
+}
 
 /**
  * The transactions grid: a virtualized list grouped by day, the group
@@ -81,6 +108,9 @@ export function TransactionGrid({
 }) {
   const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
+  // Below ~1100px the rows render as cards: no column titles, no
+  // selection — the day header and the virtualizer carry the layout.
+  const isMobile = !useIsWide()
 
   const groups = useMemo(() => groupByDay(rows), [rows])
   const items = useMemo<GridItem[]>(
@@ -98,7 +128,11 @@ export function TransactionGrid({
     count: items.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) =>
-      items[index]?.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT,
+      items[index]?.kind === 'header'
+        ? HEADER_HEIGHT
+        : isMobile
+          ? CARD_ROW_HEIGHT
+          : ROW_HEIGHT,
     overscan: 10,
   })
 
@@ -144,20 +178,23 @@ export function TransactionGrid({
   return (
     <div className="flex min-h-0 flex-1 flex-col rounded-lg border">
       {/* The column titles sit above the viewport: they never scroll away,
-       * so only the day groups need to stick. */}
-      <div className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground">
-        <Checkbox
-          checked={allSelected}
-          aria-label={labels.selectAll}
-          onCheckedChange={onToggleAll}
-        />
-        <span>{labels.when}</span>
-        <span>{labels.category}</span>
-        <span>{labels.description}</span>
-        <span className="text-right">{labels.amount}</span>
-        <span>{labels.status}</span>
-        <span />
-      </div>
+       * so only the day groups need to stick. Mobile drops them — the
+       * card rows label themselves. */}
+      {!isMobile ? (
+        <div className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground">
+          <Checkbox
+            checked={allSelected}
+            aria-label={labels.selectAll}
+            onCheckedChange={onToggleAll}
+          />
+          <span>{labels.when}</span>
+          <span>{labels.category}</span>
+          <span>{labels.description}</span>
+          <span className="text-right">{labels.amount}</span>
+          <span>{labels.status}</span>
+          <span />
+        </div>
+      ) : null}
       <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
         <div
           className="relative"
@@ -183,6 +220,12 @@ export function TransactionGrid({
                     group={item.group}
                     locale={locale}
                     labels={labels}
+                  />
+                ) : isMobile ? (
+                  <TransactionCardRow
+                    transaction={item.transaction}
+                    locale={locale}
+                    actions={actions}
                   />
                 ) : (
                   <TransactionRow

@@ -10,6 +10,7 @@ import {
 } from '@workspace/poco'
 
 import { formatMoney } from '@/lib/format-money.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * What a card purchase will do, before it is saved: how it splits (the
@@ -32,7 +33,7 @@ export function PurchasePreview({
   availableLimit: string | null
   currency: Currency
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   if (!amountSchema.safeParse(amount).success) {
     return null
@@ -44,7 +45,7 @@ export function PurchasePreview({
       : 1
   const parts = splitInstallments(amount, count, installments.amountMode)
   const total = sumMoney(parts)
-  const money = (value: string) => formatMoney(value, i18n.language, currency)
+  const money = (value: string) => formatMoney(value, formattingLocale(), currency)
   const left =
     availableLimit === null
       ? null

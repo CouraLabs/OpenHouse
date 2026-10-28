@@ -13,6 +13,7 @@ import {
 import { useTenantSettings } from '@/lib/settings.js'
 import { CodeShare } from './code-share.js'
 import { resetLinkFor, useIssueResetCode } from './use-reset-codes.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The props `ResetCodeDialog` takes. */
 interface ResetCodeDialogProps {
@@ -28,7 +29,7 @@ interface ResetCodeDialogProps {
  * current password keeps working until the code is used.
  */
 export function ResetCodeDialog({ user, onClose }: ResetCodeDialogProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { timezone } = useTenantSettings()
   const issue = useIssueResetCode()
 
@@ -41,7 +42,7 @@ export function ResetCodeDialog({ user, onClose }: ResetCodeDialogProps) {
   const until =
     issue.data === undefined
       ? ''
-      : new Intl.DateTimeFormat(i18n.language, {
+      : new Intl.DateTimeFormat(formattingLocale(), {
           timeStyle: 'short',
           timeZone: timezone,
         }).format(new Date(issue.data.expiresAt))

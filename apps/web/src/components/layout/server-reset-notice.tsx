@@ -7,6 +7,7 @@ import {
   useAccountSecurity,
 } from '@/lib/account-security.js'
 import { useTenantSettings } from '@/lib/settings.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * Tells a user that a reset code was issued for them from the server — the
@@ -14,7 +15,7 @@ import { useTenantSettings } from '@/lib/settings.js'
  * If they did not ask for it, they know to change their password.
  */
 export function ServerResetNotice() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { timezone } = useTenantSettings()
   const security = useAccountSecurity()
   const acknowledge = useAcknowledgeServerNotices()
@@ -24,7 +25,7 @@ export function ServerResetNotice() {
     return null
   }
 
-  const issuedOn = new Intl.DateTimeFormat(i18n.language, {
+  const issuedOn = new Intl.DateTimeFormat(formattingLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: timezone,

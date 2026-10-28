@@ -12,6 +12,7 @@ import type {
 } from '@workspace/poco'
 import {
   ArrowLeftRight,
+  Ellipsis,
   Gauge,
   PieChart,
   Plus,
@@ -22,10 +23,20 @@ import {
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@workspace/ui/components/dropdown-menu'
+import {
   FilterDialog,
   type FilterValues,
 } from '@workspace/ui/components/filter-dialog'
-import { ExportCsvButton } from '@/components/export-csv-button.js'
+import {
+  ExportCsvButton,
+  ExportCsvMenuItem,
+  useExportCsv,
+} from '@/components/export-csv-button.js'
 import { PageHeader } from '@/components/page-header.js'
 import { formatDateOnly } from '@/lib/format-date-only.js'
 import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
@@ -70,6 +81,7 @@ import {
   useTransfer,
   useTransactionSummary,
 } from './use-transactions.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The month window an anchor date describes, as inclusive `YYYY-MM-DD`
  * ends — the date range every search, summary, and chip reads. */
@@ -92,7 +104,7 @@ function shiftMonth(anchor: Date, months: number): Date {
  * in a dialog.
  */
 export function TransactionsPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const today = useTenantToday()
 
@@ -185,6 +197,9 @@ export function TransactionsPage() {
 
   const search = useTransactionsInfinite(args)
   const summary = useTransactionSummary(args.filter)
+  // One export mutation for both toolbars: the desktop button and the
+  // mobile overflow item share the pending and error states.
+  const exportCsv = useExportCsv('/transactions/export', args)
   const save = useSaveTransaction()
   const remove = useDeleteTransaction()
   const transfer = useTransfer()
@@ -259,7 +274,7 @@ export function TransactionsPage() {
       : t('transactions.error')
     : undefined
 
-  const monthLabel = new Intl.DateTimeFormat(i18n.language, {
+  const monthLabel = new Intl.DateTimeFormat(formattingLocale(), {
     month: 'long',
     year: 'numeric',
   }).format(anchor)
@@ -467,7 +482,7 @@ export function TransactionsPage() {
   }
 
   return (
-    <main className="flex min-h-0 w-full flex-1 animate-page-in flex-col gap-6 px-4 py-8 md:px-10 md:py-10">
+    <main className="flex h-full min-h-0 w-full animate-page-in flex-col gap-6 px-4 py-8 md:px-10 md:py-10">
       <PageHeader
         title={t('transactions.title')}
         subtitle={t('transactions.subtitle')}
@@ -496,7 +511,9 @@ export function TransactionsPage() {
               onPrevious={() => setAnchor((current) => shiftMonth(current, -1))}
               onNext={() => setAnchor((current) => shiftMonth(current, 1))}
             />
-            <ExportCsvButton path="/transactions/export" args={args} />
+            <div className="hidden min-[1100px]:flex">
+              <ExportCsvButton path="/transactions/export" args={args} csv={exportCsv} />
+            </div>
             <FilterDialog
               fields={[
                 {
@@ -565,16 +582,58 @@ export function TransactionsPage() {
                 cancel: t('filter.cancel'),
               }}
             />
-            <Button
-              variant="outline"
-              onClick={() => {
-                transfer.reset()
-                setTransferOpen(true)
-              }}
-            >
-              <ArrowLeftRight />
-              {t('transactions.transfer')}
-            </Button>
+            <div className="hidden min-[1100px]:block">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  transfer.reset()
+                  setTransferOpen(true)
+                }}
+              >
+                <ArrowLeftRight />
+                {t('transactions.transfer')}
+              </Button>
+            </div>
+            {/* The mobile overflow: the secondary controls the row cannot
+             * fit — the export and the transfer — collapse here so the
+             * toolbar never clips. */}
+            <div className="flex items-center gap-2 min-[1100px]:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label={t('transactions.more-actions')}
+                      title={t('transactions.more-actions')}
+                    />
+                  }
+                >
+                  <Ellipsis />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <ExportCsvMenuItem
+                    path="/transactions/export"
+                    args={args}
+                    csv={exportCsv}
+                  />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      transfer.reset()
+                      setTransferOpen(true)
+                    }}
+                  >
+                    <ArrowLeftRight />
+                    {t('transactions.transfer')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {exportCsv.isError ? (
+                <p role="alert" className="text-xs text-destructive">
+                  {t('export.csv-error')}
+                </p>
+              ) : null}
+            </div>
             <Button
               onClick={() => {
                 setEditing(null)
@@ -595,7 +654,7 @@ export function TransactionsPage() {
         <>
           <SummaryCards
             groups={mainCurrencyFirst(summary.data?.groups ?? [], mainCurrency)}
-            locale={i18n.language}
+            locale={formattingLocale()}
             labels={{
               incomes: t('transactions.summary-incomes'),
               expenses: t('transactions.summary-expenses'),
@@ -608,7 +667,7 @@ export function TransactionsPage() {
               title={t('transactions.dashboard-current-bill')}
               bills={currentBills}
               today={today}
-              locale={i18n.language}
+              locale={formattingLocale()}
               labels={{
                 empty: t('transactions.dashboard-bills-empty'),
                 closesIn: (days) =>
@@ -618,7 +677,7 @@ export function TransactionsPage() {
             <NextDueCard
               title={t('transactions.dashboard-next-due')}
               bills={nextDueBills}
-              locale={i18n.language}
+              locale={formattingLocale()}
               labels={{
                 empty: t('transactions.dashboard-next-due-empty'),
                 dueOn: (due) => t('transactions.dashboard-due-on', { due }),
@@ -633,7 +692,7 @@ export function TransactionsPage() {
                 categoryBreakdown.data?.groups ?? [],
                 mainCurrency
               )}
-              locale={i18n.language}
+              locale={formattingLocale()}
               labels={{
                 other: t('transactions.dashboard-other'),
                 empty: t('transactions.dashboard-empty'),
@@ -646,7 +705,7 @@ export function TransactionsPage() {
                 accountBreakdown.data?.groups ?? [],
                 mainCurrency
               )}
-              locale={i18n.language}
+              locale={formattingLocale()}
               labels={{
                 other: t('transactions.dashboard-other'),
                 empty: t('transactions.dashboard-empty'),
@@ -658,7 +717,7 @@ export function TransactionsPage() {
                 lastMonthSummary.data?.groups ?? [],
                 mainCurrency
               )}
-              locale={i18n.language}
+              locale={formattingLocale()}
               labels={{
                 incomes: t('transactions.summary-incomes'),
                 expenses: t('transactions.summary-expenses'),
@@ -667,7 +726,7 @@ export function TransactionsPage() {
             <NextMonthCard
               title={t('transactions.dashboard-next-month')}
               slices={mainCurrencyFirst(nextMonthSlices, mainCurrency)}
-              locale={i18n.language}
+              locale={formattingLocale()}
               labels={{
                 expected: t('transactions.dashboard-next-month-expected'),
                 empty: t('transactions.dashboard-next-month-empty'),
@@ -677,7 +736,7 @@ export function TransactionsPage() {
               title={t('transactions.dashboard-goals')}
               icon={<Target aria-hidden className="size-4" />}
               goals={goals.data?.items ?? []}
-              locale={i18n.language}
+              locale={formattingLocale()}
               ariaLabelFor={(goal) =>
                 t('transactions.dashboard-goal-aria', { name: goal.name })
               }
@@ -690,7 +749,7 @@ export function TransactionsPage() {
               title={t('transactions.dashboard-limits')}
               icon={<Gauge aria-hidden className="size-4" />}
               usage={limitUsage.data ?? []}
-              locale={i18n.language}
+              locale={formattingLocale()}
               labels={{
                 empty: t('transactions.dashboard-limits-empty'),
                 aria: (limit) =>
@@ -708,7 +767,7 @@ export function TransactionsPage() {
       ) : (
         <TransactionGrid
           rows={rows}
-          locale={i18n.language}
+          locale={formattingLocale()}
           labels={{
             description: t('transactions.name'),
             when: t('transactions.when'),

@@ -4,6 +4,7 @@ import { isZeroMoney } from '@workspace/poco'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * What the ledger computed against what the bank shows: the running balance
@@ -15,9 +16,9 @@ export function ReconcilePreviewSummary({
 }: {
   preview: ReconcilePreview
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const money = (amount: string) =>
-    formatMoney(amount, i18n.language, preview.currency)
+    formatMoney(amount, formattingLocale(), preview.currency)
   const matches = isZeroMoney(preview.difference)
 
   return (
@@ -42,8 +43,8 @@ export function ReconcilePreviewSummary({
         <dd
           className={`text-right font-medium tabular-nums ${
             matches
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : 'text-red-600 dark:text-red-400'
+              ? 'text-primary'
+              : 'text-destructive'
           }`}
           data-testid="reconcile-difference"
         >
@@ -63,7 +64,7 @@ export function ReconcilePreviewSummary({
             {preview.verifyRows.map((row) => (
               <li key={row.id} className="flex items-center gap-2">
                 <span className="text-muted-foreground tabular-nums">
-                  {formatDayLabel(row.transactionDt, i18n.language)}
+                  {formatDayLabel(row.transactionDt, formattingLocale())}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{row.name}</span>
                 <span className="tabular-nums">

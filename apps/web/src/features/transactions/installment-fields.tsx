@@ -8,6 +8,7 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from '@workspace/ui/components/radio-group'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * How a card purchase splits: how many installments (1–48; 1 is a single
@@ -28,7 +29,7 @@ export function InstallmentFields({
   onCashPriceChange: (value: string) => void
   error?: { message?: string }
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-3">
@@ -66,7 +67,7 @@ export function InstallmentFields({
       ) : null}
       {value.count > 1 && value.amountMode === 'perInstallment' ? (
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           label={t('transactions.cash-price')}
           labelFor="transaction-cash-price"
           placeholder={t('transactions.amount-placeholder')}

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { AppNotification } from '@workspace/poco'
 
 import { reminderText } from './notification-text.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The lines a notification reads as: one reminder, or a digest's items. */
 function linesOf(
@@ -27,10 +28,10 @@ export function NotificationItem({
   notification: AppNotification
   onRead: (id: number) => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const unread = notification.readAt === null
-  const lines = linesOf(notification, t, i18n.language)
-  const when = new Intl.DateTimeFormat(i18n.language, {
+  const lines = linesOf(notification, t, formattingLocale())
+  const when = new Intl.DateTimeFormat(formattingLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(notification.createdAt))

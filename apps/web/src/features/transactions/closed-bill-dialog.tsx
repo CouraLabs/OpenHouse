@@ -12,6 +12,7 @@ import {
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { useMoveToStatement, useStatementSearch } from '@/lib/statements.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * Asked after a save landed a card charge on a bill that is already
@@ -26,7 +27,7 @@ export function ClosedBillDialog({
   transaction: Transaction | null
   onClose: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const move = useMoveToStatement()
   const open = useStatementSearch(
     {
@@ -61,15 +62,15 @@ export function ClosedBillDialog({
               ? t('transactions.closed-bill-keep-only', {
                   due: formatDayLabel(
                     transaction?.statementDueDate ?? '',
-                    i18n.language
+                    formattingLocale()
                   ),
                 })
               : t('transactions.closed-bill-description', {
                   due: formatDayLabel(
                     transaction?.statementDueDate ?? '',
-                    i18n.language
+                    formattingLocale()
                   ),
-                  openDue: formatDayLabel(openBill.dueDate, i18n.language),
+                  openDue: formatDayLabel(openBill.dueDate, formattingLocale()),
                 })}
           </DialogDescription>
         </DialogHeader>
@@ -95,7 +96,7 @@ export function ClosedBillDialog({
               }
             >
               {t('transactions.closed-bill-move', {
-                due: formatDayLabel(openBill.dueDate, i18n.language),
+                due: formatDayLabel(openBill.dueDate, formattingLocale()),
               })}
             </Button>
           ) : null}

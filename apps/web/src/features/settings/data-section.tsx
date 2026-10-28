@@ -8,6 +8,7 @@ import { useSession } from '@/lib/auth.js'
 import { DeleteTenantDialog } from './delete-tenant-dialog.js'
 import { ExportJobPanel } from './export-job-panel.js'
 import { useCancelTenantDeletion } from './use-tenant-deletion.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The owner's Data section: export everything the household recorded as a
@@ -15,7 +16,7 @@ import { useCancelTenantDeletion } from './use-tenant-deletion.js'
  * 30-day grace period the owner can cancel.
  */
 export function DataSection() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const session = useSession()
   const cancel = useCancelTenantDeletion()
   const [deleting, setDeleting] = useState(false)
@@ -55,7 +56,7 @@ export function DataSection() {
           <div className="flex flex-col items-start gap-2">
             <p className="text-sm">
               {t('deletion.scheduled', {
-                date: formatDayLabel(deletionDate, i18n.language, {
+                date: formatDayLabel(deletionDate, formattingLocale(), {
                   dateStyle: 'long',
                 }),
               })}

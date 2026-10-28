@@ -14,6 +14,7 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { UpcomingItemRow } from './upcoming-item-row.js'
 import { useUpcoming } from './use-upcoming.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** How many lines the dashboard card lists before pointing at the page. */
 const CARD_ITEMS = 5
@@ -24,7 +25,7 @@ const CARD_ITEMS = 5
  * Upcoming page.
  */
 export function UpcomingCard() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const upcoming = useUpcoming(DEFAULT_UPCOMING_DAYS)
   const negatives =
     upcoming.data?.balances.filter(
@@ -68,11 +69,11 @@ export function UpcomingCard() {
                       name: line.accountName,
                       date: formatDayLabel(
                         line.firstNegative.date,
-                        i18n.language
+                        formattingLocale()
                       ),
                       amount: formatMoney(
                         line.firstNegative.balance,
-                        i18n.language,
+                        formattingLocale(),
                         line.currency
                       ),
                     }

@@ -13,6 +13,7 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 
 import type { RentVsBuyRow } from './simulate.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The series colors, the validated categorical palette's first two slots —
@@ -34,7 +35,7 @@ interface RentVsBuyChartProps {
  * worth against what the renter's invested balance has grown to.
  */
 export function RentVsBuyChart({ rows, sampleStep }: RentVsBuyChartProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
 
   // The sample keeps the first row and always the last, so the curves end
@@ -72,9 +73,9 @@ export function RentVsBuyChart({ rows, sampleStep }: RentVsBuyChartProps) {
             },
           ]}
           formatValue={(value) =>
-            formatMoney(String(value), i18n.language, mainCurrency)
+            formatMoney(String(value), formattingLocale(), mainCurrency)
           }
-          formatTick={compactMoney(i18n.language, mainCurrency)}
+          formatTick={compactMoney(formattingLocale(), mainCurrency)}
         />
       </CardContent>
     </Card>

@@ -12,6 +12,7 @@ import {
   useUpdateBankFigures,
 } from '@/lib/statements.js'
 import { ReconcileCandidates } from './reconcile-candidates.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The reconcile form: the total and the minimum payment printed on the
@@ -27,7 +28,7 @@ export function ReconcileFields({
   bill: CreditCardStatement
   onClose: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [bankTotal, setBankTotal] = useState(bill.bankTotal ?? '')
   const [minimumDue, setMinimumDue] = useState(bill.minimumDue ?? '')
   const save = useUpdateBankFigures()
@@ -46,7 +47,7 @@ export function ReconcileFields({
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           label={t('bills.reconcile-bank-total')}
           labelFor="reconcile-bank-total"
           placeholder={t('bills.pay-amount-placeholder')}
@@ -54,7 +55,7 @@ export function ReconcileFields({
           onValueChange={setBankTotal}
         />
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           label={t('bills.minimum-due')}
           labelFor="reconcile-minimum-due"
           placeholder={t('bills.pay-amount-placeholder')}
@@ -69,7 +70,7 @@ export function ReconcileFields({
           {matches
             ? t('bills.reconcile-matches')
             : t('bills.reconcile-difference', {
-                amount: formatMoney(difference, i18n.language, bill.currency),
+                amount: formatMoney(difference, formattingLocale(), bill.currency),
               })}
         </p>
       )}

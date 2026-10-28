@@ -31,6 +31,7 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { useMainCurrency } from '@/lib/settings.js'
 import { AccountAdvancedFields } from './account-advanced-fields.js'
 import { CardCycleFields } from './card-cycle-fields.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The fields the account form holds. The rules come straight from the
@@ -97,7 +98,7 @@ export function AccountForm({
   error,
   isSaving = false,
 }: AccountFormProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
@@ -273,7 +274,7 @@ export function AccountForm({
           />
         </Field>
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={
             account === null
@@ -354,7 +355,7 @@ export function AccountForm({
         {isCard ? (
           <>
             <MoneyField
-              locale={i18n.language}
+              locale={formattingLocale()}
               className="h-8"
               label={t('accounts.limit')}
               labelFor="account-limit"

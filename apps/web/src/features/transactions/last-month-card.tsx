@@ -46,7 +46,7 @@ export function LastMonthCard({
                   <TrendingUp aria-hidden className="size-4" />
                   {labels.incomes}
                 </span>
-                <span className="text-sm font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
+                <span className="text-sm font-semibold text-primary tabular-nums">
                   {formatMoney(group.incomes, locale, group.currency)}
                 </span>
               </div>
@@ -57,7 +57,7 @@ export function LastMonthCard({
                 </span>
                 <span
                   className={cn(
-                    'text-sm font-semibold text-red-600 tabular-nums dark:text-red-400'
+                    'text-sm font-semibold text-destructive tabular-nums'
                   )}
                 >
                   {formatMoney(group.expenses, locale, group.currency)}

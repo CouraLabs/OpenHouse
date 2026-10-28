@@ -11,6 +11,7 @@ import {
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { PayBillFields } from './pay-bill-fields.js'
 import { useActiveAccounts } from './use-bills.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * Pays one bill from another account. The fields mount once the accounts
@@ -26,7 +27,7 @@ export function PayBillDialog({
   open: boolean
   onClose: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const accounts = useActiveAccounts()
   const payers = (accounts.data ?? []).filter(
     (account) =>
@@ -46,7 +47,7 @@ export function PayBillDialog({
           <DialogDescription>
             {t('bills.pay-description', {
               card: bill.accountName,
-              due: formatDayLabel(bill.dueDate, i18n.language),
+              due: formatDayLabel(bill.dueDate, formattingLocale()),
             })}
           </DialogDescription>
         </DialogHeader>

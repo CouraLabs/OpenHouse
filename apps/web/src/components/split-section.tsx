@@ -11,6 +11,7 @@ import {
 
 import { formatMoney } from '@/lib/format-money.js'
 import { useHouseholdMembers } from '@/lib/household.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The props `SplitSection` takes. */
 interface SplitSectionProps {
@@ -43,7 +44,7 @@ export function SplitSection({
   allowExact = true,
   idPrefix,
 }: SplitSectionProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const members = useHouseholdMembers()
   // A removed member cannot take a new share; one already in the split
   // stays listed so the row still reads.
@@ -73,7 +74,7 @@ export function SplitSection({
           for (const share of result.shares) {
             preview[share.userId] = formatMoney(
               share.share,
-              i18n.language,
+              formattingLocale(),
               currency
             )
           }
@@ -88,7 +89,7 @@ export function SplitSection({
         try {
           preview[entry.userId] = formatMoney(
             entry.value ?? '0',
-            i18n.language,
+            formattingLocale(),
             currency
           )
         } catch {

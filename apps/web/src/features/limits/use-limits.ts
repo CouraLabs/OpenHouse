@@ -11,6 +11,7 @@ import type {
   SearchLimitsArgs,
   UpdateLimitBody,
   Limit,
+  LimitUsage,
 } from '@workspace/poco'
 
 import { api } from '@/lib/api.js'
@@ -36,6 +37,15 @@ export function useLimitsSearch(args: SearchLimitsArgs) {
         signal,
       }),
     placeholderData: keepPreviousData,
+  })
+}
+
+/** The usage view: every ACTIVE limit with what its period has spent
+ * against it, totaled by the API — what the usage cards render. */
+export function useLimitsUsage() {
+  return useQuery({
+    queryKey: [...LIMITS_KEY, 'usage'],
+    queryFn: ({ signal }) => api<LimitUsage[]>('/limits/usage', { signal }),
   })
 }
 

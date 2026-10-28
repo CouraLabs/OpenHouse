@@ -8,6 +8,7 @@ import {
 } from '@workspace/ui/components/card'
 
 import { formatMoney } from '@/lib/format-money.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The history of recorded settle-ups, newest first. */
 export function SettlementsCard({
@@ -15,7 +16,7 @@ export function SettlementsCard({
 }: {
   settlements: SettlementEntry[]
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <Card>
@@ -42,7 +43,7 @@ export function SettlementsCard({
                   })}
                 </span>
                 <span className="tabular-nums">
-                  {formatMoney(entry.amount, i18n.language, entry.currency)}
+                  {formatMoney(entry.amount, formattingLocale(), entry.currency)}
                 </span>
               </li>
             ))}

@@ -25,12 +25,6 @@ export function buildRecurringColumns(
 ): Array<DataTableColumn<RecurringTransaction>> {
   return [
     {
-      id: 'id',
-      header: '#',
-      enableSorting: false,
-      cell: (context) => context.row.original.id,
-    },
-    {
       accessorKey: 'receiverName',
       header: t('recurring.receiver'),
     },
@@ -52,8 +46,8 @@ export function buildRecurringColumns(
           <span
             className={
               isIncome
-                ? 'font-medium text-emerald-600 dark:text-emerald-400'
-                : 'font-medium text-red-600 dark:text-red-400'
+                ? 'font-medium text-primary'
+                : 'font-medium text-destructive'
             }
           >
             {t(`recurring.type-${context.row.original.type.toLowerCase()}`)}

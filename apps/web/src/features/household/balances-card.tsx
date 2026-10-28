@@ -14,6 +14,7 @@ import {
 } from '@workspace/ui/components/card'
 
 import { formatMoney } from '@/lib/format-money.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The props `BalancesCard` takes. */
 interface BalancesCardProps {
@@ -32,7 +33,7 @@ export function BalancesCard({
   suggestions,
   onSettle,
 }: BalancesCardProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <Card>
@@ -64,7 +65,7 @@ export function BalancesCard({
                       : 'tabular-nums'
                   }
                 >
-                  {formatMoney(row.balance, i18n.language, row.currency)}
+                  {formatMoney(row.balance, formattingLocale(), row.currency)}
                 </span>
               </li>
             ))}
@@ -89,7 +90,7 @@ export function BalancesCard({
                       to: suggestion.toName,
                       amount: formatMoney(
                         suggestion.amount,
-                        i18n.language,
+                        formattingLocale(),
                         suggestion.currency
                       ),
                     })}

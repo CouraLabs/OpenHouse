@@ -1,10 +1,18 @@
 import type { Account } from '@workspace/poco'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@workspace/ui/components/dropdown-menu'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
 import { Link } from '@tanstack/react-router'
 import {
   ChartLine,
+  Ellipsis,
   FileUp,
   Pencil,
   ReceiptText,
@@ -27,7 +35,7 @@ export interface AccountRowActions {
 }
 
 /**
- * The columns the accounts grid shows: the id, the account — its name with
+ * The columns the accounts grid shows: the account — its name with
  * the type beside it, and the agency/number pair beneath, joined by the
  * conversion spread when the account has one — and the balance
  * with, for a credit card, the free credit and the due/close days beneath.
@@ -45,12 +53,6 @@ export function buildAccountsColumns(
   })
 
   return [
-    {
-      id: 'id',
-      header: '#',
-      enableSorting: false,
-      cell: (context) => context.row.original.id,
-    },
     {
       accessorKey: 'name',
       header: t('accounts.account'),
@@ -146,8 +148,10 @@ export function buildAccountsColumns(
   ]
 }
 
-/** The actions cell: a card's bills shortcut, then the edit and delete
- * buttons, one per row. */
+/** The actions cell: the edit button beside an overflow menu holding the
+ * secondary actions — the imports and bills shortcuts, reconciliation,
+ * the history chart, and the delete (which still asks for confirmation in
+ * the page's dialog). Every item carries its label. */
 function AccountActionsCell({
   account,
   actions,
@@ -159,51 +163,6 @@ function AccountActionsCell({
 
   return (
     <div className="flex items-center justify-end gap-1">
-      {account.type === 'Credit Card' ? (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t('accounts.bills')}
-          title={t('accounts.bills')}
-          nativeButton={false}
-          render={<Link to="/bills" search={{ accountId: account.id }} />}
-        >
-          <ReceiptText />
-        </Button>
-      ) : null}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t('accounts.import')}
-        title={t('accounts.import')}
-        nativeButton={false}
-        render={
-          <Link
-            to="/accounts/$accountId/import"
-            params={{ accountId: String(account.id) }}
-          />
-        }
-      >
-        <FileUp />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t('accounts.reconcile')}
-        title={t('accounts.reconcile')}
-        onClick={() => actions.onReconcile(account)}
-      >
-        <Scale />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t('accounts.history')}
-        title={t('accounts.history')}
-        onClick={() => actions.onHistory(account)}
-      >
-        <ChartLine />
-      </Button>
       <Button
         variant="ghost"
         size="icon-sm"
@@ -213,16 +172,59 @@ function AccountActionsCell({
       >
         <Pencil />
       </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="text-destructive hover:text-destructive"
-        aria-label={t('accounts.delete')}
-        title={t('accounts.delete')}
-        onClick={() => actions.onDelete(account)}
-      >
-        <Trash2 />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('accounts.more-actions')}
+              title={t('accounts.more-actions')}
+            />
+          }
+        >
+          <Ellipsis />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {account.type === 'Credit Card' ? (
+            <DropdownMenuItem
+              render={
+                <Link to="/bills" search={{ accountId: account.id }} />
+              }
+            >
+              <ReceiptText />
+              {t('accounts.bills')}
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem
+            render={
+              <Link
+                to="/accounts/$accountId/import"
+                params={{ accountId: String(account.id) }}
+              />
+            }
+          >
+            <FileUp />
+            {t('accounts.import')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => actions.onReconcile(account)}>
+            <Scale />
+            {t('accounts.reconcile')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => actions.onHistory(account)}>
+            <ChartLine />
+            {t('accounts.history')}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => actions.onDelete(account)}
+          >
+            <Trash2 />
+            {t('accounts.delete')}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

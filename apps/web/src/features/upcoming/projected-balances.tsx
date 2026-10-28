@@ -4,6 +4,7 @@ import type { ProjectedBalance, UpcomingResponse } from '@workspace/poco'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** Whether a line sums a whole currency rather than naming one account. */
 function isCurrencyLine(line: ProjectedBalance): boolean {
@@ -24,21 +25,21 @@ export function ProjectedBalances({
   from: string
   to: string
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   if (balances.length === 0) {
     return null
   }
 
   const money = (line: ProjectedBalance, amount: string) =>
-    formatMoney(amount, i18n.language, line.currency)
+    formatMoney(amount, formattingLocale(), line.currency)
 
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-sm font-medium text-muted-foreground">
         {t('upcoming.balances', {
-          from: formatDayLabel(from, i18n.language),
-          to: formatDayLabel(to, i18n.language),
+          from: formatDayLabel(from, formattingLocale()),
+          to: formatDayLabel(to, formattingLocale()),
         })}
       </h2>
       <ul className="flex flex-col gap-1">
@@ -76,7 +77,7 @@ export function ProjectedBalances({
                       }),
                     date: formatDayLabel(
                       line.firstNegative.date,
-                      i18n.language
+                      formattingLocale()
                     ),
                     amount: money(line, line.firstNegative.balance),
                   }
@@ -88,7 +89,7 @@ export function ProjectedBalances({
       </ul>
       <p className="text-xs text-muted-foreground">
         {t('upcoming.balances-note', {
-          to: formatDayLabel(to, i18n.language),
+          to: formatDayLabel(to, formattingLocale()),
         })}
       </p>
     </section>

@@ -6,6 +6,7 @@ import { DataTable } from '@workspace/ui/components/data-table'
 
 import { buildBillPaymentsColumns } from './bill-payments-columns.js'
 import { useBillTransactions } from './use-bills.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The payments that settle one bill — the card sides of transfers naming
@@ -20,7 +21,7 @@ export function BillPaymentsTable({
   statementId: number
   onMove: (payment: Transaction) => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'transactionDt', desc: false },
   ])
@@ -46,8 +47,8 @@ export function BillPaymentsTable({
   )
   const payments = useBillTransactions(args)
   const columns = useMemo(
-    () => buildBillPaymentsColumns(t, i18n.language, onMove),
-    [t, i18n.language, onMove]
+    () => buildBillPaymentsColumns(t, formattingLocale(), onMove),
+    [t, formattingLocale(), onMove]
   )
 
   return (

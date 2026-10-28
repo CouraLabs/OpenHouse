@@ -17,6 +17,7 @@ import { PageHeader } from '@/components/page-header.js'
 import { useStatementSearch } from '@/lib/statements.js'
 import { buildBillsColumns } from './bills-columns.js'
 import { useActiveAccounts } from './use-bills.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The tenant's credit card bills, newest due first: one row per cycle a
@@ -24,7 +25,7 @@ import { useActiveAccounts } from './use-bills.js'
  * starts from the `accountId` a card's Bills shortcut links with.
  */
 export function BillsPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { accountId } = useSearch({ from: '/_main/bills' })
 
   // The table's state, held here so the search args derive from it.
@@ -66,8 +67,8 @@ export function BillsPage() {
 
   const search = useStatementSearch(args)
   const columns = useMemo(
-    () => buildBillsColumns(t, i18n.language),
-    [t, i18n.language]
+    () => buildBillsColumns(t, formattingLocale()),
+    [t, formattingLocale()]
   )
 
   // A new sort or filter is a new first page.

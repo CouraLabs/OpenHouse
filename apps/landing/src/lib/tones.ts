@@ -9,4 +9,5 @@ export const toneClasses: Record<Tone, string> = {
   blue: 'bg-blue-wash text-blue-ink',
   green: 'bg-green-wash text-green-ink',
   yellow: 'bg-yellow-wash text-yellow-ink',
+  bone: 'bg-bone text-muted',
 }

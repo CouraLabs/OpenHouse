@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@workspace/ui/components/button'
 
 import { useImportUndo, useRecentImports } from './use-statement-imports.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The account's imports from the last 24 hours that still hold rows, each
@@ -9,7 +10,7 @@ import { useImportUndo, useRecentImports } from './use-statement-imports.js'
  * on. Renders nothing while there is none.
  */
 export function RecentImports({ accountId }: { accountId: number }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const recent = useRecentImports(accountId)
   const undo = useImportUndo()
   const batches = recent.data ?? []
@@ -18,7 +19,7 @@ export function RecentImports({ accountId }: { accountId: number }) {
     return null
   }
 
-  const format = new Intl.DateTimeFormat(i18n.language, {
+  const format = new Intl.DateTimeFormat(formattingLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
   })

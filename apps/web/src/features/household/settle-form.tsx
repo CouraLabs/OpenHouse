@@ -14,6 +14,7 @@ import { useSettleUp } from '@/lib/household.js'
 import { useTenantToday } from '@/lib/settings.js'
 import { useActiveAccounts } from '@/features/transactions/use-transactions.js'
 import { StringPick } from '@/features/transactions/string-pick.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The props `SettleForm` takes. */
 interface SettleFormProps {
@@ -27,7 +28,7 @@ interface SettleFormProps {
  * so the card accounts are not offered.
  */
 export function SettleForm({ suggestion, onClose }: SettleFormProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const today = useTenantToday()
   const accounts = useActiveAccounts()
   const settle = useSettleUp()
@@ -51,7 +52,7 @@ export function SettleForm({ suggestion, onClose }: SettleFormProps) {
             to: suggestion.toName,
             amount: formatMoney(
               suggestion.amount,
-              i18n.language,
+              formattingLocale(),
               suggestion.currency
             ),
           })}

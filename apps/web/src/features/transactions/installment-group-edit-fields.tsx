@@ -9,6 +9,7 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { InstallmentFields } from './installment-fields.js'
 import { PurchasePreview } from './purchase-preview.js'
 import { useInstallmentActions } from './use-transactions.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * Edits an installment purchase as a whole: its name always, and its
@@ -25,7 +26,7 @@ export function InstallmentGroupEditFields({
   onBack: () => void
   onDone: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { update } = useInstallmentActions()
   const [name, setName] = useState(group.name)
   const [amount, setAmount] = useState(group.total)
@@ -53,7 +54,7 @@ export function InstallmentGroupEditFields({
         onChange={(event) => setName(event.target.value)}
       />
       <MoneyField
-        locale={i18n.language}
+        locale={formattingLocale()}
         label={t('transactions.amount')}
         labelFor="installment-group-amount"
         placeholder={t('transactions.amount-placeholder')}

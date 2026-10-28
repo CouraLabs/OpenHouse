@@ -9,6 +9,7 @@ import { BalancesCard } from './balances-card.js'
 import { SettleDialog } from './settle-dialog.js'
 import { SettlementsCard } from './settlements-card.js'
 import { SpendingCard } from './spending-card.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** No window: spending covers everything the household recorded. */
 const ALL_TIME = {}
@@ -19,7 +20,7 @@ const ALL_TIME = {}
  * settlements.
  */
 export function HouseholdPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const overview = useHouseholdOverview(ALL_TIME)
   const [settling, setSettling] = useState<SettleSuggestion | null>(null)
   const data = overview.data
@@ -48,7 +49,7 @@ export function HouseholdPage() {
             lines={data.byMember.map((row) => ({
               key: `${row.userId}-${row.currency}`,
               label: row.userName,
-              total: formatMoney(row.total, i18n.language, row.currency),
+              total: formatMoney(row.total, formattingLocale(), row.currency),
             }))}
           />
           <SpendingCard
@@ -58,7 +59,7 @@ export function HouseholdPage() {
               key: `${row.categoryId}-${row.currency}`,
               label: row.categoryName,
               color: row.categoryColor,
-              total: formatMoney(row.total, i18n.language, row.currency),
+              total: formatMoney(row.total, formattingLocale(), row.currency),
             }))}
           />
         </div>

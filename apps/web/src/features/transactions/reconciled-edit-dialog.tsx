@@ -3,6 +3,7 @@ import type { ReconciledEditConflict } from '@workspace/poco'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The props `ReconciledEditDialog` takes. */
 interface ReconciledEditDialogProps {
@@ -24,7 +25,7 @@ export function ReconciledEditDialog({
   onCancel,
   onConfirm,
 }: ReconciledEditDialogProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <ConfirmDialog
@@ -35,7 +36,7 @@ export function ReconciledEditDialog({
         date:
           conflict === null
             ? ''
-            : formatDayLabel(conflict.reconciledThrough, i18n.language, {
+            : formatDayLabel(conflict.reconciledThrough, formattingLocale(), {
                 dateStyle: 'medium',
               }),
       })}

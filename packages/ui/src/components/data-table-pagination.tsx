@@ -46,6 +46,13 @@ export function DataTablePagination<TData extends RowData>({
   const pageCount = table.getPageCount()
   const rowCount = table.getRowCount()
   const rowsOnPage = table.getRowModel().rows.length
+
+  // One page and there is nothing to page: the bar would read
+  // "Page 1 of 1" with dead arrows, so it stays out of the way.
+  if (pageCount <= 1) {
+    return null
+  }
+
   const firstRow = rowsOnPage === 0 ? 0 : pageIndex * pageSize + 1
   const lastRow = firstRow + rowsOnPage - 1
 

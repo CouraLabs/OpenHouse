@@ -9,6 +9,7 @@ import {
 
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The props `InterestSummary` takes: the figures at the final period. */
 interface InterestSummaryProps {
@@ -27,7 +28,7 @@ export function InterestSummary({
   compoundCapital,
   variation,
 }: InterestSummaryProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
 
   const tiles = [
@@ -53,7 +54,7 @@ export function InterestSummary({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">
-              {formatMoney(String(tile.value), i18n.language, mainCurrency)}
+              {formatMoney(String(tile.value), formattingLocale(), mainCurrency)}
             </p>
           </CardContent>
         </Card>

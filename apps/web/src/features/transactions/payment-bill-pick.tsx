@@ -11,6 +11,7 @@ import {
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { useStatementSearch } from '@/lib/statements.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The bill a transfer into a card pays. Nothing picked shows the card's
@@ -28,7 +29,7 @@ export function PaymentBillPick({
   value: number | undefined
   onChange: (value: number) => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const bills = useStatementSearch({
     sort: [{ field: 'closeDate', dir: 'desc' }],
     filter: { accountId: cardId },
@@ -40,7 +41,7 @@ export function PaymentBillPick({
     items.find((bill) => bill.id === value) ?? defaultPaymentStatement(items)
   const label = (bill: (typeof items)[number]) =>
     t('bills.bill-option', {
-      due: formatDayLabel(bill.dueDate, i18n.language),
+      due: formatDayLabel(bill.dueDate, formattingLocale()),
       status: t(`bills.status-${bill.status.toLowerCase()}`),
     })
 

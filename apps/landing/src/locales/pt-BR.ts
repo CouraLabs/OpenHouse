@@ -20,12 +20,13 @@ import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/links.js'
 /** The page in Brazilian Portuguese; samples read in reais and Brazilian dates. */
 export const ptBR: Content = {
   meta: {
-    title: 'OpenHouse — finanças da casa, em código aberto',
+    title: 'OpenHouse — o app da casa, em código aberto',
     description:
-      'OpenHouse é um app de finanças domésticas de código aberto: contas, transações, limites, metas e planejadores — hospede você mesmo de graça ou deixe que a gente rode para você.',
+      'OpenHouse é o app da casa em código aberto. O dinheiro já está no ar — contas, transações, limites e metas em um livro-caixa compartilhado — e despensa, refeições, pets, saúde e mais estão a caminho. Hospede você mesmo de graça ou deixe que a gente rode para você.',
   },
 
   navLinks: [
+    { label: 'A casa', href: '#the-house' },
     { label: 'Recursos', href: '#features' },
     { label: 'Planejadores', href: '#planners' },
     { label: 'Preços', href: '#pricing' },
@@ -37,14 +38,14 @@ export const ptBR: Content = {
     signIn: { label: 'Entrar', href: SIGN_IN_URL },
     start: { label: 'Comece grátis', href: SIGN_UP_URL },
     themeToggle: 'Alternar tema escuro',
-    localeToggle: 'View in English',
+    localeToggle: 'Ver em inglês',
   },
 
   hero: {
-    eyebrow: 'Código aberto · Finanças da casa',
-    headline: 'Cada centavo da casa, no seu lugar.',
+    eyebrow: 'Código aberto · O app da casa',
+    headline: 'Um só lugar para a casa inteira — começando pelo dinheiro.',
     tagline:
-      'O OpenHouse reúne as contas, transações, limites e metas da sua casa em um livro-caixa tranquilo. Código aberto de ponta a ponta — rode no seu próprio servidor de graça, ou deixe que a gente rode para você.',
+      'Um lugar compartilhado para o que mantém a casa funcionando. O livro-caixa já está no ar — contas, transações, limites, metas — e o resto da vida doméstica vem chegando. Código aberto de ponta a ponta: rode no seu próprio servidor de graça, ou deixe que a gente rode para você.',
     primary: { label: 'Comece grátis', href: SIGN_UP_URL },
     secondary: { label: 'Hospede você mesmo', href: GITHUB_URL },
     stack: 'Feito com PostgreSQL, NestJS e React',
@@ -146,10 +147,95 @@ export const ptBR: Content = {
 
   ruleStatus: { posted: 'Lançada', scheduled: 'Agendada' },
 
+  /** The house index: the ledger live today, the announced rooms to come. */
+  houseIntro: {
+    eyebrow: 'A casa',
+    title: 'Um lugar só para tudo o que faz a casa funcionar.',
+    lede: 'O dinheiro já está no ar. Cada parte da vida doméstica chega como um cômodo da mesma casa — o mesmo login, os mesmos membros, os mesmos livros.',
+  },
+
+  houseStatus: { live: 'Ativo', coming: 'Em breve' },
+
+  houseModules: [
+    {
+      name: 'Dinheiro',
+      kind: 'O livro-caixa',
+      description:
+        'Contas, transações, limites e metas — os livros da casa, ao vivo desde hoje.',
+      tone: 'green',
+      status: 'live',
+    },
+    {
+      name: 'Despensa',
+      kind: 'Os armários',
+      description:
+        'O que tem nos armários, o que está acabando, o que comprar.',
+      tone: 'yellow',
+      status: 'coming',
+    },
+    {
+      name: 'Refeições',
+      kind: 'A mesa',
+      description: 'Planeje a comida da semana, da despensa à mesa.',
+      tone: 'red',
+      status: 'coming',
+    },
+    {
+      name: 'Lavanderia & organização',
+      kind: 'Os guarda-roupas',
+      description: 'Onde cada coisa mora, o que está limpo, o que está onde.',
+      tone: 'blue',
+      status: 'coming',
+    },
+    {
+      name: 'Pets',
+      kind: 'Os bichos',
+      description:
+        'Alimentação, datas do veterinário e os registros de cada bicho.',
+      tone: 'yellow',
+      status: 'coming',
+    },
+    {
+      name: 'Saúde',
+      kind: 'Bem-estar',
+      description: 'Consultas, remédios e os registros da família.',
+      tone: 'red',
+      status: 'coming',
+    },
+    {
+      name: 'Tarefas',
+      kind: 'A lista',
+      description: 'A lista da casa, visível para todas as mãos.',
+      tone: 'blue',
+      status: 'coming',
+    },
+    {
+      name: 'Calendário',
+      kind: 'As datas',
+      description: 'Um calendário só, para a casa inteira.',
+      tone: 'yellow',
+      status: 'coming',
+    },
+    {
+      name: 'E-mail',
+      kind: 'As cartas',
+      description: 'As cartas da casa, conectadas às suas caixas de entrada.',
+      tone: 'blue',
+      status: 'coming',
+    },
+    {
+      name: 'Telegram & WhatsApp',
+      kind: 'As conversas',
+      description: 'A casa conversa onde a casa já conversa.',
+      tone: 'red',
+      status: 'coming',
+    },
+  ],
+
   featuresIntro: {
     eyebrow: 'O livro-caixa',
     title: 'Tudo o que a casa gasta, guarda e deve.',
-    lede: 'Cadastre suas contas uma vez e deixe o livro-caixa se manter certo sozinho — as regras lançam as contas, os atalhos preenchem os formulários, limites e metas marcam o placar.',
+    lede: 'O primeiro cômodo da casa é o dinheiro — e ele vem todo mobiliado: cadastre suas contas uma vez e deixe o livro-caixa se manter certo sozinho — as regras lançam as contas, os atalhos preenchem os formulários, limites e metas marcam o placar.',
   },
 
   features: {
@@ -353,6 +439,11 @@ export const ptBR: Content = {
       answer:
         'Contas e cartões podem ser mantidos em reais, dólares ou euros, cada um com seu próprio saldo e, para cartões, datas de fechamento e vencimento.',
     },
+    {
+      question: 'O que vem depois do dinheiro?',
+      answer:
+        'Despensa, refeições, tarefas, pets, saúde, calendário, e-mail e as integrações de mensagens estão anunciados e em construção. Cada um chega como parte da mesma casa compartilhada — o mesmo login, os mesmos membros — e o livro-caixa continua funcionando exatamente como hoje.',
+    },
   ],
 
   openSource: {
@@ -368,7 +459,7 @@ export const ptBR: Content = {
   },
 
   footer: {
-    tagline: 'Finanças da casa, em código aberto.',
+    tagline: 'O app da casa, em código aberto.',
     copyright: `© ${new Date().getFullYear()} CouraLabs`,
     links: [
       { label: 'GitHub', href: GITHUB_URL },

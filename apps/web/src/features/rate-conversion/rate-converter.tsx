@@ -18,6 +18,7 @@ import {
 } from '@workspace/ui/components/select'
 
 import { convertRate, formatPercent, type RateUnit } from '@/lib/finance.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The period choices the original-rate select offers. */
 const UNITS: Array<{ value: RateUnit; labelKey: string }> = [
@@ -38,7 +39,7 @@ const TARGETS: Array<{ value: RateUnit; labelKey: string }> = [
  * the rate, and the converted figures — compounding, never dividing.
  */
 export function RateConverter() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [unit, setUnit] = useState<RateUnit>('year')
   const [rate, setRate] = useState('10')
   // The trigger's label is rendered here, not derived by base-ui from
@@ -111,7 +112,7 @@ export function RateConverter() {
                 {t(row.labelKey)}
               </span>
               <span className="text-lg font-semibold tabular-nums">
-                {formatPercent(row.value, i18n.language)}
+                {formatPercent(row.value, formattingLocale())}
               </span>
             </div>
           ))}

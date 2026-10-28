@@ -26,6 +26,7 @@ import {
   useTenantUsers,
 } from './use-tenant-users.js'
 import { buildUserColumns } from './users-columns.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The table never sorts; the API answers oldest first. */
 const NO_SORTING: SortingState = []
@@ -37,7 +38,7 @@ const NO_SORTING: SortingState = []
  * user created is lost.
  */
 export function UsersSection() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const session = useSession()
   const { timezone } = useTenantSettings()
   const users = useTenantUsers()
@@ -61,7 +62,7 @@ export function UsersSection() {
     () =>
       buildUserColumns(
         t,
-        { locale: i18n.language, timeZone: timezone },
+        { locale: formattingLocale(), timeZone: timezone },
         session.data?.user.id ?? 0,
         {
           onRemove: (user) => {
@@ -82,7 +83,7 @@ export function UsersSection() {
       ),
     [
       t,
-      i18n.language,
+      formattingLocale(),
       timezone,
       session.data?.user.id,
       setActive.reset,
@@ -103,7 +104,7 @@ export function UsersSection() {
   const pending = (invites.data ?? []).filter((invite) =>
     isPendingInvite(invite, now)
   )
-  const expiryFormat = new Intl.DateTimeFormat(i18n.language, {
+  const expiryFormat = new Intl.DateTimeFormat(formattingLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: timezone,
@@ -202,7 +203,7 @@ export function UsersSection() {
                   name: removing?.name ?? '',
                   amount: formatMoney(
                     line.balance.replace('-', ''),
-                    i18n.language,
+                    formattingLocale(),
                     line.currency
                   ),
                 })
@@ -210,7 +211,7 @@ export function UsersSection() {
                   name: removing?.name ?? '',
                   amount: formatMoney(
                     line.balance,
-                    i18n.language,
+                    formattingLocale(),
                     line.currency
                   ),
                 })

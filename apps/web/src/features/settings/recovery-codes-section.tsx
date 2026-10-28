@@ -9,6 +9,7 @@ import {
 } from '@/lib/account-security.js'
 import { useTenantSettings } from '@/lib/settings.js'
 import { RecoveryCodesList } from './recovery-codes-list.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The owner's recovery codes, in the Security section: how many of the
@@ -18,7 +19,7 @@ import { RecoveryCodesList } from './recovery-codes-list.js'
  * codes asks first: the old ones stop working at once.
  */
 export function RecoveryCodesSection() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { timezone } = useTenantSettings()
   const security = useAccountSecurity()
   const generate = useGenerateRecoveryCodes()
@@ -46,7 +47,7 @@ export function RecoveryCodesSection() {
             ? t('settings.recovery.none')
             : t('settings.recovery.remaining', {
                 count: recovery.remaining,
-                date: new Intl.DateTimeFormat(i18n.language, {
+                date: new Intl.DateTimeFormat(formattingLocale(), {
                   dateStyle: 'medium',
                   timeZone: timezone,
                 }).format(new Date(recovery.generatedAt)),

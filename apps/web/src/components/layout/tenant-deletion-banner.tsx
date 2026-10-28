@@ -5,13 +5,14 @@ import { useTranslation } from 'react-i18next'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { useSession } from '@/lib/auth.js'
 import { useCancelTenantDeletion } from '@/features/settings/use-tenant-deletion.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * Tells everyone who signs in that the household is scheduled for deletion,
  * and on which day; the owner can cancel it from here.
  */
 export function TenantDeletionBanner() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const session = useSession()
   const cancel = useCancelTenantDeletion()
   const deletionDate = session.data?.tenant.deletionDate ?? null
@@ -20,7 +21,7 @@ export function TenantDeletionBanner() {
     return null
   }
 
-  const date = formatDayLabel(deletionDate, i18n.language, {
+  const date = formatDayLabel(deletionDate, formattingLocale(), {
     dateStyle: 'long',
   })
 

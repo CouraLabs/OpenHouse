@@ -33,6 +33,7 @@ import {
   useDeleteAccount,
   useSaveAccount,
 } from './use-accounts.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The 409 body deleting a card that still owes answers until it is
  * confirmed, or nothing for any other failure. */
@@ -53,7 +54,7 @@ function deleteConflictOf(error: unknown): AccountDeleteConflict | null {
 /** The page the tenant's accounts are managed from: the form above the
  * table, the table below, and the delete confirmation in between. */
 export function AccountsPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   // The table's state, held here so the search args derive from it.
   const [sorting, setSorting] = useState<SortingState>([])
@@ -119,7 +120,7 @@ export function AccountsPage() {
 
   const columns: Array<DataTableColumn<Account>> = useMemo(
     () =>
-      buildAccountsColumns(t, i18n.language, {
+      buildAccountsColumns(t, formattingLocale(), {
         onEdit: (account) => {
           setEditing(account)
           setFormOpen(true)
@@ -135,7 +136,7 @@ export function AccountsPage() {
         onReconcile: setReconciling,
         onHistory: setViewingHistory,
       }),
-    [t, i18n.language, save.reset]
+    [t, formattingLocale(), save.reset]
   )
 
   // Saving needs no confirmation: the form's submit is the intent. A failure
@@ -273,7 +274,7 @@ export function AccountsPage() {
                 count: deleteConflict.unpaidBills,
                 amount: formatMoney(
                   deleteConflict.amountDue,
-                  i18n.language,
+                  formattingLocale(),
                   deleteConflict.currency
                 ),
               })

@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@workspace/ui/components/select'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The period the projection counts in: whole years or whole months. */
 export type InterestUnit = 'year' | 'month'
@@ -54,7 +55,7 @@ export function InterestParams({
   onPeriodsChange,
   onUnitChange,
 }: InterestParamsProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   // The trigger's label is rendered here, not derived by base-ui from
   // `items`: a prefilled value set while the popup was closed would
   // otherwise fall back to the placeholder.
@@ -69,7 +70,7 @@ export function InterestParams({
       </CardHeader>
       <CardContent className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={t('interest-comparison.params.present-value')}
           labelFor="interest-present-value"

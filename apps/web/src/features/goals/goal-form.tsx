@@ -25,6 +25,7 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
 import { useActiveAccounts } from './use-goals.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The fields the goal form holds. The rules come straight from the shared
@@ -78,7 +79,7 @@ export function GoalForm({
   error,
   isSaving = false,
 }: GoalFormProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const today = useTenantToday()
   const {
@@ -207,7 +208,7 @@ export function GoalForm({
           ) : null}
         </Field>
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={t('goals.balance-in', { currency: mainCurrency })}
           labelFor="goal-balance"
@@ -229,7 +230,7 @@ export function GoalForm({
           <DatePicker
             id="goal-balance-dt"
             className="h-8"
-            locale={i18n.language}
+            locale={formattingLocale()}
             value={parseDateOnly(balanceDt)}
             onChange={(date) =>
               setValue('balanceDt', formatDateOnly(date), {
@@ -248,7 +249,7 @@ export function GoalForm({
           />
         </Field>
         <MoneyField
-          locale={i18n.language}
+          locale={formattingLocale()}
           className="h-8"
           label={t('goals.target-balance-in', { currency: mainCurrency })}
           labelFor="goal-target-balance"
@@ -267,7 +268,7 @@ export function GoalForm({
           <DatePicker
             id="goal-target-dt"
             className="h-8"
-            locale={i18n.language}
+            locale={formattingLocale()}
             // A deadline cannot sit in the past: today and later only.
             disabledBefore={earliestTargetDt}
             value={parseDateOnly(targetDt)}

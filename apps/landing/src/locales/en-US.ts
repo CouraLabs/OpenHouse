@@ -20,12 +20,13 @@ import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/links.js'
 /** The page in American English — the default and the fallback. */
 export const enUS: Content = {
   meta: {
-    title: 'OpenHouse — open-source household finance',
+    title: 'OpenHouse — the open-source household app',
     description:
-      'OpenHouse is an open-source household finance app: accounts, transactions, limits, goals, and planners — self-host it for free or let us run it for you.',
+      'OpenHouse is the open-source household app. The money is live today — accounts, transactions, limits, and goals in one shared ledger — with pantry, meals, pets, health, and more on the way. Self-host it for free or let us run it for you.',
   },
 
   navLinks: [
+    { label: 'The house', href: '#the-house' },
     { label: 'Features', href: '#features' },
     { label: 'Planners', href: '#planners' },
     { label: 'Pricing', href: '#pricing' },
@@ -37,14 +38,14 @@ export const enUS: Content = {
     signIn: { label: 'Sign in', href: SIGN_IN_URL },
     start: { label: 'Start free', href: SIGN_UP_URL },
     themeToggle: 'Toggle dark theme',
-    localeToggle: 'Ver em português',
+    localeToggle: 'View in Portuguese',
   },
 
   hero: {
-    eyebrow: 'Open source · Household finance',
-    headline: 'Every coin in the house, in its place.',
+    eyebrow: 'Open source · The household app',
+    headline: 'One home for the whole house — starting with the money.',
     tagline:
-      'OpenHouse keeps your household’s accounts, transactions, limits, and goals in one calm ledger. Open source end to end — run it on your own server for free, or let us run it for you.',
+      'One shared place for what the house runs on. The ledger is live today — accounts, transactions, limits, goals — and the rest of home life is on the way. Open source end to end: run it on your own server for free, or let us run it for you.',
     primary: { label: 'Start free', href: SIGN_UP_URL },
     secondary: { label: 'Self-host it', href: GITHUB_URL },
     stack: 'Built on PostgreSQL, NestJS & React',
@@ -143,10 +144,93 @@ export const enUS: Content = {
 
   ruleStatus: { posted: 'Posted', scheduled: 'Scheduled' },
 
+  /** The house index: the ledger live today, the announced rooms to come. */
+  houseIntro: {
+    eyebrow: 'The house',
+    title: 'One place for everything the house runs on.',
+    lede: 'Money is live today. Each part of home life arrives as a room of the same house — same sign-in, same members, same books.',
+  },
+
+  houseStatus: { live: 'Live', coming: 'Coming' },
+
+  houseModules: [
+    {
+      name: 'Money',
+      kind: 'The ledger',
+      description:
+        'Accounts, transactions, limits, goals — the shared books, live today.',
+      tone: 'green',
+      status: 'live',
+    },
+    {
+      name: 'Pantry',
+      kind: 'The cupboards',
+      description: 'What’s in the cupboards, what runs out, what to buy.',
+      tone: 'yellow',
+      status: 'coming',
+    },
+    {
+      name: 'Meals',
+      kind: 'The table',
+      description: 'Plan the week’s food, from pantry to table.',
+      tone: 'red',
+      status: 'coming',
+    },
+    {
+      name: 'Laundry & storage',
+      kind: 'The closets',
+      description: 'Where things live, what’s clean, what’s where.',
+      tone: 'blue',
+      status: 'coming',
+    },
+    {
+      name: 'Pets',
+      kind: 'The animals',
+      description: 'Feeding, vet dates, and the animals’ own records.',
+      tone: 'yellow',
+      status: 'coming',
+    },
+    {
+      name: 'Health',
+      kind: 'Wellbeing',
+      description: 'Appointments, medications, and the family’s records.',
+      tone: 'red',
+      status: 'coming',
+    },
+    {
+      name: 'Todos',
+      kind: 'The list',
+      description: 'The house’s list, visible to every hand.',
+      tone: 'blue',
+      status: 'coming',
+    },
+    {
+      name: 'Calendar',
+      kind: 'The dates',
+      description: 'One calendar for the whole house.',
+      tone: 'yellow',
+      status: 'coming',
+    },
+    {
+      name: 'Mail',
+      kind: 'The letters',
+      description: 'The house’s letters, connected to your inboxes.',
+      tone: 'blue',
+      status: 'coming',
+    },
+    {
+      name: 'Telegram & WhatsApp',
+      kind: 'The conversations',
+      description: 'The house talks where the house already talks.',
+      tone: 'red',
+      status: 'coming',
+    },
+  ],
+
   featuresIntro: {
     eyebrow: 'The ledger',
     title: 'Everything a household spends, saves, and owes.',
-    lede: 'Set up your accounts once, then let the ledger stay true on its own — rules post the bills, presets fill the forms, limits and goals keep score.',
+    lede: 'The first room of the house is the money — and it’s fully furnished: set up your accounts once, then let the ledger stay true on its own — rules post the bills, presets fill the forms, limits and goals keep score.',
   },
 
   features: {
@@ -348,6 +432,11 @@ export const enUS: Content = {
       answer:
         'Accounts and cards can be kept in dollars, reais, or euros, each with its own balance and, for cards, closing and due dates.',
     },
+    {
+      question: 'What comes after the money?',
+      answer:
+        'Pantry, meals, todos, pets, health, calendar, mail, and the messaging integrations are announced and in the works. Each ships as part of the same shared home — same sign-in, same members — and the ledger keeps working exactly as it does today.',
+    },
   ],
 
   openSource: {
@@ -363,7 +452,7 @@ export const enUS: Content = {
   },
 
   footer: {
-    tagline: 'Open-source household finance.',
+    tagline: 'The open-source household app.',
     copyright: `© ${new Date().getFullYear()} CouraLabs`,
     links: [
       { label: 'GitHub', href: GITHUB_URL },

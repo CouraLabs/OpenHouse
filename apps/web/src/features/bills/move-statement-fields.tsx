@@ -14,6 +14,7 @@ import {
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { useMoveToStatement, useStatementSearch } from '@/lib/statements.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** The move dialog's bill pick and buttons: the card's other bills, newest
  * first. Mounts fresh with every opening, so nothing starts picked. */
@@ -24,7 +25,7 @@ export function MoveStatementFields({
   transaction: Transaction
   onClose: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [statementId, setStatementId] = useState<number | undefined>()
   const move = useMoveToStatement()
   const bills = useStatementSearch({
@@ -40,7 +41,7 @@ export function MoveStatementFields({
     .map((bill) => ({
       value: bill.id,
       label: t('bills.bill-option', {
-        due: formatDayLabel(bill.dueDate, i18n.language),
+        due: formatDayLabel(bill.dueDate, formattingLocale()),
         status: t(`bills.status-${bill.status.toLowerCase()}`),
       }),
     }))

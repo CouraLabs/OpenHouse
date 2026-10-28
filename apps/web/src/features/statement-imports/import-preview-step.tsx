@@ -30,6 +30,7 @@ import {
   useActiveCategories,
   useActiveReceivers,
 } from './use-statement-imports.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** How many rows one page of the preview table holds. */
 const PAGE_SIZE = 50
@@ -66,7 +67,7 @@ export function ImportPreviewStep({
   onRemap: (() => void) | undefined
   onBack: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const categories = useActiveCategories()
   const receivers = useActiveReceivers()
   const [edits, setEdits] = useState<Record<number, RowEdit>>({})
@@ -197,7 +198,7 @@ export function ImportPreviewStep({
       {reconciledThrough !== null ? (
         <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">
           {t('imports.reconciled-conflict', {
-            date: formatDayLabel(reconciledThrough, i18n.language, {
+            date: formatDayLabel(reconciledThrough, formattingLocale(), {
               day: 'numeric',
               month: 'short',
               year: 'numeric',

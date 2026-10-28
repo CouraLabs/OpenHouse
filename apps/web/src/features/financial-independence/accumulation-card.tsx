@@ -14,6 +14,7 @@ import { NumberField } from '@workspace/ui/components/number-field'
 import { pmt, realRate } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * Reaching a target: the monthly contribution that turns today's balance
@@ -22,7 +23,7 @@ import { useMainCurrency } from '@/lib/settings.js'
  * contributions, and income tax on the gains.
  */
 export function AccumulationCard() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const [target, setTarget] = useState('2000000.00')
   const [present, setPresent] = useState('25000.00')
@@ -67,7 +68,7 @@ export function AccumulationCard() {
       <CardContent className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <MoneyField
-            locale={i18n.language}
+            locale={formattingLocale()}
             className="h-8"
             label={t('financial-independence.accumulation.target')}
             labelFor="accumulation-target"
@@ -75,7 +76,7 @@ export function AccumulationCard() {
             onValueChange={setTarget}
           />
           <MoneyField
-            locale={i18n.language}
+            locale={formattingLocale()}
             className="h-8"
             label={t('financial-independence.accumulation.present')}
             labelFor="accumulation-present"
@@ -131,7 +132,7 @@ export function AccumulationCard() {
               {t('financial-independence.accumulation.result')}
             </span>
             <p className="text-2xl font-semibold">
-              {formatMoney(String(contribution), i18n.language, mainCurrency)}
+              {formatMoney(String(contribution), formattingLocale(), mainCurrency)}
             </p>
           </div>
           <div className="flex justify-between gap-2 text-sm">
@@ -141,7 +142,7 @@ export function AccumulationCard() {
             <span className="font-medium tabular-nums">
               {formatMoney(
                 String(totalContributed),
-                i18n.language,
+                formattingLocale(),
                 mainCurrency
               )}
             </span>
@@ -151,7 +152,7 @@ export function AccumulationCard() {
               {t('financial-independence.accumulation.tax')}
             </span>
             <span className="font-medium tabular-nums">
-              {formatMoney(String(totalTax), i18n.language, mainCurrency)}
+              {formatMoney(String(totalTax), formattingLocale(), mainCurrency)}
             </span>
           </div>
         </div>

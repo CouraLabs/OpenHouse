@@ -1,74 +1,33 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateLimitBody, Limit, LimitType } from '@workspace/poco'
-import { limitTypes } from '@workspace/poco'
-import type { PaginationState, SortingState } from '@tanstack/react-table'
+import type { CreateLimitBody, LimitUsage } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
-import {
-  DataTable,
-  type DataTableColumn,
-} from '@workspace/ui/components/data-table'
-import {
-  FilterDialog,
-  type FilterValues,
-} from '@workspace/ui/components/filter-dialog'
+import { Spinner } from '@workspace/ui/components/spinner'
 import { Plus } from 'lucide-react'
 
-import { ExportCsvButton } from '@/components/export-csv-button.js'
 import { PageHeader } from '@/components/page-header.js'
-import { buildLimitColumns } from './limits-columns.js'
 import { LimitForm } from './limit-form.js'
+import { LimitUsageGrid } from './limit-usage-grid.js'
 import {
-  useLimitsSearch,
+  useLimitsUsage,
   useDeleteLimit,
   useSaveLimit,
-  useActiveCategories,
 } from './use-limits.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
-/** The page the tenant's limits are managed from: the form above the
- * table, the table below, and the delete confirmation in between. */
+/** The page the tenant's limits are managed from: one usage card per
+ * ACTIVE limit — what the period has spent against the cap — with the
+ * create form and the delete confirmation above it. */
 export function LimitsPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
-  // The table's state, held here so the search args derive from it.
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 20,
-  })
-
-  // The form above the table, and what its buttons are about to do.
+  // The form, and what its buttons are about to do.
   const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<Limit | null>(null)
-  const [deleting, setDeleting] = useState<Limit | null>(null)
-  // The filter the dialog applies; the args derive from it.
-  const [filter, setFilter] = useState<FilterValues>({})
-  // The dropdown's choices: the type period, and the tenant's categories.
-  const categories = useActiveCategories()
+  const [editing, setEditing] = useState<LimitUsage | null>(null)
+  const [deleting, setDeleting] = useState<LimitUsage | null>(null)
 
-  const args = useMemo(
-    () => ({
-      sort: sorting.map((clause) => ({
-        field: clause.id,
-        dir: clause.desc ? ('desc' as const) : ('asc' as const),
-      })),
-      filter: {
-        categoryId:
-          filter.categoryId === undefined
-            ? undefined
-            : Number(filter.categoryId),
-        type:
-          filter.type === undefined ? undefined : (filter.type as LimitType),
-        status: 'ACTIVE' as const,
-      },
-      skip: pagination.pageIndex * pagination.pageSize,
-      limit: pagination.pageSize,
-    }),
-    [sorting, pagination, filter]
-  )
-
-  const search = useLimitsSearch(args)
+  const usage = useLimitsUsage()
   const save = useSaveLimit()
   const remove = useDeleteLimit()
 
@@ -85,31 +44,20 @@ export function LimitsPage() {
       : t('limits.error')
     : undefined
 
-  // A new sort is a new first page.
-  const resetToFirstPage = () => {
-    setPagination((current) =>
-      current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }
-    )
+  const actions = {
+    onEdit: (limit: LimitUsage) => {
+      setEditing(limit)
+      setFormOpen(true)
+    },
+    onDelete: (limit: LimitUsage) => {
+      // Deleting any card cancels the edit in progress: the form would
+      // otherwise keep editing a row the grid no longer holds.
+      setFormOpen(false)
+      setEditing(null)
+      save.reset()
+      setDeleting(limit)
+    },
   }
-
-  const columns: Array<DataTableColumn<Limit>> = useMemo(
-    () =>
-      buildLimitColumns(t, i18n.language, {
-        onEdit: (limit) => {
-          setEditing(limit)
-          setFormOpen(true)
-        },
-        onDelete: (limit) => {
-          // Deleting any row cancels the edit in progress: the form would
-          // otherwise keep editing a row the grid no longer holds.
-          setFormOpen(false)
-          setEditing(null)
-          save.reset()
-          setDeleting(limit)
-        },
-      }),
-    [t, i18n.language, save.reset]
-  )
 
   // Saving needs no confirmation: the form's submit is the intent. A failure
   // leaves the form open, holding the values, with the error shown.
@@ -132,56 +80,17 @@ export function LimitsPage() {
     })
   }
 
-  // The page's actions, on the header line: the filter and the insert.
+  // The page's action, on the header line: the insert.
   const toolbar = (
-    <>
-      <ExportCsvButton path="/limits/export" args={args} />
-      <FilterDialog
-        fields={[
-          {
-            key: 'type',
-            label: t('limits.type'),
-            type: 'select',
-            placeholder: t('limits.filter-type-placeholder'),
-            options: limitTypes.map((value) => ({
-              value,
-              label: t(`limits.type-${value.toLowerCase()}`),
-            })),
-          },
-          {
-            key: 'categoryId',
-            label: t('limits.category'),
-            type: 'select',
-            placeholder: t('limits.filter-category-placeholder'),
-            options: (categories.data ?? []).map((category) => ({
-              value: category.id,
-              label: category.name,
-            })),
-          },
-        ]}
-        values={filter}
-        onApply={(values) => {
-          setFilter(values)
-          resetToFirstPage()
-        }}
-        labels={{
-          trigger: t('filter.trigger'),
-          title: t('filter.title'),
-          apply: t('filter.apply'),
-          clear: t('filter.clear'),
-          cancel: t('filter.cancel'),
-        }}
-      />
-      <Button
-        onClick={() => {
-          setEditing(null)
-          setFormOpen(true)
-        }}
-      >
-        <Plus />
-        {t('limits.new')}
-      </Button>
-    </>
+    <Button
+      onClick={() => {
+        setEditing(null)
+        setFormOpen(true)
+      }}
+    >
+      <Plus />
+      {t('limits.new')}
+    </Button>
   )
 
   return (
@@ -205,26 +114,19 @@ export function LimitsPage() {
           }}
         />
       ) : null}
-      <DataTable
-        columns={columns}
-        data={search.data?.items ?? []}
-        total={search.data?.total ?? 0}
-        isLoading={search.isPending || search.isPlaceholderData}
-        sorting={sorting}
-        onSortingChange={(nextSorting) => {
-          setSorting(nextSorting)
-          resetToFirstPage()
-        }}
-        pagination={pagination}
-        onPaginationChange={setPagination}
-        emptyMessage={t('limits.empty')}
-        paginationLabels={{
-          rowsPerPage: t('limits.rows-per-page'),
-          page: (page, count) => t('limits.page-of', { page, count }),
-          previous: t('limits.previous-page'),
-          next: t('limits.next-page'),
-        }}
-      />
+      {usage.isPending ? (
+        <div className="flex justify-center py-12">
+          <Spinner className="size-6" />
+        </div>
+      ) : (usage.data ?? []).length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t('limits.empty')}</p>
+      ) : (
+        <LimitUsageGrid
+          usage={usage.data ?? []}
+          locale={formattingLocale()}
+          actions={actions}
+        />
+      )}
       {deleteError ? (
         <p className="text-sm text-destructive">{deleteError}</p>
       ) : null}

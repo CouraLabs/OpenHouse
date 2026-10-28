@@ -23,12 +23,6 @@ export function buildReceiverColumns(
 ): Array<DataTableColumn<Receiver>> {
   return [
     {
-      id: 'id',
-      header: '#',
-      enableSorting: false,
-      cell: (context) => context.row.original.id,
-    },
-    {
       accessorKey: 'name',
       header: t('receivers.name'),
     },

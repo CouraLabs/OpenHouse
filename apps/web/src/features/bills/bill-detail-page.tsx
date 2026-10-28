@@ -18,6 +18,7 @@ import { ReconcileDialog } from './reconcile-dialog.js'
 import { StatementStatusBadge } from './statement-status-badge.js'
 import { StatementSummary } from './statement-summary.js'
 import { useBillTransactions } from './use-bills.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * One bill: its card, period, and status in the header, its figures, the
@@ -27,7 +28,7 @@ import { useBillTransactions } from './use-bills.js'
  * state); Reconcile checks the bill against the bank's.
  */
 export function BillDetailPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { statementId } = useParams({ from: '/_main/bills/$statementId' })
   const id = Number(statementId)
   const bill = useStatement(id)
@@ -64,8 +65,8 @@ export function BillDetailPage() {
   )
   const charges = useBillTransactions(args)
   const columns = useMemo(
-    () => buildBillTransactionsColumns(t, i18n.language, setMoving),
-    [t, i18n.language]
+    () => buildBillTransactionsColumns(t, formattingLocale(), setMoving),
+    [t, formattingLocale()]
   )
 
   const back = (
@@ -98,13 +99,13 @@ export function BillDetailPage() {
       <PageHeader
         title={t('bills.detail-title', {
           card: statement.accountName,
-          due: formatDayLabel(statement.dueDate, i18n.language, {
+          due: formatDayLabel(statement.dueDate, formattingLocale(), {
             dateStyle: 'medium',
           }),
         })}
         subtitle={t('bills.period', {
-          from: formatDayLabel(statement.periodStart, i18n.language),
-          to: formatDayLabel(statement.closesOn, i18n.language),
+          from: formatDayLabel(statement.periodStart, formattingLocale()),
+          to: formatDayLabel(statement.closesOn, formattingLocale()),
         })}
         actions={
           <>
@@ -123,7 +124,7 @@ export function BillDetailPage() {
           </>
         }
       />
-      <StatementSummary bill={statement} locale={i18n.language} />
+      <StatementSummary bill={statement} locale={formattingLocale()} />
       <DataTable
         columns={columns}
         data={charges.data?.items ?? []}

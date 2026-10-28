@@ -9,6 +9,7 @@ import {
 
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
+import { formattingLocale } from '@/lib/i18n.js'
 
 /** One period of the schedule: both capitals, both interest runs, the gap. */
 export interface InterestRow {
@@ -30,7 +31,7 @@ interface InterestTableProps {
  * shows the shape, the table carries every value exactly.
  */
 export function InterestTable({ rows }: InterestTableProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
 
   return (
@@ -72,35 +73,35 @@ export function InterestTable({ rows }: InterestTableProps) {
                   <td className="px-3 py-1.5 text-right tabular-nums">
                     {formatMoney(
                       String(row.simpleCapital),
-                      i18n.language,
+                      formattingLocale(),
                       mainCurrency
                     )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
                     {formatMoney(
                       String(row.simpleInterest),
-                      i18n.language,
+                      formattingLocale(),
                       mainCurrency
                     )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
                     {formatMoney(
                       String(row.compoundCapital),
-                      i18n.language,
+                      formattingLocale(),
                       mainCurrency
                     )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
                     {formatMoney(
                       String(row.compoundInterest),
-                      i18n.language,
+                      formattingLocale(),
                       mainCurrency
                     )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
                     {formatMoney(
                       String(row.variation),
-                      i18n.language,
+                      formattingLocale(),
                       mainCurrency
                     )}
                   </td>

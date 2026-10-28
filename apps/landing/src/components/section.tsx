@@ -18,7 +18,7 @@ export function Section({
     <section
       id={id}
       className={cn(
-        'border-line relative border-t px-6 py-24 md:py-32',
+        'border-line relative border-t scroll-mt-16 px-6 py-24 md:py-32',
         className
       )}
     >
