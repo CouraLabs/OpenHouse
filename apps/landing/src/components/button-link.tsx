@@ -2,8 +2,9 @@ import type { ReactNode } from 'react'
 import { cn } from 'cn'
 
 /**
- * A call to action as a link: `solid` is the charcoal primary, `outline` the
- * hairline secondary. Both press in to 98% on `:active`.
+ * A call to action as a link: `solid` is the ink pill, `outline` the ghost
+ * pill outlined by an inset hairline that inverts on hover. A trailing arrow
+ * turns -45deg on hover, pointing up and out.
  */
 export function ButtonLink({
   href,
@@ -27,10 +28,10 @@ export function ButtonLink({
       target={newTab ? '_blank' : undefined}
       rel={newTab ? 'noreferrer' : undefined}
       className={cn(
-        'inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-[background-color,transform] duration-200 active:scale-[0.98]',
+        'group/cta inline-flex h-[46px] items-center justify-center gap-2 rounded-full px-6 text-base font-medium whitespace-nowrap transition-[background-color,color,transform] duration-300 ease-(--ease-out-expo) active:scale-[0.98] [&_.cta-arrow]:transition-transform [&_.cta-arrow]:duration-[450ms] hover:[&_.cta-arrow]:-rotate-45',
         variant === 'solid'
           ? 'bg-ink text-on-ink hover:bg-ink-hover'
-          : 'border-line bg-surface text-ink hover:bg-bone border',
+          : 'text-ink hover:bg-ink hover:text-on-ink shadow-[inset_0_0_0_1px_var(--line-2)]',
         className
       )}
     >

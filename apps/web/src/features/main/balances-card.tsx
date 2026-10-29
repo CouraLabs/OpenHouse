@@ -15,7 +15,12 @@ import { EmptyMedia } from '@workspace/ui/components/empty'
 import { Skeleton } from '@workspace/ui/components/skeleton'
 import { cn } from 'cn'
 
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@workspace/ui/components/empty'
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from '@workspace/ui/components/empty'
 import { useAccountsSearch } from '@/features/accounts/use-accounts.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
@@ -53,7 +58,7 @@ export function BalancesCard({ className }: { className?: string }) {
     >
       <div className="flex h-full flex-col rounded-[calc(2rem-0.375rem)] bg-card p-6 shadow-soft">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-heading text-xl leading-snug font-light tracking-tight">
+          <h2 className="font-heading text-xl leading-snug font-medium tracking-tight">
             {t('main.balances')}
           </h2>
           <Link
@@ -71,7 +76,9 @@ export function BalancesCard({ className }: { className?: string }) {
               <Skeleton className="h-12 w-full" />
             </div>
           ) : accounts.isError ? (
-            <p className="text-sm text-destructive">{t('main.balances-error')}</p>
+            <p className="text-sm text-destructive">
+              {t('main.balances-error')}
+            </p>
           ) : items.length === 0 ? (
             <Empty className="flex-1 py-8">
               <EmptyHeader>

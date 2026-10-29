@@ -27,11 +27,13 @@ export function FeatureCard({
 }: FeatureCardProps) {
   return (
     <Reveal index={index} className={cn('col-span-1', className)}>
-      <article className="border-line bg-surface flex h-full flex-col gap-8 rounded-xl border p-7 transition-shadow duration-200 hover:shadow-lift md:p-9">
+      <article className="border-line bg-surface hover:bg-bone flex h-full flex-col gap-8 rounded-[20px] border p-7 transition-shadow duration-200 md:p-9">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <IconWell icon={feature.icon} tone={feature.tone} />
-            <h3 className="text-ink text-base font-medium">{feature.title}</h3>
+            <h3 className="text-ink font-display text-[1.05rem] font-medium tracking-[-0.02em]">
+              {feature.title}
+            </h3>
           </div>
           <p className="max-w-md text-sm text-pretty text-muted">
             {feature.body}

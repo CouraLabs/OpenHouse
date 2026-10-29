@@ -4,9 +4,8 @@ import { IconContext } from '@phosphor-icons/react'
 
 import { ThemeProvider } from '@workspace/ui/components/theme-provider'
 
-import '@fontsource-variable/geist'
 import '@fontsource-variable/geist-mono'
-import '@fontsource-variable/newsreader'
+import '@fontsource-variable/jost'
 import './landing.css'
 import { App } from './App.tsx'
 import { LocaleProvider } from './components/locale-provider.tsx'
@@ -24,7 +23,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <ThemeProvider>
       <LocaleProvider>
-        <IconContext.Provider value={{ weight: 'bold', size: 16 }}>
+        <IconContext.Provider value={{ weight: 'light', size: 16 }}>
           <App />
         </IconContext.Provider>
       </LocaleProvider>

@@ -26,7 +26,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={navActions.themeToggle}
-      className="border-line hover:bg-bone hover:text-ink relative size-8 shrink-0 rounded-md border text-muted transition-[color,background-color,transform] duration-200 active:scale-[0.98]"
+      className="border-line-2 hover:bg-ink hover:text-on-ink text-ink relative size-[38px] shrink-0 rounded-full border transition-[color,background-color,transform] duration-200 active:scale-[0.98]"
     >
       <Sun aria-hidden className={`${glyph} opacity-100 dark:opacity-0`} />
       <Moon aria-hidden className={`${glyph} opacity-0 dark:opacity-100`} />

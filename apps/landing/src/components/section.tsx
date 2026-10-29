@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { cn } from 'cn'
 
+import { Tick } from './tick.js'
+
 /**
- * A page section: the shared macro-whitespace and the 5xl content column,
- * with a hairline rule above it so sections read as pages of one document.
+ * A cell on the sheet: a 1px top rule that runs past the rails to the window
+ * edges, a crosshair where it meets each rail, and `pad` padding.
  */
 export function Section({
   id,
@@ -17,14 +19,11 @@ export function Section({
   return (
     <section
       id={id}
-      className={cn(
-        'border-line relative border-t scroll-mt-16 px-6 py-24 md:py-32',
-        className
-      )}
+      className={cn('cell relative scroll-mt-16 p-(--pad)', className)}
     >
-      <div className="mx-auto flex max-w-5xl flex-col gap-14 md:gap-20">
-        {children}
-      </div>
+      <Tick x="0" y="0" />
+      <Tick x="100%" y="0" />
+      <div className="flex flex-col gap-14 md:gap-20">{children}</div>
     </section>
   )
 }

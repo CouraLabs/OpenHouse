@@ -19,7 +19,8 @@
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "turbo": "^2.11.7",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "playwright": "^1.64.1"
   },
   "packageManager": "npm@12.0.2",
   "engines": {
@@ -34,8 +35,5 @@
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true,
     "fsevents@2.3.3": true
-  },
-  "dependencies": {
-    "playwright": "^1.64.1"
   }
 }

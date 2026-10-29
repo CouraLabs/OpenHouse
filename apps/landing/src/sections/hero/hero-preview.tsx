@@ -15,7 +15,7 @@ export function HeroPreview() {
         <div className="flex flex-col gap-6 p-6 md:p-8">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted">{hero.balance.label}</span>
-            <span className="text-ink font-serif text-4xl tracking-[-0.03em] tabular-nums">
+            <span className="text-ink font-display text-4xl font-medium tracking-[-0.045em] tabular-nums">
               {hero.balance.amount}
             </span>
           </div>

@@ -6,12 +6,14 @@ import { SidebarFooter } from '@workspace/ui/components/sidebar'
 import { formatMoney } from '@/lib/format-money.js'
 import { mainCurrencyFirst } from '@/lib/main-currency-first.js'
 import { useMainCurrency } from '@/lib/settings.js'
+import { SidebarCopyright } from './sidebar-copyright.js'
 import { useMonthSummary } from './use-month-summary.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
 /**
  * The sidebar's foot: this month's income and expenses across the household's
- * accounts, one tagged group per currency, the main currency first.
+ * accounts, one tagged group per currency, the main currency first, then
+ * the copyright line.
  */
 export function MonthSummaryFooter() {
   const { t } = useTranslation()
@@ -37,7 +39,7 @@ export function MonthSummaryFooter() {
                   : 'flex flex-col gap-1 border-t border-sidebar-border pt-2'
               }
             >
-              <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              <span className="font-mono text-[0.74rem] text-muted-foreground">
                 {group.currency}
               </span>
               <div className="flex items-center justify-between gap-2 text-sm">
@@ -46,7 +48,11 @@ export function MonthSummaryFooter() {
                   {t('sidebar.incomes')}
                 </span>
                 <span className="font-semibold text-primary tabular-nums">
-                  {formatMoney(group.incomes, formattingLocale(), group.currency)}
+                  {formatMoney(
+                    group.incomes,
+                    formattingLocale(),
+                    group.currency
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 text-sm">
@@ -55,13 +61,18 @@ export function MonthSummaryFooter() {
                   {t('sidebar.expenses')}
                 </span>
                 <span className="font-semibold text-destructive tabular-nums">
-                  {formatMoney(group.expenses, formattingLocale(), group.currency)}
+                  {formatMoney(
+                    group.expenses,
+                    formattingLocale(),
+                    group.currency
+                  )}
                 </span>
               </div>
             </div>
           ))
         )}
       </div>
+      <SidebarCopyright />
     </SidebarFooter>
   )
 }

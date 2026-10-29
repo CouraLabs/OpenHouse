@@ -3,19 +3,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Warm monochrome: bone canvas, charcoal ink, one hairline border, and four
- * washed-out pastels reserved for tags and icon wells. Color carries meaning
- * here or it does not appear. Every color is a variable so `.dark` (set by
- * ThemeProvider from the system preference or the nav toggle) can swap the
- * whole palette for its warm-charcoal twin.
+ * The Drafting Sheet (DESIGN.md, shared with the web app): black, white and
+ * neutral gray ink in two peer themes. Ink is the only accent. No shadows: hairlines and one-step grounds.
  */
 @theme {
-  --font-sans:
-    'Geist Variable', 'SF Pro Display', 'Helvetica Neue', sans-serif;
-  --font-serif: 'Newsreader Variable', 'Lyon Text', Georgia, serif;
-  --font-mono:
-    'Geist Mono Variable', 'SF Mono', 'JetBrains Mono', ui-monospace,
-    monospace;
+  --font-sans: 'Jost Variable', Jost, ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -30,92 +25,76 @@
   --color-body: var(--body);
   --color-muted: var(--muted);
   --color-line: var(--line);
-
-  --color-red-wash: var(--red-wash);
-  --color-red-ink: var(--red-ink);
-  --color-blue-wash: var(--blue-wash);
-  --color-blue-ink: var(--blue-ink);
-  --color-green-wash: var(--green-wash);
-  --color-green-ink: var(--green-ink);
-  --color-yellow-wash: var(--yellow-wash);
-  --color-yellow-ink: var(--yellow-ink);
-
-  --shadow-lift: var(--lift);
+  --color-line-2: var(--line-2);
 }
 
 :root {
   color-scheme: light;
 
-  --canvas: #fbfbfa;
-  --bone: #f7f6f3;
-  --surface: #ffffff;
-  --ink: #111111;
-  --ink-hover: #333333;
-  --on-ink: #ffffff;
-  --body: #2f3437;
-  /* 4.5:1+ on canvas, bone, and surface (the old #787774 was 4.1-4.5). */
-  --muted: #6b6a67;
-  --line: #eaeaea;
+  --canvas: #f2f2f0;
+  --surface: #e9e9e6;
+  --bone: #e0e0dc;
+  --ink: #0c0c0c;
+  --ink-hover: #2a2a2a;
+  --on-ink: #f2f2f0;
+  --body: #464644;
+  --muted: #62625f;
+  --line: rgb(12 12 12 / 0.13);
+  --line-2: rgb(12 12 12 / 0.24);
 
-  --red-wash: #fdebec;
-  --red-ink: #9f2f2d;
-  --blue-wash: #e1f3fe;
-  --blue-ink: #1f6c9f;
-  --green-wash: #edf3ec;
-  --green-ink: #346538;
-  --yellow-wash: #fbf3db;
-  --yellow-ink: #956400;
-
-  --lift: 0 2px 8px rgb(0 0 0 / 0.04);
-  --grid-line: rgb(0 0 0 / 0.035);
-  --ambient: rgb(214 170 110 / 0.09);
+  --grid-dot: rgb(98 98 95 / 0.55);
+  --bloom: rgb(24 26 24 / 0.2);
+  --bloom-edge: rgb(0 0 0 / 0.075);
+  --nav-glass: rgb(242 242 240 / 0.7);
+  --wordmark-soft: #666663;
 }
 
-/* The same roles at night: warm charcoal, bone-white ink, dimmed washes. */
 .dark {
   color-scheme: dark;
 
-  --canvas: #161615;
-  --bone: #1e1e1c;
-  --surface: #1b1b1a;
-  --ink: #f1f0ec;
-  --ink-hover: #d6d5d0;
-  --on-ink: #161615;
-  --body: #d3d2cd;
-  --muted: #9b9a96;
-  --line: #2b2b29;
+  --canvas: #0a0a0a;
+  --surface: #111111;
+  --bone: #181818;
+  --ink: #f2f2f0;
+  --ink-hover: #ffffff;
+  --on-ink: #0a0a0a;
+  --body: #b0b0ad;
+  --muted: #8a8a87;
+  --line: rgb(242 242 240 / 0.12);
+  --line-2: rgb(242 242 240 / 0.22);
 
-  --red-wash: #352120;
-  --red-ink: #f0a9a3;
-  --blue-wash: #1a2c39;
-  --blue-ink: #8cc5ea;
-  --green-wash: #1e2c21;
-  --green-ink: #9cc79f;
-  --yellow-wash: #342b17;
-  --yellow-ink: #e2bf78;
-
-  --lift: 0 2px 8px rgb(0 0 0 / 0.25);
-  --grid-line: rgb(255 255 255 / 0.03);
-  --ambient: rgb(214 170 110 / 0.05);
+  --grid-dot: rgb(138 138 135 / 0.55);
+  --bloom: rgb(200 205 198 / 0.13);
+  --bloom-edge: rgb(255 255 255 / 0.05);
+  --nav-glass: rgb(10 10 10 / 0.62);
+  --wordmark-soft: #a0a09d;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
     scroll-padding-top: 5rem;
+    scrollbar-color: var(--line-2) transparent;
   }
 
   body {
     background: var(--color-canvas);
     color: var(--color-body);
     font-family: var(--font-sans);
+    font-size: 1.0625rem;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
   }
 
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
   ::selection {
-    background: var(--color-yellow-wash);
-    color: var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-on-ink);
   }
 }
 
@@ -139,8 +118,13 @@
     transform: none;
   }
 
+  /* A newly selected FAQ answer settles in from a 6px rise. */
+  .faq-panel {
+    animation: faq-panel-in 360ms var(--ease-out-expo);
+  }
+
   .ambient-blob {
-    animation: ambient-drift 28s ease-in-out infinite alternate;
+    animation: ambient-drift 26s ease-in-out infinite alternate;
   }
 }
 
@@ -160,6 +144,13 @@
   }
 }
 
+@keyframes faq-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 @keyframes ambient-drift {
   from {
     transform: translate3d(-12vw, -6vh, 0) scale(1);
@@ -169,21 +160,89 @@
   }
 }
 
-/* A faint warm grain over the whole page, so the bone never reads flat. */
-.grain {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  pointer-events: none;
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.3 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+/* The 24px graph-paper dot grid some sections lay under their content. */
+.line-grid {
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1.2px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
 }
 
-/* The hairline grid some sections lay under their content. */
-.line-grid {
-  background-image:
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+/* Primitives plot in by stroke-dashoffset on a normalised path length. */
+.plot-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: plot 1500ms var(--ease-out-expo) forwards;
+}
+
+@keyframes plot {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plot-stroke {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/*
+ * The frame (DESIGN.md "Layout"): one centred sheet with 1px side rails,
+ * sections as cells ruled off it, 13px crosshairs at every intersection, and
+ * one shared column position (`--split`). Rules that meet the frame run on
+ * past the rails to the window edges; html clips the overflow.
+ */
+:root {
+  --pad: clamp(20px, 4.4vw, 64px);
+  --split: clamp(280px, 31%, 410px);
+  --max: 1320px;
+}
+
+html {
+  overflow-x: clip;
+}
+
+.sheet {
+  position: relative;
+  max-width: var(--max);
+  margin-inline: auto;
+  border-inline: 1px solid var(--line);
+}
+
+.cell::before,
+.cell-rule-b::after {
+  content: '';
+  position: absolute;
+  left: -100vw;
+  right: -100vw;
+  height: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+
+.cell::before {
+  top: 0;
+}
+
+.cell-rule-b::after {
+  bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .split-rule {
+    border-left: 1px solid var(--line);
+  }
+}
+
+.tick {
+  position: absolute;
+  z-index: 1;
+  width: 13px;
+  height: 13px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background:
+    linear-gradient(var(--muted), var(--muted)) center / 1px 100% no-repeat,
+    linear-gradient(var(--muted), var(--muted)) center / 100% 1px no-repeat;
 }

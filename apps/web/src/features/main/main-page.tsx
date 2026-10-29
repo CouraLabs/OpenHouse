@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/page-header.js'
 import { GoalGaugesCard } from '@/features/transactions/goal-gauges-card.js'
 import { LimitUsageCard } from '@/features/transactions/limit-usage-card.js'
-import { useGoals, useLimitUsage } from '@/features/transactions/use-dashboard.js'
+import {
+  useGoals,
+  useLimitUsage,
+} from '@/features/transactions/use-dashboard.js'
 import { UpcomingCard } from '@/features/upcoming/upcoming-card.js'
 import { BalancesCard } from './balances-card.js'
 import { MonthSummaryCard } from './month-summary-card.js'
@@ -24,7 +27,7 @@ export function MainPage() {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
       <PageHeader title={t('nav.dashboard')} subtitle={t('app.headline')} />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <BalancesCard className="md:col-span-2" />
         <MonthSummaryCard />
         <UpcomingCard />
@@ -46,8 +49,7 @@ export function MainPage() {
           locale={formattingLocale()}
           labels={{
             empty: t('main.limits-empty'),
-            aria: (limit) =>
-              t('main.limit-aria', { name: limit.categoryName }),
+            aria: (limit) => t('main.limit-aria', { name: limit.categoryName }),
             excluded: (limit) =>
               t('main.limit-excluded', { count: limit.excludedCount }),
           }}

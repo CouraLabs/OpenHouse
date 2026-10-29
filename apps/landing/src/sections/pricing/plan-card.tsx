@@ -14,10 +14,12 @@ export function PlanCard({ plan }: { plan: Plan }) {
   const { featuredBadge } = useContent()
 
   return (
-    <article className="border-line bg-surface flex h-full flex-col gap-8 rounded-xl border p-7 transition-shadow duration-200 hover:shadow-lift md:p-8">
+    <article className="border-line bg-surface hover:bg-bone flex h-full flex-col gap-8 rounded-[20px] border p-7 transition-shadow duration-200 md:p-8">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-ink text-base font-medium">{plan.name}</h3>
+          <h3 className="text-ink font-display text-[1.05rem] font-medium tracking-[-0.02em]">
+            {plan.name}
+          </h3>
           {plan.featured && <Tag tone="blue">{featuredBadge}</Tag>}
         </div>
         <p className="text-sm text-pretty text-muted">{plan.tagline}</p>

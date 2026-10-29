@@ -26,7 +26,7 @@ export function PendingInvites({
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-heading text-xl font-light tracking-tight">
+      <h2 className="font-heading text-xl font-medium tracking-tight">
         {t('settings.invite.pending-title')}
       </h2>
       {invites.length === 0 ? (

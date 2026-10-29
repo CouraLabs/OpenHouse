@@ -15,7 +15,7 @@ export function BrandHeader({ tenantName }: { tenantName: string }) {
       >
         <BrandMark />
         <div className="grid flex-1 leading-tight">
-          <BrandName className="truncate font-heading text-lg tracking-tight" />
+          <BrandName className="truncate text-lg tracking-[-0.01em]" />
           <span className="truncate text-xs text-muted-foreground">
             {tenantName}
           </span>

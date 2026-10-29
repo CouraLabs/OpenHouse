@@ -2,12 +2,13 @@ import type { Icon } from '@phosphor-icons/react'
 import { cn } from 'cn'
 
 import type { Tone } from '@/lib/content.js'
-import { toneClasses } from '@/lib/tones.js'
 
-/** An icon seated in a small square of pastel wash. */
+/**
+ * An icon seated in a hairline ring, like the sheet's tools. `tone` names
+ * the room; the sheet is ink-only, so every tone draws the same.
+ */
 export function IconWell({
   icon: Glyph,
-  tone,
   className,
 }: {
   icon: Icon
@@ -17,8 +18,7 @@ export function IconWell({
   return (
     <span
       className={cn(
-        'inline-flex size-8 shrink-0 items-center justify-center rounded-md',
-        toneClasses[tone],
+        'ring-line-2 text-ink inline-flex size-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset',
         className
       )}
     >

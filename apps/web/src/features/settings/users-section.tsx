@@ -119,7 +119,7 @@ export function UsersSection() {
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <h2 className="font-heading text-xl font-light tracking-tight">
+            <h2 className="font-heading text-xl font-medium tracking-tight">
               {t('settings.users.title')}
             </h2>
             <p className="text-sm text-muted-foreground">

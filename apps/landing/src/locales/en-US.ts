@@ -42,7 +42,6 @@ export const enUS: Content = {
   },
 
   hero: {
-    eyebrow: 'Open source · The household app',
     headline: 'One home for the whole house — starting with the money.',
     tagline:
       'One shared place for what the house runs on. The ledger is live today — accounts, transactions, limits, goals — and the rest of home life is on the way. Open source end to end: run it on your own server for free, or let us run it for you.',

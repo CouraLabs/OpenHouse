@@ -7,7 +7,7 @@ import { Section } from '@/components/section.js'
 import { useContent } from '@/lib/use-locale.js'
 
 /**
- * The closing argument, centered over the hairline grid: serif title, body,
+ * The closing argument, centered over the hairline grid: mono title, body,
  * the three facts as a ruled row, and the call to star the repository.
  */
 export function OpenSourceSection() {
@@ -20,7 +20,7 @@ export function OpenSourceSection() {
           <Eyebrow>{openSource.eyebrow}</Eyebrow>
         </Reveal>
         <Reveal index={1}>
-          <h2 className="text-ink font-serif text-5xl leading-[1.05] tracking-[-0.035em] text-balance md:text-6xl">
+          <h2 className="text-ink font-display text-5xl leading-[1.05] font-medium tracking-[-0.045em] text-balance md:text-6xl">
             {openSource.title}
           </h2>
         </Reveal>
@@ -39,7 +39,7 @@ export function OpenSourceSection() {
           </ButtonLink>
         </Reveal>
       </div>
-      <ul className="border-line bg-surface grid overflow-hidden rounded-xl border md:grid-cols-3">
+      <ul className="border-line bg-surface grid overflow-hidden rounded-[20px] border md:grid-cols-3">
         {openSource.points.map((point, index) => {
           const Glyph = point.icon
           return (

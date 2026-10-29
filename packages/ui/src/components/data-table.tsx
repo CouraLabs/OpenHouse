@@ -100,9 +100,9 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative min-w-0 overflow-hidden rounded-[1.25rem] bg-card shadow-soft ring-1 ring-foreground/[0.06]">
+      <div className="relative min-w-0 overflow-hidden rounded-[1.25rem] bg-card ring-1 ring-foreground/[0.06]">
         {isLoading ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
             <Spinner className="size-6" />
           </div>
         ) : null}

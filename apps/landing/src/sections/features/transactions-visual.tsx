@@ -16,13 +16,7 @@ export function TransactionsVisual() {
             <span className="font-mono text-[11px] tracking-[0.05em] text-muted uppercase">
               {total.label}
             </span>
-            <span
-              className={
-                total.income
-                  ? 'text-green-ink font-mono text-sm tabular-nums'
-                  : 'text-ink font-mono text-sm tabular-nums'
-              }
-            >
+            <span className="text-ink font-mono text-sm tabular-nums">
               {total.amount}
             </span>
           </div>

@@ -4,8 +4,8 @@ const RADIUS = 42
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
 /**
- * A goal's progress as a thin ring with the percentage set in the serif at
- * its center. The arc draws itself once the ring scrolls into view.
+ * A goal's progress as a thin ring with the percentage set in the mono
+ * display face at its center. The arc draws itself once the ring scrolls into view.
  */
 export function GoalRing({ percent }: { percent: number }) {
   const [ref, inView] = useInView<HTMLDivElement>()
@@ -31,10 +31,10 @@ export function GoalRing({ percent }: { percent: number }) {
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}
           strokeDashoffset={offset}
-          className="stroke-green-ink ease-out-expo transition-[stroke-dashoffset] duration-1000 motion-reduce:transition-none"
+          className="stroke-ink ease-out-expo transition-[stroke-dashoffset] duration-1000 motion-reduce:transition-none"
         />
       </svg>
-      <span className="text-ink absolute inset-0 flex items-center justify-center font-serif text-2xl tracking-tight">
+      <span className="text-ink font-display absolute inset-0 flex items-center justify-center text-2xl font-medium tracking-tight">
         {percent}%
       </span>
     </div>

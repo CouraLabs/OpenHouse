@@ -1,21 +1,32 @@
-import { House } from 'lucide-react'
 import { cn } from 'cn'
 
 /**
- * The logo mark: a house glyph in a machined, double-bezeled tile — a tinted
- * outer tray holding the primary-colored core. Sized by the caller.
+ * The logo mark from `logos/openhouse-glyph.svg`: a stroked roof over a
+ * square with one filled node dot at the ridge, in ink, inside a hairline
+ * ring. Sized by the caller.
  */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex size-9 shrink-0 rounded-[0.8rem] bg-primary/10 p-[3px] ring-1 ring-primary/15',
+        'flex size-9 shrink-0 items-center justify-center rounded-full text-foreground ring-1 ring-input',
         className
       )}
     >
-      <div className="flex flex-1 items-center justify-center rounded-[calc(0.8rem-3px)] bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]">
-        <House className="size-[45%]" />
-      </div>
+      <svg
+        aria-hidden
+        viewBox="-6 -6 112 112"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="size-[58%]"
+      >
+        <path d="M50 12 L86 44 H14 Z" />
+        <path d="M22 52 H78 V88 H22 Z" />
+        <circle cx="50" cy="12" r="6" fill="currentColor" stroke="none" />
+      </svg>
     </div>
   )
 }

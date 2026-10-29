@@ -10,25 +10,26 @@ import { PlannersSection } from '@/sections/planners/planners-section.js'
 import { PricingSection } from '@/sections/pricing/pricing-section.js'
 
 /**
- * The landing page: one slow warm light and a fixed grain under
- * the sticky nav, then the sections in reading order.
+ * The landing page: the gray bloom under the sticky
+ * nav, then the sections in reading order.
  */
 export function App() {
   return (
     <>
       <AmbientLight />
-      <div className="grain" aria-hidden />
       <SiteNav />
-      <main>
-        <HeroSection />
-        <HouseIndexSection />
-        <FeaturesSection />
-        <PlannersSection />
-        <PricingSection />
-        <FaqSection />
-        <OpenSourceSection />
-      </main>
-      <SiteFooter />
+      <div className="sheet">
+        <main>
+          <HeroSection />
+          <HouseIndexSection />
+          <FeaturesSection />
+          <PlannersSection />
+          <PricingSection />
+          <FaqSection />
+          <OpenSourceSection />
+        </main>
+        <SiteFooter />
+      </div>
     </>
   )
 }

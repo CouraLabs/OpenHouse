@@ -17,7 +17,7 @@ export function WindowChrome({
   return (
     <div
       className={cn(
-        'border-line bg-surface overflow-hidden rounded-xl border',
+        'border-line bg-surface overflow-hidden rounded-[20px] border',
         className
       )}
     >

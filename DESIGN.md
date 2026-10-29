@@ -1,360 +1,348 @@
 ---
 name: OpenHouse
-description: Open-source household finance — editorial warm surfaces, shared books
+description: A drafting sheet for software, with hairline grid, plotted line primitives, and black and white ink in two peer themes.
 colors:
-  background: "oklch(0.99 0.004 85)"
-  foreground: "oklch(0.24 0.014 60)"
-  card: "oklch(1 0 0 / 0.55)"
-  popover: "oklch(0.995 0.003 85 / 0.78)"
-  primary: "oklch(0.46 0.085 163)"
-  primary-foreground: "oklch(0.985 0.01 160)"
-  secondary: "oklch(0.955 0.009 80)"
-  secondary-foreground: "oklch(0.28 0.014 60)"
-  muted: "oklch(0.958 0.008 80)"
-  muted-foreground: "oklch(0.52 0.016 65)"
-  accent: "oklch(0.95 0.012 160)"
-  accent-foreground: "oklch(0.3 0.04 163)"
-  destructive: "oklch(0.56 0.19 28)"
-  border: "oklch(0.915 0.01 78)"
-  input: "oklch(0.9 0.011 78)"
-  ring: "oklch(0.62 0.08 163)"
-  chart-1: "oklch(0.82 0.11 164)"
-  chart-2: "oklch(0.68 0.12 162)"
-  chart-3: "oklch(0.56 0.1 163)"
-  chart-4: "oklch(0.46 0.085 163)"
-  chart-5: "oklch(0.72 0.09 70)"
-  sidebar: "oklch(0.97 0.008 82 / 0.5)"
-  sidebar-foreground: "oklch(0.26 0.014 60)"
-  sidebar-primary: "oklch(0.46 0.085 163)"
+  sheet-black: "#0a0a0a"
+  sheet-black-raised: "#111111"
+  sheet-black-lift: "#181818"
+  white-ink: "#f2f2f0"
+  white-ink-2: "#b0b0ad"
+  white-ink-3: "#8a8a87"
+  white-hairline: "rgb(242 242 240 / 0.12)"
+  white-hairline-strong: "rgb(242 242 240 / 0.22)"
+  white-bloom: "rgb(200 205 198 / 0.13)"
+  white-bloom-edge: "rgb(255 255 255 / 0.05)"
+  black-nav-glass: "rgb(10 10 10 / 0.62)"
+  white-button-hover: "#ffffff"
+  wordmark-soft-dark: "#a0a09d"
+  paper-white: "#f2f2f0"
+  paper-raised: "#e9e9e6"
+  paper-lift: "#e0e0dc"
+  graphite-ink: "#0c0c0c"
+  graphite-ink-2: "#464644"
+  graphite-ink-3: "#62625f"
+  graphite-hairline: "rgb(12 12 12 / 0.13)"
+  graphite-hairline-strong: "rgb(12 12 12 / 0.24)"
+  graphite-bloom: "rgb(24 26 24 / 0.2)"
+  graphite-bloom-edge: "rgb(0 0 0 / 0.075)"
+  paper-nav-glass: "rgb(242 242 240 / 0.7)"
+  graphite-button-hover: "#2a2a2a"
+  wordmark-soft-light: "#666663"
 typography:
   display:
-    fontFamily: "Fraunces Variable, ui-serif, Georgia, serif"
-    fontSize: "2.25rem"
-    fontWeight: 300
-    lineHeight: 1.25
-    letterSpacing: "-0.025em"
+    fontFamily: "Geist Mono Variable, ui-monospace, SF Mono, Menlo, monospace"
+    fontSize: "clamp(2.2rem, 5.7vw, 5.1rem)"
+    fontWeight: 500
+    lineHeight: 1.02
+    letterSpacing: "-0.045em"
+  headline:
+    fontFamily: "Geist Mono Variable, ui-monospace, SF Mono, Menlo, monospace"
+    fontSize: "clamp(2.8rem, 8vw, 6rem)"
+    fontWeight: 500
+    lineHeight: 0.95
+    letterSpacing: "-0.05em"
   title:
-    fontFamily: "Fraunces Variable, ui-serif, Georgia, serif"
-    fontSize: "1.875rem"
-    fontWeight: 300
-    lineHeight: 1.25
-    letterSpacing: "-0.025em"
-  body:
-    fontFamily: "Geist Variable, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 400
-    lineHeight: 1.5
-  label:
-    fontFamily: "Geist Variable, sans-serif"
-    fontSize: "0.75rem"
+    fontFamily: "Geist Mono Variable, ui-monospace, SF Mono, Menlo, monospace"
+    fontSize: "clamp(2rem, 3.8vw, 3.2rem)"
     fontWeight: 500
-    lineHeight: 1.33
-  eyebrow:
-    fontFamily: "Geist Variable, sans-serif"
-    fontSize: "0.625rem"
-    fontWeight: 500
-    letterSpacing: "0.2em"
     lineHeight: 1
+    letterSpacing: "-0.045em"
+  name:
+    fontFamily: "Geist Mono Variable, ui-monospace, SF Mono, Menlo, monospace"
+    fontSize: "1.1rem"
+    fontWeight: 500
+    letterSpacing: "-0.02em"
+  body:
+    fontFamily: "Jost Variable, Jost, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1.0625rem"
+    fontWeight: 400
+    lineHeight: 1.6
+  body-lead:
+    fontFamily: "Jost Variable, Jost, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1.1rem"
+    fontWeight: 400
+    lineHeight: 1.6
+  button:
+    fontFamily: "Jost Variable, Jost, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 500
+  label:
+    fontFamily: "Geist Mono Variable, ui-monospace, SF Mono, Menlo, monospace"
+    fontSize: "0.78rem"
+    fontWeight: 400
+  dot-note:
+    fontFamily: "Doto Variable, Doto, Geist Mono Variable, ui-monospace, monospace"
+    fontSize: "1.02rem"
+    fontWeight: 700
+    lineHeight: 1.45
+    letterSpacing: "0.14em"
+  dot-sign:
+    fontFamily: "Doto Variable, Doto, Geist Mono Variable, ui-monospace, monospace"
+    fontSize: "clamp(3.2rem, 16vw, 14rem)"
+    fontWeight: 700
+    lineHeight: 0.82
+    letterSpacing: "-0.02em"
 rounded:
-  sm: "0.45rem"
-  md: "0.6rem"
-  lg: "0.75rem"
-  xl: "1.05rem"
-  2xl: "1.35rem"
-  3xl: "1.65rem"
-  4xl: "1.95rem"
-  full: "9999px"
+  ctl: "999px"
+  panel: "20px"
+  tab: "16px"
+  inset: "14px"
+  key: "6px"
 spacing:
-  xs: "0.25rem"
-  sm: "0.5rem"
-  md: "1rem"
-  lg: "1.5rem"
-  xl: "2rem"
-  section: "2rem"
+  pad: "clamp(20px, 4.4vw, 64px)"
+  gutter: "clamp(20px, 2.4vw, 32px)"
+  panel-pad: "clamp(24px, 3.6vw, 44px)"
+  max: "1320px"
+  nav-h: "64px"
+  split: "clamp(280px, 31%, 410px)"
+  action-gap: "12px"
+  tab-gap: "6px"
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.full}"
-    height: "2.25rem"
-    padding: "0 1rem"
-  button-outline:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.full}"
-    height: "2.25rem"
-    padding: "0 1rem"
-  card:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.card-foreground}"
-    rounded: "{rounded.2xl}"
-  input:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.lg}"
-    height: "2.25rem"
-    padding: "0 0.75rem"
-  eyebrow-tag:
-    backgroundColor: "oklch(0.46 0.085 163 / 0.1)"
-    textColor: "{colors.primary}"
-    rounded: "{rounded.full}"
-    padding: "0.25rem 0.75rem"
+    backgroundColor: "{colors.white-ink}"
+    textColor: "{colors.sheet-black}"
+    typography: "{typography.button}"
+    rounded: "{rounded.ctl}"
+    padding: "0 24px"
+    height: "46px"
+  button-primary-hover:
+    backgroundColor: "{colors.white-button-hover}"
+  button-primary-disc:
+    backgroundColor: "{colors.white-ink}"
+    textColor: "{colors.sheet-black}"
+    rounded: "{rounded.ctl}"
+    size: "46px"
+  button-pill:
+    backgroundColor: "transparent"
+    textColor: "{colors.white-ink}"
+    typography: "{typography.button}"
+    rounded: "{rounded.ctl}"
+    padding: "0 22px"
+    height: "46px"
+  button-pill-hover:
+    backgroundColor: "{colors.white-ink}"
+    textColor: "{colors.sheet-black}"
+  button-pill-sm:
+    textColor: "{colors.white-ink-2}"
+    rounded: "{rounded.ctl}"
+    padding: "0 14px"
+    height: "34px"
+  tag:
+    backgroundColor: "transparent"
+    textColor: "{colors.white-ink-2}"
+    typography: "{typography.label}"
+    rounded: "{rounded.ctl}"
+    padding: "3px 12px"
+  tool:
+    backgroundColor: "transparent"
+    textColor: "{colors.white-ink}"
+    rounded: "{rounded.ctl}"
+    size: "38px"
+  nav-link:
+    textColor: "{colors.white-ink-2}"
+    rounded: "{rounded.ctl}"
+    padding: "7px 12px"
+  nav-link-hover:
+    backgroundColor: "{colors.sheet-black-lift}"
+    textColor: "{colors.white-ink}"
+  ledger-row:
+    backgroundColor: "{colors.sheet-black}"
+    textColor: "{colors.white-ink}"
+    padding: "12px clamp(20px, 4.4vw, 64px)"
+    height: "64px"
+  ledger-row-hover:
+    backgroundColor: "{colors.white-ink}"
+    textColor: "{colors.sheet-black}"
+  tab:
+    backgroundColor: "{colors.sheet-black}"
+    textColor: "{colors.white-ink}"
+    rounded: "{rounded.tab}"
+    padding: "16px 18px"
+  tab-selected:
+    backgroundColor: "{colors.white-ink}"
+    textColor: "{colors.sheet-black}"
+  panel:
+    backgroundColor: "{colors.sheet-black-raised}"
+    textColor: "{colors.white-ink}"
+    rounded: "{rounded.panel}"
+    padding: "clamp(24px, 3.6vw, 44px)"
+  run-block:
+    backgroundColor: "{colors.sheet-black}"
+    rounded: "{rounded.inset}"
+    padding: "14px 16px"
 ---
 
-# Design System: OpenHouse
+# Design System: CouraLabs
 
 ## Overview
 
-**Creative North Star: "The Ledger in Warm Light"**
+**Creative North Star: "The Drafting Sheet"**
 
-OpenHouse renders money the way a careful bookkeeper keeps a ledger: on warm
-paper, in espresso ink, with one quiet green accent that behaves like the
-seal on an envelope — present, meaningful, never loud. The app world is
-*editorial warm*: a cream canvas carries translucent glass cards that float
-over a fixed ambient mesh, serif headlines in Fraunces set the tone, and Geist
-does the working. Density is comfortable, not dense; motion is a soft spring
-(300 ms), never a snap.
+The page is one visible sheet of technical drawing paper. A hairline frame runs its full height, every section is a cell ruled off that frame, and crosshair ticks mark each place where two rules meet. On that sheet each project is a line drawing, plotted stroke by stroke rather than rendered: a broken ring, two overlapping circles (the second dotted), a roof over a square. One bright node dot travels a hairline orbit in the hero, and a faint gray bloom of light sits behind it. Nothing is filled except node dots and the inverted states.
 
-Depth reads as **layered paper + glass** (user-confirmed): surfaces rest on
-each other with warm-tinted, diffuse shadows and a hairline inner highlight,
-while translucent card/popover/sidebar tokens refract a fixed ambient glow —
-paper resting on paper, glass floating over light.
+The ink is strictly black, white and near-neutral gray. Dark (black sheet, white ink) and light (paper-white sheet, graphite ink) are peers. Neither is a fallback: the OS setting picks one before first paint, a `data-theme` attribute holds it, and the switch opens the new theme as a circular View Transition from the button that was pressed. The voice is Geist Mono, set large and tight, with Jost for reading and Doto dot-matrix kept to the hero corner note. Density is calm. Large mono headlines and wide cells sit against compact, tabular rows.
 
-The landing page (Persuade mode) runs a deliberate sister world: **warm
-monochrome** — bone canvas, charcoal ink, Newsreader serif, hairline rules,
-and four washed pastels reserved strictly for tags and icon wells. It shares
-the paper metaphor and the light/dark duality but not the palette; the two
-worlds must never borrow each other's accents mid-page.
+Two earlier worlds are confirmed anti-references: the frosted-glass lens over three filled primitives, and the older pixel world before it. Glass survives in exactly one place, the sticky nav.
 
 **Key Characteristics:**
-- Cream paper and espresso ink; one muted sage-emerald voice
-- Translucent glass surfaces over a fixed ambient mesh, with fixed paper grain
-- Fraunces (light serif) headlines; Geist body and data
-- Two-tier shadow vocabulary: `soft` at rest, `lift` when floating
-- Spring motion, 300 ms, transform and opacity only
-- Everything in both themes, always
+- One hairline frame (1px side rails, max 1320px) with ruled cells and 13px crosshair ticks at every rule intersection; the ticked rules run on to the window edges.
+- A shared column rule (`--split`) that runs through the projects and about cells, ticked where it meets the cell rules.
+- Line-drawn primitives plotted by stroke-dashoffset on a normalised path length, each with a filled node dot.
+- Black, white and neutral gray only, in two peer themes.
+- Inversion as the interaction grammar: rows, tabs, pills and tools flip to text colour on the ground.
+- Geist Mono 500 with negative tracking as the display voice.
 
 ## Colors
 
-The palette is a paper world with a single accent voice: warm neutrals do the
-work, sage-emerald speaks, and destructive red is the only other hue allowed
-to carry meaning.
+A monochrome ink-on-sheet palette. The only "colour" is the gap between ground and ink, plus hairlines drawn as translucent ink.
 
 ### Primary
-- **Ledger Green** (`oklch(0.46 0.085 163)`): the one accent — primary
-  buttons, active nav, focus rings, selection tint, the BrandMark core.
-  Dark theme lifts it to a mint `oklch(0.74 0.11 163)`.
-- **Ledger Green Tint** (`oklch(0.95 0.012 160)`): the accent's resting
-  surface (accent tokens, eyebrow tags at 10% opacity).
-
-### Secondary (omitted)
-The system has one accent; secondary/muted tones are warm neutrals, not a
-second accent. Charts extend the green family (chart-1…4, hue ≈162–164) with
-one warm counterpoint (**Amber Ledger**, `oklch(0.72 0.09 70)`, chart-5).
+- **White Ink / Graphite Ink** (`white-ink` dark, `graphite-ink` light): text, primitive strokes, node dots, the primary button fill, and the inverted state of every row, tab and pill. Ink is the accent, so there is no other.
 
 ### Neutral
-- **Cream Paper** (`oklch(0.99 0.004 85)`): the page canvas.
-- **Espresso Ink** (`oklch(0.24 0.014 60)`): all primary text and icons.
-- **Parchment** (`oklch(0.955 0.009 80)` / `oklch(0.958 0.008 80)`): secondary
-  and muted surfaces — subtle washes, never competitors to cards.
-- **Faded Ink** (`oklch(0.52 0.016 65)`): secondary text, placeholders.
-- **Hairline Sand** (`oklch(0.915 0.01 78)` borders, `oklch(0.9 0.011 78)`
-  inputs): the only borders inputs and hairline rules get.
-- **Glass Card** (`oklch(1 0 0 / 0.55)`): cards are white at 55% over the
-  ambient mesh; popovers 78%, sidebar tray 50%. In dark theme they invert to
-  4–8% white over warm near-black (`oklch(0.195 0.008 60)`).
-- **Alarm Red** (`oklch(0.56 0.19 28)`): destructive only — never decorative.
-  Dark theme: `oklch(0.7 0.17 24)`.
-
-### Landing variant — warm monochrome
-The landing swaps the palette, not the temperament: Bone `#fbfbfa` canvas,
-Charcoal `#111111` ink, `#eaeaea` hairline, and four meaning-only washes
-(red `#fdebec`/`#9f2f2d`, blue `#e1f3fe`/`#1f6c9f`, green `#edf3ec`/`#346538`,
-yellow `#fbf3db`/`#956400`). Dark theme is a warm-charcoal twin
-(`#161615` canvas). Serif is Newsreader, not Fraunces. Two documented
-exceptions to the app ramp: the product mockups inside hero and feature
-sections deliberately use 11–13px micro-labels (they depict a UI at reduced
-scale — never smaller than 11px), and the `.line-grid` two-axis background
-(`landing.css`) is the landing's own graph-paper texture, reserved for that
-world.
+- **Sheet Black / Paper White** (`sheet-black`, `paper-white`): the page ground, and the ground under the hero's dot grid.
+- **Raised / Lift grounds** (`sheet-black-raised`, `sheet-black-lift`; `paper-raised`, `paper-lift`): the project panel surface (raised), tab hover (raised) and nav-link hover (lift). These two steps are the only tonal layers.
+- **Ink 2** (`white-ink-2`, `graphite-ink-2`): secondary copy, sub lines, kinds, tag text, the Doto corner note.
+- **Ink 3** (`white-ink-3`, `graphite-ink-3`): crosshair ticks, mono labels (`dt`, path bar, figcaption), the `$` prompt, orbit ticks and dotted rings.
+- **Hairline / Hairline Strong** (`white-hairline`, `white-hairline-strong`; graphite equivalents): `line` for frame rails, cell rules, row dividers and arcs; `line-2` for control outlines (pills, tags, tools, keys, panel edge) and the orbit ring.
+- **Bloom** (`white-bloom` to `white-bloom-edge`; graphite equivalents): the hero's radial light, blurred 12px and drifting over 26s.
+- **Nav Glass** (`black-nav-glass`, `paper-nav-glass`): the sticky nav fill under its backdrop blur.
+- **Wordmark Soft** (`wordmark-soft-dark`, `wordmark-soft-light`): "Coura" in the wordmark, set back from full-ink "Labs".
 
 ### Named Rules
-**The Semantic Only Rule.** No hex, no `oklch(...)`, no Tailwind palette
-colors in feature code — only the semantic classes (`bg-card`,
-`text-muted-foreground`, `ring-foreground/[0.06]`). Charts use
-`--chart-1…5`. The values above live in `globals.css` alone.
+**The Ink-Only Rule.** No hue enters the system. Every value is black, white, or a gray within a few points of neutral. Project identity comes from the primitive's drawing, never from a colour.
 
-**The Meaning Rule** (landing). Color carries meaning or it does not appear:
-the four washes are reserved for tags and icon wells that encode state.
+**The Peer Themes Rule.** Every token has a dark and a light value, and both are designed. A new surface is not done until it reads correctly in both.
 
 ## Typography
 
-**Display Font:** Fraunces Variable (fallback ui-serif, Georgia)
-**Body Font:** Geist Variable (fallback system sans)
-**Mono:** Geist Mono Variable (landing)
+**Display Font:** Geist Mono Variable (with ui-monospace, SF Mono, Menlo)
+**Body Font:** Jost Variable (with ui-sans-serif, system-ui)
+**Dot-matrix Font:** Doto Variable (with Geist Mono Variable)
 
-**Character:** a bookish serif that carries warmth and authority over a
-crisp, tabular sans that does the accounting. The serif is set light and
-tight — elegance by restraint, not weight.
+**Character:** An engineer's mono drawn large and tight, set against a geometric sans that stays quiet for reading. The dot-matrix face is a stamp, not a voice.
 
 ### Hierarchy
-- **Display** (Fraunces, 300, `text-3xl md:text-4xl` / 1.875–2.25rem,
-  tight tracking): every page opens with it in the `PageHeader` `h1`.
-- **Title** (Fraunces, 300–400, `text-xl–2xl`, tight): card and section
-  headings.
-- **Body** (Geist, 400, `text-sm`–base): all prose, tables, and forms.
-  Prose blocks use `text-pretty`; headlines `text-balance`.
-- **Label** (Geist, 500, `text-xs–sm`): buttons, nav, table headers.
-- **Eyebrow** (Geist, 500, `text-[10px]`, 0.2em tracking, uppercase): the
-  small pill above hero headlines.
+- **Display** (Geist Mono 500, clamp(2.2rem, 5.7vw, 5.1rem), 1.02, -0.045em): the hero headline, split into two lines with line one left and line two right across the frame. Each line rises from a clip on load. Below 720px both lines align left at clamp(1.9rem, 8.6vw, 2.8rem).
+- **Headline** (Geist Mono 500, clamp(2.8rem, 8vw, 6rem), 0.95, -0.05em): section titles written as paths (`/projects`) and the contact heading. The about name uses the same voice at clamp(2.4rem, 4.3vw, 4rem).
+- **Title** (Geist Mono 500, clamp(2rem, 3.8vw, 3.2rem), 1, -0.045em): the project name inside the panel.
+- **Name** (Geist Mono 500, 1.08 to 1.1rem, -0.02em): project names on site sheets and tabs.
+- **Body** (Jost 400, 1.0625rem, 1.6): running copy. Leads and sub copy step to 1.1 to 1.14rem in Ink 2, capped at 42 to 62ch and wrapped with `pretty`.
+- **Button** (Jost 500, 1rem): every pill and CTA label.
+- **Label** (Geist Mono 400, 0.74 to 0.86rem): nav links, tags, status, path bar, fact terms, `kbd` keys, code. Tabular numerals on code and keys.
+- **Dot note** (Doto 700, 1.02rem, 1.45, 0.14em, uppercase): the hero corner note only, three short stacked lines in Ink 2 closed by a 16px rule. Decorative (`aria-hidden`) and hidden below 900px.
 
 ### Named Rules
-**The Never-Bold Rule.** Serif headings never take `font-bold` — `font-light`
-or `font-normal` and `tracking-tight` only. Body stays the default sans.
+**The Mono Voice Rule.** Anything that names something (a headline, a project, a section, a key) is Geist Mono 500 with negative tracking. Jost reads, and it never names.
 
-**The Tabular Money Rule.** Money and number columns stay tabular; tables
-get `font-variant-numeric: tabular-nums` automatically — never break it.
+**The One Stamp Rule.** Doto appears in exactly one place: the hero corner note. It is never used for headings, labels, or body copy.
 
 ## Layout
 
-- **Page recipe:** every signed-in page opens
-  `mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4
-  py-8 md:px-10 md:py-12`, with a `PageHeader` (serif h1, muted subtitle,
-  toolbar right-aligned in `actions`), then forms, a `DataTable`, or a card
-  grid.
-- **Exceptions:** full-height pages that virtualize (transactions) keep
-  `min-h-0`, drop `mx-auto max-w-7xl`, and use `gap-6`.
-- **Grids:** card grids `grid gap-4 md:grid-cols-2 xl:grid-cols-3`;
-  dashboards may use asymmetric `md:col-span-*` bento; all collapse to one
-  column on mobile.
-- **Toolbars:** `FilterDialog` first, then the primary `Button` (leading
-  lucide icon) on the far right of the page header.
-- **Shell:** inset sidebar on a `bg-sidebar` tray, glass `AppHeader` sticky
-  at `z-10`; overlays at `z-50`. No other z-layers.
-- **Rhythm:** Tailwind spacing; 4px base with generous section air (`gap-8`
-  pages, `gap-4` grids, `gap-2` label stacks).
+The sheet is a centred frame, `max` 1320px wide, with 1px `line` side rails. The nav repeats the rails in its inner bar so the frame runs unbroken under the glass, with crosshairs where its bottom rule meets them. Every section is a cell: padding `pad` (clamp(20px, 4.4vw, 64px)) and a 1px top rule, with a 13px crosshair centred on each end of the rule. The first cell carries its crosshairs on its bottom edge instead.
+
+Sub-rules that run frame to frame use a negative `pad` margin to reach the rails and carry their own crosshairs. This applies to the projects body rule. A shared column rule at `split` (clamp(280px, 31%, 410px)) divides the projects cell (tabs | panel) and the about cell (identity | text), with a crosshair where it meets each top rule. Thin outline circles (`.arc`, 1px `line`) cross cell edges and are clipped by an inner layer, never by the cell itself, so its crosshairs stay visible.
+
+Every rule that meets the frame at a crosshair (cell top rules, the projects body rule) runs on past the rails to the window edges, drawn with `border-image` outset by 100vw. The sheet reads as a cut-out of an endless drawing, not a box. Row dividers inside a cell stop at the rails.
+
+The hero fills the viewport below the nav on a two-column grid. Its rows are the corner note (top right), a flexible gap, the split headline, then the sub copy and actions under line one. The orbit sits right of centre; the project sites land on free grid dots around it, most often in the open top-left. Rhythm comes from clamp() values, not a fixed scale: `gutter` (clamp(20px, 2.4vw, 32px)) for inner column padding, `panel-pad` for panel interiors, 12px between actions, 6px between tabs.
+
+Breakpoints: 1100px narrows the orbit. 900px stacks the hero (orbit moves above the headline, the corner note hides), stacks projects (tabs become three equal columns showing glyph and name only, the column rule and big tabs drawing hide) and stacks about. 720px hides nav links, left-aligns both headline lines, and stacks facts and the about ledger. At 480px the hero actions go full width. At 420px the nav theme tool hides (the footer still has a theme pill).
+
+### Named Rules
+**The Ticked Intersection Rule.** Wherever a horizontal rule meets the frame or the column rule, a 13px Ink 3 crosshair marks it. A new rule that spans the sheet gets its ticks.
+
+**The One Column Rule.** Two-column cells divide at `split` so their dividers line up down the sheet. Don't invent a second column position.
+
+### The frame in OpenHouse
+
+The landing (`apps/landing`) draws the same sheet, built from three primitives in `landing.css` and `components/`:
+
+```
+            |  split                  |
+   ---------+----------+--------------+---------   ← cell rule, runs to the window edges
+            |  /path   |  Mono title  |
+            |  lede    |              |
+   ---------+----------+--------------+---------   ← head rule, ticked at rails + split
+            |  section body           |
+            ↑ rail                    ↑ rail  (max 1320px)
+```
+
+- **`.sheet`** wraps `main` and the footer: centred, `max` 1320px, 1px `line` side rails. The nav's inner bar repeats the rails and ticks their bottom corners.
+- **`Section`** is a cell: `pad` padding, a `.cell` top rule drawn as a pseudo-element outset 100vw (html clips with `overflow-x: clip`), and a `Tick` on each rail.
+- **`SectionHeading`** is the cell's head row: path name and lede left of the `split` column, the mono title right of it behind a 1px column rule, closed by a frame-to-frame bottom rule ticked at both rails and at the column. Below 768px the columns stack and the column rule and its ticks hide.
+- **`Tick`** is the 13px Ink 3 crosshair, positioned by its centre (`x`, `y` as CSS lengths).
+
+- **Nav links** are mono `/path` labels made from the translated name, lowercased and hyphenated (`/the-house`, `/features` in en-US; `/a-casa`, `/recursos` in pt-BR).
+- **Wordmark** (`components/wordmark.tsx`, Jost): "Open" at 500 in Wordmark Soft (`#a0a09d` dark, `#666663` light), "House" at 600 in full ink (`#f2f2f0` dark, `#0c0c0c` light). Nav and footer pair it with the house glyph. The web app draws the same wordmark through `BrandName` (`components/layout/brand-name.tsx`) on the `--wordmark-soft` token in `packages/ui` globals.
+- **FAQ** is a ledger right of the `split` column rule, which runs on from the head row to the cell's bottom: a mono `01` index, the question, and a 34px hairline tool (`+`/`−`) that inverts on hover; the row lifts one ground step.
+
+The hero is the one cell without a top rule; the nav's bottom rule closes it. The web app (Operate mode) does not draw the frame: it shares the tokens, type, hairlines and inversion grammar, and keeps its sidebar shell.
 
 ## Elevation & Depth
 
-Depth is layered paper plus glass. Two warm-tinted shadow tokens carry all
-elevation, each with a top inner highlight like light catching a paper edge;
-a hairline `ring-1 ring-foreground/[0.06]` draws the paper's edge without a
-border. Cards, popovers, and the sidebar are translucent glass over a fixed
-three-point ambient mesh; a fixed 3.5%-opacity grain keeps the paper tactile
-without repainting on scroll.
-
-### Shadow Vocabulary
-- **Soft** (`shadow-soft`): resting surfaces — cards, tables, outline
-  buttons. `inset 0 1px 0 rgb(255 255 255/0.7), 0 1px 2px rgb(60 40 20/0.04),
-  0 12px 32px -16px rgb(60 40 20/0.12)`.
-- **Lift** (`shadow-lift`): floating surfaces — dialogs, sheets.
-  `inset 0 1px 0 rgb(255 255 255/0.7), 0 2px 6px rgb(60 40 20/0.05),
-  0 32px 64px -24px rgb(60 40 20/0.22)`.
-- Dark theme swaps the warm rgba for neutral black at higher opacity and a
-  5–6% white top highlight.
+The sheet is flat. Depth comes from three things only: two tonal steps (raised panel, lifted hover), hairline outlines in two strengths, and the hero bloom behind the orbit. There are no drop shadows. The only `box-shadow` in the system is a 1px inset hairline that outlines the ghost CTA. The one translucent material is the sticky nav: nav-glass fill with `backdrop-filter: blur(18px) saturate(140%)`.
 
 ### Named Rules
-**The No Grey Shadow Rule.** Never `shadow-md/lg/xl` or dark rgba shadows —
-only `shadow-soft` / `shadow-lift`, always paired with
-`ring-1 ring-foreground/[0.06]` instead of a border.
+**The One Pane Rule.** Glass exists only on the sticky nav. Panels, cards, tabs and overlays are opaque ground with a hairline edge.
 
-**The Sticky Glass Rule.** `backdrop-blur` lives only on sticky or fixed
-elements (header, overlays) — never on scrolling content.
+**The Drawn Depth Rule.** If something needs to separate from the sheet, outline it or step its ground one tone. Never lift it with a shadow.
 
 ## Shapes
 
-The form language is concentric softness: everything curves, nothing is
-square, and nested containers keep concentric radii. Cards and tables
-`rounded-2xl` (1.35rem); dialogs and hero panels `rounded-3xl` (1.65rem);
-inputs `rounded-lg` (0.75rem); buttons, chips, and tags are full pills. The
-**double bezel** is the signature silhouette — an outer tray
-`rounded-[2rem] bg-foreground/[0.03] p-1.5 ring-1 ring-foreground/[0.06]`
-holding an inner core `rounded-[calc(2rem-0.375rem)] bg-card shadow-soft` —
-used once per page, on the focal element only. The BrandMark is the same
-idea miniaturized: a tinted tray holding the primary core.
+There are two families: hairline geometry drawn on the sheet, and fully rounded controls set on top of it.
+
+- **Primitives.** Stroked line drawings in a 100-unit box with round caps and joins and non-scaling strokes (1 to 1.5px). Codeboros is a ring with a gap and a node at its open end. OpenMixing is two overlapping circles, the second dotted (`stroke-dasharray: 0 0.026` at 1.9x width). OpenHouse is a roof over a square. Every stroke carries `pathLength="1"` and plots in by animating `stroke-dashoffset` from 1 to 0 (1500ms, second stroke 380ms later). The node dot and dotted trace then arrive by scaling up from 0.4. They appear at glyph size (26px), as the tab drawing, in the panel, and inside the hero orbit.
+- **Orbit.** A hairline ring (`line-2`) plotted over 2400ms, a dotted inner ring counter-spinning over 160s, four short axis ticks, and a 5px node dot. The node sweeps 76 to 126deg (14s, alternate) on desktop so it stays clear of the headline. Below 900px, where the orbit sits alone above the headline, it spins the full ring over 40s.
+- **Circles.** Outline arcs crossing cell edges, the contact pair of rings with a masked dotted trace and node, and hollow 7px bullet rings on line lists.
+- **Corners.** Controls are fully round (`ctl`, 999px): pills, CTA labels and discs, tags, tools, status, copy button. Containers step down in radius: panel 20px, tab 16px, facts grid and run block 14px, `kbd` keys and focus rings 6px.
 
 ## Components
 
 ### Buttons
-- **Shape:** full pill, `h-9` default (36px), spring 300 ms transition.
-- **Primary:** `bg-primary` on `text-primary-foreground` with a subtle inset
-  top highlight; hover `bg-primary/90`; active scale 0.97.
-- **Outline:** `bg-card` + `shadow-soft`, hairline border; hover to muted.
-- **Ghost / Destructive / Link:** muted-hover ghost; destructive is a 10%
-  red tint with red text (no solid red fill); link is green underlined.
-- **Focus:** `ring-3 ring-ring/50` — visible, soft, green.
+Two shapes for action, one pressed together, and one outlined.
+- **CTA (primary):** a pill label (46px tall, 0 24px, Jost 500 1rem) and a separate 46px round disc holding an arrow, set 4px apart and filled with ink on the ground. On hover both brighten to the button-hover value and the disc rotates -45deg (450ms, ease-out), so the arrow points up and out.
+- **CTA ghost:** the same pair, transparent, outlined by a 1px inset `line-2` hairline. On hover it inverts to ink on ground.
+- **Pill (secondary):** a 46px hairline pill (1px `line-2`, 0 22px). On hover it inverts to text colour on the ground. The small pill (34px, 0 14px, 0.9rem, Ink 2) carries footer links and toggles.
+- **Tool:** a 38px circular hairline button with a mono label or an 18px inline SVG icon (language, theme). It inverts on hover.
+- **Focus:** a 2px text-colour outline at 3px offset, radius 6px, everywhere.
 
-### Inputs / Fields
-- **Style:** `h-9`, `rounded-lg` (0.75rem), `border-input` hairline,
-  `bg-card` (dark: `bg-input/30`), 16px padding.
-- **Focus:** border shifts to `ring`, `ring-3 ring-ring/50` — no glow
-  bloom.
-- **Error:** `aria-invalid` swaps border and ring to destructive with a 20%
-  red ring; disabled at 50% opacity.
+### Chips
+- **Tag:** a mono 0.78 to 0.82rem hairline pill (`line-2`), used for project status on site sheets and the skills list. It is not interactive.
+- **Status:** a mono hairline pill with a 6px ink dot whose ring pings outward every 2.6s, in the panel bar.
 
 ### Cards / Containers
-- **Corner:** `rounded-2xl` (1.35rem).
-- **Background:** translucent `bg-card` glass over the ambient mesh.
-- **Shadow:** `shadow-soft` at rest; `shadow-lift` only when floating
-  (dialogs, sheets).
-- **Border:** none — `ring-1 ring-foreground/[0.06]` hairline instead.
-- **Padding:** `--card-spacing` token (24px), content stacks `gap-3`.
+- **Project panel:** 20px radius, raised ground, 1px `line-2` edge, no shadow. A path bar (mono repo path in Ink 3, status pill) sits over the body. The body holds the large primitive top right, the mono title, a line list with hairline dividers and hollow ring bullets, a three-column facts grid (14px, hairline cells, mono `dt`), a run block, and actions.
+- **Run block:** 14px radius, ground fill, hairline edge. A mono figcaption has a hairline copy pill, then a `pre` where each line is prefixed by a non-selectable Ink 3 `$ `.
 
-### Data Table
-The workhorse. Rows on hairline separators inside a `rounded-2xl
-shadow-soft` frame, tabular numerals throughout, sticky headers in dense
-ledgers. Pagination is a pill `ButtonGroup`.
+### Navigation
+A sticky 64px glass bar with a hairline bottom rule and the frame rails. On the left are the CL monogram (24px, its C and L slide in on load, and the L lifts once per hover) and the wordmark ("Coura" soft at 500, "Labs" full ink at 600, Jost). In the centre are mono path links (`/projects`) in Ink 2, which take a lifted pill ground on hover. On the right are the language and theme tools. Links hide at 720px.
 
-### Sidebar
-Inset tray on `bg-sidebar` glass. Nav items are pills with
-`data-[status=active]` styling; links use `activeOptions={{ exact: true }}`.
-Collapsible groups keep one trail — never two active states.
+### Project Sites (signature)
+The hero has no project list. Each project is a site on the plotter grid: on every page load it lands on a random free grid dot (seeded once per visit, confined to the open sheet above the headline: left of the corner note and clear of the orbit on the wide layout, and around the orbit's drawing when stacked; spread at least 260px apart where the sheet allows). Its entrance is a dot that swells and gives way to the project's 46px primitive plotting itself in, one site every 520ms after the hero intro. The site is a 72px round link in Ink 2; the plotted or hovered site comes up to full ink. On hover or focus, a small sheet opens beside it (flipped left past 58% of the width): 14px radius, raised ground, `line-2` edge, mono name, Jost kind, and a hairline-ruled footer with the status tag and "Open in /projects". It fades in from a 4px blur. Clicking selects that project's tab and scrolls to /projects. Hovering or focusing a site plots its primitive into the orbit. On touch, each site shows its mono name under the glyph instead of the sheet.
 
-### Dialogs & Sheets
-`rounded-3xl` (1.65rem) core, `shadow-lift`, overlay at `z-50` with
-backdrop-blur. Spring entrance, never a fade-only pop.
+### Plotter Field (hero)
+A 2D canvas behind the hero holds a 24px graph-paper dot grid (Ink 3 at 55%), fading out toward the ledger. A plotter head (an 11px ring, a 2.2px node, and short cross ticks) follows a fine pointer on a spring just short of critical damping. Its hairlines (`line-2`) run frame to frame with Ink 3 ticks where they hit the rails, dots within 170px come up to full ink, and a Geist Mono 11px readout shows `X 0000  Y 0000`. Within 72px of a project site the head locks onto it, its ring opening from 11px to 34px around the glyph, and the readout gives way to the site's sheet. Left idle for 2.6s, the head travels to the site of whichever project the orbit is plotting, labelled `plot <project>`. Under reduced motion the head snaps to the pointer (and to sites) with no spring and never travels on its own. Coarse pointers get the grid alone. The canvas pauses off-screen and re-reads ink on theme change.
 
-### BrandMark (signature)
-A house glyph in a machined double-bezel tile: tinted outer tray
-(`rounded-[0.8rem] bg-primary/10 ring-1 ring-primary/15`) holding the
-primary-colored core. Always `<BrandMark />` — never redraw the logo tile.
-
-### Eyebrow Tag
-`rounded-full bg-primary/10 px-3 py-1 text-[10px] font-medium
-tracking-[0.2em] text-primary uppercase ring-1 ring-primary/15` above a
-headline.
-
-### Ambient Glow
-Behind a hero: an `aria-hidden` absolute `rounded-full bg-primary/15
-blur-3xl` circle inside an `overflow-hidden` parent.
+### Project Tabs (signature)
+A vertical tablist of equal-height rows (`grid-auto-rows: 1fr`, 6px gap). Each tab is 16px radius with a hairline edge and holds a `kbd` key (1 to 3, 6px radius hairline), a mono name over a Jost kind, and the 26px glyph. Hover steps the ground to raised. The selected tab inverts to text colour on the ground. Keys 1 to 3 select from anywhere on the page, and arrows, Home and End move within the list. Selection redraws the primitive in the panel and below the tabs. The column scrolls with the page; it does not stick. Below 900px the tabs become three columns showing only glyph and name.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** use semantic token classes only; add a missing token to
-  `globals.css` (both themes) and document it here first.
-- **Do** keep radii concentric when nesting (tray 2rem → core
-  `calc(2rem-0.375rem)`).
-- **Do** animate only `transform` and `opacity`, on the spring curve
-  (`ease-spring` or inherited 300 ms default).
-- **Do** check `.dark` before finishing — every surface ships in both themes.
-- **Do** route all new user-facing copy through `locales/en-US.json`
-  (`packages/ui` components stay label-agnostic).
-- **Do** render lucide icons at the global 1.5 stroke; never pass
-  `strokeWidth`.
+- **Do** put every new section in a cell on the frame: a 1px `line` top rule, `pad` padding, and crosshair ticks where the rule meets the rails or the `split` column.
+- **Do** draw any new project mark as a stroked primitive in a 100-unit box with `pathLength="1"`, a plot-in by stroke-dashoffset, and one filled node dot.
+- **Do** express hover and selection by inversion (text colour on the ground) or by a one-step ground lift, with 200 to 300ms ease-out (`cubic-bezier(0.16, 1, 0.3, 1)`).
+- **Do** pair every primary action as a pill label plus a round arrow disc that rotates -45deg on hover. Use the hairline pill for the secondary.
+- **Do** set names, titles and labels in Geist Mono 500 with negative tracking, and running copy in Jost.
+- **Do** give every new colour a dark and a light value, and check both themes.
+- **Do** honour reduced motion: strokes render fully drawn, and orbit, dots and bloom stop.
 
 ### Don't:
-- **Don't** use hex, oklch literals, or Tailwind palette colors in feature
-  code.
-- **Don't** set `font-bold` on serif headings.
-- **Don't** use `shadow-md/lg/xl`, dark rgba shadows, or `border` where the
-  hairline ring is the idiom.
-- **Don't** use `ease-linear`, `ease-in-out`, or bare `transition-all`.
-- **Don't** put `backdrop-blur` on scrolling content.
-- **Don't** add new z-layers beyond sticky `z-10` and overlays `z-50`.
-- **Don't** use the double bezel or ambient glow more than once per page —
-  one focal element.
-- **Don't** animate table rows or list items; page-level sections may use
-  `animate-page-in`.
-- **Don't** mix the landing's monochrome world into app screens, or the
-  app's green into landing pages — each world keeps its own accent economy.
+- **Don't** use frosted glass anywhere but the sticky nav. The glass-lens and pane world is retired.
+- **Don't** fill a primitive or render it as a solid shape. Fills are reserved for node dots, status dots and inverted states.
+- **Don't** return to the pixel world. Doto's dot matrix is limited to the hero corner note.
+- **Don't** introduce hue, gradients beyond the gray bloom, or per-project accent colours.
+- **Don't** add drop shadows or offset shadows. Separate surfaces with hairlines and tonal steps.
+- **Don't** set small uppercase tracked labels above headings as eyebrows or kickers. Section titles carry their own `/path` name.
+- **Don't** use a system or Jost face for display text, or icon glyphs from fonts. Icons are inline SVG strokes.

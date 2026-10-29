@@ -1,11 +1,9 @@
-import { cn } from 'cn'
-
 import type { LedgerRow } from '@/lib/content.js'
 
 /**
  * A sample ledger grouped by day, as the transactions page lays it out: a
  * monospace day label, then each row's description, category, and signed
- * amount. Income reads in the pale-green ink.
+ * amount. Income reads by its sign; the sheet has no hue.
  */
 export function LedgerRows({
   days,
@@ -31,12 +29,7 @@ export function LedgerRows({
                   </span>
                   <span className="text-xs text-muted">{row.category}</span>
                 </div>
-                <span
-                  className={cn(
-                    'shrink-0 font-mono text-[13px] tabular-nums',
-                    row.income ? 'text-green-ink' : 'text-ink'
-                  )}
-                >
+                <span className="text-ink shrink-0 font-mono text-[13px] tabular-nums">
                   {row.amount}
                 </span>
               </li>

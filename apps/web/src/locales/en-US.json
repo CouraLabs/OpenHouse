@@ -38,6 +38,7 @@
     "upcoming": "Upcoming"
   },
   "sidebar": {
+    "copyright": "© 2026 CouraLabs",
     "month-summary": "This month",
     "incomes": "Income",
     "expenses": "Expenses"
@@ -1190,7 +1191,7 @@
   "security": {
     "recovery-prompt": {
       "title": "Save recovery codes",
-      "description": "Save recovery codes so you can get back in if you forget your password.",
+      "description": "If you ever forget your password, one of these codes gets you back in.",
       "action": "Get codes",
       "dismiss": "Not now"
     },

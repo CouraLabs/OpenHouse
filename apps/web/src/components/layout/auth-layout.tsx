@@ -20,7 +20,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <BrandMark />
-            <BrandName className="font-heading text-lg tracking-tight" />
+            <BrandName className="text-lg tracking-[-0.01em]" />
           </div>
           <div className="flex items-center gap-1">
             <ThemeSwitcher />
@@ -28,8 +28,8 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main className="flex flex-1 items-center justify-center px-4 py-12">
-          <div className="w-full max-w-md animate-page-in rounded-[2rem] bg-foreground/[0.03] p-1.5 ring-1 ring-foreground/[0.06]">
-            <div className="flex justify-center rounded-[calc(2rem-0.375rem)] bg-card p-8 shadow-soft sm:p-10">
+          <div className="w-full max-w-md animate-page-in">
+            <div className="flex justify-center rounded-[20px] bg-card p-8 ring-1 ring-input sm:p-10">
               {children}
             </div>
           </div>

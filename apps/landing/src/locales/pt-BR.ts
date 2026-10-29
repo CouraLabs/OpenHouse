@@ -42,7 +42,6 @@ export const ptBR: Content = {
   },
 
   hero: {
-    eyebrow: 'Código aberto · O app da casa',
     headline: 'Um só lugar para a casa inteira — começando pelo dinheiro.',
     tagline:
       'Um lugar compartilhado para o que mantém a casa funcionando. O livro-caixa já está no ar — contas, transações, limites, metas — e o resto da vida doméstica vem chegando. Código aberto de ponta a ponta: rode no seu próprio servidor de graça, ou deixe que a gente rode para você.',

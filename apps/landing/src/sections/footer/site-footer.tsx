@@ -1,17 +1,20 @@
-import { House } from '@phosphor-icons/react'
-
+import { HouseGlyph } from '@/components/house-glyph.js'
+import { Wordmark } from '@/components/wordmark.js'
+import { Tick } from '@/components/tick.js'
 import { useContent } from '@/lib/use-locale.js'
 
 /** Wordmark and tagline, the footer links, and the copyright line. */
 export function SiteFooter() {
   const { footer } = useContent()
   return (
-    <footer className="border-line border-t px-6 py-12">
-      <div className="mx-auto flex max-w-5xl flex-col gap-8 md:flex-row md:items-end md:justify-between">
+    <footer className="cell relative px-(--pad) py-12">
+      <Tick x="0" y="0" />
+      <Tick x="100%" y="0" />
+      <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-1">
-          <span className="text-ink flex items-center gap-2 text-sm font-semibold">
-            <House aria-hidden size={18} />
-            OpenHouse
+          <span className="text-ink flex items-center gap-2">
+            <HouseGlyph weight={5} className="size-5" />
+            <Wordmark />
           </span>
           <span className="text-sm text-muted">{footer.tagline}</span>
         </div>

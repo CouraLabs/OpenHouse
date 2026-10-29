@@ -12,10 +12,10 @@ export interface NavLink {
   href: string
 }
 
-/** The four washed-out pastels; the only color the page spends. */
+/** The room a tag belongs to. The sheet is ink-only, so tones draw alike. */
 export type Tone = 'red' | 'blue' | 'green' | 'yellow' | 'bone'
 
-/** A section's kicker, serif title, and optional lede. */
+/** A section's path name, mono title, and optional lede. */
 export interface Intro {
   eyebrow: string
   title: string
@@ -94,7 +94,7 @@ export interface Planner {
 /** One row of the house index: a module of the shared home and its status. */
 export interface HouseModule {
   name: string
-  /** The domain's kind, shown as a wash tag — the room of the house it is. */
+  /** The domain's kind, shown as a tag — the room of the house it is. */
   kind: string
   description: string
   tone: Tone
@@ -151,7 +151,6 @@ export interface Content {
     localeToggle: string
   }
   hero: {
-    eyebrow: string
     headline: string
     tagline: string
     primary: NavLink

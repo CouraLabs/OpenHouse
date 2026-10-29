@@ -17,7 +17,9 @@ export function PlannerRow({
       className="border-line grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-1 border-b py-6 md:grid-cols-[auto_16rem_1fr] md:items-center md:gap-x-8"
     >
       <IconWell icon={planner.icon} tone={planner.tone} />
-      <h3 className="text-ink text-base font-medium">{planner.title}</h3>
+      <h3 className="text-ink font-display text-[1.05rem] font-medium tracking-[-0.02em]">
+        {planner.title}
+      </h3>
       <p className="col-start-2 text-sm text-pretty text-muted md:col-start-3">
         {planner.body}
       </p>
