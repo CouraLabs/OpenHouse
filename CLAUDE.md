@@ -30,27 +30,28 @@ never invert.
 
 ```
 apps/
-  api/
+  api/                  # a Cloudflare Worker (Hono), deployed with wrangler
+    wrangler.jsonc      # bindings: DB (D1), JOBS (Queue), RATE_LIMIT; cron
+                        #   triggers; migrations_dir; nodejs_compat
     src/
-      main.ts                   # bootstrap only: middleware, CORS, shutdown hooks
-      reset-code.ts             # bootstrap only: the server's `reset-code` command
-                                #   (a Nest application context, no HTTP)
-      app.module.ts             # composition root: wires modules and global guards
-      app.controller.ts|spec    # health/root route (app.service.ts backs it)
-      config/                   # environment: env.ts validation, env.spec.ts
+      index.ts                  # Worker entry: { fetch: app.fetch, scheduled, queue }
+      app.ts                    # composition root: middleware order, mounts every
+                                #   feature router under /api, global error handler
+      config/                   # environment: env.ts parses c.env (bindings, vars,
+                                #   secrets) once per isolate with zod
       common/                   # cross-cutting infrastructure — no domain logic
-        session/                # session.ts: Session type, Public/Roles decorators,
-                                #   CurrentUser/CurrentTenant/CurrentSession params;
-                                #   auth.guard.ts: AuthGuard + session cookie helpers;
+        context.ts              # Hono `Variables`: session, db, deps
+        session/                # session.ts: Session type; auth.middleware.ts:
+                                #   authMiddleware + cookie helpers + requireRole;
                                 #   session-resolver.ts: the abstract SessionResolver
-                                #   the guard calls and auth/ implements
-        pipes/                  # generic request validation (ZodValidationPipe)
+                                #   the middleware calls and auth/ implements
+        validation/             # zValidator wrappers over poco schemas
         search/                 # fetch.helper.ts: buildPagedQuery, escapeLikePattern
         clock/                  # Clock (injectable "now"; specs pass a fixed one)
-                                #   + global ClockModule — never `new Date()` in a
-                                #   service whose logic depends on the day
-        ledger/                 # ledger-conflict.ts: LedgerConflictError + the filter
-                                #   answering it 409 (shared by every ledger writer)
+                                #   — never `new Date()` in a service whose logic
+                                #   depends on the day
+        ledger/                 # ledger-conflict.ts: LedgerConflictError; the
+                                #   app-wide error handler answers it 409
         card-cycle/             # card-cycle-sync.ts: the abstract CardCycleSync port
                                 #   accounts/ calls when a card's close/due days
                                 #   change and credit-card-statements/ implements
@@ -61,25 +62,24 @@ apps/
         upcoming/               # upcoming-sources.ts: abstract ports the upcoming
                                 #   panel and reminders read bills, rules, limits and
                                 #   goals through; each owning feature implements
-      <feature>/                # a domain feature (auth/, tenants/, settings/, preferences/, accounts/,
-                                #   categories/, limits/, goals/, receivers/, transactions/,
-                                #   recurring-transactions/, transaction-linkers/,
-                                #   credit-card-statements/, statement-imports/, data-exports/,
-                                #   tenant-deletion/, audit/, household/, upcoming/,
-                                #   notifications/, calendar/):
-        <feature>.module.ts     #   Nest module — wires the feature's providers; exports
-                                #   a repository when another feature may need its rows
-        <feature>.controller.ts #   routes: HTTP shape, status codes, DTO mapping (toWire)
+        db-errors.ts            # maps SQLite/D1 constraint errors to the 409/400
+                                #   repositories answer
+      <feature>/                # a domain feature (auth/, tenants/, settings/, preferences/, accounts/, categories/, limits/, goals/, receivers/, transactions/, recurring-transactions/, transaction-linkers/, credit-card-statements/, statement-imports/, data-exports/, tenant-deletion/, audit/, household/, upcoming/, notifications/, calendar/):
+        <feature>.routes.ts     #   routes: HTTP shape, status codes, DTO mapping —
+                                #   a Hono sub-app mounted by app.ts
+        <feature>.deps.ts       #   builds the feature's services from (db, ports,
+                                #   config); called once per request
         <entity>.repository.ts  #   Drizzle queries: tenant passed explicitly, paged
                                 #   search via buildPagedQuery, sortable-column whitelist
         <entity>.service.ts     #   business rules; may be split per concern
                                 #   (invite-code.service.ts, recurring-run.service.ts)
-        <concern>.ts            #   pure domain logic with no Nest/DB deps
+        <concern>.ts            #   pure domain logic with no Hono/DB deps
                                 #   (limit-period.ts, auth/reset-code.ts;
-                                #   transaction-ledger.ts pairs its
-                                #   money math with the row-locked balance writes)
+                                #   transaction-ledger.ts pairs its money math with
+                                #   the balance writes)
         *.spec.ts               #   Vitest specs next to the code
-    test/                       # e2e specs (*.e2e-spec.ts)
+    test/                       # e2e specs (*.e2e-spec.ts) — run in workerd
+    scripts/reset-code.mjs      # the operator command (rule 6e), never over HTTP
   web/
     src/
       App.tsx                   # query client + router composition
@@ -216,8 +216,12 @@ packages/
    answers 409 with their counts until the body confirms it.
    `accounts.spreadPct` is stored for the future exchange-rate integration
    and read by no calculation yet.
-6b. **Money is a string end to end.** A `numeric` column maps to a string
-   (`"12.34"`); poco validates the decimal shape with a regex; the web formats
+6b. **Money is a string end to end.** Storage is **integer minor units**
+   (cents): the `money` custom type in `packages/db` maps a decimal string
+   (`"12.34"`) to the integer SQLite stores, so `SUM` stays exact and
+   nothing crosses a float — the converter rejects values above 2^53 cents;
+   raw SQL answers cents through a `centsToDecimal` helper, not a cast.
+   poco validates the decimal shape with a regex; the web formats
    for display through `lib/format-money.ts` (the row's `Currency` from poco
    picks the symbol; an amount with no currency of its own formats in the
    tenant's main currency (`useMainCurrency()`), never a hard-coded one; the
@@ -242,9 +246,12 @@ packages/
    `reconciledAt`, like `closedAt`, is an audit stamp.
 6g. **Tenant deletion is the one hard delete.** An owner schedules it by
    typing the tenant name; 30 days later (the tenant's own calendar day) an
-   hourly job removes the tenant and everything it owns in one transaction,
-   children first, `import_mappings` and the append-only `transaction_history`
-   included. Nothing else ever removes business rows. The sanctioned exception
+   hourly job removes the tenant and everything it owns, children first,
+   `import_mappings` and the append-only `transaction_history` included —
+   one `db.batch([...])` of `DELETE … WHERE tenant_id = ?` statements (in
+   chunks per table when a tenant is big; the `tenants` row goes last, so a
+   crashed run resumes on the next hour). Nothing else ever removes business
+   rows. The sanctioned exception
    is credentials that carry no history: a `push_subscriptions` row is deleted
    when its browser unsubscribes or the push service answers 404/410, and a
    `calendar_feeds` row when its token is regenerated or revoked. No
@@ -252,8 +259,9 @@ packages/
    `audit_log` is append-only, has
    no foreign key to `tenants`, and keeps the `tenant.deleted` line. Full
    exports (`data-exports/`) and CSV exports are owner-facing and audited;
-   the ZIP lives in `EXPORT_DIR` (read in `config/`) for 24 hours or one
-   download — single-process storage, see `docs/data-export.md`.
+   the ZIP is built in memory per request and returned as a download —
+   nothing is stored, so there is no `EXPORT_DIR`, no expiry, and no
+   one-download bookkeeping (see `docs/data-export.md`).
 6e. **Password recovery never needs email.** A one-time reset code — issued
    by an owner for a member, generated in advance as an owner's recovery
    codes, or printed by the server's `reset-code` command — sets a new
@@ -261,10 +269,14 @@ packages/
    normalized code is stored; the plaintext is shown once. Redeeming clears
    the refresh hash (every session signs out); wrong, expired, and used
    codes answer one generic 400.
-7. **Environment is read only in `config/`.** Feature code receives values via
-   injection or module factories, never by calling `env.ts` helpers from deep
-   inside a feature (the session guard is the sanctioned exception, as
-   configuration consumed at guard-creation time).
+7. **Environment is read only in `config/`.** The Worker's environment comes
+   as `c.env` (D1 binding, queue binding, rate-limit binding, vars, secrets);
+   `config/env.ts` parses it with zod once per isolate and caches it. Feature
+   code receives values via injection, never by reading `c.env` or
+   `process.env` deep inside a feature (the session middleware is the
+   sanctioned exception, as configuration consumed at mount time). Local dev
+   defines values in `apps/api/.dev.vars`; production secrets go through
+   `wrangler secret put`.
 8. **Tests sit next to their code** (`<name>.spec.ts`) and e2e specs in
    `apps/api/test/`. Vitest picks up both from any depth — moving files needs no
    config changes.
@@ -310,13 +322,26 @@ navigate by.
   unconditionally. Conditionally required pairs (tenant name XOR invite code)
   stay unmarked — their labels already say when each applies.
 
+## Schema migrations
+
+- Every migration is **expand/contract**: `wrangler deploy` applies pending
+  `d1 migrations` before it ships the new Worker, so the running Worker must
+  work with the *new* schema for a few seconds while the previous bundle may
+  still be serving. Ship the widening migration first (new column nullable or
+  with a default, then backfilled), deploy the code that uses it, and only
+  then ship the contraction (drop the old column, tighten a constraint).
+  Never drop or rename a column the deployed Worker still reads in the same
+  deploy that stops reading it.
+
 ## Testing the web app in a browser
 
 After any web change, test the real UI with the `browser-use` CLI (run
 `browser-use skill` once for its helpers) — green unit and e2e tests do not
 prove a dialog opens or a form submits.
 
-1. `npm run dev` (web on `localhost:5173`, api on `localhost:3000`).
+1. `npm run dev` (web on `localhost:5173`, api on `localhost:8787` — the
+   Worker with its local D1; apply migrations first with
+   `npm run db:migrate`).
 2. Open a **separate browser context** so the developer's own logged-in
    session and data are never touched:
    `ctx = cdp("Target.createBrowserContext")["browserContextId"]`, then
