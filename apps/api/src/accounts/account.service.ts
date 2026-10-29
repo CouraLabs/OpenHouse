@@ -111,8 +111,7 @@ export class AccountService {
       write,
       cycle === null
         ? undefined
-        : (tx) =>
-            this.cardCycle.onCycleChanged(tx, tenantId, userId, body.id, cycle)
+        : await this.cardCycle.onCycleChanged(tenantId, userId, body.id, cycle)
     )
 
     if (updated === undefined) {

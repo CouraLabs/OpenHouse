@@ -12,6 +12,7 @@ import {
   lte,
   or,
   sql,
+  type SQL,
 } from 'drizzle-orm'
 import type {
   CreditCardStatement,
@@ -21,8 +22,8 @@ import type {
 } from '@workspace/db'
 import {
   accounts,
+  centsToDecimalSql,
   creditCardStatements,
-  transactionHistory,
   transactions,
 } from '@workspace/db'
 import {
@@ -41,6 +42,12 @@ import {
 } from '@workspace/poco'
 
 import { Clock } from '../common/clock/clock.js'
+import {
+  LedgerBatchPlan,
+  stampFor,
+  type LedgerStatement,
+} from '../common/ledger/ledger-batch.js'
+import { auditedUpdateStatements } from '../common/ledger/transaction-history.js'
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import {
@@ -49,6 +56,7 @@ import {
   type StatementAssigned,
   type StatementKey,
 } from './statement-assignment.js'
+import { planCycleResync } from './cycle-resync.js'
 import {
   statementTotals,
   statusCondition,
@@ -72,12 +80,36 @@ export interface StatementPlacement {
 }
 
 /**
+ * The bill placement of a write, planned before the write's batch is sent.
+ *
+ * A bill that already exists is referenced by its known id; one that must
+ * be opened inside the batch is referenced through the subselect the
+ * get-or-create insert feeds — `ON CONFLICT DO NOTHING` against the partial
+ * unique index makes the claim atomic, and a concurrent creator's bill is
+ * the one the subselect finds. The `closedAt` audit stamp rides the same
+ * batch, guarded to fire once.
+ */
+export interface PlacementPlan {
+  /** The bill the row lands on — a known id, or the in-batch subselect
+   * when the bill is opened inside the same batch, or null for no bill. */
+  statementId: number | SQL | null
+  statementPinned: boolean
+  /** Whether the bill the row lands on is already past its close. */
+  closed: boolean
+  /** The statements the caller's batch must include before the row write
+   * that references `statementId` — the get-or-create insert, when one is
+   * needed, and the `closedAt` stamp last. */
+  batch: LedgerBatchPlan
+}
+
+/**
  * The credit card bills, reached only through the tenant of the session.
  * Every method takes the tenant id explicitly.
  *
- * Exported by `CreditCardStatementsModule`: the transactions feature places
- * every card row on its bill through `placeInTx`/`replaceInTx`, inside the
- * ledger transaction that writes the row, after the account is locked.
+ * The transactions feature places every card row on its bill through
+ * `planPlacement`/`planReplacement` before the ledger batch that writes the
+ * row — the statements land in the same batch, so a bill and the charge on
+ * it commit together.
  */
 @Injectable()
 export class CreditCardStatementRepository {
@@ -88,73 +120,82 @@ export class CreditCardStatementRepository {
   ) {}
 
   /**
-   * Places a new row on the bill its day lands on, `offset` cycles later
-   * (installment `k` of a purchase lands on offset `k − 1`): nothing off a
-   * card, on a card whose days are unset, or for the card side of a
-   * payment.
+   * Plans where a new row lands: the bill its day resolves to, `offset`
+   * cycles later (installment `k` of a purchase lands on offset `k − 1`) —
+   * nothing off a card, on a card whose days are unset, or for the card
+   * side of a payment.
    */
-  async placeInTx(
-    tx: DbOrTx,
+  async planPlacement(
+    db: DbOrTx,
     tenantId: number,
     userId: number | null,
     key: StatementKey,
     offset = 0
-  ): Promise<StatementPlacement> {
+  ): Promise<PlacementPlan> {
     if (isCardPayment(key)) {
-      return { statementId: null, statementPinned: false, closed: false }
+      return {
+        statementId: null,
+        statementPinned: false,
+        closed: false,
+        batch: new LedgerBatchPlan(),
+      }
     }
 
-    const cycle = await this.cycleInTx(tx, tenantId, key.linkedAccountId)
+    const cycle = await this.cycleOf(db, tenantId, key.linkedAccountId)
 
     if (cycle === null) {
-      return { statementId: null, statementPinned: false, closed: false }
+      return {
+        statementId: null,
+        statementPinned: false,
+        closed: false,
+        batch: new LedgerBatchPlan(),
+      }
     }
 
     const window = resolveStatement(cycle, key.transactionDt, offset)
-    const statementId = await this.getOrCreateInTx(
-      tx,
-      tenantId,
-      userId,
-      key.linkedAccountId,
-      window
-    )
-    const closed = await this.touchInTx(tx, tenantId, statementId, window)
 
-    return { statementId, statementPinned: false, closed }
+    return this.planGetOrCreate(db, tenantId, userId, key.linkedAccountId, window)
   }
 
   /**
-   * Re-places an updated row: keeps its bill, or resolves it again from the
-   * new key — see `assignmentDecision`.
+   * Plans where an updated row lands: it keeps its bill, or resolves it
+   * again from the new key — see `assignmentDecision`.
    */
-  async replaceInTx(
-    tx: DbOrTx,
+  async planReplacement(
+    db: DbOrTx,
     tenantId: number,
     userId: number | null,
     before: StatementAssigned,
     after: StatementKey
-  ): Promise<StatementPlacement> {
+  ): Promise<PlacementPlan> {
     if (assignmentDecision(before, after) === 'keep') {
       return {
         statementId: before.statementId,
         statementPinned: before.statementPinned,
         closed: false,
+        batch: new LedgerBatchPlan(),
       }
     }
 
-    return this.placeInTx(tx, tenantId, userId, after)
+    return this.planPlacement(db, tenantId, userId, after)
   }
 
-  /**
-   * Reads one ACTIVE bill of the tenant locked `FOR SHARE` inside a write —
-   * the target of a manual move — and answers whether it is closed.
-   */
-  async findForMoveInTx(
-    tx: DbOrTx,
+  /** Reads one ACTIVE bill of the tenant — the target of a manual move —
+   * and answers whether it is closed. The caller stamps `closedAt` in its
+   * own batch (`closedStamp`). */
+  async findForMove(
+    db: DbOrTx,
     tenantId: number,
     id: number
-  ): Promise<{ statement: CreditCardStatement; closed: boolean } | undefined> {
-    const [statement] = await tx
+  ): Promise<
+    | {
+        statement: CreditCardStatement
+        closed: boolean
+        closedStamp: LedgerStatement | null
+      }
+    | undefined
+  > {
+    const [statement] = await db
       .select()
       .from(creditCardStatements)
       .where(
@@ -164,15 +205,17 @@ export class CreditCardStatementRepository {
           eq(creditCardStatements.status, 'ACTIVE')
         )
       )
-      .for('share')
 
     if (statement === undefined) {
       return undefined
     }
 
+    const closed = statement.closeDate <= (await this.todayOf(tenantId, db))
+
     return {
       statement,
-      closed: await this.touchInTx(tx, tenantId, id, statement),
+      closed,
+      closedStamp: this.closedStampStatement(db, tenantId, id, closed),
     }
   }
 
@@ -366,7 +409,8 @@ export class CreditCardStatementRepository {
   /**
    * The bill a payment into a card settles when the transfer names none:
    * poco's `defaultPaymentStatement` over the card's bills, else the bill
-   * today lands on. Nothing for a card whose days are unset.
+   * today lands on, opened if need be. Nothing for a card whose days are
+   * unset.
    */
   async defaultPaymentStatementId(
     tenantId: number,
@@ -378,35 +422,63 @@ export class CreditCardStatementRepository {
       (row) => toStatement(row, today)
     )
 
-    return (
-      defaultPaymentStatement(bills)?.id ??
-      (await this.getOrCreateCurrent(tenantId, userId, accountId))
-    )
+    const defaulted = defaultPaymentStatement(bills)?.id
+
+    if (defaulted !== undefined) {
+      return defaulted
+    }
+
+    return this.getOrCreateCurrent(tenantId, userId, accountId)
   }
 
   /**
    * The bill a payment into a card settles when nothing named one and the
    * card has no unpaid or Open bill yet: the one today lands on, opened if
-   * need be. Nothing for a card whose days are unset — it has no bills. Runs
-   * in a transaction of its own; an empty bill a failed payment leaves
-   * behind is hidden like any bill nothing landed on.
+   * need be. Nothing for a card whose days are unset — it has no bills. An
+   * empty bill a failed payment leaves behind is hidden like any bill
+   * nothing landed on.
    */
   private async getOrCreateCurrent(
     tenantId: number,
     userId: number,
     accountId: number
   ): Promise<number | null> {
-    return this.db.transaction(async (tx) => {
-      const cycle = await this.cycleInTx(tx, tenantId, accountId)
+    const cycle = await this.cycleOf(this.db, tenantId, accountId)
 
-      if (cycle === null) {
-        return null
-      }
+    if (cycle === null) {
+      return null
+    }
 
-      const window = resolveStatement(cycle, await this.todayOf(tenantId, tx))
+    const window = resolveStatement(cycle, await this.todayOf(tenantId))
+    const plan = await this.planGetOrCreate(
+      this.db,
+      tenantId,
+      userId,
+      accountId,
+      window
+    )
 
-      return this.getOrCreateInTx(tx, tenantId, userId, accountId, window)
-    })
+    await plan.batch.run(this.db)
+
+    if (typeof plan.statementId === 'number') {
+      return plan.statementId
+    }
+
+    // The bill was opened inside the batch: the subselect that placed the
+    // row is re-run as a plain read now that it is committed.
+    const [row] = await this.db
+      .select({ id: creditCardStatements.id })
+      .from(creditCardStatements)
+      .where(
+        and(
+          eq(creditCardStatements.tenantId, tenantId),
+          eq(creditCardStatements.accountId, accountId),
+          eq(creditCardStatements.closeDate, window.closeDate),
+          eq(creditCardStatements.status, 'ACTIVE')
+        )
+      )
+
+    return row?.id ?? null
   }
 
   /** Writes the figures typed in from the bank's bill. Answers the row, or
@@ -442,10 +514,11 @@ export class CreditCardStatementRepository {
    * bill's own, stamps `reconciledAt` (and keeps the bank total) and marks
    * every Verify row on the bill Checked — the other side of a transfer
    * with it, as any status change does — each recorded in the history. No
-   * money moves, so no account is locked. The bill's rows are locked `FOR
-   * UPDATE` in id order first and the bill after them, the ledger's
-   * row-first order, so no edit can change the total between the check and
-   * the stamp.
+   * money moves, so no account is touched. Every row's check flips through
+   * its own guarded update (an optimistic `update_dt` guard, so an edit
+   * racing the reconcile answers 409 instead of being overwritten), the
+   * histories ride the same statements, and the bill's own stamp is guarded
+   * on its update too.
    */
   async reconcile(
     tenantId: number,
@@ -453,108 +526,102 @@ export class CreditCardStatementRepository {
     id: number,
     bankTotal: string
   ): Promise<ReconcileOutcome> {
-    return this.db.transaction(async (tx) => {
-      const onBill = tx
-        .select({ id: transactions.transferGroupId })
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.tenantId, tenantId),
+    const onBill = this.db
+      .select({ id: transactions.transferGroupId })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.statementId, id),
+          isNotNull(transactions.transferGroupId)
+        )
+      )
+    const rows = await this.db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.status, 'ACTIVE'),
+          or(
             eq(transactions.statementId, id),
-            isNotNull(transactions.transferGroupId)
+            inArray(transactions.transferGroupId, onBill)
           )
         )
-      const rows = await tx
-        .select()
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.tenantId, tenantId),
-            eq(transactions.status, 'ACTIVE'),
-            or(
-              eq(transactions.statementId, id),
-              inArray(transactions.transferGroupId, onBill)
-            )
-          )
+      )
+      .orderBy(asc(transactions.id))
+
+    const [statement] = await this.db
+      .select()
+      .from(creditCardStatements)
+      .where(
+        and(
+          eq(creditCardStatements.tenantId, tenantId),
+          eq(creditCardStatements.id, id),
+          eq(creditCardStatements.status, 'ACTIVE')
         )
-        .orderBy(asc(transactions.id))
-        .for('update')
+      )
 
-      const [statement] = await tx
-        .select({ id: creditCardStatements.id })
-        .from(creditCardStatements)
-        .where(
-          and(
-            eq(creditCardStatements.tenantId, tenantId),
-            eq(creditCardStatements.id, id),
-            eq(creditCardStatements.status, 'ACTIVE')
-          )
-        )
-        .for('update')
+    if (statement === undefined) {
+      return { kind: 'missing' as const }
+    }
 
-      if (statement === undefined) {
-        return { kind: 'missing' as const }
-      }
+    const totals = await this.findTotals(tenantId, id)
 
-      const totals = await this.findTotals(tenantId, id, tx)
+    if (totals === undefined) {
+      return { kind: 'missing' as const }
+    }
 
-      if (totals === undefined) {
-        return { kind: 'missing' as const }
-      }
+    if (compareMoney(totals.total, bankTotal) !== 0) {
+      return { kind: 'mismatch' as const, total: totals.total }
+    }
 
-      if (compareMoney(totals.total, bankTotal) !== 0) {
-        return { kind: 'mismatch' as const, total: totals.total }
-      }
+    const now = this.clock.now()
+    const plan = new LedgerBatchPlan()
 
-      const now = this.clock.now()
-      const verify = rows.filter((row) => row.reviewStatus === 'Verify')
+    for (const row of rows.filter((row) => row.reviewStatus === 'Verify')) {
+      const stamp = stampFor(row)
+      const audited = auditedUpdateStatements(this.db, {
+        tenantId,
+        id: row.id,
+        userId,
+        before: row,
+        set: { reviewStatus: 'Checked', updateBy: userId, updateDt: stamp },
+        action: 'UPDATE',
+      })
 
-      if (verify.length > 0) {
-        const updated = await tx
-          .update(transactions)
-          .set({ reviewStatus: 'Checked', updateBy: userId, updateDt: now })
-          .where(
-            and(
-              eq(transactions.tenantId, tenantId),
-              inArray(
-                transactions.id,
-                verify.map((row) => row.id)
-              )
-            )
-          )
-          .returning()
-        const before = new Map(verify.map((row) => [row.id, row]))
+      plan.guarded(
+        audited.update,
+        1,
+        'the Verify row being checked (optimistic concurrency)'
+      )
+      plan.add(audited.history)
+    }
 
-        await tx.insert(transactionHistory).values(
-          updated.map((after) => ({
-            tenantId,
-            transactionId: after.id,
-            action: 'UPDATE' as const,
-            before: before.get(after.id) ?? null,
-            after,
-            createdBy: userId,
-          }))
-        )
-      }
-
-      await tx
+    plan.guarded(
+      this.db
         .update(creditCardStatements)
         .set({ bankTotal, reconciledAt: now, updateBy: userId, updateDt: now })
         .where(
           and(
             eq(creditCardStatements.tenantId, tenantId),
-            eq(creditCardStatements.id, id)
+            eq(creditCardStatements.id, id),
+            eq(creditCardStatements.updateDt, statement.updateDt)
           )
-        )
+        ),
+      1,
+      'the bill being reconciled (optimistic concurrency)'
+    )
 
-      return { kind: 'reconciled' as const }
-    })
+    await plan.run(this.db)
+
+    return { kind: 'reconciled' as const }
   }
 
   /** The tenant's "today", in its own zone — what decides whether a bill
    * is still open. */
-  async todayOf(tenantId: number, tx: DbOrTx = this.db): Promise<string> {
-    const settings = await this.settings.findByTenant(tenantId, tx)
+  async todayOf(tenantId: number, db: DbOrTx = this.db): Promise<string> {
+    const settings = await this.settings.findByTenant(tenantId, db)
 
     return todayIn(settings?.timezone ?? 'UTC', this.clock.now())
   }
@@ -562,17 +629,17 @@ export class CreditCardStatementRepository {
   // --- The card-cycle resync (see StatementCycleSyncService) ---
 
   /**
-   * Locks the rows a cycle change may move, `FOR UPDATE` in id order — the
-   * ledger's row-first lock order: the card's ACTIVE unpinned charges on an
-   * Open bill or on none yet. The card side of a payment never moves.
+   * Reads the rows a cycle change may move: the card's ACTIVE unpinned
+   * charges on an Open bill or on none yet. The card side of a payment
+   * never moves.
    */
-  async lockResyncCandidatesInTx(
-    tx: DbOrTx,
+  async resyncCandidates(
+    db: DbOrTx,
     tenantId: number,
     accountId: number,
     today: string
   ): Promise<Transaction[]> {
-    const openIds = tx
+    const openIds = db
       .select({ id: creditCardStatements.id })
       .from(creditCardStatements)
       .where(
@@ -584,7 +651,7 @@ export class CreditCardStatementRepository {
         )
       )
 
-    return tx
+    return db
       .select()
       .from(transactions)
       .where(
@@ -601,32 +668,18 @@ export class CreditCardStatementRepository {
         )
       )
       .orderBy(asc(transactions.id))
-      .for('update')
-  }
-
-  /** Locks the card row, after its transactions and before any bill write. */
-  async lockAccountInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    accountId: number
-  ): Promise<void> {
-    await tx
-      .select({ id: accounts.id })
-      .from(accounts)
-      .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, accountId)))
-      .for('update')
   }
 
   /** The card's Open ACTIVE bills, and which of them a resync must keep:
    * those holding pinned charges, or payments — a prepaid bill keeps the
    * payment that settles it. */
-  async findOpenInTx(
-    tx: DbOrTx,
+  async findOpen(
+    db: DbOrTx,
     tenantId: number,
     accountId: number,
     today: string
   ): Promise<{ open: CreditCardStatement[]; pinnedIds: Set<number> }> {
-    const open = await tx
+    const open = await db
       .select()
       .from(creditCardStatements)
       .where(
@@ -637,12 +690,11 @@ export class CreditCardStatementRepository {
           gt(creditCardStatements.closeDate, today)
         )
       )
-      .for('update')
 
     const pinned =
       open.length === 0
         ? []
-        : await tx
+        : await db
             .selectDistinct({ id: transactions.statementId })
             .from(transactions)
             .where(
@@ -660,7 +712,7 @@ export class CreditCardStatementRepository {
     const paid =
       open.length === 0
         ? []
-        : await tx
+        : await db
             .selectDistinct({ id: transactions.paymentStatementId })
             .from(transactions)
             .where(
@@ -682,138 +734,149 @@ export class CreditCardStatementRepository {
     }
   }
 
-  /** Rewrites an Open bill's period start and due date in place. */
-  async updateWindowInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    userId: number,
-    update: { id: number; periodStart: string; dueDate: string }
-  ): Promise<void> {
-    await tx
-      .update(creditCardStatements)
-      .set({
-        periodStart: update.periodStart,
-        dueDate: update.dueDate,
-        updateBy: userId,
-        updateDt: this.clock.now(),
-      })
-      .where(
-        and(
-          eq(creditCardStatements.tenantId, tenantId),
-          eq(creditCardStatements.id, update.id)
-        )
-      )
-  }
-
   /**
-   * Moves locked rows onto a bill and records an UPDATE history row for
-   * each one that actually moved — the resync is a change of the rows,
-   * audited like any other.
+   * The statements one cycle resync needs, planned from its pre-reads.
+   * Each Open bill's window is rewritten under an optimistic guard; each
+   * moved row is re-placed under its own guard and recorded in the
+   * history; the bills nothing would stay on are soft-deleted guarded by a
+   * re-check that nothing landed on them since the read — the guard that
+   * replaces the row lock a purchase once held against the resync.
    */
-  async reassignInTx(
-    tx: DbOrTx,
+  async planResync(
     tenantId: number,
     userId: number,
-    rows: readonly Transaction[],
-    statementId: number
-  ): Promise<void> {
-    const moving = rows.filter((row) => row.statementId !== statementId)
-
-    if (moving.length === 0) {
-      return
-    }
-
-    const updated = await tx
-      .update(transactions)
-      .set({ statementId, updateBy: userId, updateDt: this.clock.now() })
-      .where(
-        and(
-          eq(transactions.tenantId, tenantId),
-          inArray(
-            transactions.id,
-            moving.map((row) => row.id)
-          )
-        )
-      )
-      .returning()
-
-    const before = new Map(moving.map((row) => [row.id, row]))
-
-    await tx.insert(transactionHistory).values(
-      updated.map((after) => ({
-        tenantId,
-        transactionId: after.id,
-        action: 'UPDATE' as const,
-        before: before.get(after.id) ?? null,
-        after,
-        createdBy: userId,
-      }))
+    accountId: number,
+    cycle: CardCycle,
+    today: string
+  ): Promise<LedgerBatchPlan> {
+    const candidates = await this.resyncCandidates(
+      this.db,
+      tenantId,
+      accountId,
+      today
     )
-  }
+    const { open, pinnedIds } = await this.findOpen(
+      this.db,
+      tenantId,
+      accountId,
+      today
+    )
+    const plan = planCycleResync(cycle, open, candidates, pinnedIds)
+    const batch = new LedgerBatchPlan()
 
-  /** Soft-deletes Open bills no charge stays on. */
-  async softDeleteInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    userId: number,
-    ids: readonly number[]
-  ): Promise<void> {
-    if (ids.length === 0) {
-      return
+    for (const update of plan.windowUpdates) {
+      const before = open.find((row) => row.id === update.id)
+
+      batch.guarded(
+        this.db
+          .update(creditCardStatements)
+          .set({
+            periodStart: update.periodStart,
+            dueDate: update.dueDate,
+            updateBy: userId,
+            updateDt: stampFor(before),
+          })
+          .where(
+            and(
+              eq(creditCardStatements.tenantId, tenantId),
+              eq(creditCardStatements.id, update.id),
+              ...(before === undefined
+                ? []
+                : [eq(creditCardStatements.updateDt, before.updateDt)])
+            )
+          ),
+        1,
+        'the bill whose window the resync rewrites (optimistic concurrency)'
+      )
     }
 
-    await tx
-      .update(creditCardStatements)
-      .set({ status: 'DELETED', updateBy: userId, updateDt: this.clock.now() })
-      .where(
-        and(
-          eq(creditCardStatements.tenantId, tenantId),
-          inArray(creditCardStatements.id, [...ids])
-        )
+    const byId = new Map(candidates.map((row) => [row.id, row]))
+
+    for (const group of plan.assignments) {
+      // The bill the group moves to, opened inside this batch if need be —
+      // the subselect resolves to whichever creator won, ours included.
+      const placement = await this.planGetOrCreate(
+        this.db,
+        tenantId,
+        userId,
+        accountId,
+        group.window
       )
+
+      batch.append(placement.batch)
+
+      for (const row of group.transactionIds.flatMap(
+        (id: number) => byId.get(id) ?? []
+      )) {
+        // A bill the batch opens has no row on it yet: the move always
+        // applies. A known bill is skipped when the row already sits on it.
+        if (
+          typeof placement.statementId === 'number' &&
+          row.statementId === placement.statementId
+        ) {
+          continue
+        }
+
+        const stamp = stampFor(row)
+        const audited = auditedUpdateStatements(this.db, {
+          tenantId,
+          id: row.id,
+          userId,
+          before: row,
+          set: {
+            statementId: placement.statementId,
+            updateBy: userId,
+            updateDt: stamp,
+          },
+          action: 'UPDATE',
+        })
+
+        batch.guarded(
+          audited.update,
+          1,
+          'the row the resync re-places (optimistic concurrency)'
+        )
+        batch.add(audited.history)
+      }
+    }
+
+    for (const orphanId of plan.orphanIds) {
+      // The guard re-checks, inside the delete, that nothing landed on the
+      // bill since the read — a purchase racing the resync keeps its bill.
+      batch.add(
+        this.db
+          .update(creditCardStatements)
+          .set({ status: 'DELETED', updateBy: userId, updateDt: this.clock.now() })
+          .where(
+            and(
+              eq(creditCardStatements.tenantId, tenantId),
+              eq(creditCardStatements.id, orphanId),
+              eq(creditCardStatements.status, 'ACTIVE'),
+              notExistsCharge(tenantId, orphanId)
+            )
+          )
+      )
+    }
+
+    return batch
   }
 
   /**
-   * Finds the card's ACTIVE bill for a window's close, or creates it with
-   * the window's days snapshotted. `ON CONFLICT DO NOTHING` against the
-   * partial unique index makes the claim atomic: a concurrent creator
-   * makes this insert wait and then yield, and the follow-up select reads
-   * the row it committed. No error is ever caught here — the recurring job
-   * catches unique violations around its whole transaction.
+   * Finds the card's ACTIVE bill for a window's close, or plans creating it
+   * with the window's days snapshotted. `ON CONFLICT DO NOTHING` against
+   * the partial unique index makes the claim atomic: the winner's insert
+   * returns the row, and the loser's subselect reads the row the winner
+   * committed. No error is ever caught here — the recurring job catches
+   * unique violations around its whole batch.
    */
-  async getOrCreateInTx(
-    tx: DbOrTx,
+  private async planGetOrCreate(
+    db: DbOrTx,
     tenantId: number,
     userId: number | null,
     accountId: number,
     window: StatementWindow
-  ): Promise<number> {
-    const [created] = await tx
-      .insert(creditCardStatements)
-      .values({
-        tenantId,
-        accountId,
-        periodStart: window.periodStart,
-        closeDate: window.closeDate,
-        dueDate: window.dueDate,
-        createdBy: userId,
-        updateBy: userId,
-      })
-      .onConflictDoNothing({
-        target: [
-          creditCardStatements.tenantId,
-          creditCardStatements.accountId,
-          creditCardStatements.closeDate,
-        ],
-        where: sql`status = 'ACTIVE'`,
-      })
-      .returning({ id: creditCardStatements.id })
-
-    if (created !== undefined) {
-      return created.id
-    }
-
-    const [existing] = await tx
+  ): Promise<PlacementPlan> {
+    const [existing] = await db
       .select({ id: creditCardStatements.id })
       .from(creditCardStatements)
       .where(
@@ -825,17 +888,120 @@ export class CreditCardStatementRepository {
         )
       )
 
-    return existing.id
+    const today = await this.todayOf(tenantId, db)
+    const closed = window.closeDate <= today
+
+    if (existing !== undefined) {
+      return {
+        statementId: existing.id,
+        statementPinned: false,
+        closed,
+        batch: this.stampPlan(
+          this.closedStampStatement(db, tenantId, existing.id, closed)
+        ),
+      }
+    }
+
+    const statementId = sql<number>`(select ${creditCardStatements.id} from ${creditCardStatements} where ${creditCardStatements.tenantId} = ${tenantId} and ${creditCardStatements.accountId} = ${accountId} and ${creditCardStatements.closeDate} = ${window.closeDate} and ${creditCardStatements.status} = 'ACTIVE')`
+
+    return {
+      statementId,
+      statementPinned: false,
+      closed,
+      batch: new LedgerBatchPlan()
+        .add(
+          db
+            .insert(creditCardStatements)
+            .values({
+              tenantId,
+              accountId,
+              periodStart: window.periodStart,
+              closeDate: window.closeDate,
+              dueDate: window.dueDate,
+              createdBy: userId,
+              updateBy: userId,
+            })
+            // No conflict target: DO NOTHING answers any uniqueness
+            // conflict, and the partial index's predicate cannot render
+            // where drizzle puts the `where` clause.
+            .onConflictDoNothing()
+        )
+        .addNullable(
+          this.closedStampSubselectStatement(
+            db,
+            tenantId,
+            accountId,
+            window.closeDate,
+            closed
+          )
+        ),
+    }
+  }
+
+  /** A plan holding one nullable stamp: an open bill contributes none. */
+  private stampPlan(statement: LedgerStatement | null): LedgerBatchPlan {
+    return new LedgerBatchPlan().addNullable(statement)
+  }
+
+  /** Stamps `closedAt` the first time a write finds a known bill past its
+   * close — an audit marker only; no statement runs while the bill is open. */
+  private closedStampStatement(
+    db: DbOrTx,
+    tenantId: number,
+    id: number,
+    closed: boolean
+  ): LedgerStatement | null {
+    if (!closed) {
+      return null
+    }
+
+    return db
+      .update(creditCardStatements)
+      .set({ closedAt: this.clock.now() })
+      .where(
+        and(
+          eq(creditCardStatements.tenantId, tenantId),
+          eq(creditCardStatements.id, id),
+          isNull(creditCardStatements.closedAt)
+        )
+      )
+  }
+
+  /** The same stamp for a bill referenced by its identifying window — the
+   * shape a get-or-create plans. */
+  private closedStampSubselectStatement(
+    db: DbOrTx,
+    tenantId: number,
+    accountId: number,
+    closeDate: string,
+    closed: boolean
+  ): LedgerStatement | null {
+    if (!closed) {
+      return null
+    }
+
+    return db
+      .update(creditCardStatements)
+      .set({ closedAt: this.clock.now() })
+      .where(
+        and(
+          eq(creditCardStatements.tenantId, tenantId),
+          eq(creditCardStatements.accountId, accountId),
+          eq(creditCardStatements.closeDate, closeDate),
+          eq(creditCardStatements.status, 'ACTIVE'),
+          isNull(creditCardStatements.closedAt)
+        )
+      )
   }
 
   /** The cycle of an account, or nothing when it is not a card or its days
    * are unset. */
-  private async cycleInTx(
-    tx: DbOrTx,
+  private async cycleOf(
+    db: DbOrTx,
     tenantId: number,
     accountId: number
   ): Promise<CardCycle | null> {
-    const [account] = await tx
+    const [account] = await db
       .select({
         type: accounts.type,
         closeDay: accounts.closeDay,
@@ -852,38 +1018,8 @@ export class CreditCardStatementRepository {
     return cardCycleOf(account)
   }
 
-  /**
-   * Answers whether a bill is past its close in the tenant's zone, stamping
-   * `closedAt` the first time a write finds it so — an audit marker only.
-   */
-  private async touchInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    statementId: number,
-    window: Pick<StatementWindow, 'closeDate'>
-  ): Promise<boolean> {
-    const today = await this.todayOf(tenantId, tx)
-
-    if (window.closeDate > today) {
-      return false
-    }
-
-    await tx
-      .update(creditCardStatements)
-      .set({ closedAt: this.clock.now() })
-      .where(
-        and(
-          eq(creditCardStatements.tenantId, tenantId),
-          eq(creditCardStatements.id, statementId),
-          isNull(creditCardStatements.closedAt),
-          lte(creditCardStatements.closeDate, today)
-        )
-      )
-
-    return true
-  }
-
-  /** The joined select every totals read shares. */
+  /** The joined select every totals read shares — the cents columns of the
+   * run CTE formatted into the two-decimal strings the wire carries. */
   private joinedFields(run: StatementRun) {
     return {
       id: run.id,
@@ -900,14 +1036,20 @@ export class CreditCardStatementRepository {
       reconciledAt: run.reconciledAt,
       transactionCount: run.transactionCount,
       paymentCount: run.paymentCount,
-      charges: run.charges,
-      credits: run.credits,
-      total: run.total,
-      paid: run.paid,
-      previousBalance: run.previousBalance,
+      charges: centsToDecimalSql(col(run.charges)),
+      credits: centsToDecimalSql(col(run.credits)),
+      total: centsToDecimalSql(col(run.total)),
+      paid: centsToDecimalSql(col(run.paid)),
+      previousBalance: centsToDecimalSql(col(run.previousBalance)),
       nextDueDate: run.nextDueDate,
     }
   }
+}
+
+/** A CTE column as a plain expression — the alias is the column's name in
+ * the CTE's output, and formatting reads the value through it. */
+function col(value: SQL | SQL.Aliased): SQL {
+  return sql`${value}`
 }
 
 /** The statuses of a bill that still asks for money. */
@@ -921,4 +1063,16 @@ const pendingStatuses: readonly StatementStatus[] = [
 /** Whether anything landed on a bill: a charge, or a payment settling it. */
 function hasActivity(run: StatementRun) {
   return or(gt(run.transactionCount, 0), gt(run.paymentCount, 0))
+}
+
+/** Whether nothing ACTIVE sits on a bill — as a charge or a payment — the
+ * guard the resync's soft delete re-checks inside the batch. */
+function notExistsCharge(tenantId: number, statementId: number): SQL {
+  return sql`not exists (
+    select 1 from ${transactions}
+    where ${transactions.tenantId} = ${tenantId}
+      and ${transactions.status} = 'ACTIVE'
+      and (${transactions.statementId} = ${statementId}
+        or ${transactions.paymentStatementId} = ${statementId})
+  )`
 }

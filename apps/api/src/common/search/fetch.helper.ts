@@ -1,5 +1,6 @@
 import { asc, desc, type SQL, type SQLWrapper } from 'drizzle-orm'
 
+import { normalizeSearchName } from '@workspace/db'
 import type { FetchArgs } from '@workspace/poco'
 
 /**
@@ -62,4 +63,23 @@ export function buildPagedQuery(
  */
 export function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&')
+}
+
+/**
+ * The longest search term a `LIKE` pattern may carry: D1 caps the pattern
+ * at 50 bytes, and the two `%` wildcards take two. A longer term is cut —
+ * the results only ever narrow.
+ */
+const MAX_LIKE_TERM_CHARS = 40
+
+/**
+ * Builds the `LIKE` pattern a substring search runs: the term normalized
+ * the way the `search_name` columns were written (lowercased, accent-
+ * stripped — SQLite folds ASCII only), escaped, wrapped in `%`, and capped
+ * to the length D1 accepts.
+ */
+export function likePattern(term: string): string {
+  return `%${escapeLikePattern(
+    normalizeSearchName(term).slice(0, MAX_LIKE_TERM_CHARS)
+  )}%`
 }

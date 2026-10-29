@@ -1,14 +1,11 @@
-import { and, asc, count, eq, getTableColumns, ilike, sql } from 'drizzle-orm'
+import { and, asc, count, eq, getTableColumns, like, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Database, TransactionLinker } from '@workspace/db'
-import { categories, receivers, transactionLinkers } from '@workspace/db'
+import { categories, normalizeSearchName, receivers, transactionLinkers } from '@workspace/db'
 import type { SearchTransactionLinkersArgs } from '@workspace/poco'
 
-import {
-  buildPagedQuery,
-  escapeLikePattern,
-} from '../common/search/fetch.helper.js'
+import { buildPagedQuery, likePattern } from '../common/search/fetch.helper.js'
 
 /**
  * A linker row with the category's and the receiver's names joined on —
@@ -57,6 +54,7 @@ export class TransactionLinkerRepository {
         createdBy: userId,
         updateBy: userId,
         ...data,
+        searchName: normalizeSearchName(data.description),
       })
       .returning()
 
@@ -157,6 +155,7 @@ export class TransactionLinkerRepository {
       .update(transactionLinkers)
       .set({
         description: data.description,
+        searchName: normalizeSearchName(data.description),
         categoryId: data.categoryId,
         receiverId: data.receiverId,
         updateBy: userId,
@@ -209,10 +208,7 @@ export class TransactionLinkerRepository {
 
     if (args.filter.description !== undefined) {
       conditions.push(
-        ilike(
-          transactionLinkers.description,
-          `%${escapeLikePattern(args.filter.description)}%`
-        )
+        like(transactionLinkers.searchName, likePattern(args.filter.description))
       )
     }
 

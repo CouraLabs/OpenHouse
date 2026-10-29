@@ -3,6 +3,7 @@ import type { DbOrTx } from '@workspace/db'
 import { creditCardStatements, transactions } from '@workspace/db'
 import type { StatementStatus } from '@workspace/poco'
 
+
 /**
  * The common table expressions every bill read derives from — totals are
  * never stored, so they never drift from the transactions they sum.
@@ -36,8 +37,9 @@ export function statementTotals(
   const payments = db
     .select({
       statementId: transactions.paymentStatementId,
-      paid: sql<string>`sum(${transactions.amount})`.as('paid'),
-      count: sql<number>`count(*)::int`.as('payment_count'),
+      // Integer cents; the outer selects format them.
+      paid: sql<number>`sum(${transactions.amount})`.as('paid'),
+      count: sql<number>`count(*)`.as('payment_count'),
     })
     .from(transactions)
     .where(
@@ -63,23 +65,23 @@ export function statementTotals(
         minimumDue: creditCardStatements.minimumDue,
         bankTotal: creditCardStatements.bankTotal,
         reconciledAt: creditCardStatements.reconciledAt,
-        transactionCount: sql<number>`count(${transactions.id})::int`.as(
+        transactionCount: sql<number>`count(${transactions.id})`.as(
           'transaction_count'
         ),
-        paymentCount: sql<number>`coalesce(max(${payments.count}), 0)::int`.as(
+        paymentCount: sql<number>`coalesce(max(${payments.count}), 0)`.as(
           'payment_count'
         ),
+        // Integer cents, exact; the outer selects format the materialized
+        // columns into the two-decimal strings.
         charges:
-          sql<string>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'Expense'), 0)::numeric(16,2)`.as(
+          sql<number>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'Expense'), 0)`.as(
             'charges'
           ),
         credits:
-          sql<string>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'Income'), 0)::numeric(16,2)`.as(
+          sql<number>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'Income'), 0)`.as(
             'credits'
           ),
-        paid: sql<string>`coalesce(max(${payments.paid}), 0)::numeric(16,2)`.as(
-          'paid'
-        ),
+        paid: sql<number>`coalesce(max(${payments.paid}), 0)`.as('paid'),
       })
       .from(creditCardStatements)
       .leftJoin(
@@ -119,11 +121,9 @@ export function statementTotals(
         charges: net.charges,
         credits: net.credits,
         paid: net.paid,
-        total: sql<string>`(${net.charges} - ${net.credits})::numeric(16,2)`.as(
-          'total'
-        ),
+        total: sql<number>`(${net.charges} - ${net.credits})`.as('total'),
         previousBalance:
-          sql<string>`coalesce(sum(${net.charges} - ${net.credits} - ${net.paid}) over (partition by ${net.accountId} order by ${net.closeDate} rows between unbounded preceding and 1 preceding), 0)::numeric(16,2)`.as(
+          sql<number>`coalesce(sum(${net.charges} - ${net.credits} - ${net.paid}) over (partition by ${net.accountId} order by ${net.closeDate} rows between unbounded preceding and 1 preceding), 0)`.as(
             'previous_balance'
           ),
         nextDueDate: sql<

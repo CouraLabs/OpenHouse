@@ -68,7 +68,7 @@ export function BillsPage() {
   const search = useStatementSearch(args)
   const columns = useMemo(
     () => buildBillsColumns(t, formattingLocale()),
-    [t, formattingLocale()]
+    [t]
   )
 
   // A new sort or filter is a new first page.

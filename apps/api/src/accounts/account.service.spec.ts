@@ -4,6 +4,7 @@ import type { Account } from '@workspace/db'
 import { createAccountSchema } from '@workspace/poco'
 
 import type { CardCycleSync } from '../common/card-cycle/card-cycle-sync.js'
+import { LedgerBatchPlan } from '../common/ledger/ledger-batch.js'
 import type { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { AccountRepository } from './account.repository.js'
 import { AccountService } from './account.service.js'
@@ -46,7 +47,14 @@ const repository = () => ({
 })
 
 /** A cycle-sync port and a bill repository mock. */
-const cardCycle = () => ({ onCycleChanged: vi.fn() })
+const cardCycle = () => {
+  const plan = new LedgerBatchPlan()
+
+  return {
+    plan,
+    onCycleChanged: vi.fn(async () => plan),
+  }
+}
 const statements = () => ({
   unpaidSummary: vi.fn(async () => ({
     unpaidBills: 0,
@@ -287,19 +295,17 @@ describe('AccountService', () => {
     const repo = repository()
     const sync = cardCycle()
     repo.findById.mockResolvedValue(card)
-    repo.update.mockImplementation(async (...args: unknown[]) => {
-      const beforeWrite = args[4] as (tx: unknown) => Promise<void>
-      await beforeWrite('tx')
-      return card
-    })
+    repo.update.mockResolvedValue(card)
 
     await accountService(repo, sync).update(1, 7, { ...cardBody, dueDay: 10 })
 
-    expect(sync.onCycleChanged).toHaveBeenCalledWith('tx', 1, 7, 1, {
+    expect(sync.onCycleChanged).toHaveBeenCalledWith(1, 7, 1, {
       closeDay: 25,
       dueDay: 10,
       closeDayInclusive: false,
     })
+    // The resync plan rides the same batch that saves the days.
+    expect(repo.update.mock.calls[0][4]).toBe(sync.plan)
   })
 
   it('rejects a type change once the card has transactions — and so bills', async () => {

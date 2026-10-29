@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import { eq, inArray, isNotNull } from 'drizzle-orm'
-import type { Database, DbOrTx } from '@workspace/db'
+import { eq, isNotNull } from 'drizzle-orm'
+import type { Database } from '@workspace/db'
+import { runBatch, type LedgerStatement } from '../common/ledger/ledger-batch.js'
 import {
   accounts,
   calendarFeeds,
@@ -13,7 +14,6 @@ import {
   notificationLog,
   notificationPreferences,
   notifications,
-  passwordResetCodes,
   pushSubscriptions,
   receivers,
   recurringTransactions,
@@ -36,17 +36,11 @@ import {
 export class TenantDeletionRepository {
   constructor(@InjectDrizzle() private readonly db: Database) {}
 
-  /** Runs `work` in one transaction. */
-  transaction<T>(work: (tx: DbOrTx) => Promise<T>): Promise<T> {
-    return this.db.transaction(work)
-  }
-
   /** Reads the tenant's name and scheduled deletion day. */
   async find(
-    tenantId: number,
-    tx: DbOrTx = this.db
+    tenantId: number
   ): Promise<{ name: string; deletionDate: string | null } | undefined> {
-    const [row] = await tx
+    const [row] = await this.db
       .select({ name: tenants.name, deletionDate: tenants.deletionDate })
       .from(tenants)
       .where(eq(tenants.id, tenantId))
@@ -55,15 +49,22 @@ export class TenantDeletionRepository {
   }
 
   /** Sets the day the tenant is deleted, or clears it with `null`. */
-  async setDeletionDate(
+  setDeletionDateStatement(
     tenantId: number,
-    deletionDate: string | null,
-    tx: DbOrTx = this.db
-  ): Promise<void> {
-    await tx
+    deletionDate: string | null
+  ) {
+    return this.db
       .update(tenants)
       .set({ deletionDate, updatedAt: new Date() })
       .where(eq(tenants.id, tenantId))
+  }
+
+  /** Sets the day the tenant is deleted, or clears it with `null`. */
+  async setDeletionDate(
+    tenantId: number,
+    deletionDate: string | null
+  ): Promise<void> {
+    await this.setDeletionDateStatement(tenantId, deletionDate)
   }
 
   /** Lists every tenant with a deletion scheduled. */
@@ -79,54 +80,68 @@ export class TenantDeletionRepository {
   /**
    * Removes the tenant and everything it owns, children first so no
    * foreign key is ever violated: the append-only history, then the
-   * transactions it points at, down to the tenant row. Run inside the
-   * caller's transaction. The audit log has no foreign key and is kept.
+   * transactions it points at, down to the tenant row — one atomic batch,
+   * with the audit line appended to it (the log has no foreign key and
+   * survives the delete; the `tenants` row goes last, so a crashed run
+   * resumes on the next hour and finds the tenant still listed).
    */
-  async hardDelete(tenantId: number, tx: DbOrTx): Promise<void> {
-    // The reminders and their per-user settings point at users: first.
-    await tx.delete(notifications).where(eq(notifications.tenantId, tenantId))
-    await tx
-      .delete(notificationLog)
-      .where(eq(notificationLog.tenantId, tenantId))
-    await tx
-      .delete(notificationPreferences)
-      .where(eq(notificationPreferences.tenantId, tenantId))
-    await tx
-      .delete(pushSubscriptions)
-      .where(eq(pushSubscriptions.tenantId, tenantId))
-    await tx.delete(calendarFeeds).where(eq(calendarFeeds.tenantId, tenantId))
-    await tx
-      .delete(transactionHistory)
-      .where(eq(transactionHistory.tenantId, tenantId))
-    await tx
-      .delete(transactionSplits)
-      .where(eq(transactionSplits.tenantId, tenantId))
-    await tx.delete(transactions).where(eq(transactions.tenantId, tenantId))
-    await tx.delete(importMappings).where(eq(importMappings.tenantId, tenantId))
-    await tx
-      .delete(recurringTransactions)
-      .where(eq(recurringTransactions.tenantId, tenantId))
-    await tx
-      .delete(transactionLinkers)
-      .where(eq(transactionLinkers.tenantId, tenantId))
-    await tx.delete(goals).where(eq(goals.tenantId, tenantId))
-    await tx.delete(limits).where(eq(limits.tenantId, tenantId))
-    await tx
-      .delete(creditCardStatements)
-      .where(eq(creditCardStatements.tenantId, tenantId))
-    await tx.delete(accounts).where(eq(accounts.tenantId, tenantId))
-    await tx.delete(receivers).where(eq(receivers.tenantId, tenantId))
-    await tx.delete(categories).where(eq(categories.tenantId, tenantId))
-    await tx.delete(tenantCodes).where(eq(tenantCodes.tenantId, tenantId))
-    await tx.delete(tenantSettings).where(eq(tenantSettings.tenantId, tenantId))
-    const tenantUsers = tx
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.tenantId, tenantId))
-    await tx
-      .delete(passwordResetCodes)
-      .where(inArray(passwordResetCodes.userId, tenantUsers))
-    await tx.delete(users).where(eq(users.tenantId, tenantId))
-    await tx.delete(tenants).where(eq(tenants.id, tenantId))
+  hardDeleteStatements(
+    tenantId: number,
+    auditStatement?: LedgerStatement
+  ): LedgerStatement[] {
+    const deletes = [
+      // The reminders and their per-user settings point at users: first.
+      this.db.delete(notifications).where(eq(notifications.tenantId, tenantId)),
+      this.db
+        .delete(notificationLog)
+        .where(eq(notificationLog.tenantId, tenantId)),
+      this.db
+        .delete(notificationPreferences)
+        .where(eq(notificationPreferences.tenantId, tenantId)),
+      this.db
+        .delete(pushSubscriptions)
+        .where(eq(pushSubscriptions.tenantId, tenantId)),
+      this.db.delete(calendarFeeds).where(eq(calendarFeeds.tenantId, tenantId)),
+      this.db
+        .delete(transactionHistory)
+        .where(eq(transactionHistory.tenantId, tenantId)),
+      this.db
+        .delete(transactionSplits)
+        .where(eq(transactionSplits.tenantId, tenantId)),
+      this.db.delete(transactions).where(eq(transactions.tenantId, tenantId)),
+      this.db
+        .delete(importMappings)
+        .where(eq(importMappings.tenantId, tenantId)),
+      this.db
+        .delete(recurringTransactions)
+        .where(eq(recurringTransactions.tenantId, tenantId)),
+      this.db
+        .delete(transactionLinkers)
+        .where(eq(transactionLinkers.tenantId, tenantId)),
+      this.db.delete(goals).where(eq(goals.tenantId, tenantId)),
+      this.db.delete(limits).where(eq(limits.tenantId, tenantId)),
+      this.db
+        .delete(creditCardStatements)
+        .where(eq(creditCardStatements.tenantId, tenantId)),
+      this.db.delete(accounts).where(eq(accounts.tenantId, tenantId)),
+      this.db.delete(receivers).where(eq(receivers.tenantId, tenantId)),
+      this.db.delete(categories).where(eq(categories.tenantId, tenantId)),
+      this.db.delete(tenantCodes).where(eq(tenantCodes.tenantId, tenantId)),
+      this.db
+        .delete(tenantSettings)
+        .where(eq(tenantSettings.tenantId, tenantId)),
+      this.db.delete(users).where(eq(users.tenantId, tenantId)),
+      this.db.delete(tenants).where(eq(tenants.id, tenantId)),
+    ]
+
+    if (auditStatement === undefined) {
+      return deletes
+    }
+
+    return [...deletes, auditStatement]
+  }
+
+  async hardDelete(tenantId: number): Promise<void> {
+    await runBatch(this.db, this.hardDeleteStatements(tenantId))
   }
 }

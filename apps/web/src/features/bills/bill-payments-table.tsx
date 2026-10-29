@@ -48,7 +48,7 @@ export function BillPaymentsTable({
   const payments = useBillTransactions(args)
   const columns = useMemo(
     () => buildBillPaymentsColumns(t, formattingLocale(), onMove),
-    [t, formattingLocale(), onMove]
+    [t, onMove]
   )
 
   return (

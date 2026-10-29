@@ -10,7 +10,7 @@ const row = (overrides: Partial<Receiver> = {}): Receiver => ({
   id: 1,
   tenantId: 1,
   name: 'Landlord',
-  type: 'Person',
+  searchName: '',  type: 'Person',
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),

@@ -1,25 +1,26 @@
-import type { DbOrTx } from '@workspace/db'
 import type { CardCycle } from '@workspace/poco'
+
+import type { LedgerBatchPlan } from '../ledger/ledger-batch.js'
 
 /**
  * Keeps a card's bills in step when its close or due days change. Abstract
  * so the accounts feature, which owns the card's days, never depends on the
- * feature that owns the bills: accounts calls this port inside the
- * transaction that saves the days, and credit-card-statements provides the
- * implementation.
+ * feature that owns the bills: accounts asks this port for the resync's
+ * statements and writes them into the same batch that saves the days —
+ * bills and days commit together or not at all. Closed bills keep their
+ * snapshotted days.
  */
 export abstract class CardCycleSync {
   /**
-   * Re-resolves the card's Open bills and the unpinned charges on them —
-   * and assigns the charges that have no bill yet — under the new cycle.
-   * Runs before the account row is written, inside the caller's
-   * transaction; closed bills keep their snapshotted days.
+   * Plans the resync: re-resolves the card's Open bills and the unpinned
+   * charges on them, and assigns the charges that have no bill yet, under
+   * the new cycle. The caller runs the plan inside the batch that saves
+   * the account.
    */
   abstract onCycleChanged(
-    tx: DbOrTx,
     tenantId: number,
     userId: number,
     accountId: number,
     cycle: CardCycle
-  ): Promise<void>
+  ): Promise<LedgerBatchPlan>
 }

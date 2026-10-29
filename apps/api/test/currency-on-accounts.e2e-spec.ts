@@ -1,8 +1,5 @@
-import { readdirSync, readFileSync } from 'node:fs'
+
 import type { INestApplication } from '@nestjs/common'
-import { getDrizzleToken } from '@nestjs/drizzle'
-import type { Database } from '@workspace/db'
-import { sql } from 'drizzle-orm'
 import type { App } from 'supertest/types.js'
 
 import {
@@ -194,108 +191,6 @@ describe('currency lives on accounts (e2e, #19)', () => {
       .send({ ...accountBody(created.body), id, spreadPct: '4' })
       .expect(200)
     expect(updated.body.spreadPct).toBe('4.00')
-  })
-})
-
-describe('the currency-on-accounts migration (e2e, #19)', () => {
-  let app: INestApplication<App>
-
-  beforeAll(async () => {
-    app = await startApp()
-  })
-
-  afterAll(async () => {
-    await app.close()
-  })
-
-  /** The mismatch check the migration runs before dropping any column. */
-  const mismatchCheck = (): string => {
-    const drizzle = new URL('../../../packages/db/drizzle/', import.meta.url)
-    const folder = readdirSync(drizzle).find((name) =>
-      name.endsWith('_currency-on-accounts')
-    )
-    const migration = readFileSync(
-      new URL(`${folder}/migration.sql`, drizzle),
-      'utf8'
-    )
-
-    return migration.split('--> statement-breakpoint')[0]
-  }
-
-  /**
-   * Runs the check against scratch temp tables — they shadow the real ones
-   * inside the session and drop themselves when the transaction ends — and
-   * answers the error the check raised, if any.
-   */
-  const runCheck = async (seed: {
-    goals: Array<[number, number, string, string]>
-    limits: Array<[number, number, string, string]>
-  }): Promise<string | undefined> => {
-    const db = app.get<Database>(getDrizzleToken())
-
-    try {
-      await db.transaction(async (tx) => {
-        await tx.execute(
-          sql`create temp table tenant_settings (tenant_id int, main_currency text) on commit drop`
-        )
-        await tx.execute(
-          sql`insert into tenant_settings values (1, 'BRL'), (2, 'USD')`
-        )
-        for (const table of ['goals', 'limits']) {
-          await tx.execute(
-            sql.raw(
-              `create temp table ${table} (tenant_id int, id int, currency text, status text) on commit drop`
-            )
-          )
-        }
-        for (const [tenantId, id, currency, status] of seed.goals) {
-          await tx.execute(
-            sql`insert into goals values (${tenantId}, ${id}, ${currency}, ${status})`
-          )
-        }
-        for (const [tenantId, id, currency, status] of seed.limits) {
-          await tx.execute(
-            sql`insert into limits values (${tenantId}, ${id}, ${currency}, ${status})`
-          )
-        }
-        await tx.execute(sql.raw(mismatchCheck()))
-      })
-
-      return undefined
-    } catch (error) {
-      const cause = (error as { cause?: Error }).cause
-
-      return (cause ?? (error as Error)).message
-    }
-  }
-
-  it('refuses to run, listing the rows, when a goal or limit is in another currency', async () => {
-    const raised = await runCheck({
-      goals: [
-        [1, 10, 'BRL', 'ACTIVE'],
-        [1, 11, 'USD', 'ACTIVE'],
-      ],
-      limits: [
-        [2, 20, 'EUR', 'ACTIVE'],
-        [2, 21, 'USD', 'ACTIVE'],
-      ],
-    })
-
-    expect(raised).toMatch(/tenant 1 goal 11 \(USD\)/)
-    expect(raised).toMatch(/tenant 2 limit 20 \(EUR\)/)
-    expect(raised).not.toMatch(/goal 10|limit 21/)
-  })
-
-  it('runs when every ACTIVE row is in its main currency — deleted ones aside', async () => {
-    expect(
-      await runCheck({
-        goals: [
-          [1, 10, 'BRL', 'ACTIVE'],
-          [1, 12, 'EUR', 'DELETED'],
-        ],
-        limits: [[2, 21, 'USD', 'ACTIVE']],
-      })
-    ).toBeUndefined()
   })
 })
 

@@ -1,14 +1,11 @@
-import { and, asc, count, eq, ilike, sql } from 'drizzle-orm'
+import { and, asc, count, eq, like, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Category, Database } from '@workspace/db'
-import { categories } from '@workspace/db'
+import { categories, normalizeSearchName } from '@workspace/db'
 import type { SearchCategoriesArgs, SplitInput } from '@workspace/poco'
 
-import {
-  buildPagedQuery,
-  escapeLikePattern,
-} from '../common/search/fetch.helper.js'
+import { buildPagedQuery, likePattern } from '../common/search/fetch.helper.js'
 
 /** What a search answers with: the page's rows and how many match in all. */
 export interface CategorySearch {
@@ -47,6 +44,7 @@ export class CategoryRepository {
         createdBy: userId,
         updateBy: userId,
         ...data,
+        searchName: normalizeSearchName(data.name),
       })
       .returning()
 
@@ -67,7 +65,13 @@ export class CategoryRepository {
   ): Promise<Category> {
     const [created] = await this.db
       .insert(categories)
-      .values({ tenantId, createdBy: userId, updateBy: userId, ...data })
+      .values({
+        tenantId,
+        createdBy: userId,
+        updateBy: userId,
+        ...data,
+        searchName: normalizeSearchName(data.name),
+      })
       .onConflictDoNothing()
       .returning()
 
@@ -82,7 +86,7 @@ export class CategoryRepository {
         and(
           eq(categories.tenantId, tenantId),
           eq(categories.status, 'ACTIVE'),
-          sql`lower(${categories.name}) = lower(${data.name})`
+          eq(categories.searchName, normalizeSearchName(data.name))
         )
       )
 
@@ -146,7 +150,7 @@ export class CategoryRepository {
     const conditions = [
       eq(categories.tenantId, tenantId),
       eq(categories.status, 'ACTIVE'),
-      ilike(categories.name, escapeLikePattern(name)),
+      eq(categories.searchName, normalizeSearchName(name)),
     ]
 
     if (exceptId !== undefined) {
@@ -173,6 +177,7 @@ export class CategoryRepository {
       .update(categories)
       .set({
         name: data.name,
+        searchName: normalizeSearchName(data.name),
         color: data.color,
         ...(data.defaultSplit === undefined
           ? {}
@@ -206,9 +211,7 @@ export class CategoryRepository {
     const conditions = [eq(categories.tenantId, tenantId)]
 
     if (args.filter.name !== undefined) {
-      conditions.push(
-        ilike(categories.name, `%${escapeLikePattern(args.filter.name)}%`)
-      )
+      conditions.push(like(categories.searchName, likePattern(args.filter.name)))
     }
 
     conditions.push(eq(categories.status, args.filter.status))

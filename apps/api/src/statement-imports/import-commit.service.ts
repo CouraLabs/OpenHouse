@@ -17,6 +17,10 @@ import {
   type ReconciledEditConflict,
 } from '@workspace/poco'
 
+import { InjectDrizzle } from '@nestjs/drizzle'
+import type { Database } from '@workspace/db'
+
+import { LedgerBatchPlan } from '../common/ledger/ledger-batch.js'
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { Clock } from '../common/clock/clock.js'
@@ -44,17 +48,18 @@ interface PlannedRow {
 /**
  * Writes the rows the user picked from a preview, and takes a batch back.
  *
- * A commit is one ledger transaction: the account is locked once at the
- * start, rows already imported (their bank id is on an ACTIVE row) are
- * skipped and counted, and the rest go through `insertInTx` — the one insert
- * path, so the balance, the history, and the card bill placement are the
- * ones every other write gets — in chunks of 500, oldest day first. Any
- * failure rolls the whole file back. Every row carries the batch id; undoing
- * the batch soft-deletes its live rows within 24 hours.
+ * A commit is a series of ledger batches: rows already imported (their bank
+ * id is on an ACTIVE row, read before writing) are skipped and counted, and
+ * the rest go through the ledger's one insert group — the balance, the
+ * history, and the card bill placement every other write gets — in chunks
+ * of 500, oldest day first. Each chunk is atomic, and the `import_batch_id`
+ * every row carries makes a partially applied import detectable and
+ * re-runnable: a re-import skips the rows the bank ids already hold.
  */
 @Injectable()
 export class ImportCommitService {
   constructor(
+    @InjectDrizzle() private readonly db: Database,
     private readonly transactions: TransactionRepository,
     private readonly imports: ImportTransactionRepository,
     private readonly mappings: ImportMappingRepository,
@@ -78,65 +83,59 @@ export class ImportCommitService {
     const batchId = randomUUID()
     const planned = planRows(body.rows)
 
-    const { imported, skipped } = await this.transactions.inLedgerTx(
-      async (tx) => {
-        // The one lock of the import: every row after this finds the
-        // account already held, and a second import of the same file waits
-        // here, then sees the first one's bank ids.
-        await this.transactions.lockAccountsInTx(tx, tenantId, [account.id])
-
-        const existing = await this.imports.findByExternalIds(
-          tenantId,
-          account.id,
-          planned.flatMap(({ row }) =>
-            row.externalId == null ? [] : [row.externalId]
-          ),
-          tx
-        )
-        const seen = new Set<string>()
-        const fresh: PlannedRow[] = []
-        let skippedCount = 0
-
-        for (const entry of planned) {
-          const id = entry.row.externalId
-
-          if (id != null) {
-            if (existing.has(id) || seen.has(id)) {
-              skippedCount++
-              continue
-            }
-
-            seen.add(id)
-          }
-
-          fresh.push(entry)
-        }
-
-        for (const rows of chunk(fresh, IMPORT_CHUNK_SIZE)) {
-          for (const { row, link } of rows) {
-            await this.transactions.insertInTx(
-              tx,
-              tenantId,
-              userId,
-              toWrite(account.id, batchId, row, link),
-              { readBack: false }
-            )
-          }
-        }
-
-        if (body.mapping != null) {
-          await this.mappings.save(
-            tx,
-            tenantId,
-            userId,
-            account.id,
-            body.mapping
-          )
-        }
-
-        return { imported: fresh.length, skipped: skippedCount }
-      }
+    // The duplicate check reads before writing: a re-import of the same
+    // file finds the first one's bank ids and skips them. (Two imports of
+    // the same file committed at the same instant would both pass this
+    // read; the partial unique index aborts the loser's chunk atomically.)
+    const existing = await this.imports.findByExternalIds(
+      tenantId,
+      account.id,
+      planned.flatMap(({ row }) =>
+        row.externalId == null ? [] : [row.externalId]
+      )
     )
+    const seen = new Set<string>()
+    const fresh: PlannedRow[] = []
+    let skippedCount = 0
+
+    for (const entry of planned) {
+      const id = entry.row.externalId
+
+      if (id != null) {
+        if (existing.has(id) || seen.has(id)) {
+          skippedCount++
+          continue
+        }
+
+        seen.add(id)
+      }
+
+      fresh.push(entry)
+    }
+
+    for (const rows of chunk(fresh, IMPORT_CHUNK_SIZE)) {
+      const chunkPlan = new LedgerBatchPlan()
+
+      for (const { row, link } of rows) {
+        const group = await this.transactions.planInsertGroup(
+          this.db,
+          tenantId,
+          userId,
+          toWrite(account.id, batchId, row, link)
+        )
+
+        chunkPlan.append(group.plan)
+      }
+
+      await chunkPlan.run(this.db)
+    }
+
+    if (body.mapping != null) {
+      await this.mappings.save(tenantId, userId, account.id, body.mapping)
+    }
+
+    const imported = fresh.length
+    const skipped = skippedCount
 
     return {
       batchId: imported === 0 ? null : batchId,
@@ -163,33 +162,33 @@ export class ImportCommitService {
     userId: number,
     batchId: string
   ): Promise<ImportUndoResult> {
-    return this.transactions.inLedgerTx(async (tx) => {
-      const batch = await this.imports.lockBatch(tx, tenantId, batchId)
+    const batch = await this.imports.findBatch(this.db, tenantId, batchId)
 
-      if (batch === undefined) {
-        throw new NotFoundException(`No import ${batchId}.`)
-      }
+    if (batch === undefined) {
+      throw new NotFoundException(`No import ${batchId}.`)
+    }
 
-      const deadline = batch.importedAt.getTime() + IMPORT_UNDO_HOURS * HOUR_MS
+    const deadline = batch.importedAt.getTime() + IMPORT_UNDO_HOURS * HOUR_MS
 
-      if (this.clock.now().getTime() > deadline) {
-        throw new ConflictException(
-          `An import can only be undone within ${IMPORT_UNDO_HOURS} hours.`
-        )
-      }
-
-      await this.transactions.lockAccountsInTx(
-        tx,
-        tenantId,
-        batch.rows.map((row) => row.linkedAccountId)
+    if (this.clock.now().getTime() > deadline) {
+      throw new ConflictException(
+        `An import can only be undone within ${IMPORT_UNDO_HOURS} hours.`
       )
+    }
 
-      for (const row of batch.rows) {
-        await this.transactions.softDeleteInTx(tx, tenantId, userId, row)
-      }
+    // Every row of the batch is soft-deleted in one batch: the guarded
+    // revert, the optimistic row write, and the gated history per row.
+    const undoPlan = new LedgerBatchPlan()
 
-      return { undone: batch.rows.length }
-    })
+    for (const row of batch.rows) {
+      undoPlan.append(
+        this.transactions.planSoftDeleteGroup(this.db, tenantId, userId, row)
+      )
+    }
+
+    await undoPlan.run(this.db)
+
+    return { undone: batch.rows.length }
   }
 
   /** The account's imports that can still be undone, newest first. */

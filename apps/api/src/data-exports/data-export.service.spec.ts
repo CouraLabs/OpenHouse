@@ -18,7 +18,10 @@ describe('DataExportService', () => {
     const repository = {
       readTenant: async () => ({ accounts: [{ id: 1 }] }),
     } as unknown as DataExportRepository
-    const audit = { record: async () => undefined } as AuditRecorder
+    const audit = {
+      record: async () => undefined,
+      statement: () => undefined as never,
+    } as AuditRecorder
     const clock = { now: () => now } as Clock
     service = new DataExportService(repository, audit, clock, dir)
   })

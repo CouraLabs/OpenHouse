@@ -97,18 +97,20 @@ export class ImportTransactionRepository {
   }
 
   /**
-   * Locks and reads the ACTIVE rows of one batch, in id order. Also answers
-   * when the batch was written (its earliest row, deleted ones included) so
-   * the caller can enforce the undo window; `undefined` for a batch that
-   * never existed in the tenant.
+   * Reads the ACTIVE rows of one batch, in id order. Also answers when the
+   * batch was written (its earliest row, deleted ones included) so the
+   * caller can enforce the undo window; `undefined` for a batch that never
+   * existed in the tenant. The rows the undo soft-deletes are guarded
+   * optimistically per row, so a row edited since the read fails the batch
+   * instead of being overwritten.
    */
-  async lockBatch(
-    tx: DbOrTx,
+  async findBatch(
+    db: DbOrTx = this.db,
     tenantId: number,
     batchId: string
   ): Promise<{ rows: Transaction[]; importedAt: Date } | undefined> {
-    const [stamp] = await tx
-      .select({ importedAt: sql<Date>`min(${transactions.createdDt})` })
+    const [stamp] = await db
+      .select({ importedAt: sql<number>`min(${transactions.createdDt})` })
       .from(transactions)
       .where(
         and(
@@ -121,7 +123,7 @@ export class ImportTransactionRepository {
       return undefined
     }
 
-    const rows = await tx
+    const rows = await db
       .select()
       .from(transactions)
       .where(
@@ -132,18 +134,17 @@ export class ImportTransactionRepository {
         )
       )
       .orderBy(asc(transactions.id))
-      .for('update')
 
     return { rows, importedAt: new Date(stamp.importedAt) }
   }
 
   /** The account ids of one batch's rows, ACTIVE or not. */
   async accountsOfBatch(
-    tx: DbOrTx,
+    db: DbOrTx,
     tenantId: number,
     batchId: string
   ): Promise<number[]> {
-    const rows = await tx
+    const rows = await db
       .selectDistinct({ accountId: transactions.linkedAccountId })
       .from(transactions)
       .where(
@@ -167,7 +168,7 @@ export class ImportTransactionRepository {
     const rows = await this.db
       .select({
         batchId: sql<string>`${transactions.importBatchId}`,
-        count: sql<number>`count(*) filter (where ${transactions.status} = 'ACTIVE')::int`,
+        count: sql<number>`count(*) filter (where ${transactions.status} = 'ACTIVE')`,
         importedAt: imported,
       })
       .from(transactions)
@@ -180,7 +181,7 @@ export class ImportTransactionRepository {
       )
       .groupBy(transactions.importBatchId)
       .having(
-        sql`min(${transactions.createdDt}) >= ${since} and count(*) filter (where ${transactions.status} = 'ACTIVE') > 0`
+        sql`min(${transactions.createdDt}) >= ${since.getTime()} and count(*) filter (where ${transactions.status} = 'ACTIVE') > 0`
       )
       .orderBy(sql`min(${transactions.createdDt}) desc`)
 

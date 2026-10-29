@@ -47,25 +47,22 @@ export class TenantUserService {
       throw new ConflictException('You cannot remove yourself.')
     }
 
-    return this.users.transaction(async (tx) => {
-      const target = await this.users.findById(tenantId, id, tx)
-      if (target === undefined) {
-        throw new NotFoundException('User not found.')
-      }
+    const target = await this.users.findById(tenantId, id)
+    if (target === undefined) {
+      throw new NotFoundException('User not found.')
+    }
 
-      if (target.role === 'owner' && target.isActive) {
-        const owners = await this.users.lockActiveOwnerIds(tenantId, tx)
-        if (owners.filter((ownerId) => ownerId !== id).length === 0) {
-          throw new ConflictException(
-            'A tenant must keep at least one active owner.'
-          )
-        }
-      }
+    // The write carries the guard that keeps the tenant one active owner:
+    // removing the last active owner matches no rows, whatever raced it.
+    const updated = await this.users.deactivate(tenantId, id)
 
-      const updated = await this.users.setActive(tenantId, id, false, tx)
+    if (updated === undefined) {
+      throw new ConflictException(
+        'A tenant must keep at least one active owner.'
+      )
+    }
 
-      return updated ?? target
-    })
+    return updated
   }
 
   /** Restores a removed user; they sign in again to get a session. */
@@ -95,39 +92,33 @@ export class TenantUserService {
     actingUserId: number,
     id: number
   ): Promise<TenantUserRow> {
-    return this.users.transaction(async (tx) => {
-      const target = await this.users.findById(tenantId, id, tx)
-      if (target === undefined) {
-        throw new NotFoundException('User not found.')
-      }
-      if (target.anonymizedAt !== null) {
-        return target
-      }
-      if (target.isActive) {
-        throw new ConflictException('Remove the member before anonymizing.')
-      }
+    const target = await this.users.findById(tenantId, id)
+    if (target === undefined) {
+      throw new NotFoundException('User not found.')
+    }
+    if (target.anonymizedAt !== null) {
+      return target
+    }
+    if (target.isActive) {
+      throw new ConflictException('Remove the member before anonymizing.')
+    }
 
-      const updated = await this.users.anonymize(
+    const updated = await this.users.anonymizeWithAudit(
+      tenantId,
+      id,
+      {
+        name: ANONYMIZED_USER_NAME,
+        email: `former-member-${randomUUID()}@anonymized.invalid`,
+      },
+      this.clock.now(),
+      this.audit.statement({
         tenantId,
-        id,
-        {
-          name: ANONYMIZED_USER_NAME,
-          email: `former-member-${randomUUID()}@anonymized.invalid`,
-        },
-        this.clock.now(),
-        tx
-      )
-      await this.audit.record(
-        {
-          tenantId,
-          actorId: actingUserId,
-          action: 'member.anonymize',
-          details: { userId: id },
-        },
-        tx
-      )
+        actorId: actingUserId,
+        action: 'member.anonymize',
+        details: { userId: id },
+      })
+    )
 
-      return updated ?? target
-    })
+    return updated ?? target
   }
 }

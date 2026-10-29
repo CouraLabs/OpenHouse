@@ -106,7 +106,7 @@ export function GoalsPage() {
           setDeleting(goal)
         },
       }),
-    [t, formattingLocale(), save.reset]
+    [t, save.reset]
   )
 
   // Saving needs no confirmation: the form's submit is the intent. A failure

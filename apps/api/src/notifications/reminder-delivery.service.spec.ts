@@ -11,41 +11,91 @@ import type { ReminderCandidate } from './reminder-rules.js'
 import type { PushService } from './push.service.js'
 
 /**
- * An in-memory twin of the `notification_log` unique index: `claim` wins
- * once per `(userId, kind, refId, dueDate)`, exactly like the database's
- * `ON CONFLICT DO NOTHING`. A transaction that throws gives its claims
- * back, like a rolled-back one.
+ * An in-memory twin of the claim batch: each statement's result answers the
+ * claim's rows — once per `(userId, kind, refId, dueDate)`, exactly like
+ * the database's `ON CONFLICT DO NOTHING` — and a gated claim inserts
+ * nothing while the claim it rides on has not stood.
  */
-function fakeLog() {
-  const taken = new Set<string>()
-  const claim = async (key: LogKey) => {
-    const id = [key.userId, key.kind, key.refId, key.dueDate].join('|')
+function fakeLog(stored: NotificationBody[]) {
+  /** The logical claim keys, with the stamp of the run that won each. */
+  const won = new Map<string, number>()
+  const keyId = (key: LogKey) =>
+    [key.userId, key.kind, key.refId, key.dueDate].join('|')
+  const taken = {
+    has: (id: string) => {
+      const [logical, stamp] = id.split('@')
 
-    if (taken.has(id)) {
-      return false
-    }
-
-    taken.add(id)
-    return true
-  }
-
-  return {
-    taken,
-    claim: vi.fn(claim),
-    transaction: async <T>(work: (tx: unknown) => Promise<T>): Promise<T> => {
-      const before = new Set(taken)
-
-      try {
-        return await work({})
-      } catch (error) {
-        taken.clear()
-        for (const id of before) {
-          taken.add(id)
-        }
-        throw error
-      }
+      return won.get(logical)?.toString() === stamp
     },
   }
+
+  type StampedKey = LogKey & { stamp?: Date }
+  type ClaimStatement = {
+    claim: StampedKey
+    gates: StampedKey[]
+  }
+  type EntryStatement = {
+    entry: { tenantId: number; userId: number; body: NotificationBody; gates: StampedKey[] }
+  }
+
+  const isClaimStatement = (statement: unknown): statement is ClaimStatement =>
+    (statement as ClaimStatement).claim !== undefined
+  const isEntryStatement = (statement: unknown): statement is EntryStatement =>
+    (statement as EntryStatement).entry !== undefined
+
+  const claimStatement = vi.fn((key: StampedKey) => ({
+    claim: key,
+    gates: [],
+  }))
+  const gatedClaimStatement = vi.fn((key: StampedKey, gates: StampedKey[]) => ({
+    claim: key,
+    gates,
+  }))
+  const runAll = vi.fn(async (statements: unknown[]) =>
+    statements.map((statement) => {
+
+      if (isEntryStatement(statement)) {
+        const { body, gates } = statement.entry
+
+        if (
+          gates.every(
+            (gate) =>
+              won.get(keyId(gate)) === (gate.stamp?.getTime() ?? 0)
+          )
+        ) {
+          stored.push(body)
+          return [{ id: 1 }]
+        }
+
+        return []
+      }
+
+      if (!isClaimStatement(statement)) {
+        return []
+      }
+
+      const { claim, gates } = statement
+
+      const winner = won.get(keyId(claim))
+
+      // The gates stand only when the run that won each gate's claim is
+      // this run — the stamp the entries gate on.
+      if (
+        gates.some(
+          (gate) => won.get(keyId(gate)) !== (gate.stamp?.getTime() ?? 0)
+        ) ||
+        winner !== undefined
+      ) {
+        return []
+      }
+
+      won.set(keyId(claim), claim.stamp?.getTime() ?? 0)
+
+      return [{ id: 1 }]
+    })
+  )
+
+  return { won: () => won, taken, claimStatement, gatedClaimStatement, runAll }
 }
 
 const overdue: ReminderCandidate = {
@@ -90,20 +140,20 @@ const limitAlert: ReminderCandidate = {
 }
 
 function build(overrides: Partial<Recipient['preferences']> = {}) {
-  const log = fakeLog()
   const stored: NotificationBody[] = []
+  const log = fakeLog(stored)
   const notify = vi.fn().mockResolvedValue(1)
   const service = new ReminderDeliveryService(
     log as unknown as NotificationLogRepository,
     {
-      insert: async (
-        _tx: unknown,
-        _t: number,
-        _u: number,
-        body: NotificationBody
-      ) => {
+      insert: async (_t: number, _u: number, body: NotificationBody) => {
         stored.push(body)
       },
+      insertStatement: vi.fn(
+        (tenantId: number, userId: number, body: NotificationBody, gates: LogKey[]) => ({
+          entry: { tenantId, userId, body, gates },
+        })
+      ),
     } as unknown as NotificationRepository,
     {
       config: () => ({ enabled: true, publicKey: 'k' }),
@@ -165,7 +215,7 @@ describe('ReminderDeliveryService idempotency (the log index claim)', () => {
     })
 
     expect(await service.deliver(recipient, [overdue], '2026-11-02')).toBe(0)
-    expect(log.taken.size).toBe(0)
+    expect(log.won().size).toBe(0)
   })
 })
 

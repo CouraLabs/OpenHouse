@@ -155,6 +155,7 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
   })
 
   const choiceItem = (value: HouseholdChoice, label: string) => (
+    // biome-ignore lint/a11y/useSemanticElements: a segmented control of buttons with radio state, keyboard-navigated as buttons
     <button
       key={value}
       type="button"

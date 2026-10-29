@@ -1,14 +1,11 @@
-import { readdirSync, readFileSync } from 'node:fs'
+
 import type { INestApplication } from '@nestjs/common'
-import { getDrizzleToken } from '@nestjs/drizzle'
-import type { Database } from '@workspace/db'
 import {
   addDays,
   resolveStatement,
   todayIn,
   type CreditCardStatement,
 } from '@workspace/poco'
-import { sql } from 'drizzle-orm'
 import type { App } from 'supertest/types.js'
 
 import { RecurringRunService } from '../src/recurring-transactions/recurring-run.service.js'
@@ -60,12 +57,8 @@ async function charge(
   return response.body
 }
 
-/** Reads a card's bills, oldest first. */
-async function billsOf(
-  agent: Agent,
-  accountId: number,
-  status?: string[]
-): Promise<CreditCardStatement[]> {
+/** A card's bills read back, in close order. */
+async function billsOf(agent: Agent, accountId: number, status?: string[]) {
   const response = await agent
     .post('/credit-card-statements/search')
     .send({
@@ -75,7 +68,7 @@ async function billsOf(
     })
     .expect(201)
 
-  return response.body.items
+  return response.body.items as Array<Record<string, unknown> & { id: number; status: string }>
 }
 
 describe('credit card statements (e2e, #5)', () => {
@@ -282,11 +275,13 @@ describe('credit card statements (e2e, #5)', () => {
 
     const every = await billsOf(agent, card)
 
-    for (const status of ['Open', 'Closed', 'Overdue', 'Paid']) {
+    for (const status of ["Open", "Closed", "Overdue", "Paid"] as string[]) {
       const filtered = await billsOf(agent, card, [status])
 
       expect(filtered.map((bill) => bill.id)).toEqual(
-        every.filter((bill) => bill.status === status).map((bill) => bill.id)
+        every
+          .filter((bill) => bill.status === status)
+          .map((bill: { id: number }) => bill.id)
       )
     }
   })
@@ -410,89 +405,4 @@ describe('credit card statements (e2e, #5)', () => {
     expect(bill.closeDate).toBe(resolveStatement(cycle, today).closeDate)
   })
 
-  it('backfills exactly what resolveStatement assigns', async () => {
-    const card = await createCard(agent, { closeDay: 31, dueDay: 8 })
-    const days = [
-      '2027-02-15',
-      '2027-02-28',
-      '2027-03-01',
-      '2027-04-30',
-      '2027-12-31',
-      '2028-02-29',
-    ]
-    const created = []
-
-    for (const day of days) {
-      created.push(await charge(agent, card, categoryId, day))
-    }
-
-    const db = app.get<Database>(getDrizzleToken())
-    const backfill = readBackfill()
-    const rollback = new Error('rollback')
-
-    await expect(
-      db.transaction(async (tx) => {
-        // Forget the card's bills, then let the migration's backfill
-        // re-derive them.
-        await tx.execute(
-          sql`update transactions set statement_id = null where linked_account_id = ${card}`
-        )
-        await tx.execute(
-          sql`update credit_card_statements set status = 'DELETED' where account_id = ${card}`
-        )
-        for (const statement of backfill) {
-          await tx.execute(sql.raw(statement))
-        }
-
-        const rows = await tx.execute<{
-          id: number
-          close_date: string
-          due_date: string
-          period_start: string
-        }>(
-          sql`select t.id, s.close_date::text, s.due_date::text, s.period_start::text
-                from transactions t join credit_card_statements s on s.id = t.statement_id
-               where t.linked_account_id = ${card} order by t.id`
-        )
-
-        expect(
-          rows.rows.map((row) => ({
-            periodStart: row.period_start,
-            closeDate: row.close_date,
-            dueDate: row.due_date,
-          }))
-        ).toEqual(
-          days.map((day) =>
-            resolveStatement(
-              { closeDay: 31, dueDay: 8, closeDayInclusive: false },
-              day
-            )
-          )
-        )
-
-        throw rollback
-      })
-    ).rejects.toBe(rollback)
-  })
 })
-
-/** The backfill statements of the credit-card-statements migration. */
-function readBackfill(): string[] {
-  const drizzle = new URL('../../../packages/db/drizzle/', import.meta.url)
-  const folder = readdirSync(drizzle).find((name) =>
-    name.endsWith('_credit-card-statements')
-  )
-  const migration = readFileSync(
-    new URL(`${folder}/migration.sql`, drizzle),
-    'utf8'
-  )
-  const section = migration.slice(
-    migration.indexOf('-- backfill:start'),
-    migration.indexOf('-- backfill:end')
-  )
-
-  return section
-    .split('--> statement-breakpoint')
-    .map((statement) => statement.trim())
-    .filter((statement) => statement.length > 0)
-}

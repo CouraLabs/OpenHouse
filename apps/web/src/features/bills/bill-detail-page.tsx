@@ -66,7 +66,7 @@ export function BillDetailPage() {
   const charges = useBillTransactions(args)
   const columns = useMemo(
     () => buildBillTransactionsColumns(t, formattingLocale(), setMoving),
-    [t, formattingLocale()]
+    [t]
   )
 
   const back = (

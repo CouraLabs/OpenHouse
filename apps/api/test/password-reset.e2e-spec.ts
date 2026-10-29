@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto'
 import type { INestApplication } from '@nestjs/common'
 import { getDrizzleToken } from '@nestjs/drizzle'
 import type { Database } from '@workspace/db'
-import { sql } from 'drizzle-orm'
+import { passwordResetCodes } from '@workspace/db'
+import { eq } from 'drizzle-orm'
 import request from 'supertest'
 import type { App } from 'supertest/types.js'
 
@@ -107,19 +108,19 @@ describe('password recovery without email (e2e, #11)', () => {
     const code = await issueFor(owner, member.id)
     const normalized = code.replace('-', '')
 
-    const leaks = await db.execute<{ id: number }>(
-      sql`select id from password_reset_codes
-           where code_hash in (${code}, ${normalized})
-              or row_to_json(password_reset_codes)::text like ${`%${normalized}%`}
-              or row_to_json(password_reset_codes)::text like ${`%${code}%`}`
-    )
-    expect(leaks.rows).toHaveLength(0)
-
+    // Every column of the code row, read back: no field carries the
+    // plaintext (or its normalized spelling) anywhere.
     const hash = createHash('sha256').update(normalized).digest('hex')
-    const stored = await db.execute<{ kind: string }>(
-      sql`select kind from password_reset_codes where code_hash = ${hash}`
-    )
-    expect(stored.rows).toEqual([{ kind: 'owner_issued' }])
+    const rows = await db
+      .select()
+      .from(passwordResetCodes)
+      .where(eq(passwordResetCodes.codeHash, hash))
+    expect(rows).toHaveLength(1)
+    expect(JSON.stringify(rows)).not.toContain(normalized)
+    expect(JSON.stringify(rows)).not.toContain(code)
+
+    expect(rows[0].codeHash).toBe(hash)
+    expect(rows[0].kind).toBe('owner_issued')
   })
 
   it('answers wrong, expired, and replaced codes with the same 400', async () => {
@@ -131,10 +132,19 @@ describe('password recovery without email (e2e, #11)', () => {
     // Issuing again invalidated the first.
     const replaced = await redeem(app, first).expect(400)
 
-    await db.execute(
-      sql`update password_reset_codes set expires_at = now() - interval '1 second'
-           where code_hash = ${createHash('sha256').update(second.replace('-', '')).digest('hex')}`
-    )
+    await db
+      .update(passwordResetCodes)
+      .set({
+        expiresAt: new Date(Date.now() - 1000),
+      })
+      .where(
+        eq(
+          passwordResetCodes.codeHash,
+          createHash('sha256')
+            .update(second.replace('-', ''))
+            .digest('hex')
+        )
+      )
     const expired = await redeem(app, second).expect(400)
     const wrong = await redeem(app, 'ZZZZZ-ZZZZZ').expect(400)
 

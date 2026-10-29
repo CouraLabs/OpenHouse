@@ -16,20 +16,23 @@ import {
 } from '@workspace/poco'
 
 import {
+  balanceDeltaStatement,
+  balanceSubselect,
+  LedgerBatchPlan,
+  stampFor,
+} from '../common/ledger/ledger-batch.js'
+import { auditedUpdateStatements } from '../common/ledger/transaction-history.js'
+import {
   isOpenInstallment,
   planGroupEdit,
   type InstallmentState,
 } from './installment-plan.js'
+import { appliedDeltaFor } from './transaction-ledger.js'
 import {
   TransactionRepository,
   type TransactionRow,
   type TransactionWrite,
 } from './transaction.repository.js'
-import {
-  appliedDeltaFor,
-  applyTransactionDelta,
-  lockAccounts,
-} from './transaction-ledger.js'
 
 /**
  * The fields every installment of a purchase shares. `groupShares` is how
@@ -62,8 +65,8 @@ export interface GroupSplitChange {
   shares: SplitShare[] | null
 }
 
-/** A purchase's locked installments, in order, each with its bill's close. */
-interface LockedGroup {
+/** A purchase's installments, in order, each with its bill's close. */
+interface ReadGroup {
   rows: Transaction[]
   states: InstallmentState[]
   allOpen: boolean
@@ -75,9 +78,9 @@ interface LockedGroup {
  * The installment purchases: N transactions sharing an
  * `installmentGroupId`, each on the next bill of its card. Every write goes
  * through the transaction ledger's shared paths — balances, history, and
- * bill placement exactly as a single row's — inside one database
- * transaction that locks the group's rows by id first, then the card once
- * (#17), the ledger's row-first order.
+ * bill placement exactly as a single row's — composed into one batch whose
+ * per-row writes carry their optimistic guards, so an edit racing the group
+ * answers 409 instead of tangling the books.
  *
  * Every installment applies its delta at purchase time: the bank holds the
  * whole purchase against the limit, so a 10× TV takes its full price off
@@ -104,7 +107,7 @@ export class InstallmentRepository {
       return undefined
     }
 
-    const states = await this.statesInTx(this.db, tenantId, rows)
+    const states = await this.statesOf(this.db, tenantId, rows)
 
     return {
       rows,
@@ -112,18 +115,14 @@ export class InstallmentRepository {
     }
   }
 
-  /** Writes a purchase as one installment per part, in one transaction. */
+  /** Writes a purchase as one installment per part, in one batch. */
   async create(
     tenantId: number,
     userId: number,
     purchase: PurchaseWrite,
     parts: readonly string[]
   ): Promise<TransactionRow[]> {
-    return this.ledger.inLedgerTx(async (tx) => {
-      await lockAccounts(tx, tenantId, [purchase.linkedAccountId])
-
-      return this.insertPartsInTx(tx, tenantId, userId, purchase, parts)
-    })
+    return this.insertParts(tenantId, userId, purchase, parts)
   }
 
   /**
@@ -141,80 +140,91 @@ export class InstallmentRepository {
     today: string,
     splitChange?: GroupSplitChange
   ): Promise<GroupOutcome<TransactionRow[]>> {
-    return this.ledger.inLedgerTx(async (tx) => {
-      const group = await this.lockGroupInTx(tx, tenantId, groupId, today)
+    const group = await this.readGroup(tenantId, groupId, today)
 
-      if (group === undefined) {
-        return { kind: 'missing' }
+    if (group === undefined) {
+      return { kind: 'missing' }
+    }
+
+    const [first] = group.rows
+    const stored = await this.groupSharesOf(tenantId, group.rows)
+    const groupShares =
+      splitChange === undefined ? stored : (splitChange.shares ?? undefined)
+    const payer = meta.paidByUserId ?? first.paidByUserId
+    const plan = planGroupEdit(
+      group.states,
+      first.installmentCount ?? group.rows.length,
+      parts
+    )
+
+    if (plan !== 'meta' && !group.allOpen) {
+      return { kind: 'billed' }
+    }
+
+    if (plan === 'resplit') {
+      const plan_ = new LedgerBatchPlan()
+
+      for (const row of group.rows) {
+        plan_.append(this.ledger.planSoftDeleteGroup(this.db, tenantId, userId, row))
       }
 
-      const [first] = group.rows
-      const stored = await this.groupSharesInTx(tx, tenantId, group.rows)
-      const groupShares =
-        splitChange === undefined ? stored : (splitChange.shares ?? undefined)
-      const payer = meta.paidByUserId ?? first.paidByUserId
-      const plan = planGroupEdit(
-        group.states,
-        first.installmentCount ?? group.rows.length,
-        parts
-      )
-
-      if (plan !== 'meta' && !group.allOpen) {
-        return { kind: 'billed' }
-      }
-
-      if (plan === 'resplit') {
-        for (const row of group.rows) {
-          await this.ledger.softDeleteInTx(tx, tenantId, userId, row)
-        }
-
-        await this.insertPartsInTx(
-          tx,
+      plan_.append(
+        await this.planParts(
           tenantId,
           userId,
           { ...purchaseOf(first, groupShares), ...meta },
           parts,
           groupId
         )
-      } else {
-        // All installments are divided together, so the group's cents add up.
-        const amounts =
-          plan === 'amounts' ? parts : group.rows.map((row) => row.amount)
-        const divided =
-          groupShares === undefined
-            ? undefined
-            : divideGroupShares(groupShares, amounts, payer)
+      )
 
-        for (const [index, row] of group.rows.entries()) {
-          const amount = amounts[index]
+      await plan_.run(this.db)
+    } else {
+      // All installments are divided together, so the group's cents add up.
+      const amounts =
+        plan === 'amounts' ? parts : group.rows.map((row) => row.amount)
+      const divided =
+        groupShares === undefined
+          ? undefined
+          : divideGroupShares(groupShares, amounts, payer)
 
-          await this.rewriteInTx(tx, tenantId, userId, row, {
+      const writes = new LedgerBatchPlan()
+
+      for (const [index, row] of group.rows.entries()) {
+        const amount = amounts[index]
+
+        writes.append(
+          this.planRewrite(tenantId, userId, row, {
             ...meta,
             amount,
           })
+        )
 
-          // The shares follow the amount, and a new split replaces them.
-          if (
-            splitChange !== undefined ||
-            plan === 'amounts' ||
-            amount !== row.amount
-          ) {
-            await this.ledger.replaceSplitsInTx(
-              tx,
+        // The shares follow the amount, and a new split replaces them.
+        if (
+          splitChange !== undefined ||
+          plan === 'amounts' ||
+          amount !== row.amount
+        ) {
+          writes.append(
+            this.ledger.planReplaceSplits(
+              this.db,
               tenantId,
               userId,
               row.id,
               divided === undefined ? [] : (divided[index] ?? [])
             )
-          }
+          )
         }
       }
 
-      return {
-        kind: 'done',
-        value: await this.ledger.findInstallments(tenantId, groupId, tx),
-      }
-    })
+      await writes.run(this.db)
+    }
+
+    return {
+      kind: 'done',
+      value: await this.ledger.findInstallments(tenantId, groupId),
+    }
   }
 
   /**
@@ -229,21 +239,19 @@ export class InstallmentRepository {
     scope: 'all' | 'remaining',
     today: string
   ): Promise<GroupOutcome<number>> {
-    return this.ledger.inLedgerTx(async (tx) => {
-      const group = await this.lockGroupInTx(tx, tenantId, groupId, today)
+    const group = await this.readGroup(tenantId, groupId, today)
 
-      if (group === undefined) {
-        return { kind: 'missing' }
-      }
+    if (group === undefined) {
+      return { kind: 'missing' }
+    }
 
-      if (scope === 'all' && !group.allOpen) {
-        return { kind: 'billed' }
-      }
+    if (scope === 'all' && !group.allOpen) {
+      return { kind: 'billed' }
+    }
 
-      const deleted = await this.deleteOpenInTx(tx, tenantId, userId, group)
+    const deleted = await this.deleteOpenRows(tenantId, userId, group)
 
-      return { kind: 'done', value: deleted.length }
-    })
+    return { kind: 'done', value: deleted.length }
   }
 
   /**
@@ -259,43 +267,69 @@ export class InstallmentRepository {
     name: string,
     today: string
   ): Promise<GroupOutcome<TransactionRow | null>> {
-    return this.ledger.inLedgerTx(async (tx) => {
-      const group = await this.lockGroupInTx(tx, tenantId, groupId, today)
+    const group = await this.readGroup(tenantId, groupId, today)
 
-      if (group === undefined) {
-        return { kind: 'missing' }
+    if (group === undefined) {
+      return { kind: 'missing' }
+    }
+
+    const open = new Set(
+      group.states
+        .filter((state) => isOpenInstallment(state, group.today))
+        .map((state) => state.id)
+    )
+    const plan = new LedgerBatchPlan()
+    const deleted = new Set<number>()
+
+    for (const row of group.rows) {
+      if (open.has(row.id)) {
+        plan.append(
+          this.ledger.planSoftDeleteGroup(this.db, tenantId, userId, row)
+        )
+        deleted.add(row.id)
       }
+    }
 
-      const deleted = new Set(
-        await this.deleteOpenInTx(tx, tenantId, userId, group)
-      )
-      const billed = group.rows.filter(
-        (row) => !deleted.has(row.id) && row.reviewStatus !== 'Canceled'
-      )
+    const billed = group.rows.filter(
+      (row) => !deleted.has(row.id) && row.reviewStatus !== 'Canceled'
+    )
 
-      if (billed.length === 0) {
-        return { kind: 'done', value: null }
-      }
+    if (billed.length === 0) {
+      await plan.run(this.db)
 
-      const [first] = group.rows
-      const refund = await this.ledger.insertInTx(tx, tenantId, userId, {
-        ...purchaseOf(first),
-        name,
-        type: 'Income',
-        reviewStatus: 'Verify',
-        statusNote: null,
-        transactionDt: today,
-        amount: sumMoney(billed.map((row) => row.amount)),
-      })
+      return { kind: 'done', value: null }
+    }
 
-      return { kind: 'done', value: refund }
+    const [first] = group.rows
+    const refund = await this.ledger.planInsertGroup(this.db, tenantId, userId, {
+      ...purchaseOf(first),
+      name,
+      type: 'Income',
+      reviewStatus: 'Verify',
+      statusNote: null,
+      transactionDt: today,
+      amount: sumMoney(billed.map((row) => row.amount)),
     })
+
+    const base = plan.size
+    plan.append(refund.plan)
+
+    const results = await plan.run(this.db)
+
+    return {
+      kind: 'done',
+      value: await this.ledger.readInsertedRow(
+        tenantId,
+        results,
+        base + refund.insertIndex
+      ),
+    }
   }
 
   /**
    * Converts a single card expense into installments while its bill is
    * Open: the row is soft-deleted and the purchase recreated in parts, in
-   * the same transaction. The caller checked the row may split.
+   * one batch. The caller checked the row may split.
    */
   async convert(
     tenantId: number,
@@ -304,46 +338,48 @@ export class InstallmentRepository {
     parts: readonly string[],
     today: string
   ): Promise<GroupOutcome<TransactionRow[]>> {
-    return this.ledger.inLedgerTx(async (tx) => {
-      const [row] = await tx
-        .select()
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.tenantId, tenantId),
-            eq(transactions.id, id),
-            eq(transactions.status, 'ACTIVE')
-          )
+    const [row] = await this.db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.id, id),
+          eq(transactions.status, 'ACTIVE')
         )
-        .for('update')
+      )
 
-      if (row === undefined || row.installmentGroupId !== null) {
-        return { kind: 'missing' }
-      }
+    if (row === undefined || row.installmentGroupId !== null) {
+      return { kind: 'missing' }
+    }
 
-      await lockAccounts(tx, tenantId, [row.linkedAccountId])
+    const [state] = await this.statesOf(this.db, tenantId, [row])
 
-      const [state] = await this.statesInTx(tx, tenantId, [row])
+    if (!isOpenInstallment(state, today)) {
+      return { kind: 'billed' }
+    }
 
-      if (!isOpenInstallment(state, today)) {
-        return { kind: 'billed' }
-      }
+    const shares = await this.groupSharesOf(tenantId, [row])
 
-      const shares = await this.groupSharesInTx(tx, tenantId, [row])
+    const groupId = randomUUID()
+    const plan = new LedgerBatchPlan()
+    plan.append(this.ledger.planSoftDeleteGroup(this.db, tenantId, userId, row))
+    plan.append(
+      await this.planParts(
+        tenantId,
+        userId,
+        purchaseOf(row, shares),
+        parts,
+        groupId
+      )
+    )
 
-      await this.ledger.softDeleteInTx(tx, tenantId, userId, row)
+    await plan.run(this.db)
 
-      return {
-        kind: 'done',
-        value: await this.insertPartsInTx(
-          tx,
-          tenantId,
-          userId,
-          purchaseOf(row, shares),
-          parts
-        ),
-      }
-    })
+    return {
+      kind: 'done',
+      value: await this.ledger.findInstallments(tenantId, groupId),
+    }
   }
 
   /**
@@ -357,57 +393,83 @@ export class InstallmentRepository {
     groupId: string,
     today: string
   ): Promise<GroupOutcome<TransactionRow>> {
-    return this.ledger.inLedgerTx(async (tx) => {
-      const group = await this.lockGroupInTx(tx, tenantId, groupId, today)
+    const group = await this.readGroup(tenantId, groupId, today)
 
-      if (group === undefined) {
-        return { kind: 'missing' }
-      }
+    if (group === undefined) {
+      return { kind: 'missing' }
+    }
 
-      if (!group.allOpen) {
-        return { kind: 'billed' }
-      }
+    if (!group.allOpen) {
+      return { kind: 'billed' }
+    }
 
-      const shares = await this.groupSharesInTx(tx, tenantId, group.rows)
+    const shares = await this.groupSharesOf(tenantId, group.rows)
 
-      for (const row of group.rows) {
-        await this.ledger.softDeleteInTx(tx, tenantId, userId, row)
-      }
+    const plan = new LedgerBatchPlan()
 
-      const [first] = group.rows
-      const { groupShares, ...purchase } = purchaseOf(first, shares)
-      const amount = sumMoney(group.rows.map((row) => row.amount))
+    for (const row of group.rows) {
+      plan.append(this.ledger.planSoftDeleteGroup(this.db, tenantId, userId, row))
+    }
 
-      return {
-        kind: 'done',
-        value: await this.ledger.insertInTx(tx, tenantId, userId, {
-          ...purchase,
-          amount,
-          ...(groupShares === undefined
-            ? {}
-            : {
-                splits: inheritShares(
-                  groupShares,
-                  amount,
-                  purchase.paidByUserId ?? null
-                ),
-              }),
-        }),
-      }
+    const [first] = group.rows
+    const { groupShares, ...purchase } = purchaseOf(first, shares)
+    const amount = sumMoney(group.rows.map((row) => row.amount))
+
+    const collapsed = await this.ledger.planInsertGroup(this.db, tenantId, userId, {
+      ...purchase,
+      amount,
+      ...(groupShares === undefined
+        ? {}
+        : {
+            splits: inheritShares(
+              groupShares,
+              amount,
+              purchase.paidByUserId ?? null
+            ),
+          }),
     })
+
+    const base = plan.size
+    plan.append(collapsed.plan)
+
+    const results = await plan.run(this.db)
+
+    return {
+      kind: 'done',
+      value: await this.ledger.readInsertedRow(
+        tenantId,
+        results,
+        base + collapsed.insertIndex
+      ),
+    }
   }
 
-  /** Inserts one installment per part under one group id. The caller
-   * holds the card's lock. */
-  private async insertPartsInTx(
-    tx: DbOrTx,
+  /** Inserts one installment per part under one group id — one batch, the
+   * parts' ledger groups appended in money order. */
+  private async insertParts(
     tenantId: number,
     userId: number,
     purchase: PurchaseWrite,
     parts: readonly string[],
     groupId: string = randomUUID()
   ): Promise<TransactionRow[]> {
-    const rows: TransactionRow[] = []
+    const plan = await this.planParts(tenantId, userId, purchase, parts, groupId)
+
+    await plan.run(this.db)
+
+    return this.ledger.findInstallments(tenantId, groupId)
+  }
+
+  /** The plan a purchase's parts make: every part's ledger insert group,
+   * the shares divided across the whole group so no member's cents drift. */
+  private async planParts(
+    tenantId: number,
+    userId: number,
+    purchase: PurchaseWrite,
+    parts: readonly string[],
+    groupId: string = randomUUID()
+  ): Promise<LedgerBatchPlan> {
+    const plan = new LedgerBatchPlan()
 
     const { groupShares, ...columns } = purchase
     // Every installment inherits the purchase's split, divided across the
@@ -419,31 +481,31 @@ export class InstallmentRepository {
         : divideGroupShares(groupShares, parts, columns.paidByUserId ?? null)
 
     for (const [index, amount] of parts.entries()) {
-      rows.push(
-        await this.ledger.insertInTx(tx, tenantId, userId, {
-          ...columns,
-          amount,
-          ...(divided === undefined ? {} : { splits: divided[index] }),
-          installment: { groupId, number: index + 1, count: parts.length },
-        })
-      )
+      const group = await this.ledger.planInsertGroup(this.db, tenantId, userId, {
+        ...columns,
+        amount,
+        ...(divided === undefined ? {} : { splits: divided[index] }),
+        installment: { groupId, number: index + 1, count: parts.length },
+      })
+
+      plan.append(group.plan)
     }
 
-    return rows
+    return plan
   }
 
   /**
-   * Locks a purchase's ACTIVE installments `FOR UPDATE` in id order, then
-   * its card, and reads each row's bill close. Nothing when no installment
-   * is left.
+   * Reads a purchase's ACTIVE installments in id order, each with its
+   * bill's close. Nothing when no installment is left. The rows the write
+   * touches are guarded optimistically — a row edited since the read fails
+   * the batch.
    */
-  private async lockGroupInTx(
-    tx: DbOrTx,
+  private async readGroup(
     tenantId: number,
     groupId: string,
     today: string
-  ): Promise<LockedGroup | undefined> {
-    const locked = await tx
+  ): Promise<ReadGroup | undefined> {
+    const locked = await this.db
       .select()
       .from(transactions)
       .where(
@@ -454,18 +516,15 @@ export class InstallmentRepository {
         )
       )
       .orderBy(asc(transactions.id))
-      .for('update')
 
     if (locked.length === 0) {
       return undefined
     }
 
-    await lockAccounts(tx, tenantId, [locked[0].linkedAccountId])
-
     const rows = [...locked].sort(
       (a, b) => (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0)
     )
-    const states = await this.statesInTx(tx, tenantId, rows)
+    const states = await this.statesOf(this.db, tenantId, rows)
 
     return {
       rows,
@@ -477,15 +536,18 @@ export class InstallmentRepository {
 
   /** The split of the whole purchase: every member's shares summed over the
    * given rows. Nothing for an unsplit purchase. */
-  private async groupSharesInTx(
-    tx: DbOrTx,
+  private async groupSharesOf(
     tenantId: number,
     rows: readonly Transaction[]
   ): Promise<SplitShare[] | undefined> {
     const totals = new Map<number, bigint>()
 
     for (const row of rows) {
-      for (const entry of await this.ledger.sharesOfInTx(tx, tenantId, row.id)) {
+      for (const entry of await this.ledger.sharesOfInTx(
+        this.db,
+        tenantId,
+        row.id
+      )) {
         totals.set(
           entry.userId,
           (totals.get(entry.userId) ?? 0n) + toCents(entry.share)
@@ -501,8 +563,8 @@ export class InstallmentRepository {
   }
 
   /** Each row with the close of the bill it is on. */
-  private async statesInTx(
-    tx: DbOrTx,
+  private async statesOf(
+    db: DbOrTx,
     tenantId: number,
     rows: readonly Transaction[]
   ): Promise<InstallmentState[]> {
@@ -512,7 +574,7 @@ export class InstallmentRepository {
     const bills =
       ids.length === 0
         ? []
-        : await tx
+        : await db
             .select({
               id: creditCardStatements.id,
               closeDate: creditCardStatements.closeDate,
@@ -535,27 +597,29 @@ export class InstallmentRepository {
     }))
   }
 
-  /** Soft-deletes a locked group's installments still on an Open bill and
+  /** Soft-deletes a read group's installments still on an Open bill and
    * answers their ids. */
-  private async deleteOpenInTx(
-    tx: DbOrTx,
+  private async deleteOpenRows(
     tenantId: number,
     userId: number,
-    group: LockedGroup
+    group: ReadGroup
   ): Promise<number[]> {
     const open = new Set(
       group.states
         .filter((state) => isOpenInstallment(state, group.today))
         .map((state) => state.id)
     )
+    const plan = new LedgerBatchPlan()
     const deleted: number[] = []
 
     for (const row of group.rows) {
       if (open.has(row.id)) {
-        await this.ledger.softDeleteInTx(tx, tenantId, userId, row)
+        plan.append(this.ledger.planSoftDeleteGroup(this.db, tenantId, userId, row))
         deleted.push(row.id)
       }
     }
+
+    await plan.run(this.db)
 
     return deleted
   }
@@ -563,45 +627,54 @@ export class InstallmentRepository {
   /**
    * Rewrites one installment's shared fields and amount in place, moving
    * the card's balance by the difference and recording the history. Its
-   * bill and pin stay. The caller holds the row and card locks.
+   * bill and pin stay.
    */
-  private async rewriteInTx(
-    tx: DbOrTx,
+  private planRewrite(
     tenantId: number,
     userId: number,
     before: Transaction,
     change: GroupMeta & { amount: string }
-  ): Promise<void> {
+  ): LedgerBatchPlan {
+    const plan = new LedgerBatchPlan()
     const shift = sumMoney([
       appliedDeltaFor({ ...before, amount: change.amount }),
       negateMoney(appliedDeltaFor(before)),
     ])
-    const balanceOnDt = isZeroMoney(shift)
-      ? before.balanceOnDt
-      : await applyTransactionDelta(tx, tenantId, before.linkedAccountId, shift)
+    const stamp = stampFor(before)
 
-    const [after] = await tx
-      .update(transactions)
-      .set({
-        ...change,
-        balanceOnDt,
-        updateBy: userId,
-        updateDt: new Date(),
-      })
-      .where(
-        and(eq(transactions.tenantId, tenantId), eq(transactions.id, before.id))
+    if (!isZeroMoney(shift)) {
+      plan.guarded(
+        balanceDeltaStatement(
+          this.db,
+          tenantId,
+          before.linkedAccountId,
+          shift
+        ),
+        1,
+        'the card account the installment moves (exists and is ACTIVE)'
       )
-      .returning()
+    }
 
-    await this.ledger.recordHistory(
-      tx,
+    const audited = auditedUpdateStatements(this.db, {
       tenantId,
-      before.id,
+      id: before.id,
       userId,
-      'UPDATE',
       before,
-      after
-    )
+      set: {
+        ...change,
+        balanceOnDt: isZeroMoney(shift)
+          ? before.balanceOnDt
+          : balanceSubselect(before.linkedAccountId),
+        updateBy: userId,
+        updateDt: stamp,
+      },
+      action: 'UPDATE',
+    })
+
+    plan.guarded(audited.update, 1, 'the installment row (optimistic concurrency)')
+    plan.add(audited.history)
+
+    return plan
   }
 }
 

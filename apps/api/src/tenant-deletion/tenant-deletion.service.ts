@@ -14,9 +14,13 @@ import {
   type TenantDeletion,
 } from '@workspace/poco'
 
+import { InjectDrizzle } from '@nestjs/drizzle'
+import type { Database } from '@workspace/db'
+
 import { AuditRecorder } from '../common/audit/audit-recorder.js'
 import { Clock } from '../common/clock/clock.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
+import { runBatch } from '../common/ledger/ledger-batch.js'
 import { TenantDeletionRepository } from './tenant-deletion.repository.js'
 
 /**
@@ -30,6 +34,7 @@ export class TenantDeletionService {
   private readonly logger = new Logger(TenantDeletionService.name)
 
   constructor(
+    @InjectDrizzle() private readonly db: Database,
     private readonly tenants: TenantDeletionRepository,
     private readonly settings: SettingsRepository,
     private readonly audit: AuditRecorder,
@@ -42,51 +47,49 @@ export class TenantDeletionService {
     actorId: number,
     typedName: string
   ): Promise<TenantDeletion> {
-    return this.tenants.transaction(async (tx) => {
-      const tenant = await this.tenants.find(tenantId, tx)
-      if (tenant === undefined) {
-        throw new NotFoundException('Tenant not found.')
-      }
-      if (!tenantNameMatches(typedName, tenant.name)) {
-        throw new BadRequestException('The name does not match the tenant.')
-      }
-      if (tenant.deletionDate !== null) {
-        throw new ConflictException('The deletion is already scheduled.')
-      }
+    const tenant = await this.tenants.find(tenantId)
+    if (tenant === undefined) {
+      throw new NotFoundException('Tenant not found.')
+    }
+    if (!tenantNameMatches(typedName, tenant.name)) {
+      throw new BadRequestException('The name does not match the tenant.')
+    }
+    if (tenant.deletionDate !== null) {
+      throw new ConflictException('The deletion is already scheduled.')
+    }
 
-      const settings = await this.settings.findByTenant(tenantId, tx)
-      const today = todayIn(settings?.timezone ?? 'UTC', this.clock.now())
-      const deletionDate = deletionDateFrom(today)
+    const settings = await this.settings.findByTenant(tenantId)
+    const today = todayIn(settings?.timezone ?? 'UTC', this.clock.now())
+    const deletionDate = deletionDateFrom(today)
 
-      await this.tenants.setDeletionDate(tenantId, deletionDate, tx)
-      await this.audit.record(
-        {
-          tenantId,
-          actorId,
-          action: 'tenant.deletion_scheduled',
-          details: { deletionDate },
-        },
-        tx
-      )
+    await runBatch(this.db, [
+      this.tenants.setDeletionDateStatement(tenantId, deletionDate),
+      this.audit.statement({
+        tenantId,
+        actorId,
+        action: 'tenant.deletion_scheduled',
+        details: { deletionDate },
+      }),
+    ])
 
-      return { deletionDate }
-    })
+    return { deletionDate }
   }
 
   /** Cancels a scheduled deletion; the data stays. */
   async cancel(tenantId: number, actorId: number): Promise<void> {
-    await this.tenants.transaction(async (tx) => {
-      const tenant = await this.tenants.find(tenantId, tx)
-      if (tenant?.deletionDate == null) {
-        throw new NotFoundException('No deletion is scheduled.')
-      }
+    const tenant = await this.tenants.find(tenantId)
+    if (tenant?.deletionDate == null) {
+      throw new NotFoundException('No deletion is scheduled.')
+    }
 
-      await this.tenants.setDeletionDate(tenantId, null, tx)
-      await this.audit.record(
-        { tenantId, actorId, action: 'tenant.deletion_canceled' },
-        tx
-      )
-    })
+    await runBatch(this.db, [
+      this.tenants.setDeletionDateStatement(tenantId, null),
+      this.audit.statement({
+        tenantId,
+        actorId,
+        action: 'tenant.deletion_canceled',
+      }),
+    ])
   }
 
   /**
@@ -112,18 +115,18 @@ export class TenantDeletionService {
       }
 
       try {
-        await this.tenants.transaction(async (tx) => {
-          await this.tenants.hardDelete(tenant.id, tx)
-          await this.audit.record(
-            {
+        await runBatch(
+          this.db,
+          this.tenants.hardDeleteStatements(
+            tenant.id,
+            this.audit.statement({
               tenantId: tenant.id,
               actorId: null,
               action: 'tenant.deleted',
               details: { deletionDate: tenant.deletionDate },
-            },
-            tx
+            })
           )
-        })
+        )
         deleted += 1
       } catch (error) {
         this.logger.error(`Deleting tenant ${tenant.id} failed.`, error)

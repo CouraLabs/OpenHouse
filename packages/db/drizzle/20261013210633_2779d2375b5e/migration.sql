@@ -1,2 +1,0 @@
-DROP INDEX "categories_tenant_id_name_active_key";--> statement-breakpoint
-CREATE UNIQUE INDEX "categories_tenant_id_name_active_key" ON "categories" ("tenant_id",lower("name")) WHERE status = 'ACTIVE';

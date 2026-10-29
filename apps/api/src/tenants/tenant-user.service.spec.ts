@@ -20,16 +20,14 @@ const user = (overrides: Partial<TenantUserRow> = {}): TenantUserRow => ({
   ...overrides,
 })
 
-/** A repository mock whose transaction just runs the work. */
+/** A repository mock. `deactivate` answers the row unless the last-owner
+ * guard matched nothing. */
 const repository = () => ({
-  transaction: vi.fn(async (work: (tx: unknown) => Promise<unknown>) =>
-    work({})
-  ),
   list: vi.fn(),
   findById: vi.fn(async () => user() as TenantUserRow | undefined),
-  lockActiveOwnerIds: vi.fn(async () => [1]),
+  deactivate: vi.fn(async () => user({ isActive: false })),
   setActive: vi.fn(async () => user({ isActive: false })),
-  anonymize: vi.fn(
+  anonymizeWithAudit: vi.fn(
     async (
       _tenantId: number,
       _id: number,
@@ -40,7 +38,10 @@ const repository = () => ({
 
 const NOW = new Date('2026-10-23T12:00:00Z')
 
-const auditRecorder = () => ({ record: vi.fn(async () => undefined) })
+const auditRecorder = () => ({
+  record: vi.fn(async () => undefined),
+  statement: vi.fn(() => ({ audit: true })),
+})
 
 const service = (
   repo: ReturnType<typeof repository>,
@@ -59,7 +60,7 @@ describe('TenantUserService.deactivate', () => {
     const updated = await service(repo).deactivate(1, 1, 2)
 
     expect(updated.isActive).toBe(false)
-    expect(repo.setActive).toHaveBeenCalledWith(1, 2, false, {})
+    expect(repo.deactivate).toHaveBeenCalledWith(1, 2)
   })
 
   it('refuses to remove the acting owner', async () => {
@@ -71,25 +72,23 @@ describe('TenantUserService.deactivate', () => {
     expect(repo.setActive).not.toHaveBeenCalled()
   })
 
-  it('refuses to remove the last active owner', async () => {
+  it('refuses to remove the last active owner — the guard matched nothing', async () => {
     const repo = repository()
     repo.findById.mockResolvedValue(user({ id: 3, role: 'owner' }))
-    repo.lockActiveOwnerIds.mockResolvedValue([3])
+    repo.deactivate.mockResolvedValue(undefined as never)
 
     await expect(service(repo).deactivate(1, 1, 3)).rejects.toThrow(
       ConflictException
     )
-    expect(repo.setActive).not.toHaveBeenCalled()
   })
 
   it('removes an owner while another active owner remains', async () => {
     const repo = repository()
     repo.findById.mockResolvedValue(user({ id: 3, role: 'owner' }))
-    repo.lockActiveOwnerIds.mockResolvedValue([1, 3])
 
     await service(repo).deactivate(1, 1, 3)
 
-    expect(repo.setActive).toHaveBeenCalledWith(1, 3, false, {})
+    expect(repo.deactivate).toHaveBeenCalledWith(1, 3)
   })
 
   it('answers 404 for a user outside the tenant', async () => {
@@ -137,22 +136,19 @@ describe('TenantUserService.anonymize', () => {
     )
     expect(updated.email).not.toContain('bia')
     expect(updated.anonymizedAt).toEqual(NOW)
-    expect(repo.anonymize).toHaveBeenCalledWith(
+    expect(repo.anonymizeWithAudit).toHaveBeenCalledWith(
       1,
       2,
       { name: 'Former member', email: updated.email },
       NOW,
-      {}
+      expect.anything()
     )
-    expect(audit.record).toHaveBeenCalledWith(
-      {
-        tenantId: 1,
-        actorId: 1,
-        action: 'member.anonymize',
-        details: { userId: 2 },
-      },
-      {}
-    )
+    expect(audit.statement).toHaveBeenCalledWith({
+      tenantId: 1,
+      actorId: 1,
+      action: 'member.anonymize',
+      details: { userId: 2 },
+    })
   })
 
   it('refuses a member who is still active', async () => {
@@ -161,7 +157,7 @@ describe('TenantUserService.anonymize', () => {
     await expect(service(repo).anonymize(1, 1, 2)).rejects.toThrow(
       ConflictException
     )
-    expect(repo.anonymize).not.toHaveBeenCalled()
+    expect(repo.anonymizeWithAudit).not.toHaveBeenCalled()
   })
 
   it('changes nothing for a member already anonymized', async () => {
@@ -172,7 +168,7 @@ describe('TenantUserService.anonymize', () => {
 
     await service(repo).anonymize(1, 1, 2)
 
-    expect(repo.anonymize).not.toHaveBeenCalled()
+    expect(repo.anonymizeWithAudit).not.toHaveBeenCalled()
   })
 
   it('answers 404 for a user outside the tenant', async () => {

@@ -2,9 +2,10 @@ import { and, asc, eq, gte, lte, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Account, Database, DbOrTx } from '@workspace/db'
-import { accounts, transactions } from '@workspace/db'
+import { accounts, centsToDecimalSql, transactions } from '@workspace/db'
 import { addMoney, compareMoney, negateMoney } from '@workspace/poco'
 import type { BalanceDrift } from '@workspace/poco'
+import type { SQL } from 'drizzle-orm'
 
 import { appliedDeltaSql } from './balance-sql.js'
 
@@ -34,11 +35,13 @@ export class BalanceRepository {
       db
         .select({
           id: transactions.id,
-          runningBalance: sql<string>`(${accounts.openingBalance} + sum(${appliedDeltaSql}) over (
+          // The window sums integer cents exactly; the caller formats the
+          // materialized column into the two-decimal string.
+          cents: sql<number>`(${accounts.openingBalance} + sum(${appliedDeltaSql}) over (
             partition by ${transactions.linkedAccountId}
             order by ${transactions.transactionDt}, ${transactions.id}
             rows unbounded preceding
-          ))::numeric(16,2)::text`.as('running_balance'),
+          ))`.as('cents'),
         })
         .from(transactions)
         .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
@@ -71,7 +74,12 @@ export class BalanceRepository {
         and e.linked_account_id = ${transactions.linkedAccountId}
         and (e.transaction_dt, e.id) <= (${transactions.transactionDt}, ${transactions.id}))`
 
-    return sql<string>`(${accounts.openingBalance} + ${earlier})::numeric(16,2)::text`
+    return centsToDecimalSql(sql`(${accounts.openingBalance} + ${earlier})`)
+  }
+
+  /** Formats the running-balance CTE's materialized cents column. */
+  formatRunningBalance(cents: SQL) {
+    return centsToDecimalSql(cents)
   }
 
   /** The opening balance and currency of one account of the tenant. */
@@ -101,7 +109,9 @@ export class BalanceRepository {
   ): Promise<string> {
     const [row] = await db
       .select({
-        total: sql<string>`coalesce(sum(${appliedDeltaSql}), 0)::numeric(16,2)::text`,
+        total: centsToDecimalSql(
+          sql`coalesce(sum(${appliedDeltaSql}), 0)`
+        ),
       })
       .from(transactions)
       .where(
@@ -141,7 +151,9 @@ export class BalanceRepository {
   ): Promise<string> {
     const [row] = await db
       .select({
-        total: sql<string>`coalesce(sum(${appliedDeltaSql}), 0)::numeric(16,2)::text`,
+        total: centsToDecimalSql(
+          sql`coalesce(sum(${appliedDeltaSql}), 0)`
+        ),
       })
       .from(transactions)
       .where(
@@ -166,7 +178,7 @@ export class BalanceRepository {
     return this.db
       .select({
         date: transactions.transactionDt,
-        delta: sql<string>`sum(${appliedDeltaSql})::numeric(16,2)::text`,
+        delta: centsToDecimalSql(sql`sum(${appliedDeltaSql})`),
       })
       .from(transactions)
       .where(
@@ -189,7 +201,9 @@ export class BalanceRepository {
   ): Promise<string> {
     const [row] = await this.db
       .select({
-        total: sql<string>`coalesce(sum(${appliedDeltaSql}), 0)::numeric(16,2)::text`,
+        total: centsToDecimalSql(
+          sql`coalesce(sum(${appliedDeltaSql}), 0)`
+        ),
       })
       .from(transactions)
       .where(
@@ -218,7 +232,7 @@ export class BalanceRepository {
         accountId: accounts.id,
         name: accounts.name,
         balance: accounts.balance,
-        expected: sql<string>`(${accounts.openingBalance} + coalesce((
+        expected: centsToDecimalSql(sql`(${accounts.openingBalance} + coalesce((
           select sum(case
             when t.status = 'ACTIVE' and t.review_status <> 'Canceled'
             then case when t.type = 'Income' then t.amount else -t.amount end
@@ -226,7 +240,7 @@ export class BalanceRepository {
           end)
           from transactions t
           where t.linked_account_id = "accounts"."id"
-        ), 0))::numeric(16,2)::text`,
+        ), 0))`),
       })
       .from(accounts)
       .where(

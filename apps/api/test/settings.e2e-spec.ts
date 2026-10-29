@@ -1,14 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { readdirSync, readFileSync } from 'node:fs'
 import type { INestApplication } from '@nestjs/common'
-import { getDrizzleToken } from '@nestjs/drizzle'
-import type { Database } from '@workspace/db'
-import { sql } from 'drizzle-orm'
 import request from 'supertest'
 import type { App } from 'supertest/types.js'
 
 import {
-  createAccount,
   joinAsMember,
   signUp,
   startApp,
@@ -99,31 +94,6 @@ describe('tenant settings (e2e, #15)', () => {
       .put('/settings')
       .send({ timezone: 'UTC', mainCurrency: 'USD' })
       .expect(403)
-  })
-
-  it('backfills an existing tenant on UTC, unconfirmed, in its most used currency', async () => {
-    const owner = await signUp(app)
-    await createAccount(owner, { currency: 'BRL' })
-    await createAccount(owner, { currency: 'BRL' })
-    await createAccount(owner, { currency: 'EUR' })
-    const me = await owner.get('/auth/me').expect(200)
-    const tenantId: number = me.body.tenant.id
-    const db = app.get<Database>(getDrizzleToken())
-
-    // Recreate the pre-migration state for this tenant, then run the
-    // migration's backfill statement as it ships.
-    await db.execute(
-      sql`DELETE FROM tenant_settings WHERE tenant_id = ${tenantId}`
-    )
-    await db.execute(sql.raw(backfillStatement()))
-
-    const settings = await owner.get('/settings').expect(200)
-    expect(settings.body).toEqual({
-      timezone: 'UTC',
-      mainCurrency: 'BRL',
-      timezoneConfirmed: false,
-      unsplitMode: 'personal',
-    })
   })
 })
 
@@ -293,22 +263,3 @@ describe('change password (e2e, #15)', () => {
   })
 })
 
-/** The backfill `INSERT` of the tenant-settings migration, as it ships. */
-function backfillStatement(): string {
-  const drizzle = new URL('../../../packages/db/drizzle/', import.meta.url)
-  const folder = readdirSync(drizzle).find((name) =>
-    name.endsWith('_tenant-settings')
-  )
-  const migration = readFileSync(
-    new URL(`${folder}/migration.sql`, drizzle),
-    'utf8'
-  )
-  const statement = migration
-    .split('--> statement-breakpoint')
-    .find((part) => part.includes('INSERT INTO "tenant_settings"'))
-  if (statement === undefined) {
-    throw new Error('The tenant-settings migration has no backfill.')
-  }
-
-  return statement
-}

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common'
-import type { DbOrTx } from '@workspace/db'
 
 import {
   AuditRecorder,
   type AuditEntry,
 } from '../common/audit/audit-recorder.js'
+import type { LedgerStatement } from '../common/ledger/ledger-batch.js'
 import { AuditLogRepository } from './audit-log.repository.js'
 
 /** Writes the audit log: the implementation behind the `AuditRecorder` port. */
@@ -14,15 +14,21 @@ export class AuditLogService extends AuditRecorder {
     super()
   }
 
-  async record(entry: AuditEntry, tx?: DbOrTx): Promise<void> {
-    await this.log.insert(
-      {
-        tenantId: entry.tenantId,
-        actorId: entry.actorId,
-        action: entry.action,
-        details: entry.details ?? {},
-      },
-      tx
-    )
+  statement(entry: AuditEntry): LedgerStatement {
+    return this.log.statement({
+      tenantId: entry.tenantId,
+      actorId: entry.actorId,
+      action: entry.action,
+      details: entry.details ?? {},
+    })
+  }
+
+  async record(entry: AuditEntry): Promise<void> {
+    await this.log.insert({
+      tenantId: entry.tenantId,
+      actorId: entry.actorId,
+      action: entry.action,
+      details: entry.details ?? {},
+    })
   }
 }

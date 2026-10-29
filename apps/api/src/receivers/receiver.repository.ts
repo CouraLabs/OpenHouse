@@ -1,12 +1,11 @@
-import { and, asc, count, eq, ilike, sql } from 'drizzle-orm'
+import { and, asc, count, eq, like, } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Receiver, Database } from '@workspace/db'
-import { receivers } from '@workspace/db'
+import { normalizeSearchName, receivers } from '@workspace/db'
 import type { SearchReceiversArgs } from '@workspace/poco'
 
-import { buildPagedQuery } from '../common/search/fetch.helper.js'
-import { escapeLikePattern } from '../common/search/fetch.helper.js'
+import { buildPagedQuery, likePattern } from '../common/search/fetch.helper.js'
 
 /** What a search answers with: the page's rows and how many match in all. */
 export interface ReceiverSearch {
@@ -43,6 +42,7 @@ export class ReceiverRepository {
         createdBy: userId,
         updateBy: userId,
         ...data,
+        searchName: normalizeSearchName(data.name),
       })
       .returning()
 
@@ -67,7 +67,7 @@ export class ReceiverRepository {
           eq(receivers.tenantId, tenantId),
           eq(receivers.status, 'ACTIVE'),
           eq(receivers.type, 'Person'),
-          sql`lower(${receivers.name}) = lower(${name})`
+          eq(receivers.searchName, normalizeSearchName(name))
         )
       )
       .limit(1)
@@ -125,6 +125,7 @@ export class ReceiverRepository {
       .update(receivers)
       .set({
         name: data.name,
+        searchName: normalizeSearchName(data.name),
         type: data.type,
         updateBy: userId,
         updateDt: new Date(),
@@ -167,7 +168,7 @@ export class ReceiverRepository {
 
     if (args.filter.name !== undefined) {
       conditions.push(
-        ilike(receivers.name, `%${escapeLikePattern(args.filter.name)}%`)
+        like(receivers.searchName, likePattern(args.filter.name))
       )
     }
 

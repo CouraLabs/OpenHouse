@@ -3,7 +3,6 @@ import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, count, desc, eq, gt, isNull, max, or, sql } from 'drizzle-orm'
 import type {
   Database,
-  DbOrTx,
   NewPasswordResetCode,
   PasswordResetCode,
   ResetCodeKind,
@@ -31,12 +30,6 @@ function isOpen(now: Date) {
 export class PasswordResetRepository {
   constructor(@InjectDrizzle() private readonly db: Database) {}
 
-  /** Runs `work` in one transaction, so invalidating and issuing — or
-   * claiming and setting the password — happen together or not at all. */
-  transaction<T>(work: (tx: DbOrTx) => Promise<T>): Promise<T> {
-    return this.db.transaction(work)
-  }
-
   /** Reads one user of the tenant. */
   async findUserInTenant(
     tenantId: number,
@@ -61,32 +54,30 @@ export class PasswordResetRepository {
     return row
   }
 
-  /** Expires every open code of one kind the user holds, so only the codes
-   * issued next work. */
-  async expireOpen(
+  /**
+   * Expires every open code of one kind the user holds and stores the
+   * issued ones — their hashes only — as one batch: the old codes stop and
+   * the new ones start together.
+   */
+  async replaceCodes(
     userId: number,
     kind: ResetCodeKind,
     now: Date,
-    tx: DbOrTx = this.db
+    rows: NewPasswordResetCode[]
   ): Promise<void> {
-    await tx
-      .update(passwordResetCodes)
-      .set({ expiresAt: now })
-      .where(
-        and(
-          eq(passwordResetCodes.userId, userId),
-          eq(passwordResetCodes.kind, kind),
-          isOpen(now)
-        )
-      )
-  }
-
-  /** Stores issued codes — their hashes only. */
-  async insert(
-    rows: NewPasswordResetCode[],
-    tx: DbOrTx = this.db
-  ): Promise<void> {
-    await tx.insert(passwordResetCodes).values(rows)
+    await this.db.batch([
+      this.db
+        .update(passwordResetCodes)
+        .set({ expiresAt: now })
+        .where(
+          and(
+            eq(passwordResetCodes.userId, userId),
+            eq(passwordResetCodes.kind, kind),
+            isOpen(now)
+          )
+        ),
+      this.db.insert(passwordResetCodes).values(rows),
+    ])
   }
 
   /** Reads the code a hash belongs to, whatever its state. */
@@ -100,41 +91,47 @@ export class PasswordResetRepository {
   }
 
   /**
-   * Marks an open code used, answering it — or nothing when it was used or
-   * expired meanwhile, so two redemptions racing cannot both succeed.
+   * Redeems a code for a new password as one batch: the code is claimed
+   * (used) and the password set together — two redemptions racing lose one
+   * to the claim's guard, and a claim with no password set behind it is
+   * impossible. The claim's guard answers nothing when the code was used
+   * or expired meanwhile; the password's guard answers nothing when the
+   * user is gone; the caller tells them apart from the returned rows.
    */
-  async claim(
-    id: number,
-    now: Date,
-    tx: DbOrTx
-  ): Promise<PasswordResetCode | undefined> {
-    const [row] = await tx
-      .update(passwordResetCodes)
-      .set({ usedAt: now })
-      .where(and(eq(passwordResetCodes.id, id), isOpen(now)))
-      .returning()
-
-    return row
-  }
-
-  /**
-   * Sets an active user's password hash and clears the stored refresh hash,
-   * which signs out every session they had. A removed user is left alone
-   * and answers nothing.
-   */
-  async setActivePassword(
+  async redeem(
+    codeId: number,
     userId: number,
     passwordHash: string,
-    now: Date,
-    tx: DbOrTx
-  ): Promise<User | undefined> {
-    const [row] = await tx
-      .update(users)
-      .set({ password: passwordHash, refreshTokenHash: null, updatedAt: now })
-      .where(and(eq(users.id, userId), eq(users.isActive, true)))
-      .returning()
+    now: Date
+  ): Promise<
+    | { kind: 'claimed'; user: User }
+    | { kind: 'codeTaken' }
+    | { kind: 'userGone' }
+  > {
+    const results = await this.db.batch([
+      this.db
+        .update(passwordResetCodes)
+        .set({ usedAt: now })
+        .where(and(eq(passwordResetCodes.id, codeId), isOpen(now)))
+        .returning(),
+      this.db
+        .update(users)
+        .set({ password: passwordHash, refreshTokenHash: null, updatedAt: now })
+        .where(and(eq(users.id, userId), eq(users.isActive, true)))
+        .returning(),
+    ])
 
-    return row
+    const [claimed, user] = results as [PasswordResetCode[], User[]]
+
+    if (user.length === 0) {
+      return { kind: 'userGone' }
+    }
+
+    if (claimed.length === 0) {
+      return { kind: 'codeTaken' }
+    }
+
+    return { kind: 'claimed', user: user[0] }
   }
 
   /** How many of the user's recovery codes are still open, and when the

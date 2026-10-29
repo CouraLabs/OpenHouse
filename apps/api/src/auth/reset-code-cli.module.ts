@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { DatabaseModule } from '@workspace/db'
+import { DatabaseModule } from '../common/database.module.js'
 
 import { ClockModule } from '../common/clock/clock.module.js'
 import { PasswordResetRepository } from './password-reset.repository.js'

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import { and, count, desc, eq, isNull } from 'drizzle-orm'
-import type { Database, DbOrTx } from '@workspace/db'
-import { notifications } from '@workspace/db'
+import { and, count, desc, eq, isNull, sql } from 'drizzle-orm'
+import type { Database } from '@workspace/db'
+import { notificationLog, notifications } from '@workspace/db'
 import type { AppNotification, NotificationBody } from '@workspace/poco'
 
 /** How many entries the notification centre lists. */
@@ -15,17 +15,49 @@ export class NotificationRepository {
 
   /** Adds an entry to a user's centre. */
   async insert(
-    tx: DbOrTx,
     tenantId: number,
     userId: number,
     body: NotificationBody
   ): Promise<void> {
-    await tx.insert(notifications).values({
+    await this.db.insert(notifications).values({
       tenantId,
       userId,
       // The column is untyped JSON (the db package knows no wire types).
       body: body as unknown as Record<string, unknown>,
     })
+  }
+
+  /**
+   * The entry's insert statement, gated in SQL on the claims it rides on —
+   * an entry is stored only when every claim it needs was won, and only by
+   * the run that won them.
+   */
+  insertStatement(
+    tenantId: number,
+    userId: number,
+    body: NotificationBody,
+    gates: Array<{
+      userId: number
+      kind: string
+      refId: number
+      dueDate: string
+      /** The stamp of the run that won the claim — an entry is inserted
+       * only by the run that won it, never by a later run reading the
+       * same key. */
+      stamp: Date
+    }>
+  ) {
+    const gate = sql.join(
+      gates.map(
+        (key) =>
+          sql`exists (select 1 from ${notificationLog} where ${notificationLog.userId} = ${key.userId} and ${notificationLog.kind} = ${key.kind} and ${notificationLog.refId} = ${key.refId} and ${notificationLog.dueDate} = ${key.dueDate} and ${notificationLog.createdAt} = ${key.stamp.getTime()})`
+      ),
+      sql` and `
+    )
+
+    return this.db.insert(notifications).select(
+      sql`select null as id, ${tenantId} as tenant_id, ${userId} as user_id, ${JSON.stringify(body)} as body, (cast(unixepoch('subsec') * 1000 as integer)) as created_at, null as read_at where ${gate}`
+    )
   }
 
   /** A user's latest entries, newest first. */

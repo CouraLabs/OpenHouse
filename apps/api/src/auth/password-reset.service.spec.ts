@@ -51,22 +51,29 @@ const stored = (
   ...overrides,
 })
 
-/** A repository mock: transactions run their work on a fake handle. */
+/** A repository mock. The redeem batch answers both rows, unless the test
+ * overrides who lost. */
 const repository = () => ({
-  transaction: vi.fn(async (work: (tx: unknown) => Promise<unknown>) =>
-    work({})
-  ),
   findUserInTenant: vi.fn(async (): Promise<User | undefined> => user()),
   findUserByEmail: vi.fn(async (): Promise<User | undefined> => user()),
-  expireOpen: vi.fn(async () => {}),
-  insert: vi.fn(async () => {}),
+  replaceCodes: vi.fn(
+    async (_userId: number, _kind: string, _now: Date, _rows: unknown[]) => {}
+  ),
   findByHash: vi.fn(
     async (): Promise<PasswordResetCode | undefined> => undefined
   ),
-  claim: vi.fn(async (): Promise<PasswordResetCode | undefined> =>
-    stored('ABCDE-FGHJK')
+  redeem: vi.fn(
+    async (
+      _codeId: number,
+      _userId: number,
+      _passwordHash: string,
+      _now: Date
+    ): Promise<
+      | { kind: 'claimed'; user: User }
+      | { kind: 'codeTaken' }
+      | { kind: 'userGone' }
+    > => ({ kind: 'claimed', user: user() })
   ),
-  setActivePassword: vi.fn(async (): Promise<User | undefined> => user()),
 })
 
 const serviceWith = (repo: ReturnType<typeof repository>) =>
@@ -84,8 +91,13 @@ describe('PasswordResetService', () => {
 
     expect(issued.code).toMatch(/^[A-Z2-9]{5}-[A-Z2-9]{5}$/)
     expect(issued.expiresAt).toEqual(new Date(NOW.getTime() + 30 * 60_000))
-    expect(repo.expireOpen).toHaveBeenCalledWith(9, 'owner_issued', NOW, {})
-    const [[rows]] = repo.insert.mock.calls as unknown as [[Array<object>]]
+    expect(repo.replaceCodes).toHaveBeenCalledWith(
+      9,
+      'owner_issued',
+      NOW,
+      expect.any(Array)
+    )
+    const rows = repo.replaceCodes.mock.calls[0][3] as Array<object>
     expect(rows).toEqual([
       expect.objectContaining({
         userId: 9,
@@ -118,7 +130,7 @@ describe('PasswordResetService', () => {
       NotFoundException
     )
 
-    expect(repo.insert).not.toHaveBeenCalled()
+    expect(repo.replaceCodes).not.toHaveBeenCalled()
   })
 
   it('generates 10 distinct recovery codes, replacing the previous set', async () => {
@@ -128,10 +140,11 @@ describe('PasswordResetService', () => {
 
     expect(codes).toHaveLength(10)
     expect(new Set(codes).size).toBe(10)
-    expect(repo.expireOpen).toHaveBeenCalledWith(1, 'recovery', NOW, {})
-    const [[rows]] = repo.insert.mock.calls as unknown as [
-      [Array<{ kind: string; expiresAt?: Date }>],
-    ]
+    expect(repo.replaceCodes).toHaveBeenCalledWith(1, 'recovery', NOW, expect.any(Array))
+    const rows = repo.replaceCodes.mock.calls[0][3] as Array<{
+      kind: string
+      expiresAt?: Date
+    }>
     expect(rows).toHaveLength(10)
     expect(rows.every((row) => row.kind === 'recovery')).toBe(true)
     expect(rows.every((row) => row.expiresAt === undefined)).toBe(true)
@@ -147,9 +160,8 @@ describe('PasswordResetService', () => {
     )
 
     expect(redeemed.id).toBe(9)
-    expect(repo.claim).toHaveBeenCalledWith(3, NOW, {})
-    const [, passwordHash] = repo.setActivePassword.mock
-      .calls[0] as unknown as [number, string]
+    expect(repo.redeem).toHaveBeenCalledWith(3, 9, expect.any(String), NOW)
+    const passwordHash = repo.redeem.mock.calls[0][2] as string
     expect(await bcrypt.compare('password-new', passwordHash)).toBe(true)
   })
 
@@ -167,21 +179,21 @@ describe('PasswordResetService', () => {
       await expect(
         serviceWith(repo).redeem('ABCDE-FGHJK', 'password-new')
       ).rejects.toThrow(new BadRequestException('This code is not valid.'))
-      expect(repo.setActivePassword).not.toHaveBeenCalled()
+      expect(repo.redeem).not.toHaveBeenCalled()
     }
   })
 
   it('refuses a code that loses the race or names a removed user', async () => {
     const repo = repository()
     repo.findByHash.mockResolvedValue(stored('ABCDE-FGHJK'))
-    repo.claim.mockResolvedValueOnce(undefined)
+    repo.redeem.mockResolvedValueOnce({ kind: 'codeTaken' })
     const service = serviceWith(repo)
 
     await expect(service.redeem('ABCDE-FGHJK', 'password-new')).rejects.toThrow(
       'This code is not valid.'
     )
 
-    repo.setActivePassword.mockResolvedValueOnce(undefined)
+    repo.redeem.mockResolvedValueOnce({ kind: 'userGone' })
     await expect(service.redeem('ABCDE-FGHJK', 'password-new')).rejects.toThrow(
       'This code is not valid.'
     )

@@ -1,1 +1,0 @@
-ALTER TABLE "accounts" ALTER COLUMN "number" SET DATA TYPE varchar(34) USING "number"::varchar(34);

@@ -12,11 +12,12 @@ import type {
   Currency,
   Database,
   Tenant,
+  TenantCode,
   TenantSettingsRow,
   User,
   UserRole,
 } from '@workspace/db'
-import { tenants, tenantCodes, users } from '@workspace/db'
+import { tenants, tenantCodes, tenantSettings, users } from '@workspace/db'
 import { toStartPage, type SessionResponse } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
@@ -87,41 +88,63 @@ export class AuthService {
   }): Promise<SessionResponse> {
     const passwordHash = await bcrypt.hash(body.password, 10)
 
-    const created = await this.db.transaction(async (tx) => {
-      try {
-        const [tenant] = await tx
-          .insert(tenants)
-          .values({ name: body.tenantName })
-          .returning()
+    // One batch: the tenant, its owner, and its settings exist together or
+    // not at all. The tenant's unique name is the id the later statements
+    // resolve — the plan's subselect form, where a RETURNING result cannot
+    // feed the next statement of the same batch.
+    const tenantName = body.tenantName
+    const tenantIdByName = sql`(select id from tenants where name = ${tenantName})`
+    const stamp = new Date()
 
-        const [user] = await tx
+    let tenant: Tenant | undefined
+    let user: User | undefined
+    let settings: TenantSettingsRow | undefined
+
+    try {
+      const results = await runBatch(this.db, [
+        this.db.insert(tenants).values({ name: tenantName }).returning(),
+        this.db
           .insert(users)
           .values({
-            tenantId: tenant.id,
+            tenantId: tenantIdByName,
             email: normalizeEmail(body.email),
             name: body.name,
             password: passwordHash,
             role: 'owner',
+            createdAt: stamp,
+            updatedAt: stamp,
           })
-          .returning()
-
-        const settings = await this.settings.insert(
-          tenant.id,
-          {
+          .returning(),
+        this.db
+          .insert(tenantSettings)
+          .values({
+            tenantId: tenantIdByName,
             timezone: body.timezone ?? 'UTC',
             mainCurrency: body.currency ?? 'USD',
             timezoneConfirmed: body.timezone !== undefined,
-          },
-          tx
-        )
+          })
+          .returning(),
+      ])
 
-        return { tenant, user, settings }
-      } catch (error) {
-        throw this.conflictFor(error)
-      }
-    })
+      const [tenants_, users_, settings_] = results as [
+        Tenant[],
+        User[],
+        TenantSettingsRow[],
+      ]
 
-    return this.sessionResponse(created.user, created.tenant, created.settings)
+      tenant = tenants_[0]
+      user = users_[0]
+      settings = settings_[0]
+    } catch (error) {
+      throw this.conflictFor(error)
+    }
+
+    if (tenant === undefined || user === undefined || settings === undefined) {
+      // The batch is atomic; reaching this would mean it was not.
+      throw new Error('The sign-up batch did not complete.')
+    }
+
+    return this.sessionResponse(user, tenant, settings)
   }
 
   /**
@@ -152,19 +175,18 @@ export class AuthService {
       throw new ConflictException('This tenant code has expired.')
     }
 
-    const created = await this.db.transaction(async (tx) => {
-      const [claimed] = await tx
-        .update(tenantCodes)
-        .set({ usedAt: now })
-        .where(and(eq(tenantCodes.id, code.id), isNull(tenantCodes.usedAt)))
-        .returning()
-      if (claimed === undefined) {
-        // Another request redeemed it between the check above and here.
-        throw new ConflictException('This tenant code was already used.')
-      }
+    const stamp = new Date()
 
-      try {
-        const [user] = await tx
+    let user: User | undefined
+
+    try {
+      const [claimed, inserted] = (await runBatch(this.db, [
+        this.db
+          .update(tenantCodes)
+          .set({ usedAt: now })
+          .where(and(eq(tenantCodes.id, code.id), isNull(tenantCodes.usedAt)))
+          .returning(),
+        this.db
           .insert(users)
           .values({
             tenantId: code.tenantId,
@@ -172,16 +194,23 @@ export class AuthService {
             name: body.name,
             password: passwordHash,
             role: 'user',
+            createdAt: stamp,
+            updatedAt: stamp,
           })
-          .returning()
+          .returning(),
+      ])) as [TenantCode[], User[]]
 
-        return user
-      } catch (error) {
-        throw this.conflictFor(error)
+      if (claimed.length === 0) {
+        // Another request redeemed it between the check above and here.
+        throw new ConflictException('This tenant code was already used.')
       }
-    })
 
-    return this.sessionFor(created)
+      user = inserted[0]
+    } catch (error) {
+      throw this.conflictFor(error)
+    }
+
+    return this.sessionFor(user)
   }
 
   /**
@@ -397,11 +426,10 @@ export class AuthService {
    * enumeration.
    */
   private conflictFor(error: unknown): Error {
-    const constraint = violatedConstraint(error)
-    if (constraint === 'users_email_key') {
+    if (isUniqueViolation(error, 'users', ['email'])) {
       return new ConflictException('This email already has an account.')
     }
-    if (constraint === 'tenants_name_key') {
+    if (isUniqueViolation(error, 'tenants', ['name'])) {
       return new ConflictException('This tenant name is already taken.')
     }
 
@@ -416,19 +444,7 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
 }
 
-/**
- * Names the constraint a unique violation (`23505`) broke, or nothing. The
- * driver error rides as the `cause` of drizzle's `DrizzleQueryError`, whose
- * own message is only the failed SQL — so the constraint is read off the
- * error or its cause, never off a message.
- */
-function violatedConstraint(error: unknown): string | undefined {
-  for (const candidate of [error, (error as { cause?: unknown })?.cause]) {
-    const pgError = candidate as { code?: string; constraint?: string } | null
-    if (pgError?.code === '23505') {
-      return pgError.constraint
-    }
-  }
-
-  return undefined
-}
+/** The sign-up conflicts map through the message-based SQLite detection in
+ * `common/db-errors.ts`. */
+import { isUniqueViolation } from '../common/db-errors.js'
+import { runBatch } from '../common/ledger/ledger-batch.js'

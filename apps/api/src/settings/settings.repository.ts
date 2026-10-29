@@ -78,6 +78,17 @@ export class SettingsRepository {
     return row
   }
 
+  /** The insert statement, for the sign-up batch. */
+  insertStatement(
+    tenantId: number,
+    data: SettingsWrite & { timezoneConfirmed: boolean }
+  ) {
+    return this.db
+      .insert(tenantSettings)
+      .values({ tenantId, ...data })
+      .returning()
+  }
+
   /**
    * Counts what the main currency denominates — the tenant's ACTIVE limits
    * and goals — and, of the goals, those whose account is not in

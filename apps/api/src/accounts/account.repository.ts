@@ -2,10 +2,14 @@ import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Account, Database, DbOrTx } from '@workspace/db'
-import { accounts, transactions } from '@workspace/db'
+import { accounts, decimalToCents, transactions } from '@workspace/db'
 import type { SearchAccountsArgs } from '@workspace/poco'
 
-import { BalanceRepository } from '../balances/balance.repository.js'
+import {
+  LedgerBatchPlan,
+  stampFor,
+} from '../common/ledger/ledger-batch.js'
+
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 
 /** What a search answers with: the page's rows and how many match in all. */
@@ -43,41 +47,47 @@ export interface AccountWrite {
  */
 @Injectable()
 export class AccountRepository {
-  constructor(
-    @InjectDrizzle() private readonly db: Database,
-    private readonly balances: BalanceRepository
-  ) {}
+  constructor(@InjectDrizzle() private readonly db: Database) {}
 
   /**
    * Inserts an account, stamping the audit trail with the acting user. A
    * default account takes the flag from the previous holder first, so the
-   * tenant never holds two defaults — both writes in one database
-   * transaction, under the one-default unique index.
+   * tenant never holds two defaults — both writes in one batch, under the
+   * one-default unique index.
    */
   async insert(
     tenantId: number,
     userId: number,
     data: AccountWrite
   ): Promise<Account> {
-    return this.db.transaction(async (tx) => {
-      if (data.isDefault) {
-        await this.clearDefaultInTx(tx, tenantId, null)
-      }
+    const plan = new LedgerBatchPlan()
 
-      const [row] = await tx
+    if (data.isDefault) {
+      plan.add(this.clearDefaultStatement(this.db, tenantId, null))
+    }
+
+    const stamp = new Date()
+
+    plan.add(
+      this.db
         .insert(accounts)
         .values({
           tenantId,
           createdBy: userId,
+          createdDt: stamp,
           updateBy: userId,
+          updateDt: stamp,
           ...data,
           // A new account has no rows yet: it holds exactly what it opens at.
           balance: data.openingBalance,
         })
         .returning()
+    )
 
-      return row
-    })
+    const results = await plan.run(this.db)
+    const [row] = results.at(-1) as Account[]
+
+    return row
   }
 
   /** Runs the paged search a `FetchArgs` describes, over the tenant's rows. */
@@ -125,48 +135,48 @@ export class AccountRepository {
 
   /**
    * Updates an account's fields and audit trail. The written columns are
-   * named one by one: the id is GENERATED ALWAYS and must never be in a SET.
+   * named one by one: the id is generated and must never be in a SET.
    * A default account takes the flag from the previous holder first, so the
-   * tenant never holds two defaults — both writes in one database
-   * transaction, under the one-default unique index.
+   * tenant never holds two defaults — both writes in one batch, under the
+   * one-default unique index.
    *
-   * `beforeWrite` runs first inside the same transaction — a card's bills
-   * follow its new days there, so the days and the bills commit together.
+   * `resyncPlan` holds the statements a card's bills follow its new days
+   * with (the `CardCycleSync` port), so the days and the bills commit
+   * together. The row is written under an optimistic `update_dt` guard, so
+   * an edit racing this one answers 409 instead of being overwritten.
    */
   async update(
     tenantId: number,
     id: number,
     userId: number,
     data: AccountWrite,
-    beforeWrite?: (tx: DbOrTx) => Promise<void>
+    resyncPlan?: LedgerBatchPlan
   ): Promise<Account | undefined> {
-    return this.db.transaction(async (tx) => {
-      await beforeWrite?.(tx)
+    const [current] = await this.db
+      .select({ updateDt: accounts.updateDt })
+      .from(accounts)
+      .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id)))
 
-      if (data.isDefault) {
-        await this.clearDefaultInTx(tx, tenantId, id)
-      }
+    if (current === undefined) {
+      return undefined
+    }
 
-      // The account row is locked first, like every ledger write, so a
-      // transaction landing at the same time serializes with the recompute
-      // instead of being lost under it.
-      await tx
-        .select({ id: accounts.id })
-        .from(accounts)
-        .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id)))
-        .for('update')
+    const plan = new LedgerBatchPlan()
 
-      // Editing the opening balance moves the current one by the same
-      // amount: the cached balance is rebuilt from the ledger in this very
-      // database transaction, so the two never disagree.
-      const balance = await this.balances.ledgerBalance(
-        tx,
-        tenantId,
-        id,
-        data.openingBalance
-      )
+    if (resyncPlan !== undefined) {
+      plan.append(resyncPlan)
+    }
 
-      const [row] = await tx
+    if (data.isDefault) {
+      plan.add(this.clearDefaultStatement(this.db, tenantId, id))
+    }
+
+    // Editing the opening balance moves the current one by the same
+    // amount: the cached balance is rebuilt from the ledger **inside the
+    // write**, as a subselect over the account's rows, so the two never
+    // disagree — a transaction landing before the batch is already counted.
+    plan.guarded(
+      this.db
         .update(accounts)
         .set({
           name: data.name,
@@ -175,7 +185,11 @@ export class AccountRepository {
           type: data.type,
           openingBalance: data.openingBalance,
           ...(data.openingDt === undefined ? {} : { openingDt: data.openingDt }),
-          balance,
+          balance: sql`(${decimalToCents(data.openingBalance)} + coalesce((select sum(case
+              when t.status = 'ACTIVE' and t.review_status <> 'Canceled'
+              then case when t.type = 'Income' then t.amount else -t.amount end
+              else 0
+            end) from transactions t where t.linked_account_id = ${id}), 0))`,
           currency: data.currency,
           // Editable at any time, unlike the currency: the spread only
           // affects future conversions; the audit stamps record the change.
@@ -187,13 +201,23 @@ export class AccountRepository {
           isDefault: data.isDefault,
           ownership: data.ownership,
           updateBy: userId,
-          updateDt: new Date(),
+          updateDt: stampFor(current),
         })
-        .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id)))
-        .returning()
+        .where(
+          and(
+            eq(accounts.tenantId, tenantId),
+            eq(accounts.id, id),
+            eq(accounts.updateDt, current.updateDt)
+          )
+        )
+        .returning(),
+      1,
+      'the account row (optimistic concurrency)'
+    )
 
-      return row
-    })
+    await plan.run(this.db)
+
+    return this.findById(tenantId, id)
   }
 
   /**
@@ -231,7 +255,9 @@ export class AccountRepository {
     const [row] = await this.db
       .update(accounts)
       .set({
-        reconciledThrough: sql`greatest(${accounts.reconciledThrough}, ${date}::date)`,
+        // Never moves backwards: coalesce around SQLite's scalar max,
+        // which returns NULL when either argument is NULL.
+        reconciledThrough: sql`coalesce(max(${accounts.reconciledThrough}, ${date}), ${date})`,
         updateBy: userId,
         updateDt: new Date(),
       })
@@ -243,11 +269,11 @@ export class AccountRepository {
 
   /** Clears the default flag from every account of the tenant but `keepId`
    * — the step that keeps the one-default promise before a write sets it. */
-  private async clearDefaultInTx(
-    tx: DbOrTx,
+  private clearDefaultStatement(
+    db: DbOrTx,
     tenantId: number,
     keepId: number | null
-  ): Promise<void> {
+  ) {
     const conditions = [
       eq(accounts.tenantId, tenantId),
       eq(accounts.isDefault, true),
@@ -257,7 +283,7 @@ export class AccountRepository {
       conditions.push(ne(accounts.id, keepId))
     }
 
-    await tx
+    return db
       .update(accounts)
       .set({ isDefault: false })
       .where(and(...conditions))

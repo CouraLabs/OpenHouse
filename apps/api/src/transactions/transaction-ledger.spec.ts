@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { appliedDeltaFor, deltaFor } from './transaction-ledger.js'
 import {
-  appliedDeltaFor,
-  deltaFor,
-  lockOrder,
-  retryOnLockConflict,
-} from './transaction-ledger.js'
+  LedgerBatchPlan,
+  changesOf,
+  stampFor,
+} from '../common/ledger/ledger-batch.js'
 import { LedgerConflictError } from '../common/ledger/ledger-conflict.js'
 
 describe('deltaFor', () => {
@@ -44,57 +44,54 @@ describe('appliedDeltaFor', () => {
   })
 })
 
-describe('lockOrder', () => {
-  it('sorts ascending and de-duplicates, whatever order a write names them', () => {
-    expect(lockOrder([12, 3, 12, 7, 3])).toEqual([3, 7, 12])
-    expect(lockOrder([7, 3])).toEqual(lockOrder([3, 7]))
+describe('LedgerBatchPlan', () => {
+  it('answers a guard that matched no rows with a conflict', async () => {
+    const db = {
+      batch: vi.fn(async () => [{ meta: { changes: 0 } }, [{ id: 1 }]]),
+    } as never
+
+    const plan = new LedgerBatchPlan()
+      .guarded({} as never, 1, 'the account')
+      .add({} as never)
+
+    await expect(plan.run(db)).rejects.toThrow(LedgerConflictError)
   })
 
-  it('answers nothing for no accounts', () => {
-    expect(lockOrder([])).toEqual([])
+  it('answers the results when every guard matched', async () => {
+    const db = {
+      batch: vi.fn(async () => [
+        { meta: { changes: 1 } },
+        [{ id: 1 }],
+        { meta: { changes: 0 } },
+      ]),
+    } as never
+
+    const plan = new LedgerBatchPlan()
+      .guarded({} as never, 1, 'the account')
+      .add({} as never)
+
+    await expect(plan.run(db)).resolves.toHaveLength(3)
+  })
+
+  it('counts a returning statement’s rows as its affected-row count', () => {
+    expect(changesOf([{ id: 1 }, { id: 2 }])).toBe(2)
+    expect(changesOf({ results: [], meta: { changes: 3 } })).toBe(3)
+    expect(changesOf({})).toBe(0)
   })
 })
 
-describe('retryOnLockConflict', () => {
-  /** A drizzle query error wrapping the driver's error, as the pool throws. */
-  const driverError = (code: string) =>
-    Object.assign(new Error('Failed query'), { cause: { code } })
-  const sleep = vi.fn(async () => {})
+describe('stampFor', () => {
+  it('never stamps the value the optimistic guard matches on', () => {
+    const read = { updateDt: new Date(1_700_000_000_000) }
 
-  it('retries a deadlock and answers the next attempt', async () => {
-    const run = vi
-      .fn()
-      .mockRejectedValueOnce(driverError('40P01'))
-      .mockResolvedValueOnce('done')
+    vi.setSystemTime(read.updateDt)
 
-    await expect(retryOnLockConflict(run, { sleep })).resolves.toBe('done')
-    expect(run).toHaveBeenCalledTimes(2)
-  })
+    expect(stampFor(read).getTime()).toBe(read.updateDt.getTime() + 1)
 
-  it('retries a serialization failure', async () => {
-    const run = vi
-      .fn()
-      .mockRejectedValueOnce(driverError('40001'))
-      .mockResolvedValueOnce('done')
+    vi.setSystemTime(new Date(1_700_000_000_500))
 
-    await expect(retryOnLockConflict(run, { sleep })).resolves.toBe('done')
-  })
+    expect(stampFor(read).getTime()).toBe(1_700_000_000_500)
 
-  it('gives up after the last attempt with a LedgerConflictError', async () => {
-    const run = vi.fn().mockRejectedValue(driverError('40P01'))
-
-    await expect(retryOnLockConflict(run, { sleep })).rejects.toThrow(
-      LedgerConflictError
-    )
-    expect(run).toHaveBeenCalledTimes(3)
-  })
-
-  it('rethrows any other error at once', async () => {
-    const run = vi.fn().mockRejectedValue(driverError('23505'))
-
-    await expect(retryOnLockConflict(run, { sleep })).rejects.toThrow(
-      'Failed query'
-    )
-    expect(run).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
   })
 })

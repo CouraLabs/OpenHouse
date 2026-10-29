@@ -100,18 +100,17 @@ export class PasswordResetService {
     const now = this.clock.now()
     const codes = Array.from({ length: RECOVERY_SET_SIZE }, generateResetCode)
 
-    await this.repository.transaction(async (tx) => {
-      await this.repository.expireOpen(userId, 'recovery', now, tx)
-      await this.repository.insert(
-        codes.map((code) => ({
-          userId,
-          codeHash: hashResetCode(code),
-          kind: 'recovery' as const,
-          createdAt: now,
-        })),
-        tx
-      )
-    })
+    await this.repository.replaceCodes(
+      userId,
+      'recovery',
+      now,
+      codes.map((code) => ({
+        userId,
+        codeHash: hashResetCode(code),
+        kind: 'recovery' as const,
+        createdAt: now,
+      }))
+    )
 
     return codes
   }
@@ -145,28 +144,23 @@ export class PasswordResetService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10)
 
-    // Throwing inside the transaction rolls it back: a code that loses the
-    // race, or names a removed user, stays unused and changes nothing.
-    return this.repository.transaction(async (tx) => {
-      const claimed = await this.repository.claim(row.id, now, tx)
-      if (claimed === undefined) {
-        // Redeemed or expired between the read above and here.
-        throw this.invalid(prefix)
-      }
+    // A code that loses the race, or names a removed user, stays unused
+    // and changes nothing: the batch is atomic, and each guard answers
+    // nothing when its half of the redemption is gone.
+    const redeemed = await this.repository.redeem(
+      row.id,
+      row.userId,
+      passwordHash,
+      now
+    )
 
-      const user = await this.repository.setActivePassword(
-        row.userId,
-        passwordHash,
-        now,
-        tx
-      )
-      if (user === undefined) {
-        // A removed user cannot come back through a code.
-        throw this.invalid(prefix)
-      }
+    if (redeemed.kind !== 'claimed') {
+      // Redeemed or expired between the read above and here; a removed
+      // user cannot come back through a code.
+      throw this.invalid(prefix)
+    }
 
-      return user
-    })
+    return redeemed.user
   }
 
   /** The user's recovery codes left and their unacknowledged server-issued
@@ -202,22 +196,21 @@ export class PasswordResetService {
     const code = generateResetCode()
     const expiresAt = new Date(now.getTime() + SHORT_LIVED_MS)
 
-    await this.repository.transaction(async (tx) => {
-      await this.repository.expireOpen(userId, kind, now, tx)
-      await this.repository.insert(
-        [
-          {
-            userId,
-            codeHash: hashResetCode(code),
-            kind,
-            issuedBy,
-            expiresAt,
-            createdAt: now,
-          },
-        ],
-        tx
-      )
-    })
+    await this.repository.replaceCodes(
+      userId,
+      kind,
+      now,
+      [
+        {
+          userId,
+          codeHash: hashResetCode(code),
+          kind,
+          issuedBy,
+          expiresAt,
+          createdAt: now,
+        },
+      ]
+    )
 
     return { code, expiresAt }
   }

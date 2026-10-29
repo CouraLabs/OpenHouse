@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Database, DbOrTx } from '@workspace/db'
+import type { Database, } from '@workspace/db'
 import { importMappings } from '@workspace/db'
 import { importMappingSchema, type ImportMapping } from '@workspace/poco'
 
@@ -39,13 +39,12 @@ export class ImportMappingRepository {
 
   /** Saves the account's mapping, replacing the one before. */
   async save(
-    db: DbOrTx,
     tenantId: number,
     userId: number,
     accountId: number,
     mapping: ImportMapping
   ): Promise<void> {
-    await db
+    await this.db
       .insert(importMappings)
       .values({
         tenantId,

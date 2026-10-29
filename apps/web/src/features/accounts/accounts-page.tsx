@@ -136,7 +136,7 @@ export function AccountsPage() {
         onReconcile: setReconciling,
         onHistory: setViewingHistory,
       }),
-    [t, formattingLocale(), save.reset]
+    [t, save.reset]
   )
 
   // Saving needs no confirmation: the form's submit is the intent. A failure

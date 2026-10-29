@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common'
 import type { NotificationBody, ReminderDetail } from '@workspace/poco'
 
-import { NotificationLogRepository } from './notification-log.repository.js'
+import {
+  stampFor,
+  type LedgerStatement,
+} from '../common/ledger/ledger-batch.js'
+import { NotificationLogRepository, isClaimed } from './notification-log.repository.js'
 import { NotificationRepository } from './notification.repository.js'
 import type { Recipient } from './notification-preferences.repository.js'
 import { PushService } from './push.service.js'
 import type { ReminderCandidate } from './reminder-rules.js'
-
-/** Thrown inside the claim transaction to roll it back: this user's digest
- * for the day already went out. */
-class DigestAlreadySent extends Error {}
 
 /**
  * Delivers the reminders due for one user, exactly once. Every reminder is
@@ -17,11 +17,12 @@ class DigestAlreadySent extends Error {}
  * kind, refId, dueDate)` makes the claim atomic across restarts and
  * replicas — and only the claims this call won are stored in the
  * notification centre and pushed. The claims and the centre entries commit
- * in one transaction, so a reminder is never logged without being stored.
+ * in one batch, each centre entry gated in SQL on its claim, so a reminder
+ * is never logged without being stored.
  *
- * A digest user gets at most one digest a day: the day's digest is itself a
- * claim, and a second run that day rolls its item claims back, leaving the
- * items for the next day's digest.
+ * A digest user gets at most one digest a day: the day's digest is itself
+ * a claim, and the day's item entries are gated on it — a second run the
+ * same day stores nothing, leaving the items for the next day's digest.
  */
 @Injectable()
 export class ReminderDeliveryService {
@@ -54,59 +55,88 @@ export class ReminderDeliveryService {
       return 0
     }
 
-    let bodies: NotificationBody[]
+    const digest = preferences.delivery === 'digest'
+    // The run's stamp: the claims carry it as their `created_at`, and the
+    // entries gate on it — so an entry is stored by the run that won its
+    // claim, never by a later run reading the same key. Monotonic, so two
+    // runs in the same millisecond are still two different runs.
+    const stamp = stampFor()
+    const digestKey = {
+      tenantId,
+      userId,
+      kind: 'digest' as const,
+      refId: 0,
+      dueDate: today,
+      stamp,
+    }
 
-    try {
-      bodies = await this.log.transaction(async (tx) => {
-        const won: ReminderDetail[] = []
+    // One batch per user: the digest's claim first (it decides the day),
+    // the item claims — for a digest, gated on the digest's claim standing,
+    // so a day that already sent its digest claims nothing and the items
+    // wait for the next day — and, for individual delivery, the centre
+    // entries each gated on their own claim. A claim that lost to a
+    // concurrent delivery inserts nothing.
+    const statements: LedgerStatement[] = []
 
-        for (const candidate of candidates) {
-          if (
-            await this.log.claim({ tenantId, userId, ...candidate.key }, tx)
-          ) {
-            won.push(candidate.detail)
-          }
-        }
+    if (digest) {
+      statements.push(this.log.claimStatement(digestKey))
+    }
 
-        if (won.length === 0) {
-          return []
-        }
+    for (const candidate of candidates) {
+      statements.push(
+        digest
+          ? this.log.gatedClaimStatement(
+              { tenantId, userId, ...candidate.key, stamp },
+              [digestKey]
+            )
+          : this.log.claimStatement({ tenantId, userId, ...candidate.key, stamp })
+      )
+    }
 
-        const stored: NotificationBody[] =
-          preferences.delivery === 'digest'
-            ? [{ kind: 'digest', items: won }]
-            : won
-
-        if (
-          preferences.delivery === 'digest' &&
-          !(await this.log.claim(
-            { tenantId, userId, kind: 'digest', refId: 0, dueDate: today },
-            tx
-          ))
-        ) {
-          throw new DigestAlreadySent()
-        }
-
-        if (preferences.inAppEnabled) {
-          for (const body of stored) {
-            await this.notifications.insert(tx, tenantId, userId, body)
-          }
-        }
-
-        return stored
-      })
-    } catch (error) {
-      if (error instanceof DigestAlreadySent) {
-        return 0
+    if (preferences.inAppEnabled && !digest) {
+      for (const [_index, candidate] of candidates.entries()) {
+        statements.push(
+          this.notifications.insertStatement(tenantId, userId, candidate.detail, [
+            { userId, ...candidate.key, stamp },
+          ])
+        )
       }
-
-      throw error
     }
 
-    if (pushable && bodies.length > 0) {
-      await this.push.notify(userId, bodies, preferences.pushDetails)
+    const results = await this.log.runAll(statements)
+
+    // What this run won, read off the claim results — the push rides after
+    // the batch, like the old transaction's commit did.
+    const won: ReminderDetail[] = []
+    for (const [index, candidate] of candidates.entries()) {
+      if (isClaimed(results[index])) {
+        won.push(candidate.detail)
+      }
     }
 
-    return bodies.length
+    if (digest && !isClaimed(results[0])) {
+      return 0
+    }
+
+    if (won.length === 0) {
+      return 0
+    }
+
+    const stored: NotificationBody[] = digest
+      ? [{ kind: 'digest', items: won }]
+      : won
+
+    if (preferences.inAppEnabled && digest) {
+      // The digest's entry rides after the claims (its items are what the
+      // run just learned it won); a crash here loses the day's digest, and
+      // the items wait claimed for the next day's.
+      await this.notifications.insert(tenantId, userId, stored[0])
+    }
+
+    if (pushable) {
+      await this.push.notify(userId, stored, preferences.pushDetails)
+    }
+
+    return stored.length
   }
 }

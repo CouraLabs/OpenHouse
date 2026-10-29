@@ -1,5 +1,5 @@
 import { and, asc, count, eq, getTableColumns, sql } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Currency, Database, RecurringTransaction } from '@workspace/db'

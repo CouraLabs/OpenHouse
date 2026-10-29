@@ -1,4 +1,6 @@
-import type { AuditAction, DbOrTx } from '@workspace/db'
+import type { AuditAction } from '@workspace/db'
+
+import type { LedgerStatement } from '../ledger/ledger-batch.js'
 
 /** One line of the audit log. */
 export interface AuditEntry {
@@ -16,6 +18,12 @@ export interface AuditEntry {
  * implements it and provides it under the abstract token.
  */
 export abstract class AuditRecorder {
-  /** Appends a line; pass `tx` to make it part of the action's transaction. */
-  abstract record(entry: AuditEntry, tx?: DbOrTx): Promise<void>
+  /**
+   * The line's insert statement, for the caller's batch — the way the line
+   * commits with the action it records, in the one batch the action is.
+   */
+  abstract statement(entry: AuditEntry): LedgerStatement
+
+  /** Appends a line now, as its own batch. */
+  abstract record(entry: AuditEntry): Promise<void>
 }

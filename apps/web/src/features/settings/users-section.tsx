@@ -82,14 +82,13 @@ export function UsersSection() {
         }
       ),
     [
-      t,
-      formattingLocale(),
-      timezone,
-      session.data?.user.id,
-      setActive.reset,
-      setActive.mutate,
-      balanceCheck.mutate,
-      anonymize.reset,
+      t, 
+      timezone, 
+      session.data?.user.id, 
+      setActive.reset, 
+      setActive.mutate, 
+      balanceCheck.mutate, 
+      anonymize.reset
     ]
   )
 

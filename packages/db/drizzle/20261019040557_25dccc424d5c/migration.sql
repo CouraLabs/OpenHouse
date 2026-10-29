@@ -1,1 +1,0 @@
-ALTER TABLE "users" ADD COLUMN "start_page" text DEFAULT '/' NOT NULL;

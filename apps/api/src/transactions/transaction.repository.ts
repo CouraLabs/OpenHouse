@@ -15,7 +15,7 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import type {
@@ -27,6 +27,7 @@ import type {
 import {
   accounts,
   categories,
+  centsToDecimalSql,
   creditCardStatements,
   receivers,
   tenantSettings,
@@ -56,17 +57,24 @@ import type {
 } from '@workspace/poco'
 
 import { BalanceRepository } from '../balances/balance.repository.js'
+import {
+  balanceDeltaStatement,
+  balanceSubselect,
+  LedgerBatchPlan,
+  stampFor,
+  type LedgerStatement,
+} from '../common/ledger/ledger-batch.js'
+import {
+  auditedUpdateStatements,
+  createdRowHistoryStatement,
+  historyStatement,
+} from '../common/ledger/transaction-history.js'
+import { isAnyUniqueViolation } from '../common/db-errors.js'
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 import {
   CreditCardStatementRepository,
-  type StatementPlacement,
 } from '../credit-card-statements/credit-card-statement.repository.js'
-import {
-  appliedDeltaFor,
-  applyTransactionDelta,
-  lockAccounts,
-  retryOnLockConflict,
-} from './transaction-ledger.js'
+import { appliedDeltaFor } from './transaction-ledger.js'
 
 /**
  * A transaction row with the display fields joined on — what every read
@@ -188,10 +196,17 @@ const payers = alias(users, 'payer')
  *
  * Every write is also a ledger write: the linked account's balance moves
  * with the transaction — except while it is Canceled, money that did not
- * move — both inside one database transaction, and a
+ * move — in the same batch the row is written in, and a
  * `transaction_history` row records the full before/after snapshot. The
  * audit trail stamps the acting user; a system write (the recurring cron)
  * leaves it null.
+ *
+ * D1 has no interactive transactions, so every write is one batch whose
+ * statements were all built from pre-reads: the balance moves by a
+ * **relative**, guarded update (`balance = balance + delta`), the row's
+ * write carries an **optimistic** `update_dt` guard, and the history entry
+ * is gated in SQL on the write it records. A guard that matched no rows
+ * throws `LedgerConflictError`, answered 409.
  */
 @Injectable()
 export class TransactionRepository {
@@ -203,16 +218,34 @@ export class TransactionRepository {
 
   /**
    * Inserts a transaction and applies its delta to the account, in one
-   * database transaction of its own.
+   * batch of its own.
    */
   async insertWithBalance(
     tenantId: number,
     userId: number,
     write: TransactionWrite
   ): Promise<TransactionRow> {
-    return this.inLedgerTx(async (tx) =>
-      this.insertInTx(tx, tenantId, userId, write)
-    )
+    const group = await this.planInsertGroup(this.db, tenantId, userId, write)
+    const results = await group.plan.run(this.db)
+
+    const row = await this.readInsertedRow(tenantId, results, group.insertIndex)
+
+    // The row was just written; the read cannot come back empty.
+    return withWarning(row as TransactionRow, group) as TransactionRow
+  }
+
+  /** The row an insert's `RETURNING` answered, joined — the caller of the
+   * batch reads its answer at the statement's index. */
+  async readInsertedRow(
+    tenantId: number,
+    results: unknown[],
+    insertIndex: number
+  ): Promise<TransactionRow> {
+    const rows = results[insertIndex] as Array<Record<string, unknown>>
+    const id = rows[0].id as number
+
+    // The row was just written; the read cannot come back empty.
+    return (await this.findById(tenantId, id)) as TransactionRow
   }
 
   /**
@@ -220,24 +253,116 @@ export class TransactionRepository {
    * mechanics as `insertWithBalance`, with the audit trail left null — the
    * row is the system's, not a user's. The partial unique index on
    * `(tenant_id, recurring_id, transaction_dt)` is the last line of
-   * defense: when another replica materialized the day first, this answers
-   * `undefined` instead of double-billing.
+   * defense: when another replica materialized the day first, the batch
+   * fails on it and this answers `undefined` instead of double-billing.
    */
   async insertGenerated(
     tenantId: number,
     write: TransactionWrite
   ): Promise<TransactionRow | undefined> {
-    return this.inLedgerTx(async (tx) => {
-      try {
-        return await this.insertInTx(tx, tenantId, null, write)
-      } catch (error) {
-        if (isUniqueViolation(error)) {
-          return undefined
-        }
+    const group = await this.planInsertGroup(this.db, tenantId, null, write)
 
-        throw error
+    try {
+      const results = await group.plan.run(this.db)
+
+      return withWarning(
+        await this.readInsertedRow(tenantId, results, group.insertIndex),
+        group
+      )
+    } catch (error) {
+      if (isAnyUniqueViolation(error)) {
+        return undefined
       }
-    })
+
+      throw error
+    }
+  }
+
+  /**
+   * The statements one transaction insert needs, as a composable plan —
+   * the bill placement (a get-or-create, when the day opens a new bill),
+   * the guarded balance move, the row written with the post-delta balance
+   * stamped, its history entry, and its shares. Multi-row writers (the
+   * installment plans, the statement import) append one group per row into
+   * one batch, in money order.
+   */
+  async planInsertGroup(
+    db: DbOrTx,
+    tenantId: number,
+    userId: number | null,
+    write: TransactionWrite
+  ): Promise<{ plan: LedgerBatchPlan; closed: boolean; insertIndex: number }> {
+    const { installment, splits, ...columns } = write
+    const placement = await this.statements.planPlacement(
+      db,
+      tenantId,
+      userId,
+      {
+        linkedAccountId: write.linkedAccountId,
+        transactionDt: write.transactionDt,
+        type: write.type,
+        isTransferLeg: write.transferGroupId !== undefined,
+      },
+      installment === undefined
+        ? 0
+        : (installment.billOffset ?? installment.number - 1)
+    )
+    const stamp = new Date()
+    const plan = new LedgerBatchPlan()
+
+    plan.append(placement.batch)
+    plan.guarded(
+      balanceDeltaStatement(
+        db,
+        tenantId,
+        write.linkedAccountId,
+        appliedDeltaFor(write)
+      ),
+      1,
+      'the account the row moves (exists and is ACTIVE)'
+    )
+
+    const row = db
+      .insert(transactions)
+      .values({
+        tenantId,
+        createdBy: userId,
+        createdDt: stamp,
+        updateBy: userId,
+        updateDt: stamp,
+        ...columns,
+        // Whoever enters an expense paid it, unless the write names the
+        // payer (or states that nobody did).
+        paidByUserId:
+          write.paidByUserId === undefined ? userId : write.paidByUserId,
+        // The account's balance after the batch's guarded delta applied.
+        balanceOnDt: balanceSubselect(write.linkedAccountId),
+        statementId: placement.statementId,
+        ...(installment === undefined
+          ? {}
+          : {
+              installmentGroupId: installment.groupId,
+              installmentNumber: installment.number,
+              installmentCount: installment.count,
+              statementPinned: placement.statementId !== null,
+            }),
+      })
+      .returning()
+
+    const insertIndex = plan.size
+
+    plan.add(row)
+    plan.add(
+      createdRowHistoryStatement(db, { tenantId, userId, stamp })
+    )
+
+    const shares = await this.sharesForInsert(db, tenantId, write, userId)
+
+    if (shares.length > 0) {
+      plan.append(this.planSplitsInsert(db, tenantId, userId, shares))
+    }
+
+    return { plan, closed: placement.closed, insertIndex }
   }
 
   /**
@@ -247,14 +372,12 @@ export class TransactionRepository {
    * write saving `Canceled` applies nothing; `balanceOnDt` then carries the
    * account's balance as the edit found it.
    *
-   * The row (and a transfer's other side) is locked `FOR UPDATE` and its
-   * lifecycle checked inside the database transaction, so a soft delete
-   * racing the update serializes — whichever ran first wins, and the loser
-   * answers `undefined` instead of reverting the same delta twice. Every
-   * account the write touches is then locked in one global order before any
-   * delta moves. The other side of a transfer is updated in the same
-   * transaction with the fields the pair shares, so editing one side never
-   * leaves the books unbalanced.
+   * The row (and a transfer's other side) is written under an optimistic
+   * `update_dt` guard, so a soft delete or an edit racing the update
+   * answers 409 — whichever write ran first wins, and the loser never
+   * reverts the same delta twice. The other side of a transfer is updated
+   * in the same batch with the fields the pair shares, so editing one side
+   * never leaves the books unbalanced.
    */
   async updateWithBalance(
     tenantId: number,
@@ -264,87 +387,63 @@ export class TransactionRepository {
   ): Promise<TransactionRow | undefined> {
     const { splits, ...columns } = write
 
-    return this.inLedgerTx(async (tx) => {
-      const locked = await this.lockInTx(tx, tenantId, id)
+    const before = (await this.findById(
+      tenantId,
+      id
+    )) as TransactionRow | undefined
 
-      if (locked === undefined || locked.status === 'DELETED') {
-        return undefined
+    if (before === undefined || before.status === 'DELETED') {
+      return undefined
+    }
+
+    const sibling = await this.findActiveSibling(this.db, tenantId, before)
+    const placement = await this.statements.planReplacement(
+      this.db,
+      tenantId,
+      userId,
+      assignedOf(before),
+      {
+        linkedAccountId: write.linkedAccountId,
+        transactionDt: write.transactionDt,
+        type: write.type,
+        isTransferLeg: before.transferGroupId !== null,
       }
+    )
+    const plan = new LedgerBatchPlan()
 
-      const before = (await this.findByIdInTx(
-        tx,
-        tenantId,
-        id
-      )) as TransactionRow
-      const sibling = await this.findActiveSiblingInTx(tx, tenantId, before)
+    plan.append(placement.batch)
 
-      await lockAccounts(tx, tenantId, [
-        before.linkedAccountId,
-        write.linkedAccountId,
-        ...(sibling === undefined ? [] : [sibling.linkedAccountId]),
-      ])
+    this.appendDeltaRevert(plan, this.db, tenantId, before)
+    this.appendDeltaApply(
+      plan,
+      this.db,
+      tenantId,
+      write.linkedAccountId,
+      appliedDeltaFor(write)
+    )
 
-      await applyTransactionDelta(
-        tx,
-        tenantId,
-        before.linkedAccountId,
-        negateMoney(appliedDeltaFor(before))
+    plan.append(
+      this.planRowUpdate(this.db, tenantId, userId, before, {
+        ...columns,
+        balanceOnDt: balanceSubselect(write.linkedAccountId),
+        statementId: placement.statementId,
+        statementPinned: placement.statementPinned,
+      })
+    )
+
+    if (splits !== undefined) {
+      plan.append(this.planReplaceSplits(this.db, tenantId, userId, id, splits))
+    }
+
+    if (sibling !== undefined) {
+      plan.append(
+        await this.planSiblingUpdate(this.db, tenantId, userId, sibling, write)
       )
+    }
 
-      const newBalance = await applyTransactionDelta(
-        tx,
-        tenantId,
-        write.linkedAccountId,
-        appliedDeltaFor(write)
-      )
+    await plan.run(this.db)
 
-      const placement = await this.statements.replaceInTx(
-        tx,
-        tenantId,
-        userId,
-        assignedOf(before),
-        {
-          linkedAccountId: write.linkedAccountId,
-          transactionDt: write.transactionDt,
-          type: write.type,
-          isTransferLeg: before.transferGroupId !== null,
-        }
-      )
-
-      const [row] = await tx
-        .update(transactions)
-        .set({
-          ...columns,
-          balanceOnDt: newBalance,
-          statementId: placement.statementId,
-          statementPinned: placement.statementPinned,
-          updateBy: userId,
-          updateDt: new Date(),
-        })
-        .where(
-          and(
-            eq(transactions.tenantId, tenantId),
-            eq(transactions.id, id),
-            eq(transactions.status, 'ACTIVE')
-          )
-        )
-        .returning()
-
-      await this.recordHistory(tx, tenantId, id, userId, 'UPDATE', before, row)
-
-      if (splits !== undefined) {
-        await this.replaceSplitsInTx(tx, tenantId, userId, id, splits)
-      }
-
-      if (sibling !== undefined) {
-        await this.updateTransferSibling(tx, tenantId, userId, sibling, write)
-      }
-
-      return withWarning(
-        (await this.findByIdInTx(tx, tenantId, id)) as TransactionRow,
-        placement
-      )
-    })
+    return withWarning(await this.findById(tenantId, id), placement)
   }
 
   /**
@@ -353,9 +452,9 @@ export class TransactionRepository {
    * late and the bank billed it a cycle on). On the card side of a payment
    * it re-points the bill the payment settles instead — a payment is on no
    * bill, so there is nothing to pin. The caller checked the bill belongs
-   * to the row's card; the row is locked and its lifecycle checked here,
-   * and the account is locked before the bill, in the ledger's order.
-   * Answers `undefined` when the row or the bill is gone.
+   * to the row's card; the row is written under its optimistic guard, and
+   * the bill's `closedAt` stamp rides the same batch. Answers `undefined`
+   * when the row or the bill is gone.
    */
   async moveToStatement(
     tenantId: number,
@@ -363,63 +462,44 @@ export class TransactionRepository {
     userId: number,
     statementId: number
   ): Promise<TransactionRow | undefined> {
-    return this.inLedgerTx(async (tx) => {
-      const locked = await this.lockInTx(tx, tenantId, id)
+    const row = (await this.findById(tenantId, id)) as TransactionRow | undefined
 
-      if (locked === undefined || locked.status === 'DELETED') {
-        return undefined
-      }
+    if (row === undefined || row.status === 'DELETED') {
+      return undefined
+    }
 
-      await lockAccounts(tx, tenantId, [locked.linkedAccountId])
+    const target = await this.statements.findForMove(
+      this.db,
+      tenantId,
+      statementId
+    )
 
-      const target = await this.statements.findForMoveInTx(
-        tx,
-        tenantId,
-        statementId
-      )
+    if (target === undefined || target.statement.accountId !== row.linkedAccountId) {
+      return undefined
+    }
 
-      if (
-        target === undefined ||
-        target.statement.accountId !== locked.linkedAccountId
-      ) {
-        return undefined
-      }
+    const payment = isPaymentRow(row)
+    const stamp = stampFor(row)
+    const plan = new LedgerBatchPlan()
 
-      const payment = isPaymentRow(locked)
-      const [row] = await tx
-        .update(transactions)
-        .set({
-          ...(payment
-            ? { paymentStatementId: statementId }
-            : { statementId, statementPinned: true }),
-          updateBy: userId,
-          updateDt: new Date(),
-        })
-        .where(
-          and(
-            eq(transactions.tenantId, tenantId),
-            eq(transactions.id, id),
-            eq(transactions.status, 'ACTIVE')
-          )
-        )
-        .returning()
+    plan.addNullable(target.closedStamp)
+    plan.append(
+      this.planRowUpdate(this.db, tenantId, userId, row, {
+        ...(payment
+          ? { paymentStatementId: statementId }
+          : { statementId, statementPinned: true }),
+        updateBy: userId,
+        updateDt: stamp,
+      })
+    )
 
-      await this.recordHistory(tx, tenantId, id, userId, 'UPDATE', locked, row)
+    await plan.run(this.db)
 
-      const moved = (await this.findByIdInTx(
-        tx,
-        tenantId,
-        id
-      )) as TransactionRow
+    const moved = (await this.findById(tenantId, id)) as TransactionRow
 
-      return payment
-        ? moved
-        : withWarning(moved, {
-            statementId,
-            statementPinned: true,
-            closed: target.closed,
-          })
-    })
+    return payment
+      ? moved
+      : withWarning(moved, { closed: target.closed })
   }
 
   /**
@@ -431,11 +511,9 @@ export class TransactionRepository {
    * value stamped when the amount last applied: a status change never
    * rewrites it, so a Canceled row shows the balance it once left behind.
    *
-   * The row is locked `FOR UPDATE` and its lifecycle checked inside the
-   * database transaction, as in `updateWithBalance`. The other side of a
-   * transfer is mirrored in the same transaction, both deltas reverted or
-   * re-applied together: flipping one side alone would move the pair's
-   * money into one account and out of none.
+   * The row and the other side of a transfer are written under optimistic
+   * guards, both deltas reverted or re-applied together: flipping one side
+   * alone would move the pair's money into one account and out of none.
    */
   async updateStatus(
     tenantId: number,
@@ -443,33 +521,31 @@ export class TransactionRepository {
     userId: number,
     reviewStatus: TransactionStatus
   ): Promise<TransactionRow | undefined> {
-    return this.inLedgerTx(async (tx) => {
-      const locked = await this.lockInTx(tx, tenantId, id)
+    const before = (await this.findById(tenantId, id)) as TransactionRow | undefined
 
-      if (locked === undefined || locked.status === 'DELETED') {
-        return undefined
-      }
+    if (before === undefined || before.status === 'DELETED') {
+      return undefined
+    }
 
-      const before = (await this.findByIdInTx(
-        tx,
+    const sibling = await this.findActiveSibling(this.db, tenantId, before)
+    const plan = new LedgerBatchPlan()
+
+    this.appendStatusFlip(plan, this.db, tenantId, userId, before, reviewStatus)
+
+    if (sibling !== undefined) {
+      this.appendStatusFlip(
+        plan,
+        this.db,
         tenantId,
-        id
-      )) as TransactionRow
-      const sibling = await this.findActiveSiblingInTx(tx, tenantId, before)
+        userId,
+        sibling,
+        reviewStatus
+      )
+    }
 
-      await lockAccounts(tx, tenantId, [
-        before.linkedAccountId,
-        ...(sibling === undefined ? [] : [sibling.linkedAccountId]),
-      ])
+    await plan.run(this.db)
 
-      await this.updateStatusInTx(tx, tenantId, userId, before, reviewStatus)
-
-      if (sibling !== undefined) {
-        await this.updateStatusInTx(tx, tenantId, userId, sibling, reviewStatus)
-      }
-
-      return this.findByIdInTx(tx, tenantId, id) as Promise<TransactionRow>
-    })
+    return this.findById(tenantId, id)
   }
 
   /**
@@ -484,125 +560,127 @@ export class TransactionRepository {
     id: number,
     userId: number
   ): Promise<Transaction | undefined> {
-    return this.inLedgerTx(async (tx) => {
-      const locked = await this.lockInTx(tx, tenantId, id)
+    const before = (await this.findById(tenantId, id)) as TransactionRow | undefined
 
-      if (locked === undefined) {
-        return undefined
-      }
+    if (before === undefined) {
+      return undefined
+    }
 
-      const before = (await this.findByIdInTx(
-        tx,
-        tenantId,
-        id
-      )) as TransactionRow
+    if (before.status === 'DELETED') {
+      return before
+    }
 
-      if (before.status === 'DELETED') {
-        return before
-      }
+    const sibling = await this.findActiveSibling(this.db, tenantId, before)
+    const plan = new LedgerBatchPlan()
 
-      const sibling = await this.findActiveSiblingInTx(tx, tenantId, before)
+    plan.append(this.planSoftDeleteGroup(this.db, tenantId, userId, before))
 
-      await lockAccounts(tx, tenantId, [
-        before.linkedAccountId,
-        ...(sibling === undefined ? [] : [sibling.linkedAccountId]),
-      ])
+    if (sibling !== undefined) {
+      plan.append(this.planSoftDeleteGroup(this.db, tenantId, userId, sibling))
+    }
 
-      await this.softDeleteInTx(tx, tenantId, userId, before)
+    await plan.run(this.db)
 
-      if (sibling !== undefined) {
-        await this.softDeleteInTx(tx, tenantId, userId, sibling)
-      }
-
-      return this.findByIdInTx(tx, tenantId, id)
-    })
+    return this.findById(tenantId, id)
   }
 
   /**
    * Writes both sides of a transfer — an Expense on the source and an
-   * Income on the destination — in one database transaction, so the money
-   * never vanishes between two rows. Both rows carry the same
-   * `transferGroupId`, the link every later write keeps the pair by. Both
-   * accounts are locked in the global order first, so a transfer A→B racing
-   * one B→A never deadlocks.
+   * Income on the destination — in one batch, so the money never vanishes
+   * between two rows. Both rows carry the same `transferGroupId`, the link
+   * every later write keeps the pair by.
    *
-   * A payment's bill is locked `FOR SHARE` after the accounts, in the
-   * ledger's order, so a cycle resync cannot retire it mid-write. Answers
-   * `undefined` when that bill is gone or belongs to another card.
+   * A payment's bill is read before the batch, and its `closedAt` stamp
+   * rides the same batch, so a cycle resync cannot retire it mid-write
+   * without failing the whole transfer. Answers `undefined` when that bill
+   * is gone or belongs to another card.
    */
   async insertTransfer(
     tenantId: number,
     userId: number,
     write: TransferWrite
   ): Promise<[TransactionRow, TransactionRow] | undefined> {
-    return this.inLedgerTx(async (tx) => {
-      const transferGroupId = randomUUID()
+    const transferGroupId = randomUUID()
 
-      await lockAccounts(tx, tenantId, [write.fromAccountId, write.toAccountId])
+    let closedStamp: LedgerStatement | null = null
+    if (write.paymentStatementId !== null) {
+      const target = await this.statements.findForMove(
+        this.db,
+        tenantId,
+        write.paymentStatementId
+      )
 
-      if (write.paymentStatementId !== null) {
-        const target = await this.statements.findForMoveInTx(
-          tx,
-          tenantId,
-          write.paymentStatementId
-        )
-
-        if (target?.statement.accountId !== write.toAccountId) {
-          return undefined
-        }
+      if (target === undefined || target.statement.accountId !== write.toAccountId) {
+        return undefined
       }
 
-      const from = await this.insertInTx(tx, tenantId, userId, {
-        name: 'TRANSFER_OUT',
-        note: write.note,
-        invoice: 'TRANSFER',
-        amount: write.amount,
-        transactionDt: write.transactionDt,
-        linkedAccountId: write.fromAccountId,
-        categoryId: write.categoryId,
-        receiverId: null,
-        recurringId: null,
-        type: 'Expense',
-        reviewStatus: 'Verify',
-        statusNote: null,
-        transferGroupId,
-        // A transfer is nobody's expense — except a settle-up, which the
-        // debtor pays and the creditor receives in full.
-        paidByUserId: write.settlement?.fromUserId ?? null,
-        isSettlement: write.settlement !== undefined,
-        ...(write.settlement === undefined
-          ? {}
-          : {
-              splits: [
-                { userId: write.settlement.toUserId, share: write.amount },
-              ],
-            }),
-      })
+      closedStamp = target.closedStamp
+    }
 
-      const to = await this.insertInTx(tx, tenantId, userId, {
-        name: 'TRANSFER_IN',
-        note: write.note,
-        invoice: 'TRANSFER',
-        amount: write.amount,
-        transactionDt: write.transactionDt,
-        linkedAccountId: write.toAccountId,
-        categoryId: write.categoryId,
-        receiverId: null,
-        recurringId: null,
-        type: 'Income',
-        reviewStatus: 'Verify',
-        statusNote: null,
-        transferGroupId,
-        paidByUserId: null,
-        isSettlement: write.settlement !== undefined,
-        splits: [],
-        ...(write.paymentStatementId === null
-          ? {}
-          : { paymentStatementId: write.paymentStatementId }),
-      })
+    const plan = new LedgerBatchPlan()
 
-      return [from, to] as [TransactionRow, TransactionRow]
+    plan.addNullable(closedStamp)
+
+    const from = await this.planInsertGroup(this.db, tenantId, userId, {
+      name: 'TRANSFER_OUT',
+      note: write.note,
+      invoice: 'TRANSFER',
+      amount: write.amount,
+      transactionDt: write.transactionDt,
+      linkedAccountId: write.fromAccountId,
+      categoryId: write.categoryId,
+      receiverId: null,
+      recurringId: null,
+      type: 'Expense',
+      reviewStatus: 'Verify',
+      statusNote: null,
+      transferGroupId,
+      // A transfer is nobody's expense — except a settle-up, which the
+      // debtor pays and the creditor receives in full.
+      paidByUserId: write.settlement?.fromUserId ?? null,
+      isSettlement: write.settlement !== undefined,
+      ...(write.settlement === undefined
+        ? {}
+        : {
+            splits: [
+              { userId: write.settlement.toUserId, share: write.amount },
+            ],
+          }),
     })
+    const to = await this.planInsertGroup(this.db, tenantId, userId, {
+      name: 'TRANSFER_IN',
+      note: write.note,
+      invoice: 'TRANSFER',
+      amount: write.amount,
+      transactionDt: write.transactionDt,
+      linkedAccountId: write.toAccountId,
+      categoryId: write.categoryId,
+      receiverId: null,
+      recurringId: null,
+      type: 'Income',
+      reviewStatus: 'Verify',
+      statusNote: null,
+      transferGroupId,
+      paidByUserId: null,
+      isSettlement: write.settlement !== undefined,
+      splits: [],
+      ...(write.paymentStatementId === null
+        ? {}
+        : { paymentStatementId: write.paymentStatementId }),
+    })
+
+    plan.append(from.plan)
+    plan.append(to.plan)
+
+    await plan.run(this.db)
+
+    const inserted = await this.findByTransferGroup(
+      tenantId,
+      transferGroupId
+    )
+
+    // Both sides were just written; the read cannot come back short.
+    return inserted as [TransactionRow, TransactionRow]
   }
 
   /** Runs the paged search a `FetchArgs` describes, over the tenant's rows. */
@@ -644,7 +722,11 @@ export class TransactionRepository {
     const [rows, [counted]] = await Promise.all([
       this.db
         .with(running)
-        .select(this.joinedColumns(sql<string>`${running.runningBalance}`))
+        .select(
+          this.joinedColumns(
+            this.balances.formatRunningBalance(col(running.cents))
+          )
+        )
         .from(transactions)
         .innerJoin(running, eq(running.id, transactions.id))
         .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
@@ -708,9 +790,15 @@ export class TransactionRepository {
     const rows = await this.db
       .select({
         currency: accounts.currency,
-        incomes: sql<string>`coalesce(sum(case when ${transactions.type} = 'Income' then ${transactions.amount} else 0 end), 0)`,
-        expenses: sql<string>`coalesce(sum(case when ${transactions.type} = 'Expense' then ${transactions.amount} else 0 end), 0)`,
-        creditExpenses: sql<string>`coalesce(sum(case when ${transactions.type} = 'Expense' and ${accounts.type} = 'Credit Card' then ${transactions.amount} else 0 end), 0)`,
+        incomes: centsToDecimalSql(
+          sql`coalesce(sum(case when ${transactions.type} = 'Income' then ${transactions.amount} else 0 end), 0)`
+        ),
+        expenses: centsToDecimalSql(
+          sql`coalesce(sum(case when ${transactions.type} = 'Expense' then ${transactions.amount} else 0 end), 0)`
+        ),
+        creditExpenses: centsToDecimalSql(
+          sql`coalesce(sum(case when ${transactions.type} = 'Expense' and ${accounts.type} = 'Credit Card' then ${transactions.amount} else 0 end), 0)`
+        ),
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
@@ -760,7 +848,7 @@ export class TransactionRepository {
             ? sql<null>`null`
             : sql<string | null>`coalesce(${colorColumn}, null)`,
         currency: accounts.currency,
-        total: sql<string>`coalesce(sum(${transactions.amount}), 0)`,
+        total: centsToDecimalSql(sql`coalesce(sum(${transactions.amount}), 0)`),
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
@@ -834,7 +922,7 @@ export class TransactionRepository {
       .select({
         categoryId: transactions.categoryId,
         currency: accounts.currency,
-        total: sql<string>`coalesce(sum(${transactions.amount}), 0)`,
+        total: centsToDecimalSql(sql`coalesce(sum(${transactions.amount}), 0)`),
         count: count(),
       })
       .from(transactions)
@@ -919,121 +1007,103 @@ export class TransactionRepository {
   }
 
   /**
-   * The one insert path every write shares: read the account `FOR UPDATE`,
-   * apply the delta, insert the row with the resulting balance stamped, and
-   * record the CREATE history — all inside the caller's transaction. A row
-   * created Canceled applies nothing and stamps the balance as it found it.
-   * An installment lands on its offset bill, pinned.
+   * The plan of one row's soft delete: the guarded revert of its applied
+   * delta, the row marked DELETED under its optimistic guard, and the
+   * gated history entry. Multi-row writers (the installment groups, the
+   * import undo) append one group per row into one batch.
    */
-  async insertInTx(
-    tx: DbOrTx,
+  planSoftDeleteGroup(
+    db: DbOrTx,
     tenantId: number,
-    userId: number | null,
-    write: TransactionWrite
-  ): Promise<TransactionRow>
-  /**
-   * The same write without the joined re-read of the stored row, for a
-   * caller that inserts thousands of rows and does not answer them (the
-   * statement import): the re-read is the most expensive query of the path.
-   */
-  async insertInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    userId: number | null,
-    write: TransactionWrite,
-    options: { readBack: false }
-  ): Promise<undefined>
-  async insertInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    userId: number | null,
-    write: TransactionWrite,
-    options: { readBack: boolean } = { readBack: true }
-  ): Promise<TransactionRow | undefined> {
-    const { installment, splits, ...columns } = write
-    const newBalance = await applyTransactionDelta(
-      tx,
-      tenantId,
-      write.linkedAccountId,
-      appliedDeltaFor(write)
-    )
+    userId: number,
+    before: Transaction
+  ): LedgerBatchPlan {
+    const plan = new LedgerBatchPlan()
+    const revert = negateMoney(appliedDeltaFor(before))
 
-    // A card row lands on its bill in the same transaction, after the
-    // account is locked — so recurring rules and transfers get bills too.
-    const placement = await this.statements.placeInTx(
-      tx,
+    if (!isZeroMoney(revert)) {
+      plan.guarded(
+        balanceDeltaStatement(db, tenantId, before.linkedAccountId, revert),
+        1,
+        'the account the row reverts from (exists and is ACTIVE)'
+      )
+    }
+
+    const audited = auditedUpdateStatements(db, {
       tenantId,
+      id: before.id,
       userId,
-      {
-        linkedAccountId: write.linkedAccountId,
-        transactionDt: write.transactionDt,
-        type: write.type,
-        isTransferLeg: write.transferGroupId !== undefined,
-      },
-      installment === undefined
-        ? 0
-        : (installment.billOffset ?? installment.number - 1)
-    )
-
-    const [row] = await tx
-      .insert(transactions)
-      .values({
-        tenantId,
-        createdBy: userId,
+      before,
+      set: {
+        status: 'DELETED',
         updateBy: userId,
-        ...columns,
-        // Whoever enters an expense paid it, unless the write names the
-        // payer (or states that nobody did).
-        paidByUserId:
-          write.paidByUserId === undefined ? userId : write.paidByUserId,
-        balanceOnDt: newBalance,
-        statementId: placement.statementId,
-        ...(installment === undefined
-          ? {}
-          : {
-              installmentGroupId: installment.groupId,
-              installmentNumber: installment.number,
-              installmentCount: installment.count,
-              statementPinned: placement.statementId !== null,
-            }),
-      })
-      .returning()
+        updateDt: stampFor(before),
+      },
+      action: 'DELETE',
+    })
 
-    await this.recordHistory(tx, tenantId, row.id, userId, 'CREATE', null, row)
-
-    const shares = await this.sharesForInsert(tx, tenantId, row, splits)
-
-    if (shares.length > 0) {
-      await this.replaceSplitsInTx(tx, tenantId, userId, row.id, shares)
-    }
-
-    if (!options.readBack) {
-      return undefined
-    }
-
-    return withWarning(
-      (await this.findByIdInTx(tx, tenantId, row.id)) as TransactionRow,
-      placement
+    plan.guarded(
+      audited.update,
+      1,
+      'the row being deleted (optimistic concurrency)'
     )
+    plan.add(audited.history)
+
+    return plan
   }
 
-  /** Records one append-only history row with the full snapshots. */
-  async recordHistory(
-    tx: DbOrTx,
+  /**
+   * Replaces a transaction's shares: the ACTIVE ones are marked DELETED —
+   * split rows are never removed — and the new ones inserted, as the
+   * statements of one plan. The caller validated the shares.
+   */
+  planReplaceSplits(
+    db: DbOrTx,
+    tenantId: number,
+    userId: number | null,
+    transactionId: number,
+    shares: readonly SplitShare[]
+  ): LedgerBatchPlan {
+    const plan = new LedgerBatchPlan()
+
+    plan.add(
+      db
+        .update(transactionSplits)
+        .set({ status: 'DELETED', updateBy: userId, updateDt: new Date() })
+        .where(
+          and(
+            eq(transactionSplits.tenantId, tenantId),
+            eq(transactionSplits.transactionId, transactionId),
+            eq(transactionSplits.status, 'ACTIVE')
+          )
+        )
+    )
+
+    if (shares.length > 0) {
+      plan.append(this.planSplitsInsert(db, tenantId, userId, shares, transactionId))
+    }
+
+    return plan
+  }
+
+  /** Records one append-only history row with the full snapshots — the
+   * plain form, for a write whose before and after are both known. */
+  recordHistory(
+    db: DbOrTx,
     tenantId: number,
     transactionId: number,
     userId: number | null,
     action: 'CREATE' | 'UPDATE' | 'DELETE',
     before: Transaction | null,
     after: Transaction | null
-  ): Promise<void> {
-    await tx.insert(transactionHistory).values({
+  ): LedgerStatement {
+    return historyStatement(db, {
       tenantId,
       transactionId,
+      userId,
       action,
       before,
       after,
-      createdBy: userId,
     })
   }
 
@@ -1072,52 +1142,13 @@ export class TransactionRepository {
     return this.withSplits(db, tenantId, rows)
   }
 
-  /**
-   * Replaces a transaction's shares: the ACTIVE ones are marked DELETED —
-   * split rows are never removed — and the new ones inserted. The caller
-   * holds the transaction's locks and validated the shares.
-   */
-  async replaceSplitsInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    userId: number | null,
-    transactionId: number,
-    shares: readonly SplitShare[]
-  ): Promise<void> {
-    await tx
-      .update(transactionSplits)
-      .set({ status: 'DELETED', updateBy: userId, updateDt: new Date() })
-      .where(
-        and(
-          eq(transactionSplits.tenantId, tenantId),
-          eq(transactionSplits.transactionId, transactionId),
-          eq(transactionSplits.status, 'ACTIVE')
-        )
-      )
-
-    if (shares.length === 0) {
-      return
-    }
-
-    await tx.insert(transactionSplits).values(
-      shares.map((entry) => ({
-        tenantId,
-        transactionId,
-        userId: entry.userId,
-        share: entry.share,
-        createdBy: userId,
-        updateBy: userId,
-      }))
-    )
-  }
-
   /** The ACTIVE shares of one transaction, in member order. */
   async sharesOfInTx(
-    tx: DbOrTx,
+    db: DbOrTx,
     tenantId: number,
     transactionId: number
   ): Promise<SplitShare[]> {
-    const rows = await tx
+    const rows = await db
       .select({ userId: transactionSplits.userId, share: transactionSplits.share })
       .from(transactionSplits)
       .where(
@@ -1140,26 +1171,29 @@ export class TransactionRepository {
    * rewrites what the household already agreed to.
    */
   private async sharesForInsert(
-    tx: DbOrTx,
+    db: DbOrTx,
     tenantId: number,
-    row: Transaction,
-    splits: SplitShare[] | undefined
+    write: TransactionWrite,
+    userId: number | null
   ): Promise<SplitShare[]> {
-    if (splits !== undefined) {
-      return splits
+    if (write.splits !== undefined) {
+      return write.splits
     }
 
+    const paidByUserId =
+      write.paidByUserId === undefined ? userId : write.paidByUserId
+
     if (
-      row.type !== 'Expense' ||
-      row.paidByUserId === null ||
-      row.transferGroupId !== null ||
-      row.isAdjustment ||
-      row.isSettlement
+      write.type !== 'Expense' ||
+      paidByUserId === null ||
+      write.transferGroupId !== undefined ||
+      write.isAdjustment === true ||
+      write.isSettlement === true
     ) {
       return []
     }
 
-    const [settings] = await tx
+    const [settings] = await db
       .select({ unsplitMode: tenantSettings.unsplitMode })
       .from(tenantSettings)
       .where(eq(tenantSettings.tenantId, tenantId))
@@ -1168,26 +1202,308 @@ export class TransactionRepository {
       return []
     }
 
-    const [account] = await tx
+    const [account] = await db
       .select({ ownership: accounts.ownership })
       .from(accounts)
-      .where(eq(accounts.id, row.linkedAccountId))
+      .where(eq(accounts.id, write.linkedAccountId))
 
     if (account?.ownership === 'shared') {
       return []
     }
 
-    const members = await tx
+    const members = await db
       .select({ id: users.id })
       .from(users)
       .where(and(eq(users.tenantId, tenantId), eq(users.isActive, true)))
       .orderBy(asc(users.id))
 
     return householdShares(
-      row.amount,
+      write.amount,
       members.map((member) => member.id),
-      row.paidByUserId
+      paidByUserId
     )
+  }
+
+  /** The split-insert statements of one transaction — its id resolved by
+   * the newest-row subselect when the caller has not read it back yet. */
+  private planSplitsInsert(
+    db: DbOrTx,
+    tenantId: number,
+    userId: number | null,
+    shares: readonly SplitShare[],
+    knownTransactionId?: number
+  ): LedgerBatchPlan {
+    const plan = new LedgerBatchPlan()
+    const transactionId =
+      knownTransactionId ??
+      sql`(select max(${transactions.id}) from ${transactions} where ${transactions.tenantId} = ${tenantId})`
+
+    plan.add(
+      db.insert(transactionSplits).values(
+        shares.map((entry) => ({
+          tenantId,
+          transactionId,
+          userId: entry.userId,
+          share: entry.share,
+          createdBy: userId,
+          updateBy: userId,
+        }))
+      )
+    )
+
+    return plan
+  }
+
+  /** The guarded revert of a row's applied delta — skipped when the row
+   * applied none (a Canceled row), which is what makes un-cancelling and
+   * cancelling symmetric. */
+  private appendDeltaRevert(
+    plan: LedgerBatchPlan,
+    db: DbOrTx,
+    tenantId: number,
+    before: Transaction
+  ): void {
+    const revert = negateMoney(appliedDeltaFor(before))
+
+    if (!isZeroMoney(revert)) {
+      plan.guarded(
+        balanceDeltaStatement(db, tenantId, before.linkedAccountId, revert),
+        1,
+        'the account the row reverts from (exists and is ACTIVE)'
+      )
+    }
+  }
+
+  /** The guarded application of a write's delta — skipped when the write
+   * applies none (saving `Canceled`). */
+  private appendDeltaApply(
+    plan: LedgerBatchPlan,
+    db: DbOrTx,
+    tenantId: number,
+    accountId: number,
+    delta: string
+  ): void {
+    if (!isZeroMoney(delta)) {
+      plan.guarded(
+        balanceDeltaStatement(db, tenantId, accountId, delta),
+        1,
+        'the account the row applies to (exists and is ACTIVE)'
+      )
+    }
+  }
+
+  /** One row's audited update: the optimistic write and its gated history
+   * entry, with the row count the plan checks. */
+  private planRowUpdate(
+    db: DbOrTx,
+    tenantId: number,
+    userId: number,
+    before: Transaction,
+    set: Record<string, unknown>
+  ): LedgerBatchPlan {
+    const plan = new LedgerBatchPlan()
+    const stamp = stampFor(before)
+    const audited = auditedUpdateStatements(db, {
+      tenantId,
+      id: before.id,
+      userId,
+      before,
+      set: { ...set, updateBy: userId, updateDt: stamp },
+      action: 'UPDATE',
+    })
+
+    plan.guarded(audited.update, 1, 'the transaction row (optimistic concurrency)')
+    plan.add(audited.history)
+
+    return plan
+  }
+
+  /**
+   * The other side of a transfer, kept in step with an update of one side:
+   * the fields the pair shares — amount, day, category, note, review
+   * status — are mirrored, each side's own account and direction kept. The
+   * mirrored amounts keep the books balanced: the money moved by the pair
+   * stays the same both sides, and a Canceled pair moves none on either.
+   */
+  private async planSiblingUpdate(
+    db: DbOrTx,
+    tenantId: number,
+    userId: number,
+    sibling: Transaction,
+    write: TransactionWrite
+  ): Promise<LedgerBatchPlan> {
+    const plan = new LedgerBatchPlan()
+
+    // The sibling's account never changes: revert and apply collapse into
+    // one guarded shift.
+    const shift = addMoney(
+      appliedDeltaFor({
+        type: sibling.type,
+        amount: write.amount,
+        reviewStatus: write.reviewStatus,
+      }),
+      negateMoney(appliedDeltaFor(sibling))
+    )
+
+    if (!isZeroMoney(shift)) {
+      plan.guarded(
+        balanceDeltaStatement(db, tenantId, sibling.linkedAccountId, shift),
+        1,
+        'the transfer sibling’s account (exists and is ACTIVE)'
+      )
+    }
+
+    // The mirrored day may move a card side to another bill.
+    const placement = await this.statements.planReplacement(
+      db,
+      tenantId,
+      userId,
+      assignedOf(sibling),
+      {
+        linkedAccountId: sibling.linkedAccountId,
+        transactionDt: write.transactionDt,
+        type: sibling.type,
+        isTransferLeg: true,
+      }
+    )
+
+    plan.append(placement.batch)
+    plan.append(
+      this.planRowUpdate(db, tenantId, userId, sibling, {
+        amount: write.amount,
+        transactionDt: write.transactionDt,
+        categoryId: write.categoryId,
+        note: write.note,
+        reviewStatus: write.reviewStatus,
+        statusNote: write.statusNote,
+        balanceOnDt: balanceSubselect(sibling.linkedAccountId),
+        statementId: placement.statementId,
+        statementPinned: placement.statementPinned,
+      })
+    )
+
+    return plan
+  }
+
+  /** One row's review-status flip: the delta the new status applies minus
+   * the one the old did — nonzero only into or out of Canceled — guarded
+   * on the account, and the row written under its optimistic guard. */
+  private appendStatusFlip(
+    plan: LedgerBatchPlan,
+    db: DbOrTx,
+    tenantId: number,
+    userId: number,
+    before: Transaction,
+    reviewStatus: TransactionStatus
+  ): void {
+    const shift = addMoney(
+      appliedDeltaFor({ ...before, reviewStatus }),
+      negateMoney(appliedDeltaFor(before))
+    )
+
+    if (!isZeroMoney(shift)) {
+      plan.guarded(
+        balanceDeltaStatement(db, tenantId, before.linkedAccountId, shift),
+        1,
+        'the account the status flip moves (exists and is ACTIVE)'
+      )
+    }
+
+    plan.append(
+      this.planRowUpdate(db, tenantId, userId, before, { reviewStatus })
+    )
+  }
+
+  /** The columns every read answers: the row, the joined display fields,
+   * the chronological running balance, and the reconciliation lock. */
+  private joinedColumns(runningBalance: SQL<string>) {
+    return {
+      ...getTableColumns(transactions),
+      accountName: sql<string>`coalesce(${accounts.name}, '')`,
+      categoryName: sql<string>`coalesce(${categories.name}, '')`,
+      categoryColor: sql<string>`coalesce(${categories.color}, '')`,
+      receiverName: receivers.name,
+      paidByName: payers.name,
+      currency: accounts.currency,
+      statementDueDate: creditCardStatements.dueDate,
+      paymentStatementDueDate: paymentStatements.dueDate,
+      runningBalance,
+      locked: sql<boolean>`coalesce(${transactions.transactionDt} <= ${accounts.reconciledThrough}, false)`.mapWith(
+        Boolean
+      ),
+    }
+  }
+
+  /** The joined select the by-id reads share. The running balance is the
+   * correlated single-row form; a page of rows joins the window instead
+   * (`search`). */
+  private selectJoined(db: DbOrTx) {
+    return db
+      .select(
+        this.joinedColumns(this.balances.runningBalanceOfRowSql())
+      )
+      .from(transactions)
+      .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .leftJoin(receivers, eq(transactions.receiverId, receivers.id))
+      .leftJoin(payers, eq(transactions.paidByUserId, payers.id))
+      .leftJoin(
+        creditCardStatements,
+        eq(transactions.statementId, creditCardStatements.id)
+      )
+      .leftJoin(
+        paymentStatements,
+        eq(transactions.paymentStatementId, paymentStatements.id)
+      )
+  }
+
+  /** Reads the ACTIVE other side of a transfer by the group id the pair
+   * shares — nothing for a plain transaction or a side already deleted. */
+  private async findActiveSibling(
+    db: DbOrTx,
+    tenantId: number,
+    row: Transaction
+  ): Promise<Transaction | undefined> {
+    if (row.transferGroupId === null) {
+      return undefined
+    }
+
+    const [sibling] = await db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.transferGroupId, row.transferGroupId),
+          ne(transactions.id, row.id),
+          eq(transactions.status, 'ACTIVE')
+        )
+      )
+
+    return sibling
+  }
+
+  /** The rows of one transfer, by the group id the pair shares — what a
+   * transfer write answers. */
+  private async findByTransferGroup(
+    tenantId: number,
+    transferGroupId: string
+  ): Promise<TransactionRow[] | undefined> {
+    const rows = await this.selectJoined(this.db)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.transferGroupId, transferGroupId),
+          eq(transactions.status, 'ACTIVE')
+        )
+      )
+      .orderBy(asc(transactions.id))
+
+    if (rows.length !== 2) {
+      return undefined
+    }
+
+    return this.withSplits(this.db, tenantId, rows)
   }
 
   /** Attaches each row's ACTIVE shares, names joined. */
@@ -1230,304 +1546,6 @@ export class TransactionRepository {
     }
 
     return rows.map((row) => ({ ...row, splits: byTransaction.get(row.id) ?? [] }))
-  }
-
-  /** The columns every read answers: the row, the joined display fields,
-   * the chronological running balance, and the reconciliation lock. */
-  private joinedColumns(runningBalance: SQL<string>) {
-    return {
-      ...getTableColumns(transactions),
-      accountName: sql<string>`coalesce(${accounts.name}, '')`,
-      categoryName: sql<string>`coalesce(${categories.name}, '')`,
-      categoryColor: sql<string>`coalesce(${categories.color}, '')`,
-      receiverName: receivers.name,
-      paidByName: payers.name,
-      currency: accounts.currency,
-      statementDueDate: creditCardStatements.dueDate,
-      paymentStatementDueDate: paymentStatements.dueDate,
-      runningBalance,
-      locked: sql<boolean>`coalesce(${transactions.transactionDt} <= ${accounts.reconciledThrough}, false)`,
-    }
-  }
-
-  /** The joined select the by-id reads share. The running balance is the
-   * correlated single-row form; a page of rows joins the window instead
-   * (`search`). */
-  private selectJoined(db: DbOrTx) {
-    return db
-      .select(this.joinedColumns(this.balances.runningBalanceOfRowSql()))
-      .from(transactions)
-      .innerJoin(accounts, eq(transactions.linkedAccountId, accounts.id))
-      .innerJoin(categories, eq(transactions.categoryId, categories.id))
-      .leftJoin(receivers, eq(transactions.receiverId, receivers.id))
-      .leftJoin(payers, eq(transactions.paidByUserId, payers.id))
-      .leftJoin(
-        creditCardStatements,
-        eq(transactions.statementId, creditCardStatements.id)
-      )
-      .leftJoin(
-        paymentStatements,
-        eq(transactions.paymentStatementId, paymentStatements.id)
-      )
-  }
-
-  /**
-   * Reads one row of the tenant locked `FOR UPDATE`, so two writes to the
-   * same row serialize instead of both reading the same lifecycle status.
-   * A transfer side locks its other side with it, both in id order: two
-   * writes starting from opposite sides of one pair would otherwise each
-   * hold one row while waiting for the other. The group id is read first
-   * without a lock — it never changes once written.
-   */
-  private async lockInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    id: number
-  ): Promise<Transaction | undefined> {
-    const [target] = await tx
-      .select({ transferGroupId: transactions.transferGroupId })
-      .from(transactions)
-      .where(and(eq(transactions.tenantId, tenantId), eq(transactions.id, id)))
-
-    if (target === undefined) {
-      return undefined
-    }
-
-    const rows = await tx
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.tenantId, tenantId),
-          target.transferGroupId === null
-            ? eq(transactions.id, id)
-            : eq(transactions.transferGroupId, target.transferGroupId)
-        )
-      )
-      .orderBy(asc(transactions.id))
-      .for('update')
-
-    return rows.find((row) => row.id === id)
-  }
-
-  /** Reads the ACTIVE other side of a transfer by the group id the pair
-   * shares — nothing for a plain transaction or a side already deleted. */
-  private async findActiveSiblingInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    row: Transaction
-  ): Promise<Transaction | undefined> {
-    if (row.transferGroupId === null) {
-      return undefined
-    }
-
-    const [sibling] = await tx
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.tenantId, tenantId),
-          eq(transactions.transferGroupId, row.transferGroupId),
-          ne(transactions.id, row.id),
-          eq(transactions.status, 'ACTIVE')
-        )
-      )
-
-    return sibling
-  }
-
-  /**
-   * Runs one ledger write in a database transaction of its own, retried
-   * when Postgres aborts it for a deadlock or a serialization failure. The
-   * ordered locks make those rare; the retry is the safety net.
-   */
-  inLedgerTx<T>(run: (tx: DbOrTx) => Promise<T>): Promise<T> {
-    return retryOnLockConflict(() => this.db.transaction(run))
-  }
-
-  /**
-   * Locks accounts `FOR UPDATE` in the ledger's global order, inside the
-   * caller's ledger transaction — for a writer outside this feature (the
-   * statement import) that takes the lock once and then calls `insertInTx`
-   * per row.
-   */
-  async lockAccountsInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    accountIds: readonly number[]
-  ): Promise<void> {
-    await lockAccounts(tx, tenantId, accountIds)
-  }
-
-  /** Writes one row's review status and moves its account by the difference
-   * between the delta the new status applies and the one the old applied —
-   * nonzero only into or out of Canceled. The caller holds the row and
-   * account locks. */
-  private async updateStatusInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    userId: number,
-    before: Transaction,
-    reviewStatus: TransactionStatus
-  ): Promise<void> {
-    const shift = addMoney(
-      appliedDeltaFor({ ...before, reviewStatus }),
-      negateMoney(appliedDeltaFor(before))
-    )
-
-    if (!isZeroMoney(shift)) {
-      await applyTransactionDelta(tx, tenantId, before.linkedAccountId, shift)
-    }
-
-    const [row] = await tx
-      .update(transactions)
-      .set({ reviewStatus, updateBy: userId, updateDt: new Date() })
-      .where(
-        and(
-          eq(transactions.tenantId, tenantId),
-          eq(transactions.id, before.id),
-          eq(transactions.status, 'ACTIVE')
-        )
-      )
-      .returning()
-
-    if (row !== undefined) {
-      await this.recordHistory(
-        tx,
-        tenantId,
-        before.id,
-        userId,
-        'UPDATE',
-        before,
-        row
-      )
-    }
-  }
-
-  /** Reverts one row's applied delta (none for a Canceled row), marks it
-   * DELETED, and records the history — the body every soft delete shares.
-   * The `where` re-checks the lifecycle so a row a concurrent write deleted
-   * is left alone. */
-  async softDeleteInTx(
-    tx: DbOrTx,
-    tenantId: number,
-    userId: number,
-    before: Transaction
-  ): Promise<void> {
-    await applyTransactionDelta(
-      tx,
-      tenantId,
-      before.linkedAccountId,
-      negateMoney(appliedDeltaFor(before))
-    )
-
-    const [row] = await tx
-      .update(transactions)
-      .set({ status: 'DELETED', updateBy: userId, updateDt: new Date() })
-      .where(
-        and(
-          eq(transactions.tenantId, tenantId),
-          eq(transactions.id, before.id),
-          eq(transactions.status, 'ACTIVE')
-        )
-      )
-      .returning()
-
-    if (row !== undefined) {
-      await this.recordHistory(
-        tx,
-        tenantId,
-        before.id,
-        userId,
-        'DELETE',
-        before,
-        null
-      )
-    }
-  }
-
-  /**
-   * Keeps the other side of a transfer in step with an update of one side:
-   * the fields the pair shares — amount, day, category, note, review
-   * status — are mirrored, each side's own account and direction kept. The
-   * mirrored amounts keep the books balanced: the money moved by the pair
-   * stays the same both sides, and a Canceled pair moves none on either.
-   * The caller holds the sibling's row and account locks.
-   */
-  private async updateTransferSibling(
-    tx: DbOrTx,
-    tenantId: number,
-    userId: number,
-    sibling: Transaction,
-    write: TransactionWrite
-  ): Promise<void> {
-    await applyTransactionDelta(
-      tx,
-      tenantId,
-      sibling.linkedAccountId,
-      negateMoney(appliedDeltaFor(sibling))
-    )
-
-    const newBalance = await applyTransactionDelta(
-      tx,
-      tenantId,
-      sibling.linkedAccountId,
-      appliedDeltaFor({
-        type: sibling.type,
-        amount: write.amount,
-        reviewStatus: write.reviewStatus,
-      })
-    )
-
-    // The mirrored day may move a card side to another bill.
-    const placement = await this.statements.replaceInTx(
-      tx,
-      tenantId,
-      userId,
-      assignedOf(sibling),
-      {
-        linkedAccountId: sibling.linkedAccountId,
-        transactionDt: write.transactionDt,
-        type: sibling.type,
-        isTransferLeg: true,
-      }
-    )
-
-    const [row] = await tx
-      .update(transactions)
-      .set({
-        amount: write.amount,
-        transactionDt: write.transactionDt,
-        categoryId: write.categoryId,
-        note: write.note,
-        reviewStatus: write.reviewStatus,
-        statusNote: write.statusNote,
-        balanceOnDt: newBalance,
-        statementId: placement.statementId,
-        statementPinned: placement.statementPinned,
-        updateBy: userId,
-        updateDt: new Date(),
-      })
-      .where(
-        and(
-          eq(transactions.tenantId, tenantId),
-          eq(transactions.id, sibling.id),
-          eq(transactions.status, 'ACTIVE')
-        )
-      )
-      .returning()
-
-    if (row !== undefined) {
-      await this.recordHistory(
-        tx,
-        tenantId,
-        sibling.id,
-        userId,
-        'UPDATE',
-        sibling,
-        row
-      )
-    }
   }
 
   /** Translates the wire filter into SQL, always inside the tenant. */
@@ -1585,14 +1603,10 @@ export class TransactionRepository {
   }
 }
 
-/** Answers whether a database error is the unique-index violation — the
- * signature two materializing replicas race over. */
-function isUniqueViolation(error: unknown): boolean {
-  const codes = [error, (error as { cause?: unknown } | null)?.cause]
-
-  return codes.some(
-    (candidate) => (candidate as { code?: string } | null)?.code === '23505'
-  )
+/** A CTE column as a plain expression — the alias is the column's name in
+ * the CTE's output, and formatting reads the value through it. */
+function col(value: SQL | SQL.Aliased): SQL {
+  return sql`${value}`
 }
 
 /** Whether a row is the card side of a payment — an Income transfer leg
@@ -1619,8 +1633,12 @@ function assignedOf(row: Transaction) {
 
 /** Flags a write's answer when the row landed on a closed bill. */
 function withWarning(
-  row: TransactionRow,
-  placement: StatementPlacement
-): TransactionRow {
+  row: TransactionRow | undefined,
+  placement: { closed: boolean }
+): TransactionRow | undefined {
+  if (row === undefined) {
+    return undefined
+  }
+
   return placement.closed ? { ...row, warning: STATEMENT_CLOSED } : row
 }

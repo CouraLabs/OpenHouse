@@ -29,7 +29,7 @@ const category = (overrides: Partial<Category> = {}): Category => ({
   id: 3,
   tenantId: 1,
   name: 'Office',
-  color: '#1D4ED8',
+  searchName: '',  color: '#1D4ED8',
   defaultSplit: null,
   status: 'ACTIVE',
   createdBy: null,

@@ -19,7 +19,7 @@
  */
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, renameSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync, renameSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -84,6 +84,13 @@ function runGenerate(args) {
 /**
  * Renames the folder `drizzle-kit` just wrote to `<utc timestamp>_<hash>` and
  * returns the path of the migration inside it.
+ *
+ * Wrangler's migrator (`wrangler d1 migrations apply`) cannot read the
+ * folder-per-migration layout drizzle-kit writes: it lists flat `NNNN_*.sql`
+ * files in the folder `wrangler.jsonc`'s `migrations_dir` names. The rename
+ * therefore also copies the migration to `<timestamp>_<hash>.sql` beside the
+ * folder — the folder stays for drizzle-kit's journal, the flat file is what
+ * Wrangler applies and tracks in its own `d1_migrations` table.
  */
 function renameToContentHash(generatedPath) {
   const sqlPath = resolve(packageRoot, generatedPath)
@@ -101,6 +108,7 @@ function renameToContentHash(generatedPath) {
   }
 
   renameSync(folder, target)
+  copyFileSync(join(target, basename(sqlPath)), join(dirname(folder), `${timestamp}_${hash}.sql`))
 
   return relative(packageRoot, join(target, basename(sqlPath)))
 }

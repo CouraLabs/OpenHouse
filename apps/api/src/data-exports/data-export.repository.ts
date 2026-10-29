@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, asc, eq } from 'drizzle-orm'
-import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core'
+import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { Database } from '@workspace/db'
 import {
   accounts,
@@ -23,10 +23,10 @@ import {
 } from '@workspace/db'
 
 /** A table every tenant owns rows of, authored by a user. */
-type TenantTable = PgTable & {
-  id: AnyPgColumn
-  tenantId: AnyPgColumn
-  createdBy: AnyPgColumn
+type TenantTable = SQLiteTable & {
+  id: AnySQLiteColumn
+  tenantId: AnySQLiteColumn
+  createdBy: AnySQLiteColumn
 }
 
 /**
@@ -143,7 +143,7 @@ export class DataExportRepository {
   ): Promise<Row[]> {
     const rows = await this.db
       .select()
-      .from(table as PgTable)
+      .from(table as SQLiteTable)
       .where(
         and(
           eq(table.tenantId, tenantId),
