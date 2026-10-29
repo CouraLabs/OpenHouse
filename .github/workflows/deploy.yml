@@ -1,0 +1,44 @@
+# Deploys the Worker: applies the D1 migrations to the remote database
+# FIRST, then ships the new bundle — the expand/contract order the contract
+# requires (the running Worker must work with the new schema for the
+# seconds before the new bundle takes over). Runs on pushes to main and on
+# demand; the first deploy of an account needs `wrangler d1 create` +
+# `wrangler queues create` done by hand (see the README), and the
+# repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID set.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck && npm run lint && npm run test
+
+      - name: Apply pending migrations (before the deploy)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/api
+          command: d1 migrations apply DB --remote
+
+      - name: Deploy the Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/api
+          command: deploy

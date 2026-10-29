@@ -47,7 +47,7 @@ export const ptBR: Content = {
       'Um lugar compartilhado para o que mantém a casa funcionando. O livro-caixa já está no ar — contas, transações, limites, metas — e o resto da vida doméstica vem chegando. Código aberto de ponta a ponta: rode no seu próprio servidor de graça, ou deixe que a gente rode para você.',
     primary: { label: 'Comece grátis', href: SIGN_UP_URL },
     secondary: { label: 'Hospede você mesmo', href: GITHUB_URL },
-    stack: 'Feito com PostgreSQL, NestJS e React',
+    stack: 'Feito com Cloudflare Workers, Hono e React',
     windowTitle: 'openhouse — Transações',
     balance: {
       label: 'Conta corrente · Banco da Praça',
@@ -343,14 +343,14 @@ export const ptBR: Content = {
     priceNote: 'para sempre, código aberto',
     perks: [
       { label: 'Todos os recursos, contas e histórico ilimitados' },
-      { label: 'Seu PostgreSQL, seus dados, seus backups' },
-      { label: 'Stack Docker Compose, pronta em minutos' },
+      { label: 'Seu banco D1, seus dados, seus backups' },
+      { label: 'Um wrangler deploy, pronto em minutos' },
       { label: 'Suporte da comunidade no GitHub' },
     ],
     commands: [
       `git clone ${GITHUB_URL}.git`,
       'cd OpenHouse',
-      'docker compose up --build',
+      'npx wrangler login && npm run deploy',
     ],
     cta: { label: 'Baixe no GitHub', href: GITHUB_URL },
   },
@@ -416,12 +416,12 @@ export const ptBR: Content = {
     {
       question: 'É mesmo grátis hospedar por conta própria?',
       answer:
-        'Sim. O plano auto-hospedado custa R$ 0 para sempre e traz todos os recursos, sem limites. Clone o repositório, rode docker compose up --build e a stack sobe no seu próprio hardware.',
+        'Sim. O plano auto-hospedado custa R$ 0 para sempre e traz todos os recursos, sem limites. Clone o repositório, rode npm run deploy e a stack sobe na sua própria conta Cloudflare — um Worker, um banco D1, seus dados.',
     },
     {
       question: 'Onde ficam os meus dados?',
       answer:
-        'Auto-hospedado, eles ficam no seu próprio PostgreSQL — seus dados, seus backups. Num plano hospedado, o OpenHouse roda o servidor e cuida dos backups e atualizações para você.',
+        'Auto-hospedado, eles ficam no seu próprio banco D1, na sua conta Cloudflare — seus dados, seus backups. Num plano hospedado, o OpenHouse roda o servidor e cuida dos backups e atualizações para você.',
     },
     {
       question: 'O código hospedado é diferente do código aberto?',
@@ -450,8 +450,8 @@ export const ptBR: Content = {
     title: 'Sua casa. Seu servidor. Seu código.',
     body: 'O OpenHouse é construído às claras. Leia cada linha, rode na sua própria máquina e mande um pull request quando a casa precisar de um cômodo novo.',
     points: [
-      { icon: Bank, label: 'Sobre PostgreSQL, schema no repositório' },
-      { icon: House, label: 'Uma única stack Docker Compose' },
+      { icon: Bank, label: 'SQLite no D1, schema no repositório' },
+      { icon: House, label: 'Um Worker, um comando de deploy' },
       { icon: UsersThree, label: 'Casas com vários membros, de fábrica' },
     ],
     cta: { label: 'Dê uma estrela no GitHub', href: GITHUB_URL },

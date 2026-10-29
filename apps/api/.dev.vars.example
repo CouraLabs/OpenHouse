@@ -1,0 +1,18 @@
+# The secrets the Worker reads locally (`wrangler dev`), copied to
+# `.dev.vars` next to this file. In production, set them with
+# `wrangler secret put JWT_SECRET` etc. — never a file.
+
+# The HMAC secret the session JWTs are signed with. Generate one with
+# `openssl rand -base64 48` and keep it stable — changing it signs every
+# user out.
+JWT_SECRET=
+
+# The VAPID key pair web push is signed with. Optional as a PAIR: both set
+# enables push, both absent disables it, one alone is a boot error. The
+# public key is also handed to browsers, which subscribe against it.
+# Generate a pair with:
+#   node -e "const k = await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign']); ..." 
+# (or any standard VAPID generator — 65-byte public / 32-byte private,
+# URL-safe base64).
+PUSH_VAPID_PUBLIC_KEY=
+PUSH_VAPID_PRIVATE_KEY=

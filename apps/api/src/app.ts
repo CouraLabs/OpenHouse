@@ -68,7 +68,25 @@ export function createApp(env: AppEnv['Bindings']): {
 
       await limitRequest(env, 'general', clientAddressOf(context.req.raw))
 
-      return next()
+      const started = Date.now()
+
+      // The handler's response lands on the context once `next` resolves.
+      await next()
+
+      // One line per request, for Workers Logs: who (the session's tenant,
+      // once the auth middleware resolved), what, how long — so a slow
+      // tenant or route is visible before it hurts.
+      const session = context.get('session') as { tenant?: { id: number } } | undefined
+
+      console.log(
+        JSON.stringify({
+          method: context.req.method,
+          route: context.req.path,
+          status: context.res.status,
+          durationMs: Date.now() - started,
+          ...(session?.tenant === undefined ? {} : { tenantId: session.tenant.id }),
+        })
+      )
     })
   )
 

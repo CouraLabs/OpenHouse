@@ -1,59 +1,26 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
-import type { CreateDataExportBody, DataExportJob } from '@workspace/poco'
+import { useMutation } from '@tanstack/react-query'
+import type { CreateDataExportBody } from '@workspace/poco'
 
-import { api, apiFile } from '@/lib/api.js'
+import { apiFile } from '@/lib/api.js'
 import { saveFile } from '@/lib/save-file.js'
 
-/** How often a pending export is asked after, in milliseconds. */
-const POLL_MS = 1000
-
 /**
- * One full-export run: start the job, poll it until it is ready, download
- * it. The file is single-use, so a finished download clears the run. A job
- * that vanished (expired after 24 hours) reads as `expired`.
+ * One full-export run: the request builds the ZIP in memory and answers
+ * the bytes, which are saved as a download. There is no job to poll — the
+ * pending state is the request itself.
  */
 export function useDataExport() {
-  const [jobId, setJobId] = useState<string | null>(null)
-
-  const start = useMutation({
-    mutationFn: (body: CreateDataExportBody) =>
-      api<DataExportJob>('/data-exports', {
+  const run = useMutation({
+    mutationFn: async (body: CreateDataExportBody) => {
+      const file = await apiFile('/data-exports', {
         method: 'POST',
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
-      }),
-    onSuccess: (job) => setJobId(job.id),
-  })
+      }, 'openhouse-export.zip')
 
-  const job = useQuery({
-    queryKey: ['data-export', jobId],
-    enabled: jobId !== null,
-    retry: false,
-    queryFn: ({ signal }) =>
-      api<DataExportJob>(`/data-exports/${jobId}`, { signal }),
-    refetchInterval: (query) =>
-      query.state.data?.status === 'pending' ? POLL_MS : false,
-  })
-
-  const reset = () => {
-    setJobId(null)
-    start.reset()
-  }
-
-  const download = useMutation({
-    mutationFn: () =>
-      apiFile(`/data-exports/${jobId}/download`, undefined, 'export.zip'),
-    onSuccess: (file) => {
       saveFile(file)
-      reset()
     },
   })
 
-  return {
-    start,
-    job: job.data,
-    expired: job.isError,
-    download,
-    reset,
-  }
+  return { start: run, reset: run.reset }
 }

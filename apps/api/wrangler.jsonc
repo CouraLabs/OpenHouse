@@ -56,6 +56,8 @@
     "crons": ["15 * * * *", "30 * * * *", "45 * * * *", "15 3 * * *"]
   },
   "limits": { "cpu_ms": 30000 },
+  // Workers Logs captures the request lines and the jobs' errors.
+  "observability": { "enabled": true },
   "vars": {
     // Non-secret defaults; secrets live in .dev.vars / `wrangler secret put`.
     "JWT_ACCESS_TTL_S": "900",

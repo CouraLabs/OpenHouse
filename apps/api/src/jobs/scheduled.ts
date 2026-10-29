@@ -8,6 +8,7 @@ import {
   listTenantsScheduledForDeletion,
   listTenantsWithActiveRules,
 } from './tenants.js'
+import { logDatabaseSize } from './size-watch.js'
 
 /**
  * The cron trigger handler: given the cron expression that fired, lists the
@@ -54,6 +55,13 @@ export async function handleScheduled(
 ): Promise<void> {
   const db = createDatabase(env.DB as never)
   const { kind, tenants } = await tenantsForCron(db, cron)
+
+  // The daily balances run is also the size watch: once a day, the row
+  // counts go to the logs (the byte ceiling is read with `wrangler d1
+  // info`; see docs/operations.md).
+  if (kind === 'balances') {
+    await logDatabaseSize(db)
+  }
 
   if (tenants.length === 0) {
     return

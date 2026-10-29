@@ -47,7 +47,7 @@ export const enUS: Content = {
       'One shared place for what the house runs on. The ledger is live today — accounts, transactions, limits, goals — and the rest of home life is on the way. Open source end to end: run it on your own server for free, or let us run it for you.',
     primary: { label: 'Start free', href: SIGN_UP_URL },
     secondary: { label: 'Self-host it', href: GITHUB_URL },
-    stack: 'Built on PostgreSQL, NestJS & React',
+    stack: 'Built on Cloudflare Workers, Hono & React',
     windowTitle: 'openhouse — Transactions',
     balance: { label: 'Checking · Main Street Bank', amount: '$8,412.36' },
     limitsTitle: 'Limits · October',
@@ -333,19 +333,19 @@ export const enUS: Content = {
     badge: 'Free · Self-hosted',
     name: 'Host it yourself',
     tagline:
-      'Every feature, no limits, on hardware you own. Clone the repository, start the stack, and the books never leave your house.',
+      'Every feature, no limits, on your own Cloudflare account. Clone the repository, run one deploy command, and the books live where you say.',
     price: '$0',
     priceNote: 'forever, open source',
     perks: [
       { label: 'Every feature, unlimited accounts and history' },
-      { label: 'Your PostgreSQL, your data, your backups' },
-      { label: 'Docker Compose stack, ready in minutes' },
+      { label: 'Your own D1 database, your data, your backups' },
+      { label: 'One wrangler deploy, ready in minutes' },
       { label: 'Community support on GitHub' },
     ],
     commands: [
       `git clone ${GITHUB_URL}.git`,
-      'cd OpenHouse',
-      'docker compose up --build',
+      'cd OpenHouse && npm install',
+      'npx wrangler login && npm run deploy',
     ],
     cta: { label: 'Get it on GitHub', href: GITHUB_URL },
   },
@@ -409,12 +409,12 @@ export const enUS: Content = {
     {
       question: 'Is it really free to self-host?',
       answer:
-        'Yes. The self-hosted plan is $0 forever and carries every feature with no limits. Clone the repository, run docker compose up --build, and the stack starts on your own hardware.',
+        'Yes. The self-hosted plan is $0 forever and carries every feature with no limits. Clone the repository, run npm run deploy, and the stack deploys to your own Cloudflare account — one Worker, one D1 database, your data.',
     },
     {
       question: 'Where does my data live?',
       answer:
-        'Self-hosted, it lives in your own PostgreSQL — your data, your backups. On a hosted plan, OpenHouse runs the server and keeps backups and updates managed for you.',
+        'Self-hosted, it lives in your own D1 database on your own Cloudflare account — your data, your backups. On a hosted plan, OpenHouse runs the server and keeps backups and updates managed for you.',
     },
     {
       question: 'Is the hosted code different from the open-source code?',
@@ -443,8 +443,8 @@ export const enUS: Content = {
     title: 'Your house. Your server. Your code.',
     body: 'OpenHouse is built in the open. Read every line, run it on your own machine, and send a pull request when the house needs a new room.',
     points: [
-      { icon: Bank, label: 'PostgreSQL-backed, schema in the repo' },
-      { icon: House, label: 'One Docker Compose stack' },
+      { icon: Bank, label: 'SQLite-backed D1, schema in the repo' },
+      { icon: House, label: 'One Worker, one deploy command' },
       { icon: UsersThree, label: 'Multi-member households built in' },
     ],
     cta: { label: 'Star on GitHub', href: GITHUB_URL },

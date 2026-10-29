@@ -17,55 +17,21 @@
       "dependsOn": ["^typecheck", "^build"]
     },
     "test": {
-      "dependsOn": ["^build"],
-      "env": [
-        "DATABASE_URL",
-        "DB_POOL_MAX",
-        "DB_CONNECTION_TIMEOUT_MS",
-        "DB_IDLE_TIMEOUT_MS"
-      ]
-    },
-    "test:e2e": {
-      "dependsOn": ["^build"],
-      "env": [
-        "DATABASE_URL",
-        "DB_POOL_MAX",
-        "DB_CONNECTION_TIMEOUT_MS",
-        "DB_IDLE_TIMEOUT_MS"
-      ]
+      "dependsOn": ["^build"]
     },
     "db:generate": {
-      "cache": false,
-      "env": ["DATABASE_URL"]
+      "cache": false
     },
-    "db:migrate": {
-      "cache": false,
-      "env": ["DATABASE_URL"]
+    "db:migrate:local": {
+      "cache": false
+    },
+    "db:migrate:remote": {
+      "cache": false
     },
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,
-      "persistent": true,
-      "env": [
-        "DATABASE_URL",
-        "PORT",
-        "NODE_ENV",
-        "CORS_ORIGINS",
-        "APP_TRUST_PROXY_HOPS",
-        "THROTTLE_TTL_MS",
-        "THROTTLE_LIMIT",
-        "JWT_SECRET",
-        "JWT_ACCESS_TTL_S",
-        "JWT_REFRESH_TTL_S",
-        "JWT_REMEMBER_REFRESH_TTL_S",
-        "DB_POOL_MAX",
-        "DB_CONNECTION_TIMEOUT_MS",
-        "DB_IDLE_TIMEOUT_MS",
-        "EXPORT_DIR",
-        "PUSH_VAPID_PUBLIC_KEY",
-        "PUSH_VAPID_PRIVATE_KEY",
-        "PUSH_VAPID_SUBJECT"
-      ]
+      "persistent": true
     }
   }
 }

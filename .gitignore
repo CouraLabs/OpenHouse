@@ -42,3 +42,7 @@ plans/
 # local agent tooling (skills, harness agents)
 .agents/
 .claude/
+
+# Worker local secrets
+.dev.vars
+apps/api/.local

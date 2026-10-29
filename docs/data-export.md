@@ -1,16 +1,23 @@
 # Data export format
 
 The owner's **Export all data** (Settings -> Data) and **Export data** on a
-member (Settings -> Users) produce a ZIP, written by an in-process job to
-`EXPORT_DIR` and downloaded in the app. It is deleted after the first
-successful download or after 24 hours. Nothing is emailed. The layout below is
-the input contract of a future import from backup.
+member (Settings -> Users) produce a ZIP **in one request**: the Worker reads
+the tenant's tables, builds the CSVs and the ZIP in memory, records the audit
+line, and answers the bytes as a download. Nothing is stored — there is no
+`EXPORT_DIR`, no job to poll, no expiry, and no one-download bookkeeping.
+Nothing is emailed. The layout below is the input contract of a future
+import from backup.
+
+Cost note: the whole ZIP lives in the Worker's memory once (128 MB per
+isolate), which bounds the largest tenant an export can serve; the plan's
+size alert (`docs/operations.md`) watches that ceiling.
 
 ## Layout
 
 One JSON file per entity, each a pretty-printed array of rows, plus
-`manifest.json`. Dates and instants are ISO 8601 strings; `numeric` columns
-are strings (`"12.34"`); keys are the camelCase column names of
+`manifest.json`. Dates and instants are ISO 8601 strings; money columns are
+decimal strings (`"12.34"` — storage holds integer cents and the export
+formats them back); keys are the camelCase column names of
 `packages/db/src/schema.ts`.
 
 | File | Contents |
@@ -46,9 +53,10 @@ is recorded in `audit_log`.
 
 ## Tenant deletion
 
-The owner types the tenant name (`POST tenant-deletion`); the data is
-hard-deleted 30 days later, by an hourly job that compares each tenant's own
-calendar day, in one transaction, children first (history, transactions,
-import mappings, recurring rules, linkers, goals, limits, statements,
-accounts, receivers, categories, codes, settings, users, tenant).
-`DELETE tenant-deletion` cancels. The `audit_log` line survives.
+The owner types the tenant name; the data is hard-deleted 30 days later, by
+the hourly cron that enqueues a job per scheduled tenant and compares each
+tenant's own calendar day, in one `db.batch`, children first (history,
+transactions, import mappings, recurring rules, linkers, goals, limits,
+statements, accounts, receivers, categories, codes, settings, users,
+tenant) — the `tenants` row last, so a crashed run resumes on the next hour.
+The `audit_log` line rides the same batch and survives the delete.

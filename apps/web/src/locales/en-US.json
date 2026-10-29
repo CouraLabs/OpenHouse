@@ -1246,12 +1246,8 @@
     "csv": "Export CSV",
     "csv-pending": "Exporting…",
     "csv-error": "The export failed. Try again.",
-    "download": "Download",
-    "downloading": "Downloading…",
     "preparing": "Preparing…",
-    "ready-note": "Ready. The file is deleted after you download it, or on {{date}}.",
-    "error": "The export failed. Try again.",
-    "expired": "The export expired. Start a new one."
+    "error": "The export failed. Try again."
   },
   "deletion": {
     "scheduled": "Scheduled for deletion on {{date}}. All data of this household will be permanently removed.",
