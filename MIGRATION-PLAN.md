@@ -451,10 +451,10 @@ Not in scope now, but these choices keep that door open at low cost:
 
 ## Checklist
 
-- [ ] Phase 0: limits checked, money storage decided, `CLAUDE.md` contract updated
-- [ ] Phase 1: SQLite schema, `money` type, baseline migration, `db:migrate` on Wrangler
-- [ ] Phase 2: SQL ported, `FOR UPDATE` and interactive transactions replaced, suite green on SQLite
-- [ ] Phase 3: all 24 features on Hono, Node deps replaced, crons on Cron Triggers/Queues, in-memory export download, web served by the Worker
-- [ ] Phase 4: unit + 16 e2e specs green in workerd, browser QA passed
-- [ ] Phase 5: Docker and NestJS removed, docs, landing copy and CI updated
-- [ ] Phase 6: backups runbook, size alert, logging in place
+- [x] Phase 0: limits checked, money storage decided, `CLAUDE.md` contract updated
+- [x] Phase 1: SQLite schema, `money` type, baseline migration, `db:migrate` on Wrangler
+- [x] Phase 2: SQL ported, `FOR UPDATE` and interactive transactions replaced, suite green on SQLite
+- [x] Phase 3: all 24 features on Hono, Node deps replaced, crons on Cron Triggers/Queues, in-memory export download, web served by the Worker
+- [x] Phase 4: unit + e2e specs green in workerd, browser QA passed
+- [x] Phase 5: Docker and NestJS removed, docs, landing copy and CI updated
+- [x] Phase 6: backups runbook, size alert, logging in place

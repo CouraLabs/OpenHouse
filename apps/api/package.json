@@ -20,7 +20,6 @@
     "reset-code": "node scripts/reset-code.mjs"
   },
   "dependencies": {
-    "@hono/zod-validator": "^0.9.1",
     "@workspace/db": "*",
     "@workspace/poco": "*",
     "bcryptjs": "^3.0.3",
