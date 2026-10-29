@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common'
+import { ConflictError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { TenantSettingsRow } from '@workspace/db'
 
@@ -43,9 +43,9 @@ describe('SettingsService', () => {
       mainCurrency: 'USD',
     })
 
-    await expect(attempt).rejects.toThrow(ConflictException)
-    await attempt.catch((error: ConflictException) => {
-      expect(error.getResponse()).toMatchObject({
+    await expect(attempt).rejects.toThrow(ConflictError)
+    await attempt.catch((error: ConflictError) => {
+      expect(error.payload).toMatchObject({
         limits: 3,
         goals: 1,
         goalsOffCurrency: 1,

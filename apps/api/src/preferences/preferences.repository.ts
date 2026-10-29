@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '@workspace/db'
 import { users } from '@workspace/db'
@@ -13,9 +11,8 @@ export interface PreferencesRow {
  * The preference columns of the user rows. Every method takes the tenant id
  * explicitly, alongside the user, so a write never crosses tenants.
  */
-@Injectable()
 export class PreferencesRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Saves a user's preferences. */
   async update(

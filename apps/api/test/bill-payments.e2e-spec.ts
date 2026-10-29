@@ -1,4 +1,3 @@
-import type { INestApplication } from '@nestjs/common'
 import {
   addDays,
   CARD_PAYMENT_CATEGORY,
@@ -7,8 +6,7 @@ import {
   type CreditCardStatement,
   type StatementStatus,
 } from '@workspace/poco'
-import type { App } from 'supertest/types.js'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import {
   type Agent,
@@ -20,30 +18,45 @@ import {
 
 const cycle = { closeDay: 25, dueDay: 5, closeDayInclusive: false }
 
-/** Creates a credit card closing on the 25th, due on the 5th. */
-function createCard(agent: Agent) {
-  return createAccount(agent, {
-    type: 'Credit Card',
-    agency: null,
-    number: null,
-    balance: '0.00',
-    limit: '5000.00',
-    closeDay: cycle.closeDay,
-    dueDay: cycle.dueDay,
-  })
-}
+describe('bill payment and reconciliation (e2e, #7)', () => {
+  const { app } = startApp()
 
-/** Records a card charge and answers the response body. */
-async function charge(
-  agent: Agent,
-  accountId: number,
-  categoryId: number,
-  transactionDt: string,
-  amount = '100.00'
-) {
-  const response = await agent
-    .post('/transactions')
-    .send({
+  /** A signed-in agent with one category and the tenant's today. */
+  async function session(): Promise<{
+    agent: Agent
+    categoryId: number
+    today: string
+  }> {
+    const agent = await signUp(app)
+    const categoryId = await createCategory(agent)
+    const settings = await agent.get('/api/settings')
+    expect(settings.status).toBe(200)
+
+    return { agent, categoryId, today: todayIn(settings.body.timezone) }
+  }
+
+  /** Creates a credit card closing on the 25th, due on the 5th. */
+  function createCard(agent: Agent) {
+    return createAccount(agent, {
+      type: 'Credit Card',
+      agency: null,
+      number: null,
+      balance: '0.00',
+      limit: '5000.00',
+      closeDay: cycle.closeDay,
+      dueDay: cycle.dueDay,
+    })
+  }
+
+  /** Records a card charge and answers the response body. */
+  async function charge(
+    agent: Agent,
+    accountId: number,
+    categoryId: number,
+    transactionDt: string,
+    amount = '100.00'
+  ) {
+    const response = await agent.post('/api/transactions', {
       name: 'Purchase',
       amount,
       transactionDt,
@@ -51,74 +64,56 @@ async function charge(
       categoryId,
       type: 'Expense',
     })
-    .expect(201)
+    expect(response.status).toBe(201)
 
-  return response.body
-}
-
-/** Pays a card from an account; answers both sides of the transfer. */
-async function pay(
-  agent: Agent,
-  body: {
-    fromAccountId: number
-    toAccountId: number
-    amount: string
-    transactionDt: string
-    paymentStatementId?: number
-    categoryId?: number
-  }
-) {
-  // A failure reports the response body, so a flaky 500 names its cause.
-  const response = await agent
-    .post('/transactions/transfer')
-    .send(body)
-    .expect((res) => {
-      if (res.status !== 201) {
-        throw new Error(`transfer ${res.status}: ${JSON.stringify(res.body)}`)
-      }
-    })
-
-  return response.body as [{ id: number }, { id: number; categoryId: number }]
-}
-
-async function bill(agent: Agent, id: number): Promise<CreditCardStatement> {
-  return (await agent.get(`/credit-card-statements/${id}`).expect(200)).body
-}
-
-/** The status a closed bill that is not paid in full takes on a day. */
-function unpaidStatus(
-  closed: CreditCardStatement,
-  today: string,
-  paidSome: boolean
-): StatementStatus {
-  if (today > closed.dueDate) {
-    return 'Overdue'
+    return response.body
   }
 
-  return paidSome ? 'PartiallyPaid' : 'Closed'
-}
+  /** Pays a card from an account; answers both sides of the transfer. */
+  async function pay(
+    agent: Agent,
+    body: {
+      fromAccountId: number
+      toAccountId: number
+      amount: string
+      transactionDt: string
+      paymentStatementId?: number
+      categoryId?: number
+    }
+  ) {
+    const response = await agent.post('/api/transactions/transfer', body)
+    // A failure reports the response body, so a flaky 500 names its cause.
+    if (response.status !== 201) {
+      throw new Error(
+        `transfer ${response.status}: ${JSON.stringify(response.body)}`
+      )
+    }
 
-describe('bill payment and reconciliation (e2e, #7)', () => {
-  let app: INestApplication<App>
-  let agent: Agent
-  let categoryId: number
-  let today: string
+    return response.body as [{ id: number }, { id: number; categoryId: number }]
+  }
 
-  beforeAll(async () => {
-    app = await startApp()
-    agent = await signUp(app)
-    categoryId = await createCategory(agent)
+  async function bill(agent: Agent, id: number): Promise<CreditCardStatement> {
+    const response = await agent.get(`/api/credit-card-statements/${id}`)
+    expect(response.status).toBe(200)
 
-    const settings = await agent.get('/settings').expect(200)
-    today = todayIn(settings.body.timezone)
-  })
+    return response.body
+  }
 
-  afterAll(async () => {
-    await app.close()
-  })
+  /** The status a closed bill that is not paid in full takes on a day. */
+  function unpaidStatus(
+    closed: CreditCardStatement,
+    today: string,
+    paidSome: boolean
+  ): StatementStatus {
+    if (today > closed.dueDate) {
+      return 'Overdue'
+    }
+
+    return paidSome ? 'PartiallyPaid' : 'Closed'
+  }
 
   /** A card with one closed bill of 100.00, and a checking account. */
-  async function closedBill() {
+  async function closedBill(agent: Agent, categoryId: number, today: string) {
     const card = await createCard(agent)
     const checking = await createAccount(agent)
     const charged = await charge(agent, card, categoryId, addDays(today, -60))
@@ -127,7 +122,12 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   }
 
   it('pays a bill in full and in part', async () => {
-    const { card, checking, statementId } = await closedBill()
+    const { agent, categoryId, today } = await session()
+    const { card, checking, statementId } = await closedBill(
+      agent,
+      categoryId,
+      today
+    )
 
     await pay(agent, {
       fromAccountId: checking,
@@ -161,6 +161,7 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   })
 
   it('settles the chosen bill even when paid inside the next period', async () => {
+    const { agent, categoryId, today } = await session()
     const card = await createCard(agent)
     const checking = await createAccount(agent)
     // A bill closed yesterday-ish, and a charge on the bill running now.
@@ -182,9 +183,21 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   })
 
   it('carries an unpaid remainder into the next bill', async () => {
-    const { card, checking, statementId } = await closedBill()
+    const { agent, categoryId, today } = await session()
+    const { card, checking, statementId } = await closedBill(
+      agent,
+      categoryId,
+      today
+    )
     const first = await bill(agent, statementId)
-    const next = await charge(agent, card, categoryId, first.closeDate, '10.00')
+    expect(first.accountId).toBe(card)
+    const next = await charge(
+      agent,
+      card,
+      categoryId,
+      first.closeDate,
+      '10.00'
+    )
 
     await pay(agent, {
       fromAccountId: checking,
@@ -204,9 +217,20 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   })
 
   it('carries an overpayment into the next bill as a credit', async () => {
-    const { card, checking, statementId } = await closedBill()
+    const { agent, categoryId, today } = await session()
+    const { card, checking, statementId } = await closedBill(
+      agent,
+      categoryId,
+      today
+    )
     const first = await bill(agent, statementId)
-    const next = await charge(agent, card, categoryId, first.closeDate, '10.00')
+    const next = await charge(
+      agent,
+      card,
+      categoryId,
+      first.closeDate,
+      '10.00'
+    )
 
     await pay(agent, {
       fromAccountId: checking,
@@ -227,6 +251,7 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   })
 
   it('records a plain transfer into a card as a payment on the oldest unpaid bill', async () => {
+    const { agent, categoryId, today } = await session()
     const card = await createCard(agent)
     const checking = await createAccount(agent)
     const oldest = await charge(agent, card, categoryId, addDays(today, -90))
@@ -239,10 +264,10 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
       transactionDt: today,
       categoryId,
     })
-    const read = (await agent.get(`/transactions/${cardSide.id}`).expect(200))
-      .body
+    const read = await agent.get(`/api/transactions/${cardSide.id}`)
+    expect(read.status).toBe(200)
 
-    expect(read.paymentStatementId).toBe(oldest.statementId)
+    expect(read.body.paymentStatementId).toBe(oldest.statementId)
     expect((await bill(agent, oldest.statementId)).paid).toBe('25.00')
   })
 
@@ -250,6 +275,9 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
     const own = await signUp(app)
     const card = await createCard(own)
     const checking = await createAccount(own)
+    const settings = await own.get('/api/settings')
+    expect(settings.status).toBe(200)
+    const today = todayIn(settings.body.timezone)
     await charge(own, card, await createCategory(own), addDays(today, -60))
 
     const paid = await Promise.all(
@@ -263,17 +291,18 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
       )
     )
     const ids = new Set(paid.map(([, cardSide]) => cardSide.categoryId))
-    const listed = (await own.get('/categories').expect(200)).body as Array<{
-      name: string
-    }>
+    const listed = await own.get('/api/categories')
+    expect(listed.status).toBe(200)
 
+    const named = (listed.body as Array<{ name: string }>).filter(
+      (category) => category.name === CARD_PAYMENT_CATEGORY.name
+    )
     expect(ids.size).toBe(1)
-    expect(
-      listed.filter((category) => category.name === CARD_PAYMENT_CATEGORY.name)
-    ).toHaveLength(1)
+    expect(named).toHaveLength(1)
   })
 
   it('shows an early payment of an Open bill as prepaid', async () => {
+    const { agent, categoryId, today } = await session()
     const card = await createCard(agent)
     const checking = await createAccount(agent)
     const open = await charge(agent, card, categoryId, today)
@@ -294,7 +323,12 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   })
 
   it('restores the previous status when a payment is deleted', async () => {
-    const { card, checking, statementId } = await closedBill()
+    const { agent, categoryId, today } = await session()
+    const { card, checking, statementId } = await closedBill(
+      agent,
+      categoryId,
+      today
+    )
     const before = await bill(agent, statementId)
     const [, cardSide] = await pay(agent, {
       fromAccountId: checking,
@@ -307,7 +341,8 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
 
     expect((await bill(agent, statementId)).status).toBe('Paid')
 
-    await agent.delete(`/transactions/${cardSide.id}`).expect(204)
+    const deleted = await agent.delete(`/api/transactions/${cardSide.id}`)
+    expect(deleted.status).toBe(204)
 
     const after = await bill(agent, statementId)
 
@@ -316,6 +351,7 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   })
 
   it('moves a payment to another bill of the card', async () => {
+    const { agent, categoryId, today } = await session()
     const card = await createCard(agent)
     const checking = await createAccount(agent)
     // 40 days apart: a cycle spans at most 31, so the two charges can never
@@ -331,10 +367,11 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
       categoryId,
     })
 
-    const moved = await agent
-      .patch(`/transactions/${cardSide.id}/statement`)
-      .send({ statementId: newer.statementId })
-      .expect(200)
+    const moved = await agent.patch(
+      `/api/transactions/${cardSide.id}/statement`,
+      { statementId: newer.statementId }
+    )
+    expect(moved.status).toBe(200)
 
     expect(moved.body.paymentStatementId).toBe(newer.statementId)
     expect(moved.body.statementId).toBeNull()
@@ -343,26 +380,31 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
   })
 
   it('rejects a bill of another card', async () => {
-    const { card: other, statementId } = await closedBill()
+    const { agent, categoryId, today } = await session()
+    const { card: other, statementId } = await closedBill(
+      agent,
+      categoryId,
+      today
+    )
     const card = await createCard(agent)
     const checking = await createAccount(agent)
 
     expect(other).not.toBe(card)
 
-    await agent
-      .post('/transactions/transfer')
-      .send({
-        fromAccountId: checking,
-        toAccountId: card,
-        amount: '5.00',
-        transactionDt: today,
-        paymentStatementId: statementId,
-        categoryId,
-      })
-      .expect(409)
+    const response = await agent.post('/api/transactions/transfer', {
+      fromAccountId: checking,
+      toAccountId: card,
+      amount: '5.00',
+      transactionDt: today,
+      paymentStatementId: statementId,
+      categoryId,
+    })
+
+    expect(response.status).toBe(409)
   })
 
   it('keeps a prepaid bill through a change of the card days', async () => {
+    const { agent, categoryId, today } = await session()
     const card = await createCard(agent)
     const checking = await createAccount(agent)
     const [, cardSide] = await pay(agent, {
@@ -372,49 +414,55 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
       transactionDt: today,
       categoryId,
     })
-    const paid = (await agent.get(`/transactions/${cardSide.id}`).expect(200))
-      .body
-    const account = (await agent.get(`/accounts/${card}`).expect(200)).body
+    const paid = await agent.get(`/api/transactions/${cardSide.id}`)
+    expect(paid.status).toBe(200)
+    const account = await agent.get(`/api/accounts/${card}`)
+    expect(account.status).toBe(200)
 
-    await agent
-      .put('/accounts')
-      .send({ ...account, closeDay: 10, dueDay: 20 })
-      .expect(200)
+    const updated = await agent.put('/api/accounts', {
+      ...account.body,
+      closeDay: 10,
+      dueDay: 20,
+    })
+    expect(updated.status).toBe(200)
 
-    expect((await bill(agent, paid.paymentStatementId)).paid).toBe('20.00')
+    const after = await bill(agent, paid.body.paymentStatementId)
+    expect(after.paid).toBe('20.00')
   })
 
   it('reconciles a bill once the bank total matches', async () => {
-    const { statementId } = await closedBill()
+    const { agent, categoryId, today } = await session()
+    const { statementId } = await closedBill(agent, categoryId, today)
 
-    await agent
-      .patch(`/credit-card-statements/${statementId}`)
-      .send({ minimumDue: '15.00', bankTotal: '110.00' })
-      .expect(200)
+    const patched = await agent.patch(
+      `/api/credit-card-statements/${statementId}`,
+      { minimumDue: '15.00', bankTotal: '110.00' }
+    )
+    expect(patched.status).toBe(200)
 
-    const mismatch = await agent
-      .post(`/credit-card-statements/${statementId}/reconcile`)
-      .send({ bankTotal: '110.00' })
-      .expect(409)
-
+    const mismatch = await agent.post(
+      `/api/credit-card-statements/${statementId}/reconcile`,
+      { bankTotal: '110.00' }
+    )
+    expect(mismatch.status).toBe(409)
     expect(mismatch.body.total).toBe('100.00')
 
-    const reconciled = await agent
-      .post(`/credit-card-statements/${statementId}/reconcile`)
-      .send({ bankTotal: '100.00' })
-      .expect(201)
-
+    const reconciled = await agent.post(
+      `/api/credit-card-statements/${statementId}/reconcile`,
+      { bankTotal: '100.00' }
+    )
+    expect(reconciled.status).toBe(201)
     expect(reconciled.body.reconciledAt).not.toBeNull()
     expect(reconciled.body.minimumDue).toBe('15.00')
     expect(reconciled.body.bankTotal).toBe('100.00')
 
-    const rows = (
-      await agent
-        .post('/transactions/search')
-        .send({ filter: { statementId }, limit: 50 })
-        .expect(201)
-    ).body.items as Array<{ status: string }>
+    const search = await agent.post('/api/transactions/search', {
+      filter: { statementId },
+      limit: 50,
+    })
+    expect(search.status).toBe(201)
 
+    const rows = search.body.items as Array<{ status: string }>
     expect(rows.every((row) => row.status === 'Checked')).toBe(true)
   })
 })

@@ -1,4 +1,3 @@
-import type { INestApplication } from '@nestjs/common'
 import {
   addDays,
   resolveStatement,
@@ -6,8 +5,7 @@ import {
   type InstallmentGroup,
   type Transaction,
 } from '@workspace/poco'
-import type { App } from 'supertest/types.js'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import {
   type Agent,
@@ -21,28 +19,35 @@ import {
 const cycle = { closeDay: 25, dueDay: 5, closeDayInclusive: false }
 
 describe('installment purchases (e2e, #6)', () => {
-  let app: INestApplication<App>
-  let agent: Agent
-  let categoryId: number
-  let today: string
-  let currency: string
+  const { app } = startApp()
 
-  beforeAll(async () => {
-    app = await startApp()
-    agent = await signUp(app)
-    categoryId = await createCategory(agent)
+  /** A signed-in agent with one category, the tenant's today, and its
+   * main currency — per test (the storage isolates per test). */
+  async function session(): Promise<{
+    agent: Agent
+    categoryId: number
+    today: string
+    currency: string
+  }> {
+    const agent = await signUp(app)
+    const categoryId = await createCategory(agent)
+    const settings = await agent.get('/api/settings')
+    expect(settings.status).toBe(200)
 
-    const settings = await agent.get('/settings').expect(200)
-    today = todayIn(settings.body.timezone)
-    currency = settings.body.mainCurrency
-  })
-
-  afterAll(async () => {
-    await app.close()
-  })
+    return {
+      agent,
+      categoryId,
+      today: todayIn(settings.body.timezone),
+      currency: settings.body.mainCurrency,
+    }
+  }
 
   /** Creates a credit card in the main currency. */
-  function createCard(days: { closeDay: number; dueDay: number } = cycle) {
+  function createCard(
+    agent: Agent,
+    currency: string,
+    days: { closeDay: number; dueDay: number } = cycle
+  ) {
     return createAccount(agent, {
       type: 'Credit Card',
       agency: null,
@@ -56,37 +61,46 @@ describe('installment purchases (e2e, #6)', () => {
 
   /** Buys on a card in installments; answers installment 1. */
   async function buy(
+    agent: Agent,
+    categoryId: number,
     card: number,
     transactionDt: string,
     amount: string,
     count: number,
     amountMode: 'total' | 'perInstallment' = 'total'
   ): Promise<Transaction> {
-    const response = await agent
-      .post('/transactions')
-      .send({
-        name: 'TV',
-        amount,
-        transactionDt,
-        linkedAccountId: card,
-        categoryId,
-        type: 'Expense',
-        installments: { count, amountMode },
-      })
-      .expect(201)
+    const response = await agent.post('/api/transactions', {
+      name: 'TV',
+      amount,
+      transactionDt,
+      linkedAccountId: card,
+      categoryId,
+      type: 'Expense',
+      installments: { count, amountMode },
+    })
+    expect(response.status).toBe(201)
 
     return response.body
   }
 
-  async function group(id: string): Promise<InstallmentGroup> {
-    return (await agent.get(`/transactions/installments/${id}`).expect(200))
-      .body
+  async function group(
+    agent: Agent,
+    id: string
+  ): Promise<InstallmentGroup> {
+    const response = await agent.get(`/api/transactions/installments/${id}`)
+    expect(response.status).toBe(200)
+
+    return response.body
   }
 
   it('splits a purchase across consecutive bills, the remainder on installment 1', async () => {
-    const card = await createCard()
-    const first = await buy(card, today, '1000.00', 3)
-    const purchase = await group(first.installmentGroupId as string)
+    const { agent, categoryId, today, currency } = await session()
+    const card = await createCard(agent, currency)
+    const first = await buy(agent, categoryId, card, today, '1000.00', 3)
+    const purchase = await group(
+      agent,
+      first.installmentGroupId as string
+    )
 
     expect(purchase.total).toBe('1000.00')
     expect(purchase.editable).toBe(true)
@@ -114,142 +128,171 @@ describe('installment purchases (e2e, #6)', () => {
   })
 
   it('offsets bills instead of shifting days: close 30, Jan 29, 3×', async () => {
-    const card = await createCard({ closeDay: 30, dueDay: 10 })
-    const first = await buy(card, '2027-01-29', '300.00', 3)
-    const purchase = await group(first.installmentGroupId as string)
+    const { agent, categoryId, currency } = await session()
+    const card = await createCard(agent, currency, {
+      closeDay: 30,
+      dueDay: 10,
+    })
+    const first = await buy(agent, categoryId, card, '2027-01-29', '300.00', 3)
+    const purchase = await group(agent, first.installmentGroupId as string)
     const closes = await Promise.all(
-      purchase.installments.map(
-        async (row) =>
-          (
-            await agent
-              .get(`/credit-card-statements/${row.statementId}`)
-              .expect(200)
-          ).body.closeDate
-      )
+      purchase.installments.map(async (row) => {
+        const bill = await agent.get(`/api/credit-card-statements/${row.statementId}`)
+        expect(bill.status).toBe(200)
+
+        return bill.body.closeDate
+      })
     )
 
     expect(closes).toEqual(['2027-01-30', '2027-02-28', '2027-03-30'])
   })
 
   it('repeats a per-installment amount', async () => {
-    const card = await createCard()
-    const first = await buy(card, today, '110.00', 3, 'perInstallment')
-
-    expect((await group(first.installmentGroupId as string)).total).toBe(
-      '330.00'
+    const { agent, categoryId, today, currency } = await session()
+    const card = await createCard(agent, currency)
+    const first = await buy(
+      agent,
+      categoryId,
+      card,
+      today,
+      '110.00',
+      3,
+      'perInstallment'
     )
+
+    expect(
+      (await group(agent, first.installmentGroupId as string)).total
+    ).toBe('330.00')
   })
 
   it('answers 409 for installments off a credit card', async () => {
+    const { agent, categoryId, today, currency } = await session()
     const checking = await createAccount(agent, { currency })
 
-    await agent
-      .post('/transactions')
-      .send({
-        name: 'TV',
-        amount: '300.00',
-        transactionDt: today,
-        linkedAccountId: checking,
-        categoryId,
-        type: 'Expense',
-        installments: { count: 3 },
-      })
-      .expect(409)
+    const response = await agent.post('/api/transactions', {
+      name: 'TV',
+      amount: '300.00',
+      transactionDt: today,
+      linkedAccountId: checking,
+      categoryId,
+      type: 'Expense',
+      installments: { count: 3 },
+    })
+
+    expect(response.status).toBe(409)
   })
 
   it('re-splits an Open purchase as a whole, in place or recreated', async () => {
-    const card = await createCard()
-    const first = await buy(card, today, '300.00', 3)
+    const { agent, categoryId, today, currency } = await session()
+    const card = await createCard(agent, currency)
+    const first = await buy(agent, categoryId, card, today, '300.00', 3)
     const id = first.installmentGroupId as string
     const edit = (amount: string, count: number) =>
-      agent.put(`/transactions/installments/${id}`).send({
+      agent.put(`/api/transactions/installments/${id}`, {
         name: 'Big TV',
         categoryId,
         amount,
         installments: { count, amountMode: 'total' },
       })
 
-    const inPlace = (await edit('600.00', 3).expect(200)).body
-    expect(inPlace.installments.map((row: Transaction) => row.id)).toEqual(
-      (await group(id)).installments.map((row) => row.id)
+    const inPlace = await edit('600.00', 3)
+    expect(inPlace.status).toBe(200)
+    expect(inPlace.body.installments.map((row: Transaction) => row.id)).toEqual(
+      (await group(agent, id)).installments.map((row) => row.id)
     )
-    expect(inPlace.total).toBe('600.00')
+    expect(inPlace.body.total).toBe('600.00')
     expect(await balanceOf(agent, card)).toBe('-600.00')
 
-    const history = (
-      await agent.get(`/transactions/${first.id}/history`).expect(200)
-    ).body
-    expect(history[0].action).toBe('UPDATE')
+    const history = await agent.get(`/api/transactions/${first.id}/history`)
+    expect(history.status).toBe(200)
+    expect(history.body[0].action).toBe('UPDATE')
 
-    const recreated = (await edit('600.00', 4).expect(200)).body
-    expect(recreated.installments).toHaveLength(4)
-    expect(recreated.installments[0].name).toBe('Big TV')
+    const recreated = await edit('600.00', 4)
+    expect(recreated.status).toBe(200)
+    expect(recreated.body.installments).toHaveLength(4)
+    expect(recreated.body.installments[0].name).toBe('Big TV')
     expect(await balanceOf(agent, card)).toBe('-600.00')
   })
 
   it('keeps billed installments as history: shared fields change, money answers 409', async () => {
-    const card = await createCard()
+    const { agent, categoryId, currency } = await session()
     const otherCategory = await createCategory(agent)
-    const first = await buy(card, addDays(today, -60), '400.00', 4)
+    const card = await createCard(agent, currency)
+    const settings = await agent.get('/api/settings')
+    expect(settings.status).toBe(200)
+    const today = todayIn(settings.body.timezone)
+    const first = await buy(
+      agent,
+      categoryId,
+      card,
+      addDays(today, -60),
+      '400.00',
+      4
+    )
     const id = first.installmentGroupId as string
 
-    expect((await group(id)).editable).toBe(false)
+    expect((await group(agent, id)).editable).toBe(false)
 
-    const renamed = (
-      await agent
-        .put(`/transactions/installments/${id}`)
-        .send({
-          name: 'Renamed',
-          categoryId: otherCategory,
-          amount: '400.00',
-          installments: { count: 4, amountMode: 'total' },
-        })
-        .expect(200)
-    ).body as InstallmentGroup
+    const renamed = await agent.put(`/api/transactions/installments/${id}`, {
+      name: 'Renamed',
+      categoryId: otherCategory,
+      amount: '400.00',
+      installments: { count: 4, amountMode: 'total' },
+    })
+    expect(renamed.status).toBe(200)
 
+    const renamedGroup = renamed.body as InstallmentGroup
     expect(
-      renamed.installments.every(
+      renamedGroup.installments.every(
         (row) => row.name === 'Renamed' && row.categoryId === otherCategory
       )
     ).toBe(true)
 
-    await agent
-      .put(`/transactions/installments/${id}`)
-      .send({
-        name: 'Renamed',
-        categoryId,
-        amount: '800.00',
-        installments: { count: 4, amountMode: 'total' },
-      })
-      .expect(409)
-    await agent
-      .delete(`/transactions/installments/${id}?scope=all`)
-      .expect(409)
+    let response = await agent.put(`/api/transactions/installments/${id}`, {
+      name: 'Renamed',
+      categoryId,
+      amount: '800.00',
+      installments: { count: 4, amountMode: 'total' },
+    })
+    expect(response.status).toBe(409)
+    response = await agent.delete(`/api/transactions/installments/${id}?scope=all`)
+    expect(response.status).toBe(409)
   })
 
   it('deletes the remaining installments, leaving the billed ones', async () => {
-    const card = await createCard()
-    const first = await buy(card, addDays(today, -60), '400.00', 4)
+    const { agent, categoryId, currency } = await session()
+    const card = await createCard(agent, currency)
+    const settings = await agent.get('/api/settings')
+    expect(settings.status).toBe(200)
+    const today = todayIn(settings.body.timezone)
+    const first = await buy(
+      agent,
+      categoryId,
+      card,
+      addDays(today, -60),
+      '400.00',
+      4
+    )
     const id = first.installmentGroupId as string
-    const before = await group(id)
-    const billed = (
-      await Promise.all(
-        before.installments.map(
-          async (row) =>
-            (
-              await agent
-                .get(`/credit-card-statements/${row.statementId}`)
-                .expect(200)
-            ).body
+    const before = await group(agent, id)
+    const bills = await Promise.all(
+      before.installments.map(async (row) => {
+        const bill = await agent.get(
+          `/api/credit-card-statements/${row.statementId}`
         )
-      )
-    ).filter((bill) => bill.status !== 'Open')
+        expect(bill.status).toBe(200)
 
-    await agent
-      .delete(`/transactions/installments/${id}?scope=remaining`)
-      .expect(204)
+        return bill.body
+      })
+    )
+    const billed = bills.filter((bill) => bill.status !== 'Open')
 
-    const after = await group(id)
+    const deleted = await agent.delete(
+      `/api/transactions/installments/${id}?scope=remaining`
+    )
+    expect(deleted.status).toBe(204)
+
+    const after = await group(agent, id)
 
     expect(billed.length).toBeGreaterThan(0)
     expect(after.installments).toHaveLength(billed.length)
@@ -260,41 +303,52 @@ describe('installment purchases (e2e, #6)', () => {
   })
 
   it('deletes a whole Open purchase, restoring the balance', async () => {
-    const card = await createCard()
-    const first = await buy(card, today, '300.00', 3)
+    const { agent, categoryId, today, currency } = await session()
+    const card = await createCard(agent, currency)
+    const first = await buy(agent, categoryId, card, today, '300.00', 3)
+    const id = first.installmentGroupId as string
 
-    await agent
-      .delete(`/transactions/installments/${first.installmentGroupId}`)
-      .expect(204)
+    const deleted = await agent.delete(`/api/transactions/installments/${id}`)
+    expect(deleted.status).toBe(204)
 
     expect(await balanceOf(agent, card)).toBe('0.00')
-    await agent
-      .get(`/transactions/installments/${first.installmentGroupId}`)
-      .expect(404)
+    const missing = await agent.get(`/api/transactions/installments/${id}`)
+    expect(missing.status).toBe(404)
   })
 
   it('refunds a purchase in full: the rest deleted, the billed part credited', async () => {
-    const card = await createCard()
-    const first = await buy(card, addDays(today, -60), '400.00', 4)
+    const { agent, categoryId, currency } = await session()
+    const card = await createCard(agent, currency)
+    const settings = await agent.get('/api/settings')
+    expect(settings.status).toBe(200)
+    const today = todayIn(settings.body.timezone)
+    const first = await buy(
+      agent,
+      categoryId,
+      card,
+      addDays(today, -60),
+      '400.00',
+      4
+    )
     const id = first.installmentGroupId as string
 
-    await agent.delete(`/transactions/installments/${id}?scope=remaining`)
-    const billed = await group(id)
-    const refunded = (
-      await agent
-        .post(`/transactions/installments/${id}/refund`)
-        .send({ name: 'Refund: TV' })
-        .expect(201)
-    ).body
+    await agent.delete(`/api/transactions/installments/${id}?scope=remaining`)
+    const billed = await group(agent, id)
+    const refunded = await agent.post(
+      `/api/transactions/installments/${id}/refund`,
+      { name: 'Refund: TV' }
+    )
+    expect(refunded.status).toBe(201)
 
-    expect(refunded.refund.type).toBe('Income')
-    expect(refunded.refund.amount).toBe(billed.total)
+    expect(refunded.body.refund.type).toBe('Income')
+    expect(refunded.body.refund.amount).toBe(billed.total)
     expect(await balanceOf(agent, card)).toBe('0.00')
   })
 
   it('edits one Open installment alone, but never its name', async () => {
-    const card = await createCard()
-    const first = await buy(card, today, '300.00', 3)
+    const { agent, categoryId, today, currency } = await session()
+    const card = await createCard(agent, currency)
+    const first = await buy(agent, categoryId, card, today, '300.00', 3)
     const body = {
       id: first.id,
       name: first.name,
@@ -306,63 +360,65 @@ describe('installment purchases (e2e, #6)', () => {
       status: 'Verify',
     }
 
-    await agent.put('/transactions').send(body).expect(200)
+    const edited = await agent.put('/api/transactions', body)
+    expect(edited.status).toBe(200)
     expect(await balanceOf(agent, card)).toBe('-320.00')
 
-    await agent
-      .put('/transactions')
-      .send({ ...body, name: 'Other' })
-      .expect(409)
-    await agent.delete(`/transactions/${first.id}`).expect(409)
+    let response = await agent.put('/api/transactions', {
+      ...body,
+      name: 'Other',
+    })
+    expect(response.status).toBe(409)
+    response = await agent.delete(`/api/transactions/${first.id}`)
+    expect(response.status).toBe(409)
   })
 
   it('converts a single expense into installments and back', async () => {
-    const card = await createCard()
-    const single = (
-      await agent
-        .post('/transactions')
-        .send({
-          name: 'Sofa',
-          amount: '900.00',
-          transactionDt: today,
-          linkedAccountId: card,
-          categoryId,
-          type: 'Expense',
-        })
-        .expect(201)
-    ).body
+    const { agent, categoryId, today, currency } = await session()
+    const card = await createCard(agent, currency)
+    const single = await agent.post('/api/transactions', {
+      name: 'Sofa',
+      amount: '900.00',
+      transactionDt: today,
+      linkedAccountId: card,
+      categoryId,
+      type: 'Expense',
+    })
+    expect(single.status).toBe(201)
 
-    const split = (
-      await agent
-        .post(`/transactions/${single.id}/installments`)
-        .send({ count: 3, amountMode: 'total' })
-        .expect(201)
-    ).body as InstallmentGroup
+    const split = await agent.post(
+      `/api/transactions/${single.body.id}/installments`,
+      { count: 3, amountMode: 'total' }
+    )
+    expect(split.status).toBe(201)
+    const splitGroup = split.body as InstallmentGroup
 
-    expect(split.installments.map((row) => row.amount)).toEqual([
+    expect(splitGroup.installments.map((row) => row.amount)).toEqual([
       '300.00',
       '300.00',
       '300.00',
     ])
-    expect(
-      (await agent.get(`/transactions/${single.id}`).expect(200)).body.lifecycle
-    ).toBe('DELETED')
+    const read = await agent.get(`/api/transactions/${single.body.id}`)
+    expect(read.status).toBe(200)
+    expect(read.body.lifecycle).toBe('DELETED')
 
-    const collapsed = (
-      await agent
-        .post(`/transactions/installments/${split.groupId}/collapse`)
-        .expect(201)
-    ).body
+    const collapsed = await agent.post(
+      `/api/transactions/installments/${splitGroup.groupId}/collapse`
+    )
+    expect(collapsed.status).toBe(201)
 
-    expect(collapsed.amount).toBe('900.00')
-    expect(collapsed.installmentGroupId).toBeNull()
-    expect(collapsed.statementId).toBe(split.installments[0].statementId)
+    expect(collapsed.body.amount).toBe('900.00')
+    expect(collapsed.body.installmentGroupId).toBeNull()
+    expect(collapsed.body.statementId).toBe(
+      splitGroup.installments[0].statementId
+    )
     expect(await balanceOf(agent, card)).toBe('-900.00')
   })
 
   it('counts the full purchase against a limit in the purchase period', async () => {
     const own = await signUp(app)
-    const settings = (await own.get('/settings').expect(200)).body
+    const settings = await own.get('/api/settings')
+    expect(settings.status).toBe(200)
     const category = await createCategory(own)
     const card = await createAccount(own, {
       type: 'Credit Card',
@@ -370,29 +426,30 @@ describe('installment purchases (e2e, #6)', () => {
       number: null,
       balance: '0.00',
       limit: '5000.00',
-      currency: settings.mainCurrency,
+      currency: settings.body.mainCurrency,
       ...cycle,
     })
 
-    await own
-      .post('/limits')
-      .send({ categoryId: category, amount: '5000.00', type: 'Yearly' })
-      .expect(201)
-    await own
-      .post('/transactions')
-      .send({
-        name: 'TV',
-        amount: '1200.00',
-        transactionDt: todayIn(settings.timezone),
-        linkedAccountId: card,
-        categoryId: category,
-        type: 'Expense',
-        installments: { count: 10 },
-      })
-      .expect(201)
+    const limit = await own.post('/api/limits', {
+      categoryId: category,
+      amount: '5000.00',
+      type: 'Yearly',
+    })
+    expect(limit.status).toBe(201)
+    const purchase = await own.post('/api/transactions', {
+      name: 'TV',
+      amount: '1200.00',
+      transactionDt: todayIn(settings.body.timezone),
+      linkedAccountId: card,
+      categoryId: category,
+      type: 'Expense',
+      installments: { count: 10 },
+    })
+    expect(purchase.status).toBe(201)
 
-    const usage = (await own.get('/limits/usage').expect(200)).body
+    const usage = await own.get('/api/limits/usage')
+    expect(usage.status).toBe(200)
 
-    expect(usage[0].spent).toBe('1200.00')
+    expect(usage.body[0].spent).toBe('1200.00')
   })
 })

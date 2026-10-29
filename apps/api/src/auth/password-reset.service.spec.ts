@@ -1,10 +1,10 @@
+import bcrypt from 'bcryptjs'
 import {
-  BadRequestException,
-  ConflictException,
-  HttpException,
-  NotFoundException,
-} from '@nestjs/common'
-import bcrypt from 'bcrypt'
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  TooManyRequestsError,
+} from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { PasswordResetCode, User } from '@workspace/db'
 
@@ -36,12 +36,12 @@ const user = (overrides: Partial<User> = {}): User => ({
 
 /** A stored code row for `code`, open unless overridden. */
 const stored = (
-  code: string,
+  codeHash: string,
   overrides: Partial<PasswordResetCode> = {}
 ): PasswordResetCode => ({
   id: 3,
   userId: 9,
-  codeHash: hashResetCode(code),
+  codeHash,
   kind: 'owner_issued',
   issuedBy: 1,
   expiresAt: new Date(NOW.getTime() + 60_000),
@@ -103,7 +103,7 @@ describe('PasswordResetService', () => {
         userId: 9,
         kind: 'owner_issued',
         issuedBy: 1,
-        codeHash: hashResetCode(issued.code),
+        codeHash: await hashResetCode(issued.code),
       }),
     ])
     // The plaintext never reaches the write.
@@ -117,17 +117,17 @@ describe('PasswordResetService', () => {
 
     repo.findUserInTenant.mockResolvedValueOnce(user({ role: 'owner' }))
     await expect(service.issueForMember(1, 1, 9)).rejects.toThrow(
-      ConflictException
+      ConflictError
     )
 
     repo.findUserInTenant.mockResolvedValueOnce(user({ isActive: false }))
     await expect(service.issueForMember(1, 1, 9)).rejects.toThrow(
-      ConflictException
+      ConflictError
     )
 
     repo.findUserInTenant.mockResolvedValueOnce(undefined)
     await expect(service.issueForMember(1, 1, 9)).rejects.toThrow(
-      NotFoundException
+      NotFoundError
     )
 
     expect(repo.replaceCodes).not.toHaveBeenCalled()
@@ -152,7 +152,7 @@ describe('PasswordResetService', () => {
 
   it('redeems an open code: new password, sessions cleared, code used', async () => {
     const repo = repository()
-    repo.findByHash.mockResolvedValue(stored('ABCDE-FGHJK'))
+    repo.findByHash.mockResolvedValue(stored(await hashResetCode('ABCDE-FGHJK')))
 
     const redeemed = await serviceWith(repo).redeem(
       'abcde fghjk',
@@ -168,8 +168,8 @@ describe('PasswordResetService', () => {
   it('answers wrong, expired, and used codes with the same error', async () => {
     const cases: Array<PasswordResetCode | undefined> = [
       undefined,
-      stored('ABCDE-FGHJK', { expiresAt: new Date(NOW.getTime() - 1) }),
-      stored('ABCDE-FGHJK', { usedAt: NOW }),
+      stored(await hashResetCode('ABCDE-FGHJK'), { expiresAt: new Date(NOW.getTime() - 1) }),
+      stored(await hashResetCode('ABCDE-FGHJK'), { usedAt: NOW }),
     ]
 
     for (const found of cases) {
@@ -178,14 +178,14 @@ describe('PasswordResetService', () => {
 
       await expect(
         serviceWith(repo).redeem('ABCDE-FGHJK', 'password-new')
-      ).rejects.toThrow(new BadRequestException('This code is not valid.'))
+      ).rejects.toThrow(new BadRequestError('This code is not valid.'))
       expect(repo.redeem).not.toHaveBeenCalled()
     }
   })
 
   it('refuses a code that loses the race or names a removed user', async () => {
     const repo = repository()
-    repo.findByHash.mockResolvedValue(stored('ABCDE-FGHJK'))
+    repo.findByHash.mockResolvedValue(stored(await hashResetCode('ABCDE-FGHJK')))
     repo.redeem.mockResolvedValueOnce({ kind: 'codeTaken' })
     const service = serviceWith(repo)
 
@@ -206,14 +206,14 @@ describe('PasswordResetService', () => {
     for (let failure = 0; failure < 10; failure += 1) {
       await expect(
         service.redeem('ABCDE-FGHJ2', 'password-new')
-      ).rejects.toThrow(BadRequestException)
+      ).rejects.toThrow(BadRequestError)
     }
 
     await expect(service.redeem('ABCDE-FGHJ3', 'password-new')).rejects.toThrow(
-      HttpException
+      TooManyRequestsError
     )
     await expect(
       service.redeem('ABCDE-FGHJ3', 'password-new')
-    ).rejects.not.toThrow(BadRequestException)
+    ).rejects.not.toThrow(BadRequestError)
   })
 })

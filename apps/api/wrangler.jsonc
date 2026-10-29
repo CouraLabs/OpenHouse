@@ -1,0 +1,66 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "openhouse",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // The web app ships from the same Worker: static assets with SPA fallback,
+  // and every /api/* request runs the Worker first (sessions, JSON).
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
+    "not_found_handling": "single-page-application"
+  },
+  // One database for the whole app; every tenant's rows carry tenant_id.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "openhouse",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../packages/db/drizzle"
+    }
+  ],
+  // The background jobs fan out per tenant: the cron handler enqueues, the
+  // consumer runs the per-tenant service. At-least-once — every job is
+  // idempotent.
+  "queues": {
+    "producers": [{ "binding": "JOBS", "queue": "openhouse-jobs" }],
+    "consumers": [
+      {
+        "queue": "openhouse-jobs",
+        "max_batch_size": 10,
+        "max_retries": 3,
+        "max_batch_timeout": 5
+      }
+    ]
+  },
+  // Two rate-limit namespaces: the general one for every route, the
+  // credential one (tighter) for sign-in, sign-up and password resets.
+  "ratelimits": [
+    {
+      "name": "RATE_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 300, "period": 60 }
+    },
+    {
+      "name": "RATE_LIMIT_CREDENTIALS",
+      "namespace_id": "1002",
+      "simple": { "limit": 10, "period": 60 }
+    }
+  ],
+  "triggers": {
+    // Hourly: tenant deletions at :15, recurring rules at :30, reminders at
+    // :45 — each tenant's own calendar day decides what is due. Daily at
+    // 03:15: the balance-consistency check.
+    "crons": ["15 * * * *", "30 * * * *", "45 * * * *", "15 3 * * *"]
+  },
+  "limits": { "cpu_ms": 30000 },
+  "vars": {
+    // Non-secret defaults; secrets live in .dev.vars / `wrangler secret put`.
+    "JWT_ACCESS_TTL_S": "900",
+    "JWT_REFRESH_TTL_S": "86400",
+    "JWT_REMEMBER_REFRESH_TTL_S": "2592000",
+    "PUSH_VAPID_SUBJECT": "mailto:admin@openhouse.invalid"
+  }
+}

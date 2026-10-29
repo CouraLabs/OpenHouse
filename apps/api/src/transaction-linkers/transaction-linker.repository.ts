@@ -1,6 +1,4 @@
 import { and, asc, count, eq, getTableColumns, like, sql } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Database, TransactionLinker } from '@workspace/db'
 import { categories, normalizeSearchName, receivers, transactionLinkers } from '@workspace/db'
 import type { SearchTransactionLinkersArgs } from '@workspace/poco'
@@ -37,9 +35,8 @@ export interface TransactionLinkerWrite {
  * receiver's names, so a client never has to resolve an id, and the names
  * survive a deleted row.
  */
-@Injectable()
 export class TransactionLinkerRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Inserts a linker, stamping the audit trail with the acting user. */
   async insert(

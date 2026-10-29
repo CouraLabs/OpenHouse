@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common'
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { AuditRecorder } from '../common/audit/audit-recorder.js'
@@ -67,7 +67,7 @@ describe('TenantUserService.deactivate', () => {
     const repo = repository()
 
     await expect(service(repo).deactivate(1, 1, 1)).rejects.toThrow(
-      ConflictException
+      ConflictError
     )
     expect(repo.setActive).not.toHaveBeenCalled()
   })
@@ -78,7 +78,7 @@ describe('TenantUserService.deactivate', () => {
     repo.deactivate.mockResolvedValue(undefined as never)
 
     await expect(service(repo).deactivate(1, 1, 3)).rejects.toThrow(
-      ConflictException
+      ConflictError
     )
   })
 
@@ -96,7 +96,7 @@ describe('TenantUserService.deactivate', () => {
     repo.findById.mockResolvedValue(undefined)
 
     await expect(service(repo).deactivate(1, 1, 9)).rejects.toThrow(
-      NotFoundException
+      NotFoundError
     )
   })
 })
@@ -117,7 +117,7 @@ describe('TenantUserService.reactivate', () => {
     repo.setActive.mockResolvedValue(undefined as never)
 
     await expect(service(repo).reactivate(1, 9)).rejects.toThrow(
-      NotFoundException
+      NotFoundError
     )
   })
 })
@@ -155,7 +155,7 @@ describe('TenantUserService.anonymize', () => {
     const repo = repository()
 
     await expect(service(repo).anonymize(1, 1, 2)).rejects.toThrow(
-      ConflictException
+      ConflictError
     )
     expect(repo.anonymizeWithAudit).not.toHaveBeenCalled()
   })
@@ -176,7 +176,7 @@ describe('TenantUserService.anonymize', () => {
     repo.findById.mockResolvedValue(undefined)
 
     await expect(service(repo).anonymize(1, 1, 9)).rejects.toThrow(
-      NotFoundException
+      NotFoundError
     )
   })
 
@@ -187,7 +187,7 @@ describe('TenantUserService.anonymize', () => {
     )
 
     await expect(service(repo).reactivate(1, 2)).rejects.toThrow(
-      ConflictException
+      ConflictError
     )
     expect(repo.setActive).not.toHaveBeenCalled()
   })

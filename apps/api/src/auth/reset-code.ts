@@ -1,5 +1,3 @@
-import { createHash, randomInt, timingSafeEqual } from 'node:crypto'
-
 /**
  * The characters a reset code is drawn from: digits and uppercase letters
  * without the ones a person misreads — no `0`/`O`, no `1`/`I`/`L`. Codes are
@@ -18,9 +16,18 @@ const PREFIX_LENGTH = 5
  * codes: far beyond guessing within the reset route's throttle.
  */
 export function generateResetCode(): string {
+  const bytes = new Uint32Array(CODE_LENGTH)
+  crypto.getRandomValues(bytes)
   let code = ''
   for (let index = 0; index < CODE_LENGTH; index += 1) {
-    code += RESET_CODE_ALPHABET[randomInt(RESET_CODE_ALPHABET.length)]
+    // Rejection sampling keeps the draw uniform over the alphabet.
+    const limit = 0xffffffff - (0xffffffff % RESET_CODE_ALPHABET.length)
+    let draw = bytes[index]
+    while (draw > limit) {
+      crypto.getRandomValues(bytes.subarray(index, index + 1))
+      ;[draw] = bytes.subarray(index, index + 1)
+    }
+    code += RESET_CODE_ALPHABET[draw % RESET_CODE_ALPHABET.length]
   }
 
   return `${code.slice(0, PREFIX_LENGTH)}-${code.slice(PREFIX_LENGTH)}`
@@ -42,17 +49,36 @@ export function isWellFormedResetCode(normalized: string): boolean {
   )
 }
 
-/** The SHA-256 (hex) of a code's normalized spelling — all that is stored. */
-export function hashResetCode(code: string): string {
-  return createHash('sha256').update(normalizeResetCode(code)).digest('hex')
+/** The SHA-256 (hex) of a code's normalized spelling — all that is stored.
+ * WebCrypto, so it runs on Workers; the reset-code script on Node uses the
+ * same platform API. */
+export async function hashResetCode(code: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(normalizeResetCode(code))
+  )
+
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
 }
 
-/** Compares two code hashes in constant time. */
+/**
+ * Compares two code hashes without short-circuiting on the first differing
+ * character — the comparison runs over the whole pair whatever it reads.
+ * The hashes are hex of a fixed length, so the length check is implied.
+ */
 export function hashesMatch(stored: string, presented: string): boolean {
-  const left = Buffer.from(stored, 'hex')
-  const right = Buffer.from(presented, 'hex')
+  if (stored.length !== presented.length) {
+    return false
+  }
 
-  return left.length === right.length && timingSafeEqual(left, right)
+  let difference = 0
+  for (let index = 0; index < stored.length; index += 1) {
+    difference |= stored.charCodeAt(index) ^ presented.charCodeAt(index)
+  }
+
+  return difference === 0
 }
 
 /** The part of a normalized code the attempt limiter counts failures by. */

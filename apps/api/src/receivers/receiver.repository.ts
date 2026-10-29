@@ -1,6 +1,4 @@
-import { and, asc, count, eq, like, } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
+import { and, asc, count, eq, like } from 'drizzle-orm'
 import type { Receiver, Database } from '@workspace/db'
 import { normalizeSearchName, receivers } from '@workspace/db'
 import type { SearchReceiversArgs } from '@workspace/poco'
@@ -25,9 +23,8 @@ export interface ReceiverWrite {
  * is asking. A receiver carries its display name itself; there is nothing
  * to join on.
  */
-@Injectable()
 export class ReceiverRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Inserts a receiver, stamping the audit trail with the acting user. */
   async insert(

@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common'
 import type { UpcomingRule } from '@workspace/poco'
 
 import { RecurringSource } from '../common/upcoming/upcoming-sources.js'
@@ -7,7 +6,6 @@ import { RecurringTransactionRepository } from './recurring-transaction.reposito
 
 /** Answers the `RecurringSource` port: the tenant's active rules, and which
  * of them already generated their transaction for a day. */
-@Injectable()
 export class RecurringRuleSource extends RecurringSource {
   constructor(
     private readonly rules: RecurringTransactionRepository,

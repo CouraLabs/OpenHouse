@@ -1,4 +1,3 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
 import {
   assembleUpcoming,
   shiftDay,
@@ -8,6 +7,7 @@ import {
 
 import { AccountRepository } from '../accounts/account.repository.js'
 import { Clock } from '../common/clock/clock.js'
+import { NotFoundError } from '../common/errors.js'
 import {
   BillSource,
   GoalSource,
@@ -21,7 +21,6 @@ import { SettingsRepository } from '../settings/settings.repository.js'
  * and the tenant's accounts, and lets poco's `assembleUpcoming` merge,
  * sort, and project them. "Today" is the tenant's own calendar day.
  */
-@Injectable()
 export class UpcomingService {
   constructor(
     private readonly bills: BillSource,
@@ -38,7 +37,7 @@ export class UpcomingService {
     const settings = await this.settings.findByTenant(tenantId)
 
     if (settings === undefined) {
-      throw new NotFoundException('Settings not found.')
+      throw new NotFoundError('Settings not found.')
     }
 
     const today = todayIn(settings.timezone, this.clock.now())

@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, asc, eq } from 'drizzle-orm'
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { Database } from '@workspace/db'
@@ -70,9 +68,8 @@ type Row = Record<string, unknown>
  * explicitly; the user rows are selected column by column so no secret can
  * leave with them.
  */
-@Injectable()
 export class DataExportRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Every file of a tenant export, keyed by file name (without `.json`). */
   async readTenant(tenantId: number): Promise<Record<string, Row[]>> {
@@ -112,6 +109,17 @@ export class DataExportRepository {
       .where(and(eq(users.tenantId, tenantId), eq(users.id, userId)))
 
     return rows.length > 0
+  }
+
+  /** The tenant's settings time zone — the one the export's file name
+   * dates itself in. `UTC` when the settings row is missing. */
+  async timezoneOf(tenantId: number): Promise<string> {
+    const [row] = await this.db
+      .select({ timezone: tenantSettings.timezone })
+      .from(tenantSettings)
+      .where(eq(tenantSettings.tenantId, tenantId))
+
+    return row?.timezone ?? 'UTC'
   }
 
   /** A member's profile and every row they created, keyed like a tenant

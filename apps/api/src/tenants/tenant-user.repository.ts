@@ -1,8 +1,6 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, asc, eq, gt, isNull, or } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
-import type { Database, DbOrTx, User } from '@workspace/db'
+import type { Database, User } from '@workspace/db'
 import { runBatch, type LedgerStatement } from '../common/ledger/ledger-batch.js'
 import {
   calendarFeeds,
@@ -32,10 +30,10 @@ const PUBLIC_COLUMNS = {
 /**
  * The tenant's user rows, reached only through the tenant of the session.
  * Every method takes the tenant id explicitly.
+ * Every method takes the tenant id explicitly.
  */
-@Injectable()
 export class TenantUserRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Lists the tenant's users, oldest first. */
   async list(tenantId: number): Promise<TenantUserRow[]> {
@@ -49,10 +47,9 @@ export class TenantUserRepository {
   /** Reads one user of the tenant. */
   async findById(
     tenantId: number,
-    id: number,
-    tx: DbOrTx = this.db
+    id: number
   ): Promise<TenantUserRow | undefined> {
-    const [row] = await tx
+    const [row] = await this.db
       .select(PUBLIC_COLUMNS)
       .from(users)
       .where(and(eq(users.tenantId, tenantId), eq(users.id, id)))

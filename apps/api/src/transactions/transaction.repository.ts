@@ -16,8 +16,6 @@ import {
   type SQL,
 } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import type {
   Database,
   DbOrTx,
@@ -208,10 +206,9 @@ const payers = alias(users, 'payer')
  * is gated in SQL on the write it records. A guard that matched no rows
  * throws `LedgerConflictError`, answered 409.
  */
-@Injectable()
 export class TransactionRepository {
   constructor(
-    @InjectDrizzle() private readonly db: Database,
+    private readonly db: Database,
     private readonly statements: CreditCardStatementRepository,
     private readonly balances: BalanceRepository
   ) {}

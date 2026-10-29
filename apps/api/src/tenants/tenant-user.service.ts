@@ -1,12 +1,7 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
-
 import { randomUUID } from 'node:crypto'
 import { ANONYMIZED_USER_NAME } from '@workspace/poco'
 
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { AuditRecorder } from '../common/audit/audit-recorder.js'
 import { Clock } from '../common/clock/clock.js'
 import {
@@ -21,7 +16,6 @@ import {
  * who asks for erasure is anonymized: their identity goes, their rows stay
  * for the household's books.
  */
-@Injectable()
 export class TenantUserService {
   constructor(
     private readonly users: TenantUserRepository,
@@ -44,12 +38,12 @@ export class TenantUserService {
     id: number
   ): Promise<TenantUserRow> {
     if (id === actingUserId) {
-      throw new ConflictException('You cannot remove yourself.')
+      throw new ConflictError('You cannot remove yourself.')
     }
 
     const target = await this.users.findById(tenantId, id)
     if (target === undefined) {
-      throw new NotFoundException('User not found.')
+      throw new NotFoundError('User not found.')
     }
 
     // The write carries the guard that keeps the tenant one active owner:
@@ -57,7 +51,7 @@ export class TenantUserService {
     const updated = await this.users.deactivate(tenantId, id)
 
     if (updated === undefined) {
-      throw new ConflictException(
+      throw new ConflictError(
         'A tenant must keep at least one active owner.'
       )
     }
@@ -69,12 +63,12 @@ export class TenantUserService {
   async reactivate(tenantId: number, id: number): Promise<TenantUserRow> {
     const target = await this.users.findById(tenantId, id)
     if (target?.anonymizedAt != null) {
-      throw new ConflictException('An anonymized member cannot be restored.')
+      throw new ConflictError('An anonymized member cannot be restored.')
     }
 
     const updated = await this.users.setActive(tenantId, id, true)
     if (updated === undefined) {
-      throw new NotFoundException('User not found.')
+      throw new NotFoundError('User not found.')
     }
 
     return updated
@@ -94,13 +88,13 @@ export class TenantUserService {
   ): Promise<TenantUserRow> {
     const target = await this.users.findById(tenantId, id)
     if (target === undefined) {
-      throw new NotFoundException('User not found.')
+      throw new NotFoundError('User not found.')
     }
     if (target.anonymizedAt !== null) {
       return target
     }
     if (target.isActive) {
-      throw new ConflictException('Remove the member before anonymizing.')
+      throw new ConflictError('Remove the member before anonymizing.')
     }
 
     const updated = await this.users.anonymizeWithAudit(

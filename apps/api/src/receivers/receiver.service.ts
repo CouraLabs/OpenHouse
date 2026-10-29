@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
 import type { Receiver } from '@workspace/db'
+import { NotFoundError } from '../common/errors.js'
 import type {
   CreateReceiverBody,
   ReceiverRef,
@@ -17,7 +17,6 @@ import {
  * audit trail records the user the session acted as. The tenant and the
  * user always arrive from the caller — this service never reads a request.
  */
-@Injectable()
 export class ReceiverService {
   constructor(private readonly repository: ReceiverRepository) {}
 
@@ -50,7 +49,7 @@ export class ReceiverService {
     const row = await this.repository.findById(tenantId, id)
 
     if (row === undefined) {
-      throw new NotFoundException(`No receiver with id ${id}.`)
+      throw new NotFoundError(`No receiver with id ${id}.`)
     }
 
     return row
@@ -71,7 +70,7 @@ export class ReceiverService {
     })
 
     if (updated === undefined) {
-      throw new NotFoundException(`No receiver with id ${body.id}.`)
+      throw new NotFoundError(`No receiver with id ${body.id}.`)
     }
 
     return updated
@@ -92,7 +91,7 @@ export class ReceiverService {
     const row = await this.repository.findById(tenantId, id)
 
     if (row === undefined) {
-      throw new NotFoundException(`No receiver with id ${id}.`)
+      throw new NotFoundError(`No receiver with id ${id}.`)
     }
   }
 }

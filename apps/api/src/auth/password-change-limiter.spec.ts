@@ -1,4 +1,4 @@
-import { HttpException } from '@nestjs/common'
+import { TooManyRequestsError } from '../common/errors.js'
 import { describe, expect, it } from 'vitest'
 
 import type { Clock } from '../common/clock/clock.js'
@@ -25,7 +25,7 @@ describe('PasswordChangeLimiter', () => {
       limiter.consume(7)
     }
 
-    expect(() => limiter.consume(7)).toThrow(HttpException)
+    expect(() => limiter.consume(7)).toThrow(TooManyRequestsError)
     // Another user has their own budget.
     expect(() => limiter.consume(8)).not.toThrow()
   })

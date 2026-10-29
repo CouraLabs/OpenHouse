@@ -1,10 +1,3 @@
-import { Cron } from '@nestjs/schedule'
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common'
 import {
   MAX_BALANCE_HISTORY_DAYS,
   addMoney,
@@ -13,6 +6,7 @@ import {
   type BalanceHistoryBody,
 } from '@workspace/poco'
 
+import { BadRequestError, NotFoundError } from '../common/errors.js'
 import { BalanceRepository } from './balance.repository.js'
 
 /**
@@ -20,10 +14,7 @@ import { BalanceRepository } from './balance.repository.js'
  * end-of-day balance of an account, and the consistency check that keeps the
  * cached `accounts.balance` honest against the ledger.
  */
-@Injectable()
 export class BalanceService {
-  private readonly logger = new Logger(BalanceService.name)
-
   constructor(private readonly balances: BalanceRepository) {}
 
   /**
@@ -39,13 +30,13 @@ export class BalanceService {
     const account = await this.balances.findAccount(tenantId, accountId)
 
     if (account === undefined) {
-      throw new NotFoundException(`No account with id ${accountId}.`)
+      throw new NotFoundError(`No account with id ${accountId}.`)
     }
 
     const days = daysBetween(body.from, body.to)
 
     if (days.length > MAX_BALANCE_HISTORY_DAYS) {
-      throw new BadRequestException(
+      throw new BadRequestError(
         `Ask for at most ${MAX_BALANCE_HISTORY_DAYS} days.`
       )
     }
@@ -71,7 +62,9 @@ export class BalanceService {
     }
   }
 
-  /** Checks one tenant's accounts (on demand) and logs any drift. */
+  /** Checks one tenant's accounts (on demand) and logs any drift. The
+   * nightly check over every tenant rides the queue as one
+   * `checkBalancesForTenant` job per tenant (`balances.jobs.ts`). */
   async check(tenantId: number): Promise<BalanceConsistency> {
     const { checked, drifts } = await this.balances.findDrifts(tenantId)
 
@@ -81,17 +74,6 @@ export class BalanceService {
       checked,
       drifts: drifts.map(({ tenantId: _tenant, ...drift }) => drift),
     }
-  }
-
-  /** The nightly check over every tenant: it asserts `balance ==
-   * openingBalance + sum(deltas)` and logs each account that drifted. */
-  @Cron('0 15 3 * * *')
-  async checkAll(): Promise<number> {
-    const { drifts } = await this.balances.findDrifts()
-
-    this.logDrifts(drifts)
-
-    return drifts.length
   }
 
   private logDrifts(
@@ -104,7 +86,7 @@ export class BalanceService {
     }>
   ): void {
     for (const drift of drifts) {
-      this.logger.error(
+      console.error(
         `Balance drift on account ${drift.accountId} (tenant ${drift.tenantId}): cached ${drift.balance}, ledger ${drift.expected}, off by ${drift.drift}.`
       )
     }

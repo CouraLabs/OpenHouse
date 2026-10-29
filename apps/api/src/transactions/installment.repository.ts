@@ -1,6 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { Database, DbOrTx, Transaction } from '@workspace/db'
 import { creditCardStatements, transactions } from '@workspace/db'
@@ -87,10 +85,9 @@ interface ReadGroup {
  * the card balance on the day it is bought. Limits count it the same way:
  * each installment keeps the purchase day.
  */
-@Injectable()
 export class InstallmentRepository {
   constructor(
-    @InjectDrizzle() private readonly db: Database,
+    private readonly db: Database,
     private readonly ledger: TransactionRepository
   ) {}
 

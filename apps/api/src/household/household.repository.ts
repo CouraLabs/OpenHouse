@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import {
   and,
   asc,
@@ -51,9 +49,8 @@ export interface SettlementRow {
  * every read, so it cannot drift. Every method takes the tenant explicitly.
  * Also the implementation of the `HouseholdMembers` port.
  */
-@Injectable()
 export class HouseholdRepository extends HouseholdMembers {
-  constructor(@InjectDrizzle() private readonly db: Database) {
+  constructor(private readonly db: Database) {
     super()
   }
 

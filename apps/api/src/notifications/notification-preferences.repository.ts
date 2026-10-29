@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '@workspace/db'
 import { notificationPreferences, users } from '@workspace/db'
@@ -35,9 +33,8 @@ function toPreferences(
  * The per-user reminder preferences. A user who never saved any has no row
  * and gets poco's defaults, so nothing needs seeding at sign-up.
  */
-@Injectable()
 export class NotificationPreferencesRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Reads a user's preferences, the defaults when none were saved. */
   async find(
@@ -93,6 +90,33 @@ export class NotificationPreferencesRepository {
       )
       .where(eq(users.isActive, true))
       .orderBy(users.tenantId, users.id)
+
+    return rows.map((row) => ({
+      tenantId: row.tenantId,
+      userId: row.userId,
+      preferences:
+        row.preferences === null
+          ? defaultNotificationPreferences
+          : toPreferences(row.preferences),
+    }))
+  }
+
+  /** Lists the active, non-anonymized users of one tenant with their
+   * preferences — who the per-tenant reminder job evaluates. */
+  async listRecipientsOfTenant(tenantId: number): Promise<Recipient[]> {
+    const rows = await this.db
+      .select({
+        tenantId: users.tenantId,
+        userId: users.id,
+        preferences: notificationPreferences,
+      })
+      .from(users)
+      .leftJoin(
+        notificationPreferences,
+        eq(notificationPreferences.userId, users.id)
+      )
+      .where(and(eq(users.tenantId, tenantId), eq(users.isActive, true)))
+      .orderBy(users.id)
 
     return rows.map((row) => ({
       tenantId: row.tenantId,

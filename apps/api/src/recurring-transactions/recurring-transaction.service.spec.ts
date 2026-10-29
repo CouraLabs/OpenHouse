@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common'
+import { BadRequestError, ConflictError, NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Account, Category, Receiver } from '@workspace/db'
 
@@ -193,14 +189,14 @@ describe('RecurringTransactionService', () => {
 
     await expect(
       service(repo).create(1, 7, { ...createBody, defaultSplit: exact })
-    ).rejects.toThrow(BadRequestException)
+    ).rejects.toThrow(BadRequestError)
     await expect(
       service(repo).create(1, 7, {
         ...createBody,
         type: 'Income',
         defaultSplit: { mode: 'equal', entries: [{ userId: 1 }] },
       })
-    ).rejects.toThrow(BadRequestException)
+    ).rejects.toThrow(BadRequestError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
@@ -210,7 +206,7 @@ describe('RecurringTransactionService', () => {
         ...createBody,
         defaultSplit: { mode: 'equal', entries: [{ userId: 99 }] },
       })
-    ).rejects.toThrow(BadRequestException)
+    ).rejects.toThrow(BadRequestError)
   })
 
   it('rejects a create whose account the tenant does not hold', async () => {
@@ -222,7 +218,7 @@ describe('RecurringTransactionService', () => {
         7,
         createBody
       )
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
@@ -232,7 +228,7 @@ describe('RecurringTransactionService', () => {
 
     await expect(
       service(repo).update(1, 7, { ...createBody, id: 1 })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
   })
 
   it('updates an ACTIVE rule', async () => {
@@ -261,7 +257,7 @@ describe('RecurringTransactionService', () => {
         id: 1,
         linkedAccountId: 11,
       })
-    ).rejects.toThrow(ConflictException)
+    ).rejects.toThrow(ConflictError)
     expect(repo.update).not.toHaveBeenCalled()
   })
 

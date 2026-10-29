@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, count, desc, eq, isNull, sql } from 'drizzle-orm'
 import type { Database } from '@workspace/db'
 import { notificationLog, notifications } from '@workspace/db'
@@ -9,9 +7,8 @@ import type { AppNotification, NotificationBody } from '@workspace/poco'
 export const CENTRE_PAGE_SIZE = 30
 
 /** The notification centre entries of the users, reached by user. */
-@Injectable()
 export class NotificationRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Adds an entry to a user's centre. */
   async insert(

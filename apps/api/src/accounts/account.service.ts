@@ -1,8 +1,3 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type { Account } from '@workspace/db'
 import {
   cardCycleOf,
@@ -15,6 +10,7 @@ import {
   type UpdateAccountBody,
 } from '@workspace/poco'
 
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { CardCycleSync } from '../common/card-cycle/card-cycle-sync.js'
 import { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { AccountRepository, type AccountWrite } from './account.repository.js'
@@ -26,7 +22,6 @@ import { AccountRepository, type AccountWrite } from './account.repository.js'
  * duplicates it. The tenant and the user always arrive from the caller —
  * this service never reads a request.
  */
-@Injectable()
 export class AccountService {
   constructor(
     private readonly repository: AccountRepository,
@@ -56,7 +51,7 @@ export class AccountService {
     const row = await this.repository.findById(tenantId, id)
 
     if (row === undefined) {
-      throw new NotFoundException(`No account with id ${id}.`)
+      throw new NotFoundError(`No account with id ${id}.`)
     }
 
     return row
@@ -81,11 +76,11 @@ export class AccountService {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${body.id}.`)
+      throw new NotFoundError(`No account with id ${body.id}.`)
     }
 
     if (body.currency !== row.currency) {
-      throw new ConflictException(
+      throw new ConflictError(
         'The currency cannot change: the money already recorded is denominated in it.'
       )
     }
@@ -94,7 +89,7 @@ export class AccountService {
       body.type !== row.type &&
       (await this.repository.hasTransactions(tenantId, body.id))
     ) {
-      throw new ConflictException(
+      throw new ConflictError(
         'The type cannot change: the account already has transactions.'
       )
     }
@@ -115,7 +110,7 @@ export class AccountService {
     )
 
     if (updated === undefined) {
-      throw new NotFoundException(`No account with id ${body.id}.`)
+      throw new NotFoundError(`No account with id ${body.id}.`)
     }
 
     return updated
@@ -147,7 +142,7 @@ export class AccountService {
           ...owed,
         }
 
-        throw new ConflictException(conflict)
+        throw new ConflictError(conflict)
       }
     }
 
@@ -163,7 +158,7 @@ function assertCycleDaysDiffer(body: CreateAccountBody): void {
     body.dueDay != null &&
     !cycleDaysDiffer(body.closeDay, body.dueDay)
   ) {
-    throw new ConflictException('The close and due days must differ.')
+    throw new ConflictError('The close and due days must differ.')
   }
 }
 

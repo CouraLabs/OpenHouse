@@ -1,9 +1,9 @@
-import { ConflictException, NotFoundException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import type { Account } from '@workspace/db'
 import { createAccountSchema } from '@workspace/poco'
 
 import type { CardCycleSync } from '../common/card-cycle/card-cycle-sync.js'
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { LedgerBatchPlan } from '../common/ledger/ledger-batch.js'
 import type { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { AccountRepository } from './account.repository.js'
@@ -156,7 +156,7 @@ describe('AccountService', () => {
     repo.findById.mockResolvedValue(undefined)
     const service = accountService(repo)
 
-    await expect(service.find(1, 999)).rejects.toThrow(NotFoundException)
+    await expect(service.find(1, 999)).rejects.toThrow(NotFoundError)
   })
 
   it('updates an ACTIVE account', async () => {
@@ -222,7 +222,7 @@ describe('AccountService', () => {
         isDefault: false,
         ownership: 'personal' as const,
       })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.update).not.toHaveBeenCalled()
   })
 
@@ -277,7 +277,7 @@ describe('AccountService', () => {
 
     await expect(
       accountService(repo).update(1, 7, { ...cardBody, dueDay: 25 })
-    ).rejects.toThrow(ConflictException)
+    ).rejects.toThrow(ConflictError)
     expect(repo.update).not.toHaveBeenCalled()
   })
 
@@ -322,7 +322,7 @@ describe('AccountService', () => {
         closeDay: null,
         dueDay: null,
       })
-    ).rejects.toThrow(ConflictException)
+    ).rejects.toThrow(ConflictError)
   })
 
   it('asks before deleting a card that still owes, until confirmed', async () => {
@@ -337,7 +337,7 @@ describe('AccountService', () => {
 
     await expect(
       accountService(repo, cardCycle(), bills).softDelete(1, 7, 1)
-    ).rejects.toThrow(ConflictException)
+    ).rejects.toThrow(ConflictError)
     expect(repo.softDelete).not.toHaveBeenCalled()
 
     await accountService(repo, cardCycle(), bills).softDelete(1, 7, 1, true)

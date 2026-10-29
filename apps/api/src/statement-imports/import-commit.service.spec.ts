@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common'
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Account, Category, Receiver, Transaction } from '@workspace/db'
 
@@ -8,17 +8,10 @@ import type { AccountRepository } from '../accounts/account.repository.js'
 import type { CategoryRepository } from '../categories/category.repository.js'
 import type { ReceiverRepository } from '../receivers/receiver.repository.js'
 import type { TransactionRepository } from '../transactions/transaction.repository.js'
-import { chunk } from './chunk.js'
 import { ImportCommitService } from './import-commit.service.js'
 import type { ImportMappingRepository } from './import-mapping.repository.js'
 import type { ImportTransactionRepository } from './import-transaction.repository.js'
 import type { ImportCommitBody, ImportCommitRow } from '@workspace/poco'
-
-vi.mock('./chunk.js', async (importOriginal) => {
-  const original = await importOriginal<typeof import('./chunk.js')>()
-
-  return { chunk: vi.fn(original.chunk) }
-})
 
 const NOW = new Date('2026-01-20T12:00:00Z')
 const HOUR = 60 * 60 * 1000
@@ -191,7 +184,6 @@ describe('ImportCommitService.commit', () => {
     const result = await service.commit(1, 7, body(rows))
 
     expect(result.imported).toBe(5000)
-    expect(chunk).toHaveBeenCalledWith(expect.any(Array), 500)
     expect(insertWrites).toHaveLength(5000)
   })
 
@@ -294,7 +286,7 @@ describe('ImportCommitService.commit', () => {
         7,
         body([row({ installment: { number: 3, count: 10 } })])
       )
-    ).rejects.toBeInstanceOf(ConflictException)
+    ).rejects.toBeInstanceOf(ConflictError)
     expect(transactions.planInsertGroup).not.toHaveBeenCalled()
   })
 
@@ -304,7 +296,7 @@ describe('ImportCommitService.commit', () => {
     })
 
     await expect(service.commit(1, 7, body([row()]))).rejects.toMatchObject({
-      response: { reconciledThrough: '2026-01-05' },
+      payload: { reconciledThrough: '2026-01-05' },
     })
     expect(transactions.planInsertGroup).not.toHaveBeenCalled()
 
@@ -318,10 +310,10 @@ describe('ImportCommitService.commit', () => {
 
     await expect(
       service.commit(1, 7, body([row({ categoryId: 99 })]))
-    ).rejects.toBeInstanceOf(NotFoundException)
+    ).rejects.toBeInstanceOf(NotFoundError)
     await expect(
       service.commit(1, 7, body([row({ receiverId: 99 })]))
-    ).rejects.toBeInstanceOf(NotFoundException)
+    ).rejects.toBeInstanceOf(NotFoundError)
     expect(transactions.planInsertGroup).not.toHaveBeenCalled()
   })
 })
@@ -351,7 +343,7 @@ describe('ImportCommitService.undo', () => {
     })
 
     await expect(service.undo(1, 7, 'batch')).rejects.toBeInstanceOf(
-      ConflictException
+      ConflictError
     )
     expect(transactions.planSoftDeleteGroup).not.toHaveBeenCalled()
   })
@@ -362,7 +354,7 @@ describe('ImportCommitService.undo', () => {
     imports.findBatch.mockResolvedValue(undefined)
 
     await expect(service.undo(1, 7, 'batch')).rejects.toBeInstanceOf(
-      NotFoundException
+      NotFoundError
     )
   })
 })

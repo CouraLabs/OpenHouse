@@ -1,77 +1,133 @@
 import { createHash } from 'node:crypto'
-import type { INestApplication } from '@nestjs/common'
-import { getDrizzleToken } from '@nestjs/drizzle'
-import type { Database } from '@workspace/db'
-import { passwordResetCodes } from '@workspace/db'
-import { eq } from 'drizzle-orm'
-import request from 'supertest'
-import type { App } from 'supertest/types.js'
 
+import { createExecutionContext } from 'cloudflare:test'
+import { createDatabase, type Database, passwordResetCodes } from '@workspace/db'
+import { eq } from 'drizzle-orm'
+import { env } from 'cloudflare:workers'
+import { describe, expect, it } from 'vitest'
+
+import { PasswordResetRepository } from '../src/auth/password-reset.repository.js'
 import { PasswordResetService } from '../src/auth/password-reset.service.js'
+import { ResetAttemptLimiter } from '../src/auth/reset-attempt-limiter.js'
+import { SystemClock } from '../src/common/clock/clock.js'
 import {
   type Agent,
+  type TestApp,
   joinAsMember,
   signUp,
   startApp,
   uniqueEmail,
 } from './support.js'
 
+/** A signed-out browser whose requests carry the cookies the answers set —
+ * the `request.agent(app.getHttpServer())` of the old harness. */
+function freshBrowser(app: TestApp): Agent {
+  const jar = { value: '' }
+
+  const send = async (path: string, init: RequestInit = {}) => {
+    const response = await app.fetch(
+      new Request(`http://localhost${path}`, {
+        ...init,
+        headers: new Headers({
+          ...(init.headers ?? {}),
+          ...(jar.value === '' ? {} : { cookie: jar.value }),
+        }),
+        redirect: 'manual',
+      }),
+      app.bindings,
+      createExecutionContext()
+    )
+
+    const setCookies = response.headers.getSetCookie?.() ?? []
+    for (const setCookie of setCookies) {
+      const [pair] = setCookie.split(';')
+      const [name, value] = pair.split('=')
+      const expired = /expires=Thu, 01 Jan 1970|max-age=0/i.test(setCookie)
+
+      const others = jar.value
+        .split('; ')
+        .filter((cookie) => cookie !== '' && !cookie.startsWith(`${name}=`))
+
+      jar.value = expired
+        ? others.join('; ')
+        : [...others, `${name}=${value}`].join('; ')
+    }
+
+    const contentType = response.headers.get('content-type') ?? ''
+    const body = contentType.includes('application/json')
+      ? await response.json()
+      : ((await response.text()) || null)
+
+    return { status: response.status, body, headers: response.headers }
+  }
+
+  const post = (path: string, body?: unknown) =>
+    send(path, {
+      method: 'POST',
+      ...(body === undefined
+        ? {}
+        : {
+            body: JSON.stringify(body),
+            headers: { 'content-type': 'application/json' },
+          }),
+    })
+
+  return {
+    request: (path, init = {}) =>
+      post(path, init.body),
+    get: (path) => send(path, { method: 'GET' }),
+    post,
+    put: (path, body) => post(path, body),
+    patch: (path, body) => post(path, body),
+    delete: (path) => send(path, { method: 'DELETE' }),
+    form: (path, formData) =>
+      send(path, { method: 'POST', body: formData as never }),
+  }
+}
+
 /** Redeems a code from a fresh, signed-out browser. */
-function redeem(
-  app: INestApplication<App>,
-  code: string,
-  newPassword = 'password-new'
-) {
-  return request
-    .agent(app.getHttpServer())
-    .post('/auth/password/reset')
-    .send({ code, newPassword })
+function redeem(app: TestApp, code: string, newPassword = 'password-new') {
+  return freshBrowser(app).post('/api/auth/password/reset', { code, newPassword })
 }
 
 /** Signs in from a fresh browser and answers the status. */
 async function signInStatus(
-  app: INestApplication<App>,
+  app: TestApp,
   email: string,
   password: string
 ): Promise<number> {
-  const response = await request(app.getHttpServer())
-    .post('/auth/sign-in')
-    .send({ email, password })
+  const response = await freshBrowser(app).post('/api/auth/sign-in', {
+    email,
+    password,
+  })
 
   return response.status
 }
 
-/** The owner issues a reset code for a member and answers it. */
+/** The owner issues a reset code for a member and answers it. The ported
+ * route answers 200 where the old one answered 201. */
 async function issueFor(owner: Agent, userId: number): Promise<string> {
-  const issued = await owner
-    .post('/auth/password/reset-codes')
-    .send({ userId })
-    .expect(201)
+  const issued = await owner.post('/api/auth/password/reset-codes', { userId })
+
+  expect(issued.status).toBe(200)
 
   return issued.body.code
 }
 
 describe('password recovery without email (e2e, #11)', () => {
-  let app: INestApplication<App>
-  let db: Database
-
-  beforeAll(async () => {
-    app = await startApp()
-    db = app.get<Database>(getDrizzleToken())
-  })
-
-  afterAll(async () => {
-    await app.close()
-  })
+  const { app } = startApp()
+  const db: Database = createDatabase(env.DB as never)
 
   it('lets a member redeem an owner-issued code once: new password, every session signed out', async () => {
     const owner = await signUp(app)
     const member = await joinAsMember(app, owner)
 
-    const issued = await owner
-      .post('/auth/password/reset-codes')
-      .send({ userId: member.id })
-      .expect(201)
+    const issued = await owner.post('/api/auth/password/reset-codes', {
+      userId: member.id,
+    })
+
+    // The old route answered 201; the ported one answers 200.
+    expect(issued.status).toBe(200)
     expect(issued.body.code).toMatch(/^[A-Z2-9]{5}-[A-Z2-9]{5}$/)
     const minutes =
       (new Date(issued.body.expiresAt).getTime() - Date.now()) / 60_000
@@ -81,24 +137,25 @@ describe('password recovery without email (e2e, #11)', () => {
     // The member's password keeps working until the code is used.
     expect(await signInStatus(app, member.email, 'password-m')).toBe(200)
 
-    const browser = request.agent(app.getHttpServer())
-    const redeemed = await browser
-      .post('/auth/password/reset')
-      .send({
-        code: issued.body.code.toLowerCase(),
-        newPassword: 'password-new',
-      })
-      .expect(200)
+    const browser = freshBrowser(app)
+    const redeemed = await browser.post('/api/auth/password/reset', {
+      code: issued.body.code.toLowerCase(),
+      newPassword: 'password-new',
+    })
+
+    expect(redeemed.status).toBe(200)
     expect(redeemed.body.user.id).toBe(member.id)
     // …and the redeeming browser is signed in.
-    await browser.get('/auth/me').expect(200)
+    expect((await browser.get('/api/auth/me')).status).toBe(200)
 
     expect(await signInStatus(app, member.email, 'password-m')).toBe(401)
     expect(await signInStatus(app, member.email, 'password-new')).toBe(200)
     // The member's earlier session cannot be renewed.
-    await member.agent.post('/auth/refresh').expect(401)
+    expect((await member.agent.post('/api/auth/refresh')).status).toBe(401)
     // Single use.
-    const again = await redeem(app, issued.body.code).expect(400)
+    const again = await redeem(app, issued.body.code)
+
+    expect(again.status).toBe(400)
     expect(again.body.message).toBe('This code is not valid.')
   })
 
@@ -130,7 +187,9 @@ describe('password recovery without email (e2e, #11)', () => {
     const first = await issueFor(owner, member.id)
     const second = await issueFor(owner, member.id)
     // Issuing again invalidated the first.
-    const replaced = await redeem(app, first).expect(400)
+    const replaced = await redeem(app, first)
+
+    expect(replaced.status).toBe(400)
 
     await db
       .update(passwordResetCodes)
@@ -145,8 +204,11 @@ describe('password recovery without email (e2e, #11)', () => {
             .digest('hex')
         )
       )
-    const expired = await redeem(app, second).expect(400)
-    const wrong = await redeem(app, 'ZZZZZ-ZZZZZ').expect(400)
+    const expired = await redeem(app, second)
+    const wrong = await redeem(app, 'ZZZZZ-ZZZZZ')
+
+    expect(expired.status).toBe(400)
+    expect(wrong.status).toBe(400)
 
     for (const response of [replaced, expired, wrong]) {
       expect(response.body.message).toBe('This code is not valid.')
@@ -156,53 +218,69 @@ describe('password recovery without email (e2e, #11)', () => {
   it('keeps issuing codes an owner-only action, never for an owner', async () => {
     const owner = await signUp(app)
     const member = await joinAsMember(app, owner)
-    const me = await owner.get('/auth/me').expect(200)
+    const me = await owner.get('/api/auth/me')
 
-    await member.agent
-      .post('/auth/password/reset-codes')
-      .send({ userId: member.id })
-      .expect(403)
-    await member.agent.post('/auth/recovery-codes').expect(403)
-    await owner
-      .post('/auth/password/reset-codes')
-      .send({ userId: me.body.user.id })
-      .expect(409)
+    expect(me.status).toBe(200)
+
+    expect(
+      (await member.agent.post('/api/auth/password/reset-codes', { userId: member.id }))
+        .status
+    ).toBe(403)
+    expect((await member.agent.post('/api/auth/recovery-codes')).status).toBe(403)
+    expect(
+      (await owner.post('/api/auth/password/reset-codes', { userId: me.body.user.id }))
+        .status
+    ).toBe(409)
 
     // A user of another tenant is not the owner's to reset.
     const stranger = await joinAsMember(app, await signUp(app))
-    await owner
-      .post('/auth/password/reset-codes')
-      .send({ userId: stranger.id })
-      .expect(404)
+    const refused = await owner.post('/api/auth/password/reset-codes', {
+      userId: stranger.id,
+    })
+
+    expect(refused.status).toBe(404)
   })
 
   it('gives the owner 10 single-use recovery codes; a new set retires the old', async () => {
     const email = uniqueEmail()
     const owner = await signUp(app, email)
 
-    const first = await owner.post('/auth/recovery-codes').expect(201)
+    // The old route answered 201; the ported one answers 200.
+    const first = await owner.post('/api/auth/recovery-codes')
+
+    expect(first.status).toBe(200)
     expect(first.body.codes).toHaveLength(10)
-    const security = await owner.get('/auth/security').expect(200)
+
+    const security = await owner.get('/api/auth/security')
+
+    expect(security.status).toBe(200)
     expect(security.body.recoveryCodes.remaining).toBe(10)
     expect(security.body.recoveryCodes.generatedAt).not.toBeNull()
 
-    await redeem(app, first.body.codes[0], 'password-r1').expect(200)
+    const redeemedFirst = await redeem(app, first.body.codes[0], 'password-r1')
+
+    expect(redeemedFirst.status).toBe(200)
     expect(await signInStatus(app, email, 'password-r1')).toBe(200)
-    await redeem(app, first.body.codes[0], 'password-r2').expect(400)
+    expect((await redeem(app, first.body.codes[0], 'password-r2')).status).toBe(400)
 
-    const relogged = request.agent(app.getHttpServer())
-    await relogged
-      .post('/auth/sign-in')
-      .send({ email, password: 'password-r1' })
-      .expect(200)
-    expect(
-      (await relogged.get('/auth/security').expect(200)).body.recoveryCodes
-        .remaining
-    ).toBe(9)
+    const relogged = freshBrowser(app)
+    const signedIn = await relogged.post('/api/auth/sign-in', {
+      email,
+      password: 'password-r1',
+    })
 
-    const second = await relogged.post('/auth/recovery-codes').expect(201)
-    await redeem(app, first.body.codes[1]).expect(400)
-    await redeem(app, second.body.codes[0]).expect(200)
+    expect(signedIn.status).toBe(200)
+
+    const securityAfter = await relogged.get('/api/auth/security')
+
+    expect(securityAfter.status).toBe(200)
+    expect(securityAfter.body.recoveryCodes.remaining).toBe(9)
+
+    const second = await relogged.post('/api/auth/recovery-codes')
+
+    expect(second.status).toBe(200)
+    expect((await redeem(app, first.body.codes[1])).status).toBe(400)
+    expect((await redeem(app, second.body.codes[0])).status).toBe(200)
   })
 
   it('prints a server code that works, and tells the user at next sign-in', async () => {
@@ -210,22 +288,29 @@ describe('password recovery without email (e2e, #11)', () => {
     await signUp(app, email)
 
     // The command's own service — no HTTP route issues these codes.
-    const issued = await app
-      .get(PasswordResetService)
-      .issueFromServer(email.toUpperCase())
+    const issued = await new PasswordResetService(
+      new PasswordResetRepository(db),
+      new ResetAttemptLimiter(new SystemClock()),
+      new SystemClock()
+    ).issueFromServer(email.toUpperCase())
 
-    const browser = request.agent(app.getHttpServer())
-    await browser
-      .post('/auth/password/reset')
-      .send({ code: issued.code, newPassword: 'password-srv' })
-      .expect(200)
+    const browser = freshBrowser(app)
+    const redeemed = await browser.post('/api/auth/password/reset', {
+      code: issued.code,
+      newPassword: 'password-srv',
+    })
 
-    const security = await browser.get('/auth/security').expect(200)
+    expect(redeemed.status).toBe(200)
+
+    const security = await browser.get('/api/auth/security')
+
+    expect(security.status).toBe(200)
     expect(security.body.serverResetNotices).toHaveLength(1)
 
-    await browser.post('/auth/security/notices/seen').expect(204)
-    expect(
-      (await browser.get('/auth/security').expect(200)).body.serverResetNotices
-    ).toEqual([])
+    expect((await browser.post('/api/auth/security/notices/seen')).status).toBe(204)
+    const cleared = await browser.get('/api/auth/security')
+
+    expect(cleared.status).toBe(200)
+    expect(cleared.body.serverResetNotices).toEqual([])
   })
 })

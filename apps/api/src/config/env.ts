@@ -1,188 +1,49 @@
+import { z } from 'zod'
+
 /**
- * The environment contract of the API.
+ * The environment contract of the Worker.
  *
- * Every variable the application reads is declared here, together with the
- * values it accepts, so a typo or an unusable value stops the boot with a
- * message naming the variable instead of surfacing as a broken request much
- * later. `validateEnv` is handed to `ConfigModule`; the `get*` helpers are the
- * parsing that the bootstrap and the module factories share, so nothing else
- * reads `process.env` on its own.
- *
- * The helpers read `process.env` rather than injecting `ConfigService`: they
- * are also used by `main.ts`, which runs before the container exists, and
- * `validateEnv` normalizes every value they read back into `process.env`.
+ * Every value the application reads arrives as a binding (`c.env`): the D1
+ * database, the job queue, the rate-limit namespaces, the non-secret vars,
+ * and the secrets (`JWT_SECRET`, the VAPID private key — `.dev.vars` locally,
+ * `wrangler secret put` in production). This is the only file that reads it:
+ * it parses the vars with zod once per isolate and caches the result, so a
+ * typo or an unusable value fails the first request that needs it, naming
+ * the variable — and no feature ever touches `c.env` itself.
  */
 
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-
-/** Environments the API runs in. Anything else is a typo in a deployment. */
-const NODE_ENVIRONMENTS = ['development', 'test', 'production'] as const
-
-type NodeEnvironment = (typeof NODE_ENVIRONMENTS)[number]
+const positiveInt = z.coerce
+  .number()
+  .int()
+  .positive()
+  .transform((value) => Math.trunc(value))
 
 /**
- * Prefixes this application owns. A variable under one of them that is not
- * declared in `VARIABLES` is rejected, so `THROTTLE_LIMITS=5` fails at boot
- * instead of being ignored. Variables a host injects (`PATH`, `HOSTNAME`, …)
- * do not use these prefixes and pass through untouched.
+ * The typed bindings and vars a request sees. `DB`, `JOBS`, `RATE_LIMIT`
+ * and `ASSETS` are runtime bindings typed structurally (the generated
+ * `worker-configuration.d.ts` narrows them); the rest are vars and secrets.
  */
-const RESERVED_PREFIXES = [
-  'APP_',
-  'CORS_',
-  'DB_',
-  'EXPORT_',
-  'JWT_',
-  'PUSH_',
-  'THROTTLE_',
-]
+export interface Env {
+  DB: unknown
+  JOBS: unknown
+  RATE_LIMIT: unknown
+  RATE_LIMIT_CREDENTIALS: unknown
+  ASSETS: unknown
 
-/** What a declared variable accepts. */
-type VariableSpec =
-  /** Read as it is. `NODE_ENV` is one of these: `readNodeEnvironment` checks it. */
-  | { kind: 'text' }
-  /** Origins a browser may call the API from, comma-separated. */
-  | { kind: 'originList'; requiredInProduction: boolean }
-  /** A string a production deployment must set and development may leave out. */
-  | { kind: 'secret'; requiredInProduction: boolean }
-  | { kind: 'positiveInteger' }
-  /** A VAPID key: URL-safe base64 of `bytes` raw bytes. */
-  | { kind: 'vapidKey'; bytes: number }
-
-/**
- * Every variable the API reads. A declared variable that is unset falls back
- * to the default its consumer passes to `getPositiveInt`, which is also the
- * value in `.env.example`.
- */
-const VARIABLES: Record<string, VariableSpec> = {
-  NODE_ENV: { kind: 'text' },
-  PORT: { kind: 'positiveInteger' },
-  CORS_ORIGINS: { kind: 'originList', requiredInProduction: true },
-  // How many reverse proxies sit in front of the API. Unset, the API trusts
-  // none and rate-limits by the socket's address; behind a proxy that would
-  // put every user under the proxy's one IP.
-  APP_TRUST_PROXY_HOPS: { kind: 'positiveInteger' },
-  THROTTLE_TTL_MS: { kind: 'positiveInteger' },
-  THROTTLE_LIMIT: { kind: 'positiveInteger' },
-  // Where the full-export ZIPs wait for their download. Unset, a folder under
-  // the OS temp directory. One process owns it: a second replica would need
-  // shared storage.
-  EXPORT_DIR: { kind: 'text' },
-  DB_POOL_MAX: { kind: 'positiveInteger' },
-  DB_CONNECTION_TIMEOUT_MS: { kind: 'positiveInteger' },
-  DB_IDLE_TIMEOUT_MS: { kind: 'positiveInteger' },
-  // The HMAC secret the JWTs are signed with. A development default keeps the
-  // app bootable without a file; a deployment must set its own.
-  JWT_SECRET: { kind: 'secret', requiredInProduction: true },
-  // How long an access token lives, in seconds. Short by design: the session
-  // survives it through the refresh token.
-  JWT_ACCESS_TTL_S: { kind: 'positiveInteger' },
-  // How long the server honors a refresh token, in seconds, when the sign-in
-  // did not ask to be remembered. Remembered sessions use JWT_REFRESH_TTL_S.
-  JWT_REFRESH_TTL_S: { kind: 'positiveInteger' },
-  // How long the server honors a refresh token, in seconds, when the sign-in
-  // asked to be remembered.
-  JWT_REMEMBER_REFRESH_TTL_S: { kind: 'positiveInteger' },
-  // Read by `@workspace/db`, not by this application directly. It is declared
-  // so that the API knows the variable the database module needs.
-  DATABASE_URL: { kind: 'text' },
-  // The VAPID key pair web push is signed with. Optional as a PAIR: both set
-  // enables push, both absent disables it, one alone is a boot error. The
-  // public key is also handed to browsers, which subscribe against it.
-  // Generate a pair with `npx web-push generate-vapid-keys`.
-  PUSH_VAPID_PUBLIC_KEY: { kind: 'vapidKey', bytes: 65 },
-  PUSH_VAPID_PRIVATE_KEY: { kind: 'vapidKey', bytes: 32 },
-  // Who the push services can contact about this sender: a `mailto:` or
-  // `https:` URL. Defaults to a placeholder when push is enabled.
-  PUSH_VAPID_SUBJECT: { kind: 'text' },
+  JWT_SECRET?: string
+  JWT_ACCESS_TTL_S?: string
+  JWT_REFRESH_TTL_S?: string
+  JWT_REMEMBER_REFRESH_TTL_S?: string
+  PUSH_VAPID_PUBLIC_KEY?: string
+  PUSH_VAPID_PRIVATE_KEY?: string
+  PUSH_VAPID_SUBJECT?: string
 }
 
-/**
- * Checks the environment and returns it, adding the `NODE_ENV` the application
- * is actually running in so that no consumer repeats that fallback.
- *
- * `ConfigModule` calls this while the application is being created, so a
- * rejected value aborts the boot.
- */
-export function validateEnv(
-  config: Record<string, unknown>
-): Record<string, unknown> {
-  rejectUndeclaredReservedNames(config)
-
-  const nodeEnv = readNodeEnvironment(config.NODE_ENV)
-  for (const [name, spec] of Object.entries(VARIABLES)) {
-    assertUsable(name, spec, text(config[name]), nodeEnv)
-  }
-  assertVapidPair(config)
-
-  return { ...config, NODE_ENV: nodeEnv }
-}
-
-/** Returns `true` when the application runs as a deployed one. */
-export function isProduction(): boolean {
-  return readNodeEnvironment(process.env.NODE_ENV) === 'production'
-}
-
-/**
- * Returns the origins `CORS_ORIGINS` lists, or `undefined` when it is unset.
- * A deployment must list at least one, which `validateEnv` enforces.
- */
-export function getCorsOrigins(): string[] | undefined {
-  const value = text(process.env.CORS_ORIGINS)
-  return value
-    ?.split(',')
-    .map((origin) => origin.trim())
-    .filter((origin) => origin !== '')
-}
-
-/** Returns the number a variable holds, or `undefined` when it holds none. */
-export function getInt(name: string): number | undefined {
-  const value = text(process.env[name])
-  if (value === undefined || !isPositiveInteger(value)) {
-    return undefined
-  }
-
-  return Number.parseInt(value, 10)
-}
-
-/**
- * Returns the number a variable holds, falling back to `fallback` when it is
- * unset. A value that is not a positive integer also falls back: `validateEnv`
- * has already rejected it by the time a consumer reads it.
- */
-export function getPositiveInt(name: string, fallback: number): number {
-  return getInt(name) ?? fallback
-}
-
-/**
- * Returns the secret the JWTs are signed with. Development falls back to a
- * fixed value — tokens it signs are only honored by the same local process —
- * and production cannot reach this function without the variable, which
- * `validateEnv` enforces.
- */
-export function getJwtSecret(): string {
-  return text(process.env.JWT_SECRET) ?? 'development-only-secret'
-}
-
-/**
- * Returns how long the tokens live, in seconds: an access token always, and a
- * refresh token for a session that did not (`refreshTtlS`) or did
- * (`rememberRefreshTtlS`) ask to be remembered.
- */
-export function getJwtTtls() {
-  return {
-    accessTtlS: getPositiveInt('JWT_ACCESS_TTL_S', 900),
-    refreshTtlS: getPositiveInt('JWT_REFRESH_TTL_S', 86_400),
-    rememberRefreshTtlS: getPositiveInt(
-      'JWT_REMEMBER_REFRESH_TTL_S',
-      2_592_000
-    ),
-  }
-}
-
-/** Returns the folder the full-export ZIPs are written to. */
-export function getExportDir(): string {
-  return text(process.env.EXPORT_DIR) ?? join(tmpdir(), 'openhouse-exports')
+/** How long the tokens live, in seconds — the lifetimes the session sets. */
+export interface JwtTtls {
+  accessTtlS: number
+  refreshTtlS: number
+  rememberRefreshTtlS: number
 }
 
 /** The VAPID keys and contact web push signs with. */
@@ -192,125 +53,71 @@ export interface PushConfig {
   subject: string
 }
 
+/** The vars, parsed. */
+const varsSchema = z.object({
+  JWT_SECRET: z.string().min(1).default('development-only-secret'),
+  JWT_ACCESS_TTL_S: positiveInt.default(900),
+  JWT_REFRESH_TTL_S: positiveInt.default(86_400),
+  JWT_REMEMBER_REFRESH_TTL_S: positiveInt.default(2_592_000),
+  PUSH_VAPID_PUBLIC_KEY: z.string().optional(),
+  PUSH_VAPID_PRIVATE_KEY: z.string().optional(),
+  PUSH_VAPID_SUBJECT: z.string().default('mailto:admin@openhouse.invalid'),
+})
+
+/** The parse result, cached per isolate. */
+export interface Config {
+  jwtSecret: string
+  ttls: JwtTtls
+  /** Web push configuration, or nothing when the VAPID pair is absent —
+   * push is then disabled, and everything else runs as usual. */
+  push: PushConfig | undefined
+}
+
+let cached: Config | undefined
+
 /**
- * Returns the web push configuration, or `undefined` when the VAPID pair is
- * absent — push is then disabled, and the rest of the application runs as
- * usual. `validateEnv` has already rejected a half-set pair.
+ * Parses `c.env`'s vars once per isolate. A half-set VAPID pair is a boot
+ * error; a missing secret falls back to the development default (the tokens
+ * it signs are only honored by the same deployment).
  */
-export function getPushConfig(): PushConfig | undefined {
-  const publicKey = text(process.env.PUSH_VAPID_PUBLIC_KEY)
-  const privateKey = text(process.env.PUSH_VAPID_PRIVATE_KEY)
-
-  if (publicKey === undefined || privateKey === undefined) {
-    return undefined
+export function config(env: Env): Config {
+  if (cached !== undefined) {
+    return cached
   }
 
-  return {
-    publicKey,
-    privateKey,
-    subject:
-      text(process.env.PUSH_VAPID_SUBJECT) ?? 'mailto:admin@openhouse.invalid',
-  }
-}
+  const vars = varsSchema.parse(env)
 
-/** Returns a value as a string, treating an empty one as unset. */
-function text(value: unknown): string | undefined {
-  if (value === undefined || value === null) {
-    return undefined
-  }
-
-  const raw = String(value).trim()
-  return raw === '' ? undefined : raw
-}
-
-/** Returns the environment the application runs in, defaulting to development. */
-function readNodeEnvironment(value: unknown): NodeEnvironment {
-  const nodeEnv = text(value) ?? 'development'
-  if (!NODE_ENVIRONMENTS.includes(nodeEnv as NodeEnvironment)) {
-    throw new Error(
-      `NODE_ENV must be one of ${NODE_ENVIRONMENTS.join(', ')}, got "${nodeEnv}".`
-    )
-  }
-
-  return nodeEnv as NodeEnvironment
-}
-
-/** Rejects variables under this application's prefixes that it does not read. */
-function rejectUndeclaredReservedNames(config: Record<string, unknown>): void {
-  const undeclared = Object.keys(config).filter(
-    (name) =>
-      !(name in VARIABLES) &&
-      RESERVED_PREFIXES.some((prefix) => name.startsWith(prefix))
-  )
-
-  if (undeclared.length > 0) {
-    throw new Error(
-      `${undeclared.join(', ')} is not read by this application. Declared variables: ${Object.keys(VARIABLES).join(', ')}.`
-    )
-  }
-}
-
-/** Rejects a value a declared variable cannot hold. */
-function assertUsable(
-  name: string,
-  spec: VariableSpec,
-  value: string | undefined,
-  nodeEnv: NodeEnvironment
-): void {
-  if (
-    spec.kind === 'positiveInteger' &&
-    value !== undefined &&
-    !isPositiveInteger(value)
-  ) {
-    throw new Error(`${name} must be a positive integer, got "${value}".`)
-  }
-
-  if (spec.kind === 'vapidKey' && value !== undefined) {
-    const decoded = /^[A-Za-z0-9_-]+$/.test(value)
-      ? Buffer.from(value, 'base64url')
-      : undefined
-
-    if (decoded?.length !== spec.bytes) {
-      throw new Error(
-        `${name} must be a URL-safe base64 VAPID key of ${spec.bytes} bytes (npx web-push generate-vapid-keys).`
-      )
-    }
-  }
-
-  if (
-    spec.kind === 'secret' &&
-    spec.requiredInProduction &&
-    text(value) === undefined &&
-    nodeEnv === 'production'
-  ) {
-    throw new Error(`${name} is required when NODE_ENV is production.`)
-  }
-
-  if (
-    spec.kind === 'originList' &&
-    spec.requiredInProduction &&
-    value === undefined &&
-    nodeEnv === 'production'
-  ) {
-    throw new Error(
-      `${name} must list at least one origin when NODE_ENV is production.`
-    )
-  }
-}
-
-/** Rejects one VAPID key set without the other. */
-function assertVapidPair(config: Record<string, unknown>): void {
-  const hasPublic = text(config.PUSH_VAPID_PUBLIC_KEY) !== undefined
-  const hasPrivate = text(config.PUSH_VAPID_PRIVATE_KEY) !== undefined
+  const hasPublic = vars.PUSH_VAPID_PUBLIC_KEY !== undefined
+  const hasPrivate = vars.PUSH_VAPID_PRIVATE_KEY !== undefined
 
   if (hasPublic !== hasPrivate) {
     throw new Error(
       'PUSH_VAPID_PUBLIC_KEY and PUSH_VAPID_PRIVATE_KEY must be set together, or both left out to disable web push.'
     )
   }
+
+  cached = {
+    jwtSecret: vars.JWT_SECRET,
+    ttls: {
+      accessTtlS: vars.JWT_ACCESS_TTL_S,
+      refreshTtlS: vars.JWT_REFRESH_TTL_S,
+      rememberRefreshTtlS: vars.JWT_REMEMBER_REFRESH_TTL_S,
+    },
+    push:
+      vars.PUSH_VAPID_PUBLIC_KEY !== undefined &&
+      vars.PUSH_VAPID_PRIVATE_KEY !== undefined
+        ? {
+            publicKey: vars.PUSH_VAPID_PUBLIC_KEY,
+            privateKey: vars.PUSH_VAPID_PRIVATE_KEY,
+            subject: vars.PUSH_VAPID_SUBJECT,
+          }
+        : undefined,
+  }
+
+  return cached
 }
 
-/** Returns whether a value is entirely a positive integer. */
-function isPositiveInteger(value: string): boolean {
-  return /^\d+$/.test(value) && Number.parseInt(value, 10) > 0
+/** Clears the per-isolate cache — a test isolate re-parses. */
+export function resetConfigCache(): void {
+  cached = undefined
 }

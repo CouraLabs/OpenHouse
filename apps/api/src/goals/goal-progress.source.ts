@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common'
 import type { UpcomingGoalInput } from '@workspace/poco'
 
 import { GoalSource } from '../common/upcoming/upcoming-sources.js'
@@ -11,7 +10,6 @@ import { GoalRepository } from './goal.repository.js'
  * (the main currency changed after it was set) tracks nothing comparable
  * and is left out.
  */
-@Injectable()
 export class GoalProgressSource extends GoalSource {
   constructor(
     private readonly goals: GoalRepository,

@@ -1,14 +1,11 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, eq } from 'drizzle-orm'
 import type { Database, PushSubscriptionRow } from '@workspace/db'
 import { pushSubscriptions } from '@workspace/db'
 import type { PushSubscriptionBody } from '@workspace/poco'
 
 /** The push subscriptions: one row per browser or device endpoint. */
-@Injectable()
 export class PushSubscriptionRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Stores a browser's subscription. An endpoint is one browser, so
    * subscribing again (maybe as another user of a shared browser) replaces

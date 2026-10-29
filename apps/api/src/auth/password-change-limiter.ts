@@ -1,6 +1,5 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
-
 import { Clock } from '../common/clock/clock.js'
+import { TooManyRequestsError } from '../common/errors.js'
 
 /** Attempts one user may make per window. */
 const MAX_ATTEMPTS = 5
@@ -11,12 +10,12 @@ const WINDOW_MS = 15 * 60 * 1000
 /**
  * Limits password-change attempts per user, so a hijacked session cannot
  * brute-force the current password. Counted per user, not per IP, and
- * enforced in every environment — unlike the global throttler.
+ * enforced in every environment — unlike the global rate limit.
  *
- * The counts live in memory: enough while the API is one process, like the
- * throttler's store.
+ * The counts live in memory: per isolate on Workers — one deployment's
+ * isolates share nothing, so the limiter is a damper, not a wall; the
+ * per-IP rate-limit binding is the wall.
  */
-@Injectable()
 export class PasswordChangeLimiter {
   private readonly attempts = new Map<number, number[]>()
 
@@ -31,9 +30,8 @@ export class PasswordChangeLimiter {
 
     if (recent.length >= MAX_ATTEMPTS) {
       this.attempts.set(userId, recent)
-      throw new HttpException(
-        'Too many password change attempts. Try again later.',
-        HttpStatus.TOO_MANY_REQUESTS
+      throw new TooManyRequestsError(
+        'Too many password change attempts. Try again later.'
       )
     }
 

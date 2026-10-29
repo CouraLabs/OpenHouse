@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import {
   and,
   asc,
@@ -111,10 +109,9 @@ export interface PlacementPlan {
  * row — the statements land in the same batch, so a bill and the charge on
  * it commit together.
  */
-@Injectable()
 export class CreditCardStatementRepository {
   constructor(
-    @InjectDrizzle() private readonly db: Database,
+    private readonly db: Database,
     private readonly settings: SettingsRepository,
     private readonly clock: Clock
   ) {}
@@ -210,7 +207,7 @@ export class CreditCardStatementRepository {
       return undefined
     }
 
-    const closed = statement.closeDate <= (await this.todayOf(tenantId, db))
+    const closed = statement.closeDate <= (await this.todayOf(tenantId))
 
     return {
       statement,
@@ -620,8 +617,8 @@ export class CreditCardStatementRepository {
 
   /** The tenant's "today", in its own zone — what decides whether a bill
    * is still open. */
-  async todayOf(tenantId: number, db: DbOrTx = this.db): Promise<string> {
-    const settings = await this.settings.findByTenant(tenantId, db)
+  async todayOf(tenantId: number): Promise<string> {
+    const settings = await this.settings.findByTenant(tenantId)
 
     return todayIn(settings?.timezone ?? 'UTC', this.clock.now())
   }
@@ -888,7 +885,7 @@ export class CreditCardStatementRepository {
         )
       )
 
-    const today = await this.todayOf(tenantId, db)
+    const today = await this.todayOf(tenantId)
     const closed = window.closeDate <= today
 
     if (existing !== undefined) {

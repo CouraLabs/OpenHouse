@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common'
 import type { CreditCardStatement } from '@workspace/poco'
 
 import { BillSource } from '../common/upcoming/upcoming-sources.js'
@@ -7,7 +6,6 @@ import { toStatement } from './statement-view.js'
 
 /** Answers the `BillSource` port: the bills that still ask for money, with
  * their status derived against the tenant's today. */
-@Injectable()
 export class StatementBillSource extends BillSource {
   constructor(private readonly repository: CreditCardStatementRepository) {
     super()

@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common'
 import type { CardCycle } from '@workspace/poco'
 
 import { CardCycleSync } from '../common/card-cycle/card-cycle-sync.js'
@@ -12,7 +11,6 @@ import { CreditCardStatementRepository } from './credit-card-statement.repositor
  * on are soft-deleted guarded by a re-check — a purchase racing the resync
  * keeps its bill, and the racing writes answer 409 instead of tangling.
  */
-@Injectable()
 export class StatementCycleSyncService extends CardCycleSync {
   constructor(private readonly statements: CreditCardStatementRepository) {
     super()

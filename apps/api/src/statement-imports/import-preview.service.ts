@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  PayloadTooLargeException,
-} from '@nestjs/common'
+import { BadRequestError, NotFoundError } from '../common/errors.js'
 import type { Account } from '@workspace/db'
 import {
   addDays,
@@ -49,7 +44,6 @@ import type { ParsedImportRow } from './parsed-import.js'
  * A CSV with no mapping yet — neither sent nor saved for the account —
  * answers its headers and a sample instead, so the user can map it.
  */
-@Injectable()
 export class ImportPreviewService {
   constructor(
     private readonly accounts: AccountRepository,
@@ -67,16 +61,15 @@ export class ImportPreviewService {
   ): Promise<ImportPreview> {
     const account = await this.activeAccount(tenantId, fields.accountId)
 
-    if (file.size > IMPORT_MAX_BYTES || file.buffer.length > IMPORT_MAX_BYTES) {
-      throw new PayloadTooLargeException('An import file is at most 5 MB.')
+    if (file.size > IMPORT_MAX_BYTES || file.bytes.length > IMPORT_MAX_BYTES) {
+      throw new BadRequestError('An import file is at most 5 MB.')
     }
 
     const format = formatOfUpload(file.originalname)
     const { read, mapping } =
       format === 'ofx'
-        ? { read: readOfxFile(file.buffer), mapping: null }
+        ? { read: readOfxFile(file.bytes), mapping: null }
         : await this.readCsv(tenantId, account.id, file, fields)
-
     assertCurrency(read.currencies, account)
 
     const base = {
@@ -124,7 +117,7 @@ export class ImportPreviewService {
     const mapping = fields.mapping ?? (fields.remap ? undefined : saved)
 
     return {
-      read: readCsvFile(file.buffer, {
+      read: readCsvFile(file.bytes, {
         mapping,
         encoding: fields.encoding ?? saved?.encoding ?? 'auto',
         delimiter: fields.delimiter ?? saved?.delimiter ?? 'auto',
@@ -249,7 +242,7 @@ export class ImportPreviewService {
     const account = await this.accounts.findById(tenantId, accountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${accountId}.`)
+      throw new NotFoundError(`No account with id ${accountId}.`)
     }
 
     return account
@@ -262,7 +255,7 @@ function assertCurrency(declared: readonly string[], account: Account): void {
   const other = declared.find((currency) => currency !== account.currency)
 
   if (other !== undefined) {
-    throw new BadRequestException(
+    throw new BadRequestError(
       `This file is in ${other}, but the account is in ${account.currency}.`
     )
   }

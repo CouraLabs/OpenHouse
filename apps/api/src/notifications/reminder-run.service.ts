@@ -1,5 +1,3 @@
-import { Injectable, Logger } from '@nestjs/common'
-import { Cron } from '@nestjs/schedule'
 import { hourIn, MAX_LEAD_DAYS, shiftDay, todayIn } from '@workspace/poco'
 
 import { Clock } from '../common/clock/clock.js'
@@ -16,39 +14,77 @@ import {
 import { ReminderDeliveryService } from './reminder-delivery.service.js'
 import { dueReminders, SEND_FROM_HOUR } from './reminder-rules.js'
 
+/** The four sources one tenant's evaluation reads, once each. */
+export interface ReminderSources {
+  bills: BillSource
+  recurring: RecurringSource
+  limits: LimitSource
+  delivery: ReminderDeliveryService
+}
+
 /**
- * The hourly reminder job. Each tenant is evaluated on its own calendar —
+ * Reads the tenant's four sources once and delivers what each of its users
+ * is due, on the tenant's calendar day. One failing user never stops the
+ * others.
+ */
+export async function runTenantReminders(
+  sources: ReminderSources,
+  tenantId: number,
+  recipients: readonly Recipient[],
+  today: string
+): Promise<number> {
+  const [bills, rules, generatedToday, limits] = await Promise.all([
+    sources.bills.pendingBills(tenantId, shiftDay(today, MAX_LEAD_DAYS)),
+    sources.recurring.activeRules(tenantId),
+    sources.recurring.generatedOn(tenantId, today),
+    sources.limits.usage(tenantId),
+  ])
+  let sent = 0
+
+  for (const recipient of recipients) {
+    try {
+      sent += await sources.delivery.deliver(
+        recipient,
+        dueReminders({
+          today,
+          preferences: recipient.preferences,
+          bills,
+          rules,
+          generatedToday,
+          limits,
+        }),
+        today
+      )
+    } catch (error) {
+      console.error(
+        `Reminders of user ${recipient.userId} (tenant ${tenantId}) failed.`,
+        error
+      )
+    }
+  }
+
+  return sent
+}
+
+/**
+ * The reminder evaluation. Each tenant is judged on its own calendar —
  * "today" is `todayIn(settings.timezone)` and a tenant is skipped until its
  * own morning (`SEND_FROM_HOUR`) — so a household at UTC−03:00 is judged by
- * its local day, not the server's. The job is idempotent: the delivery
- * claims every reminder in the `notification_log` first, so a restart, an
- * overlapping run, or a second replica sends nothing twice. One failing
- * tenant or user never stops the others.
+ * its local day, not the server's. The evaluation is idempotent: the
+ * delivery claims every reminder in the `notification_log` first, so a
+ * restart, an overlapping run, or a second replica sends nothing twice.
  */
-@Injectable()
 export class ReminderRunService {
-  private readonly logger = new Logger(ReminderRunService.name)
-
   constructor(
     private readonly preferences: NotificationPreferencesRepository,
     private readonly settings: SettingsRepository,
-    private readonly bills: BillSource,
-    private readonly recurring: RecurringSource,
-    private readonly limits: LimitSource,
-    private readonly delivery: ReminderDeliveryService,
+    private readonly sources: ReminderSources,
     private readonly clock: Clock
   ) {}
 
-  /** The scheduled run, at minute 45: after the recurring job (minute 30)
-   * has materialized the hour's transactions. */
-  @Cron('0 45 * * * *')
-  async runHourly(): Promise<number> {
-    return this.run()
-  }
-
-  /** Evaluates every tenant now — or only `onlyTenantId`, which the e2e
-   * specs use to keep a run off the other tenants of a shared database —
-   * and answers how many messages went out. */
+  /** Evaluates every tenant now — or only `onlyTenantId`, which the specs
+   * use to keep a run off the other tenants of a shared database — and
+   * answers how many messages went out. */
   async run(onlyTenantId?: number): Promise<number> {
     const now = this.clock.now()
     const byTenant = new Map<number, Recipient[]>()
@@ -75,58 +111,19 @@ export class ReminderRunService {
       }
 
       try {
-        sent += await this.runTenant(
+        sent += await runTenantReminders(
+          this.sources,
           tenantId,
           recipients,
           todayIn(timezone, now)
         )
       } catch (error) {
-        this.logger.error(`Reminders of tenant ${tenantId} failed.`, error)
+        console.error(`Reminders of tenant ${tenantId} failed.`, error)
       }
     }
 
     if (sent > 0) {
-      this.logger.log(`Sent ${sent} reminders.`)
-    }
-
-    return sent
-  }
-
-  /** Reads the tenant's four sources once and delivers what each of its
-   * users is due. */
-  private async runTenant(
-    tenantId: number,
-    recipients: readonly Recipient[],
-    today: string
-  ): Promise<number> {
-    const [bills, rules, generatedToday, limits] = await Promise.all([
-      this.bills.pendingBills(tenantId, shiftDay(today, MAX_LEAD_DAYS)),
-      this.recurring.activeRules(tenantId),
-      this.recurring.generatedOn(tenantId, today),
-      this.limits.usage(tenantId),
-    ])
-    let sent = 0
-
-    for (const recipient of recipients) {
-      try {
-        sent += await this.delivery.deliver(
-          recipient,
-          dueReminders({
-            today,
-            preferences: recipient.preferences,
-            bills,
-            rules,
-            generatedToday,
-            limits,
-          }),
-          today
-        )
-      } catch (error) {
-        this.logger.error(
-          `Reminders of user ${recipient.userId} (tenant ${tenantId}) failed.`,
-          error
-        )
-      }
+      console.log(`Sent ${sent} reminders.`)
     }
 
     return sent

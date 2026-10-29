@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common'
+import { NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { PreferencesRepository } from './preferences.repository.js'
@@ -24,6 +24,6 @@ describe('PreferencesService.update', () => {
 
     await expect(
       service(update).update(1, 99, { startPage: '/' })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
   })
 })

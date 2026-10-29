@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common'
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Category } from '@workspace/db'
 
@@ -66,13 +66,15 @@ describe('CategoryService', () => {
 
     await expect(
       service.create(1, 7, { name: 'Office', color: '#1D4ED8' })
-    ).rejects.toThrow(ConflictException)
+    ).rejects.toThrow(ConflictError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
   it('maps the unique-index violation of a lost race onto a 409', async () => {
     const repo = repository()
-    repo.insert.mockRejectedValue({ cause: { code: '23505' } })
+    repo.insert.mockRejectedValue({
+      message: "UNIQUE constraint failed: index 'categories_tenant_id_name_active_key'",
+    })
     const service = new CategoryService(
       repo as unknown as CategoryRepository,
       members as unknown as HouseholdMembers
@@ -80,7 +82,7 @@ describe('CategoryService', () => {
 
     await expect(
       service.create(1, 7, { name: 'Office', color: '#1D4ED8' })
-    ).rejects.toThrow(ConflictException)
+    ).rejects.toThrow(ConflictError)
   })
 
   it('updates an ACTIVE category', async () => {
@@ -117,7 +119,7 @@ describe('CategoryService', () => {
 
     await expect(
       service.update(1, 7, { id: 1, name: 'Renamed', color: '#1D4ED8' })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.update).not.toHaveBeenCalled()
   })
 
@@ -129,7 +131,7 @@ describe('CategoryService', () => {
       members as unknown as HouseholdMembers
     )
 
-    await expect(service.find(1, 999)).rejects.toThrow(NotFoundException)
+    await expect(service.find(1, 999)).rejects.toThrow(NotFoundError)
   })
 
   it('soft-deletes a category as a status change', async () => {

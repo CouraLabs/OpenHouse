@@ -1,9 +1,3 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type { Account } from '@workspace/db'
 import {
   parseSplit,
@@ -15,8 +9,9 @@ import {
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { BadRequestError, ConflictError, NotFoundError } from '../common/errors.js'
 import { HouseholdMembers } from '../common/household/household-members.js'
-import { assertMembers } from '../common/household/split-members.js'
+import { assertMembers } from '../transactions/split-members.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
 import {
@@ -33,7 +28,6 @@ import {
  * the user always arrive from the caller — this service never reads a
  * request.
  */
-@Injectable()
 export class RecurringTransactionService {
   constructor(
     private readonly repository: RecurringTransactionRepository,
@@ -78,7 +72,7 @@ export class RecurringTransactionService {
     const row = await this.repository.findById(tenantId, id)
 
     if (row === undefined) {
-      throw new NotFoundException(`No recurring transaction with id ${id}.`)
+      throw new NotFoundError(`No recurring transaction with id ${id}.`)
     }
 
     return row
@@ -94,7 +88,7 @@ export class RecurringTransactionService {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(
+      throw new NotFoundError(
         `No recurring transaction with id ${body.id}.`
       )
     }
@@ -112,7 +106,7 @@ export class RecurringTransactionService {
       )
 
       if (previous !== undefined && previous.currency !== account.currency) {
-        throw new ConflictException(
+        throw new ConflictError(
           'Move the recurring transaction to an account of the same currency.'
         )
       }
@@ -147,7 +141,7 @@ export class RecurringTransactionService {
     })
 
     if (updated === undefined) {
-      throw new NotFoundException(
+      throw new NotFoundError(
         `No recurring transaction with id ${body.id}.`
       )
     }
@@ -191,11 +185,11 @@ export class RecurringTransactionService {
     }
 
     if (body.type !== 'Expense') {
-      throw new BadRequestException('Only an expense can be split.')
+      throw new BadRequestError('Only an expense can be split.')
     }
 
     if (account.ownership === 'shared') {
-      throw new ConflictException(
+      throw new ConflictError(
         'Expenses from a shared account create no debts.'
       )
     }
@@ -203,7 +197,7 @@ export class RecurringTransactionService {
     const resolved = resolveSplit(body.amount, split, payer)
 
     if (!resolved.ok) {
-      throw new BadRequestException(resolved.message)
+      throw new BadRequestError(resolved.message)
     }
   }
 
@@ -216,19 +210,19 @@ export class RecurringTransactionService {
     const receiver = await this.receivers.findById(tenantId, body.receiverId)
 
     if (receiver === undefined || receiver.status === 'DELETED') {
-      throw new NotFoundException(`No receiver with id ${body.receiverId}.`)
+      throw new NotFoundError(`No receiver with id ${body.receiverId}.`)
     }
 
     const category = await this.categories.findById(tenantId, body.categoryId)
 
     if (category === undefined || category.status === 'DELETED') {
-      throw new NotFoundException(`No category with id ${body.categoryId}.`)
+      throw new NotFoundError(`No category with id ${body.categoryId}.`)
     }
 
     const account = await this.accounts.findById(tenantId, body.linkedAccountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${body.linkedAccountId}.`)
+      throw new NotFoundError(`No account with id ${body.linkedAccountId}.`)
     }
 
     return account

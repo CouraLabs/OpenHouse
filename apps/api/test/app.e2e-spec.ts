@@ -1,37 +1,41 @@
-import { Test, TestingModule } from '@nestjs/testing'
-import { INestApplication } from '@nestjs/common'
-import request from 'supertest'
-import { App } from 'supertest/types.js'
-import { AppModule } from './../src/app.module.js'
+import { describe, expect, it } from 'vitest'
+
+import { startApp, signUp } from './support.js'
 
 describe('the session guard (e2e)', () => {
-  let app: INestApplication<App>
+  // The app is built per spec; the storage is per-test isolated.
+  const { app } = startApp()
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile()
+  it('answers the health route without a session', async () => {
+    const response = await app.request('/api/health')
 
-    app = moduleFixture.createNestApplication()
-    await app.init()
+    expect(response.status).toBe(200)
   })
 
-  afterEach(async () => {
-    await app.close()
-  })
+  it('rejects a request without a session', async () => {
+    const response = await app.request('/api/settings')
 
-  it('rejects a request without a session', () => {
-    return request(app.getHttpServer()).get('/').expect(401).expect({
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({
       message: 'Missing session.',
       error: 'Unauthorized',
       statusCode: 401,
     })
   })
 
-  it('rejects a request whose access cookie does not verify', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .set('Cookie', ['openhouse_access=not-a-token'])
-      .expect(401)
+  it('rejects a request whose access cookie does not verify', async () => {
+    const response = await app.request('/api/settings', {
+      headers: { cookie: 'openhouse_access=not-a-token' },
+    })
+
+    expect(response.status).toBe(401)
+  })
+
+  it('accepts a signed-in session', async () => {
+    const agent = await signUp(app)
+    const response = await agent.get('/api/auth/me')
+
+    expect(response.status).toBe(200)
+    expect(response.body.user.email).toContain('@example.com')
   })
 })

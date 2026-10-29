@@ -1,4 +1,4 @@
-import { HttpException } from '@nestjs/common'
+import { TooManyRequestsError } from '../common/errors.js'
 import { describe, expect, it } from 'vitest'
 
 import type { Clock } from '../common/clock/clock.js'
@@ -26,12 +26,12 @@ describe('ResetAttemptLimiter', () => {
       limiter.recordFailure('ABCDE')
     }
 
-    expect(() => limiter.assertAllowed('ABCDE')).toThrow(HttpException)
+    expect(() => limiter.assertAllowed('ABCDE')).toThrow(TooManyRequestsError)
     // Another prefix is unaffected.
     expect(() => limiter.assertAllowed('FGHJK')).not.toThrow()
 
     advance(59 * 60 * 1000)
-    expect(() => limiter.assertAllowed('ABCDE')).toThrow(HttpException)
+    expect(() => limiter.assertAllowed('ABCDE')).toThrow(TooManyRequestsError)
 
     advance(60 * 1000)
     expect(() => limiter.assertAllowed('ABCDE')).not.toThrow()

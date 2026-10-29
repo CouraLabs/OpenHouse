@@ -1,4 +1,3 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
 import {
   isZeroMoney,
   memberBalances,
@@ -11,6 +10,7 @@ import {
 } from '@workspace/poco'
 
 import { SettingsRepository } from '../settings/settings.repository.js'
+import { NotFoundError } from '../common/errors.js'
 import { totalSpending } from './household-spending.js'
 import { HouseholdRepository } from './household.repository.js'
 
@@ -19,7 +19,6 @@ import { HouseholdRepository } from './household.repository.js'
  * cost, and the settle-ups so far. Everything is derived from the
  * transactions on read. The tenant always arrives from the caller.
  */
-@Injectable()
 export class HouseholdService {
   constructor(
     private readonly repository: HouseholdRepository,
@@ -109,7 +108,7 @@ export class HouseholdService {
     const member = members.find((candidate) => candidate.id === userId)
 
     if (member === undefined) {
-      throw new NotFoundException('Member not found.')
+      throw new NotFoundError('Member not found.')
     }
 
     const balances = memberBalances(

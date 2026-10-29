@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { eq, isNotNull } from 'drizzle-orm'
 import type { Database } from '@workspace/db'
 import { runBatch, type LedgerStatement } from '../common/ledger/ledger-batch.js'
@@ -32,9 +30,8 @@ import {
  * `hardDelete` is the one place in the application that removes rows: the
  * sanctioned exception to soft delete.
  */
-@Injectable()
 export class TenantDeletionRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Reads the tenant's name and scheduled deletion day. */
   async find(

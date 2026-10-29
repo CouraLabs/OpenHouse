@@ -60,7 +60,7 @@ const household = {
   ownerId: async () => 1,
 }
 
-describe('RecurringRunService.runDue', () => {
+describe('RecurringRunService.runForTenant', () => {
   const today = '2026-10-15'
   const dueRule = rule({
     frequency: 'Daily',
@@ -78,7 +78,7 @@ describe('RecurringRunService.runDue', () => {
     members = household
   ) => {
     const rulesRepo = {
-      listActiveAllTenants: vi.fn(async () => rules),
+      listActiveRules: vi.fn(async () => rules),
       findById: vi.fn(async () => ({
         ...rules[0],
         receiverName: 'City Power',
@@ -136,7 +136,7 @@ describe('RecurringRunService.runDue', () => {
     })
     const { svc, transactionsRepo } = run([removed], false, 'UTC', NOW, household)
 
-    await svc.runDue(1)
+    await svc.runForTenant(1, 1)
 
     expect(transactionsRepo.insertGenerated).toHaveBeenCalledWith(
       1,
@@ -147,7 +147,7 @@ describe('RecurringRunService.runDue', () => {
   it('materializes a due rule that has no transaction today', async () => {
     const { svc, transactionsRepo } = run([dueRule], false)
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(1)
     expect(transactionsRepo.insertGenerated).toHaveBeenCalledWith(
@@ -179,7 +179,7 @@ describe('RecurringRunService.runDue', () => {
     })
     const { svc, transactionsRepo } = run([shared], false)
 
-    await svc.runDue(1)
+    await svc.runForTenant(1, 1)
 
     expect(transactionsRepo.insertGenerated).toHaveBeenCalledWith(
       1,
@@ -196,7 +196,7 @@ describe('RecurringRunService.runDue', () => {
   it('leaves a rule with no default split unsplit', async () => {
     const { svc, transactionsRepo } = run([dueRule], false)
 
-    await svc.runDue(1)
+    await svc.runForTenant(1, 1)
 
     const [, write] = transactionsRepo.insertGenerated.mock.calls[0]
 
@@ -211,7 +211,7 @@ describe('RecurringRunService.runDue', () => {
       new Date('2026-10-15T01:00:00Z')
     )
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(1)
     expect(transactionsRepo.insertGenerated).toHaveBeenCalledWith(
@@ -229,7 +229,7 @@ describe('RecurringRunService.runDue', () => {
       new Date('2026-10-15T01:00:00Z')
     )
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(0)
     expect(transactionsRepo.insertGenerated).not.toHaveBeenCalled()
@@ -238,7 +238,7 @@ describe('RecurringRunService.runDue', () => {
   it('skips a rule whose transaction already exists today — idempotent', async () => {
     const { svc, transactionsRepo } = run([dueRule], true)
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(0)
     expect(transactionsRepo.insertGenerated).not.toHaveBeenCalled()
@@ -248,7 +248,7 @@ describe('RecurringRunService.runDue', () => {
     const { svc, transactionsRepo } = run([dueRule], false)
     transactionsRepo.insertGenerated.mockResolvedValueOnce(undefined)
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(0)
   })
@@ -256,7 +256,7 @@ describe('RecurringRunService.runDue', () => {
   it('catches up the missed days of an outage, oldest first, ending today', async () => {
     const { svc, transactionsRepo } = run([dueRule], false)
 
-    const created = await svc.runDue(3)
+    const created = await svc.runForTenant(1, 3)
 
     expect(created).toBe(3)
     const days = transactionsRepo.insertGenerated.mock.calls.map(
@@ -276,7 +276,7 @@ describe('RecurringRunService.runDue', () => {
     })
     const { svc, transactionsRepo } = run([fresh], false)
 
-    const created = await svc.runDue(3)
+    const created = await svc.runForTenant(1, 3)
 
     expect(created).toBe(2)
     const days = transactionsRepo.insertGenerated.mock.calls.map(
@@ -294,7 +294,7 @@ describe('RecurringRunService.runDue', () => {
     })
     const { svc, transactionsRepo } = run([notDue], false)
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(0)
     expect(transactionsRepo.insertGenerated).not.toHaveBeenCalled()
@@ -304,7 +304,7 @@ describe('RecurringRunService.runDue', () => {
     const { svc, transactionsRepo, accountsRepo } = run([dueRule], false)
     accountsRepo.findById.mockResolvedValue({ id: 10, status: 'DELETED' })
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(0)
     expect(transactionsRepo.insertGenerated).not.toHaveBeenCalled()
@@ -314,7 +314,7 @@ describe('RecurringRunService.runDue', () => {
     const { svc, transactionsRepo, categoriesRepo } = run([dueRule], false)
     categoriesRepo.findById.mockResolvedValue({ id: 3, status: 'DELETED' })
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(0)
     expect(transactionsRepo.insertGenerated).not.toHaveBeenCalled()
@@ -324,13 +324,13 @@ describe('RecurringRunService.runDue', () => {
     // Both rules are Daily, so this passes on any calendar day.
     const other = rule({
       id: 2,
-      tenantId: 2,
+      tenantId: 1,
       frequency: 'Daily',
       frequencyDay: null,
       frequencyMonth: null,
     })
     const rulesRepo = {
-      listActiveAllTenants: vi.fn(async () => [dueRule, other]),
+      listActiveRules: vi.fn(async () => [dueRule, other]),
       findById: vi.fn(async () => ({ ...dueRule, receiverName: 'X' })),
     }
     const transactionsRepo = {
@@ -365,7 +365,7 @@ describe('RecurringRunService.runDue', () => {
       household as unknown as HouseholdMembers
     )
 
-    const created = await svc.runDue(1)
+    const created = await svc.runForTenant(1, 1)
 
     expect(created).toBe(1)
     expect(transactionsRepo.insertGenerated).toHaveBeenCalledTimes(2)

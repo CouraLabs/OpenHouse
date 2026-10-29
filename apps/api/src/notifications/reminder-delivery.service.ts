@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common'
 import type { NotificationBody, ReminderDetail } from '@workspace/poco'
 
 import {
@@ -24,7 +23,6 @@ import type { ReminderCandidate } from './reminder-rules.js'
  * a claim, and the day's item entries are gated on it — a second run the
  * same day stores nothing, leaving the items for the next day's digest.
  */
-@Injectable()
 export class ReminderDeliveryService {
   constructor(
     private readonly log: NotificationLogRepository,

@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common'
+import { BadRequestError, ConflictError, NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Account, Currency, Goal } from '@workspace/db'
 
@@ -123,10 +119,12 @@ describe('GoalService', () => {
       settingsIn('BRL')
     )
 
-    const attempt = service.create(1, 7, body)
+    const error = await service.create(1, 7, body).catch(
+      (caught: unknown) => caught
+    )
 
-    await expect(attempt).rejects.toThrow(ConflictException)
-    await expect(attempt).rejects.toThrow(
+    expect(error).toBeInstanceOf(ConflictError)
+    expect((error as ConflictError).payload).toBe(
       'This account is in USD; goals use your main currency (BRL).'
     )
     expect(repo.insert).not.toHaveBeenCalled()
@@ -142,7 +140,7 @@ describe('GoalService', () => {
       settingsIn('USD')
     )
 
-    await expect(service.create(1, 7, body)).rejects.toThrow(NotFoundException)
+    await expect(service.create(1, 7, body)).rejects.toThrow(NotFoundError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
@@ -156,7 +154,7 @@ describe('GoalService', () => {
       settingsIn('USD')
     )
 
-    await expect(service.create(1, 7, body)).rejects.toThrow(NotFoundException)
+    await expect(service.create(1, 7, body)).rejects.toThrow(NotFoundError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
@@ -171,7 +169,7 @@ describe('GoalService', () => {
     )
 
     await expect(service.create(1, 7, body)).rejects.toThrow(
-      BadRequestException
+      BadRequestError
     )
     expect(repo.insert).not.toHaveBeenCalled()
   })
@@ -213,7 +211,7 @@ describe('GoalService', () => {
     )
 
     await expect(service.update(1, 7, { ...body, id: 1 })).rejects.toThrow(
-      NotFoundException
+      NotFoundError
     )
     expect(repo.update).not.toHaveBeenCalled()
   })
@@ -228,7 +226,7 @@ describe('GoalService', () => {
       settingsIn('USD')
     )
 
-    await expect(service.find(1, 999)).rejects.toThrow(NotFoundException)
+    await expect(service.find(1, 999)).rejects.toThrow(NotFoundError)
   })
 
   it('soft-deletes a goal the tenant holds', async () => {

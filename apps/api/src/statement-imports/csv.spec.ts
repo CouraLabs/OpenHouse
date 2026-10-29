@@ -6,6 +6,17 @@ import { mapCsvRecords } from './csv-rows.js'
 import { decodeImportBytes } from './import-decoder.js'
 import { readCsvFile } from './import-file-reader.js'
 
+/** Runs `read` and answers the payload of the `DomainError` it raises. */
+function errorPayloadOf(read: () => unknown): unknown {
+  try {
+    read()
+  } catch (error) {
+    return (error as { payload: unknown }).payload
+  }
+
+  return expect.unreachable('the read was expected to fail')
+}
+
 const base: ImportMapping = {
   hasHeader: true,
   dateColumn: 0,
@@ -214,14 +225,18 @@ describe('readCsvFile', () => {
       delimiter: 'auto',
     } as const
 
-    expect(() => readCsvFile(new Uint8Array(), options)).toThrow(/empty/)
+    expect(errorPayloadOf(() => readCsvFile(new Uint8Array(), options))).toMatch(
+      /empty/
+    )
 
     const line = '05/01/2026,A,"-1,00"\n'
     const rows = `Data,Descrição,Valor\n${line.repeat(5001)}`
 
-    expect(() =>
-      readCsvFile(Uint8Array.from(Buffer.from(rows)), options)
-    ).toThrow(/at most 5000 rows/)
+    expect(
+      errorPayloadOf(() =>
+        readCsvFile(Uint8Array.from(Buffer.from(rows)), options)
+      )
+    ).toMatch(/at most 5000 rows/)
     expect(
       readCsvFile(
         Uint8Array.from(

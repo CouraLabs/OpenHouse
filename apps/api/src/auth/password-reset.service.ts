@@ -1,14 +1,13 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import type { User } from '@workspace/db'
 import type { AccountSecurity } from '@workspace/poco'
 
 import { Clock } from '../common/clock/clock.js'
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from '../common/errors.js'
 import { PasswordResetRepository } from './password-reset.repository.js'
 import { ResetAttemptLimiter } from './reset-attempt-limiter.js'
 import {
@@ -37,7 +36,6 @@ const INVALID_CODE = 'This code is not valid.'
  * Only a code's hash is stored; the plaintext is answered once and never
  * reaches the database. Redeeming signs out every session the user had.
  */
-@Injectable()
 export class PasswordResetService {
   constructor(
     private readonly repository: PasswordResetRepository,
@@ -59,13 +57,13 @@ export class PasswordResetService {
   ): Promise<{ code: string; expiresAt: Date }> {
     const target = await this.repository.findUserInTenant(tenantId, userId)
     if (target === undefined) {
-      throw new NotFoundException('User not found.')
+      throw new NotFoundError('User not found.')
     }
     if (target.role === 'owner') {
-      throw new ConflictException('A reset code cannot be issued for an owner.')
+      throw new ConflictError('A reset code cannot be issued for an owner.')
     }
     if (!target.isActive) {
-      throw new ConflictException(
+      throw new ConflictError(
         'This user was removed. Reactivate them first.'
       )
     }
@@ -84,7 +82,7 @@ export class PasswordResetService {
   ): Promise<{ code: string; expiresAt: Date; user: User }> {
     const user = await this.repository.findUserByEmail(email)
     if (user === undefined) {
-      throw new NotFoundException(`No user has the email ${email}.`)
+      throw new NotFoundError(`No user has the email ${email}.`)
     }
 
     const issued = await this.issueShortLived(user.id, 'server', null)
@@ -104,12 +102,14 @@ export class PasswordResetService {
       userId,
       'recovery',
       now,
-      codes.map((code) => ({
-        userId,
-        codeHash: hashResetCode(code),
-        kind: 'recovery' as const,
-        createdAt: now,
-      }))
+      await Promise.all(
+        codes.map(async (code) => ({
+          userId,
+          codeHash: await hashResetCode(code),
+          kind: 'recovery' as const,
+          createdAt: now,
+        }))
+      )
     )
 
     return codes
@@ -127,7 +127,7 @@ export class PasswordResetService {
     const prefix = resetCodePrefix(normalized)
     this.limiter.assertAllowed(prefix)
 
-    const presented = hashResetCode(normalized)
+    const presented = await hashResetCode(normalized)
     const row = isWellFormedResetCode(normalized)
       ? await this.repository.findByHash(presented)
       : undefined
@@ -139,7 +139,7 @@ export class PasswordResetService {
       row.usedAt !== null ||
       (row.expiresAt !== null && row.expiresAt <= now)
     ) {
-      throw this.invalid(prefix)
+      throw await this.invalid(prefix)
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10)
@@ -157,7 +157,7 @@ export class PasswordResetService {
     if (redeemed.kind !== 'claimed') {
       // Redeemed or expired between the read above and here; a removed
       // user cannot come back through a code.
-      throw this.invalid(prefix)
+      throw await this.invalid(prefix)
     }
 
     return redeemed.user
@@ -203,7 +203,7 @@ export class PasswordResetService {
       [
         {
           userId,
-          codeHash: hashResetCode(code),
+          codeHash: await hashResetCode(code),
           kind,
           issuedBy,
           expiresAt,
@@ -216,9 +216,9 @@ export class PasswordResetService {
   }
 
   /** Records the failure and answers the one generic error. */
-  private invalid(prefix: string): BadRequestException {
+  private async invalid(prefix: string): Promise<BadRequestError> {
     this.limiter.recordFailure(prefix)
 
-    return new BadRequestException(INVALID_CODE)
+    return new BadRequestError(INVALID_CODE)
   }
 }

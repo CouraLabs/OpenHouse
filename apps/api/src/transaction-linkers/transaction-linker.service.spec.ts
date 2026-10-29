@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common'
+import { NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Category, Receiver } from '@workspace/db'
 
@@ -131,7 +131,7 @@ describe('TransactionLinkerService', () => {
         categoryId: 999,
         receiverId: null,
       })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
@@ -146,7 +146,7 @@ describe('TransactionLinkerService', () => {
         categoryId: 3,
         receiverId: 5,
       })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
@@ -198,7 +198,7 @@ describe('TransactionLinkerService', () => {
         categoryId: 3,
         receiverId: null,
       })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.update).not.toHaveBeenCalled()
   })
 

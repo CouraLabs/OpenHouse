@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
 import type {
   CreateTransactionLinkerBody,
   SearchTransactionLinkersArgs,
   UpdateTransactionLinkerBody,
 } from '@workspace/poco'
+
+import { NotFoundError } from '../common/errors.js'
 
 import { CategoryRepository } from '../categories/category.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
@@ -20,7 +21,6 @@ import {
  * session acted as. The tenant and the user always arrive from the caller —
  * this service never reads a request.
  */
-@Injectable()
 export class TransactionLinkerService {
   constructor(
     private readonly repository: TransactionLinkerRepository,
@@ -60,7 +60,7 @@ export class TransactionLinkerService {
     const row = await this.repository.findById(tenantId, id)
 
     if (row === undefined) {
-      throw new NotFoundException(`No transaction linker with id ${id}.`)
+      throw new NotFoundError(`No transaction linker with id ${id}.`)
     }
 
     return row
@@ -76,7 +76,7 @@ export class TransactionLinkerService {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(`No transaction linker with id ${body.id}.`)
+      throw new NotFoundError(`No transaction linker with id ${body.id}.`)
     }
 
     await this.assertReferencesUsable(
@@ -92,7 +92,7 @@ export class TransactionLinkerService {
     })
 
     if (updated === undefined) {
-      throw new NotFoundException(`No transaction linker with id ${body.id}.`)
+      throw new NotFoundError(`No transaction linker with id ${body.id}.`)
     }
 
     return updated
@@ -118,14 +118,14 @@ export class TransactionLinkerService {
     const category = await this.categories.findById(tenantId, categoryId)
 
     if (category === undefined || category.status === 'DELETED') {
-      throw new NotFoundException(`No category with id ${categoryId}.`)
+      throw new NotFoundError(`No category with id ${categoryId}.`)
     }
 
     if (receiverId != null) {
       const receiver = await this.receivers.findById(tenantId, receiverId)
 
       if (receiver === undefined || receiver.status === 'DELETED') {
-        throw new NotFoundException(`No receiver with id ${receiverId}.`)
+        throw new NotFoundError(`No receiver with id ${receiverId}.`)
       }
     }
   }

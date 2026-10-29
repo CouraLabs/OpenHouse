@@ -1,4 +1,4 @@
-import { BadRequestException, PayloadTooLargeException } from '@nestjs/common'
+import { BadRequestError } from '../common/errors.js'
 import {
   IMPORT_MAX_ROWS,
   type ImportDelimiter,
@@ -38,7 +38,7 @@ export interface ReadFile {
 /** Rejects a file with more rows than one import takes. */
 function assertRowCount(count: number): void {
   if (count > IMPORT_MAX_ROWS) {
-    throw new PayloadTooLargeException(
+    throw new BadRequestError(
       `An import takes at most ${IMPORT_MAX_ROWS} rows; this file has ${count}. Split it and import the parts.`
     )
   }
@@ -59,7 +59,7 @@ export function readOfxFile(bytes: Uint8Array): ReadFile {
     statement = parseOfx(text)
   } catch (error) {
     if (error instanceof OfxFormatError) {
-      throw new BadRequestException(error.message)
+      throw new BadRequestError(error.message)
     }
 
     throw error
@@ -112,7 +112,7 @@ export function readCsvFile(
   const { records } = parseCsv(text, mapping?.delimiter ?? options.delimiter)
 
   if (records.length === 0) {
-    throw new BadRequestException('The file is empty.')
+    throw new BadRequestError('The file is empty.')
   }
 
   const hasHeader = mapping?.hasHeader ?? true

@@ -1,6 +1,4 @@
 import { and, asc, eq, gte, lte, sql } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Account, Database, DbOrTx } from '@workspace/db'
 import { accounts, centsToDecimalSql, transactions } from '@workspace/db'
 import { addMoney, compareMoney, negateMoney } from '@workspace/poco'
@@ -16,9 +14,8 @@ import { appliedDeltaSql } from './balance-sql.js'
  * balance the ledger writes move; everything here recomputes it from the
  * rows, which is what the consistency check compares against.
  */
-@Injectable()
 export class BalanceRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * The running-balance window as a CTE of `(id, runningBalance)`: for every

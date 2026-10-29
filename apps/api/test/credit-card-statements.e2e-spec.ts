@@ -1,14 +1,15 @@
-
-import type { INestApplication } from '@nestjs/common'
 import {
   addDays,
   resolveStatement,
   todayIn,
   type CreditCardStatement,
 } from '@workspace/poco'
-import type { App } from 'supertest/types.js'
+import { createDatabase, type Database } from '@workspace/db'
+import { env } from 'cloudflare:workers'
+import { beforeAll, describe, expect, it } from 'vitest'
 
-import { RecurringRunService } from '../src/recurring-transactions/recurring-run.service.js'
+import { SystemClock } from '../src/common/clock/clock.js'
+import { runRecurringForTenant } from '../src/recurring-transactions/recurring.jobs.js'
 import {
   type Agent,
   createAccount,
@@ -42,52 +43,53 @@ async function charge(
   amount = '100.00',
   type: 'Expense' | 'Income' = 'Expense'
 ) {
-  const response = await agent
-    .post('/transactions')
-    .send({
-      name: 'Purchase',
-      amount,
-      transactionDt,
-      linkedAccountId: accountId,
-      categoryId,
-      type,
-    })
-    .expect(201)
+  const response = await agent.post('/api/transactions', {
+    name: 'Purchase',
+    amount,
+    transactionDt,
+    linkedAccountId: accountId,
+    categoryId,
+    type,
+  })
+
+  expect(response.status).toBe(201)
 
   return response.body
 }
 
 /** A card's bills read back, in close order. */
 async function billsOf(agent: Agent, accountId: number, status?: string[]) {
-  const response = await agent
-    .post('/credit-card-statements/search')
-    .send({
-      sort: [{ field: 'closeDate', dir: 'asc' }],
-      filter: { accountId, ...(status === undefined ? {} : { status }) },
-      limit: 100,
-    })
-    .expect(201)
+  const response = await agent.post('/api/credit-card-statements/search', {
+    sort: [{ field: 'closeDate', dir: 'asc' }],
+    filter: { accountId, ...(status === undefined ? {} : { status }) },
+    limit: 100,
+  })
+
+  expect(response.status).toBe(201)
 
   return response.body.items as Array<Record<string, unknown> & { id: number; status: string }>
 }
 
 describe('credit card statements (e2e, #5)', () => {
-  let app: INestApplication<App>
   let agent: Agent
+  let tenantId: number
   let categoryId: number
   let today: string
 
   beforeAll(async () => {
-    app = await startApp()
+    const { app } = startApp()
     agent = await signUp(app)
     categoryId = await createCategory(agent)
 
-    const settings = await agent.get('/settings').expect(200)
-    today = todayIn(settings.body.timezone)
-  })
+    const me = await agent.get('/api/auth/me')
 
-  afterAll(async () => {
-    await app.close()
+    expect(me.status).toBe(200)
+    tenantId = me.body.tenant.id
+
+    const settings = await agent.get('/api/settings')
+
+    expect(settings.status).toBe(200)
+    today = todayIn(settings.body.timezone)
   })
 
   it('places a card charge on its bill and totals the bill', async () => {
@@ -102,11 +104,7 @@ describe('credit card statements (e2e, #5)', () => {
     expect(first.statementDueDate).toBe(window.dueDate)
     expect(first.warning).toBe('STATEMENT_CLOSED')
 
-    const bill = (
-      await agent
-        .get(`/credit-card-statements/${first.statementId}`)
-        .expect(200)
-    ).body as CreditCardStatement
+    const bill = (await agent.get(`/api/credit-card-statements/${first.statementId}`)).body as CreditCardStatement
 
     expect(bill).toMatchObject({
       closeDate: window.closeDate,
@@ -137,11 +135,16 @@ describe('credit card statements (e2e, #5)', () => {
     const canceled = await charge(agent, card, categoryId, day, '20.00')
     const deleted = await charge(agent, card, categoryId, day, '40.00')
 
-    await agent
-      .patch(`/transactions/${canceled.id}/status`)
-      .send({ id: canceled.id, status: 'Canceled' })
-      .expect(200)
-    await agent.delete(`/transactions/${deleted.id}`).expect(204)
+    const canceledStatus = await agent.patch(
+      `/api/transactions/${canceled.id}/status`,
+      { id: canceled.id, status: 'Canceled' }
+    )
+
+    expect(canceledStatus.status).toBe(200)
+
+    const removed = await agent.delete(`/api/transactions/${deleted.id}`)
+
+    expect(removed.status).toBe(204)
 
     const [bill] = await billsOf(agent, card)
 
@@ -155,26 +158,23 @@ describe('credit card statements (e2e, #5)', () => {
     const checking = await createAccount(agent)
     const day = addDays(today, 40)
 
-    const paid = await agent
-      .post('/transactions/transfer')
-      .send({
-        fromAccountId: checking,
-        toAccountId: card,
-        categoryId,
-        amount: '50.00',
-        transactionDt: day,
-      })
-      .expect(201)
-    const advance = await agent
-      .post('/transactions/transfer')
-      .send({
-        fromAccountId: card,
-        toAccountId: checking,
-        categoryId,
-        amount: '25.00',
-        transactionDt: day,
-      })
-      .expect(201)
+    const paid = await agent.post('/api/transactions/transfer', {
+      fromAccountId: checking,
+      toAccountId: card,
+      categoryId,
+      amount: '50.00',
+      transactionDt: day,
+    })
+    const advance = await agent.post('/api/transactions/transfer', {
+      fromAccountId: card,
+      toAccountId: checking,
+      categoryId,
+      amount: '25.00',
+      transactionDt: day,
+    })
+
+    expect(paid.status).toBe(201)
+    expect(advance.status).toBe(201)
 
     const [, cardSide] = paid.body
     const [cardCharge, checkingSide] = advance.body
@@ -210,29 +210,31 @@ describe('credit card statements (e2e, #5)', () => {
     const day = addDays(today, 40)
     const created = await charge(agent, card, categoryId, day)
     const later = await charge(agent, card, categoryId, addDays(day, 31))
-    const edit = (transactionDt: string) =>
-      agent
-        .put('/transactions')
-        .send({
-          id: created.id,
-          name: 'Purchase',
-          amount: '100.00',
-          transactionDt,
-          linkedAccountId: card,
-          categoryId,
-          type: 'Expense',
-        })
-        .expect(200)
+    const edit = async (transactionDt: string) => {
+      const response = await agent.put('/api/transactions', {
+        id: created.id,
+        name: 'Purchase',
+        amount: '100.00',
+        transactionDt,
+        linkedAccountId: card,
+        categoryId,
+        type: 'Expense',
+      })
+
+      expect(response.status).toBe(200)
+
+      return response
+    }
 
     const moved = await edit(addDays(day, 31))
 
     expect(moved.body.statementId).toBe(later.statementId)
 
-    const pinned = await agent
-      .patch(`/transactions/${created.id}/statement`)
-      .send({ statementId: created.statementId })
-      .expect(200)
+    const pinned = await agent.patch(`/api/transactions/${created.id}/statement`, {
+      statementId: created.statementId,
+    })
 
+    expect(pinned.status).toBe(200)
     expect(pinned.body.statementPinned).toBe(true)
     expect(pinned.body.statementId).toBe(created.statementId)
 
@@ -247,10 +249,11 @@ describe('credit card statements (e2e, #5)', () => {
     const created = await charge(agent, card, categoryId, addDays(today, 40))
     const foreign = await charge(agent, other, categoryId, addDays(today, 40))
 
-    await agent
-      .patch(`/transactions/${created.id}/statement`)
-      .send({ statementId: foreign.statementId })
-      .expect(409)
+    const refused = await agent.patch(`/api/transactions/${created.id}/statement`, {
+      statementId: foreign.statementId,
+    })
+
+    expect(refused.status).toBe(409)
   })
 
   it('carries an unpaid bill into the next one', async () => {
@@ -290,18 +293,18 @@ describe('credit card statements (e2e, #5)', () => {
     const card = await createCard(agent)
     const past = await charge(agent, card, categoryId, addDays(today, -120))
     const future = await charge(agent, card, categoryId, addDays(today, 70))
-    const account = (await agent.get(`/accounts/${card}`).expect(200)).body
+    const account = (await agent.get(`/api/accounts/${card}`)).body
 
-    await agent
-      .put('/accounts')
-      .send({ ...account, closeDay: 10, dueDay: 20 })
-      .expect(200)
+    const changed = await agent.put('/api/accounts', {
+      ...account,
+      closeDay: 10,
+      dueDay: 20,
+    })
 
-    const pastAfter = (await agent.get(`/transactions/${past.id}`).expect(200))
-      .body
-    const futureAfter = (
-      await agent.get(`/transactions/${future.id}`).expect(200)
-    ).body
+    expect(changed.status).toBe(200)
+
+    const pastAfter = (await agent.get(`/api/transactions/${past.id}`)).body
+    const futureAfter = (await agent.get(`/api/transactions/${future.id}`)).body
     const expected = resolveStatement(
       { closeDay: 10, dueDay: 20, closeDayInclusive: false },
       future.transactionDt
@@ -311,26 +314,23 @@ describe('credit card statements (e2e, #5)', () => {
     expect(futureAfter.statementId).not.toBe(future.statementId)
     expect(futureAfter.statementDueDate).toBe(expected.dueDate)
 
-    const history = (
-      await agent.get(`/transactions/${future.id}/history`).expect(200)
-    ).body
+    const history = (await agent.get(`/api/transactions/${future.id}/history`)).body
 
     expect(history[0].action).toBe('UPDATE')
   })
 
   it('rejects a card whose close and due days match', async () => {
-    await agent
-      .post('/accounts')
-      .send({
-        name: 'Same day',
-        type: 'Credit Card',
-        balance: '0.00',
-        currency: 'USD',
-        limit: '100.00',
-        closeDay: 5,
-        dueDay: 5,
-      })
-      .expect(409)
+    const refused = await agent.post('/api/accounts', {
+      name: 'Same day',
+      type: 'Credit Card',
+      balance: '0.00',
+      currency: 'USD',
+      limit: '100.00',
+      closeDay: 5,
+      dueDay: 5,
+    })
+
+    expect(refused.status).toBe(409)
   })
 
   it('asks before deleting a card that still owes', async () => {
@@ -338,12 +338,15 @@ describe('credit card statements (e2e, #5)', () => {
 
     await charge(agent, card, categoryId, addDays(today, -90))
 
-    const refused = await agent.delete(`/accounts/${card}`).expect(409)
+    const refused = await agent.delete(`/api/accounts/${card}`)
 
+    expect(refused.status).toBe(409)
     expect(refused.body.unpaidBills).toBe(1)
     expect(refused.body.amountDue).toBe('100.00')
 
-    await agent.delete(`/accounts/${card}?confirmUnpaidBills=true`).expect(204)
+    const confirmed = await agent.delete(`/api/accounts/${card}?confirmUnpaidBills=true`)
+
+    expect(confirmed.status).toBe(204)
   })
 
   it('dates card charges by the bill due date in cash mode', async () => {
@@ -353,21 +356,21 @@ describe('credit card statements (e2e, #5)', () => {
 
     await charge(agent, card, categoryId, day, '75.00')
 
-    const summary = async (creditMode: string, from: string, to: string) =>
-      (
-        await agent
-          .post('/transactions/summary')
-          .send({
-            sort: [],
-            filter: {
-              linkedAccountId: card,
-              transactionDtFrom: from,
-              transactionDtTo: to,
-              creditMode,
-            },
-          })
-          .expect(201)
-      ).body.groups
+    const summary = async (creditMode: string, from: string, to: string) => {
+      const response = await agent.post('/api/transactions/summary', {
+        sort: [],
+        filter: {
+          linkedAccountId: card,
+          transactionDtFrom: from,
+          transactionDtTo: to,
+          creditMode,
+        },
+      })
+
+      expect(response.status).toBe(201)
+
+      return response.body.groups
+    }
 
     expect(await summary('accrual', day, day)).toMatchObject([
       { creditExpenses: '75.00' },
@@ -380,29 +383,34 @@ describe('credit card statements (e2e, #5)', () => {
 
   it('places a recurring rule’s charge on its bill', async () => {
     const card = await createCard(agent)
-    const receiver = await agent
-      .post('/receivers')
-      .send({ name: 'Streaming', type: 'Service' })
-      .expect(201)
+    const receiver = await agent.post('/api/receivers', {
+      name: 'Streaming',
+      type: 'Service',
+    })
 
-    await agent
-      .post('/recurring-transactions')
-      .send({
-        receiverId: receiver.body.id,
-        categoryId,
-        linkedAccountId: card,
-        amount: '9.90',
-        type: 'Expense',
-        frequency: 'Daily',
-      })
-      .expect(201)
+    expect(receiver.status).toBe(201)
 
-    await app.get(RecurringRunService).runDue()
+    const rule = await agent.post('/api/recurring-transactions', {
+      receiverId: receiver.body.id,
+      categoryId,
+      linkedAccountId: card,
+      amount: '9.90',
+      type: 'Expense',
+      frequency: 'Daily',
+    })
+
+    expect(rule.status).toBe(201)
+
+    // The queue job the cron fans out: the rule was created today, so the
+    // catch-up window materializes exactly today's charge.
+    const db: Database = createDatabase(env.DB as never)
+    const created = await runRecurringForTenant(db, new SystemClock(), tenantId)
+
+    expect(created).toBe(1)
 
     const [bill] = await billsOf(agent, card)
 
     expect(bill.charges).toBe('9.90')
     expect(bill.closeDate).toBe(resolveStatement(cycle, today).closeDate)
   })
-
 })

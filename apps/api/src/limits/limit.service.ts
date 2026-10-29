@@ -1,4 +1,3 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
 import type { Currency } from '@workspace/db'
 import {
   periodWindow,
@@ -10,6 +9,7 @@ import {
 
 import { CategoryRepository } from '../categories/category.repository.js'
 import { Clock } from '../common/clock/clock.js'
+import { NotFoundError } from '../common/errors.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import { TransactionRepository } from '../transactions/transaction.repository.js'
 import {
@@ -36,7 +36,6 @@ export type LimitUsageView = LimitView & {
  * the audit trail records the user the session acted as. The tenant and the
  * user always arrive from the caller — this service never reads a request.
  */
-@Injectable()
 export class LimitService {
   constructor(
     private readonly repository: LimitRepository,
@@ -99,7 +98,7 @@ export class LimitService {
     // The periods run on the tenant's calendar, not the server's.
     const settings = await this.settings.findByTenant(tenantId)
     if (settings === undefined) {
-      throw new NotFoundException('Settings not found.')
+      throw new NotFoundError('Settings not found.')
     }
     const today = todayIn(settings.timezone, this.clock.now())
 
@@ -148,7 +147,7 @@ export class LimitService {
     ])
 
     if (row === undefined) {
-      throw new NotFoundException(`No limit with id ${id}.`)
+      throw new NotFoundError(`No limit with id ${id}.`)
     }
 
     return { ...row, currency: mainCurrency }
@@ -164,7 +163,7 @@ export class LimitService {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(`No limit with id ${body.id}.`)
+      throw new NotFoundError(`No limit with id ${body.id}.`)
     }
 
     await this.assertCategoryUsable(tenantId, body.categoryId)
@@ -176,7 +175,7 @@ export class LimitService {
     })
 
     if (updated === undefined) {
-      throw new NotFoundException(`No limit with id ${body.id}.`)
+      throw new NotFoundError(`No limit with id ${body.id}.`)
     }
 
     return { ...updated, currency: row.currency }
@@ -197,7 +196,7 @@ export class LimitService {
     const settings = await this.settings.findByTenant(tenantId)
 
     if (settings === undefined) {
-      throw new NotFoundException('Settings not found.')
+      throw new NotFoundError('Settings not found.')
     }
 
     return settings.mainCurrency
@@ -211,7 +210,7 @@ export class LimitService {
     const category = await this.categories.findById(tenantId, categoryId)
 
     if (category === undefined || category.status === 'DELETED') {
-      throw new NotFoundException(`No category with id ${categoryId}.`)
+      throw new NotFoundError(`No category with id ${categoryId}.`)
     }
   }
 }

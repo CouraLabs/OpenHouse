@@ -1,7 +1,5 @@
 import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Account, Database, DbOrTx } from '@workspace/db'
+import type { Account, Database } from '@workspace/db'
 import { accounts, decimalToCents, transactions } from '@workspace/db'
 import type { SearchAccountsArgs } from '@workspace/poco'
 
@@ -45,9 +43,8 @@ export interface AccountWrite {
  * method takes the tenant id explicitly — the repository never decides who
  * is asking.
  */
-@Injectable()
 export class AccountRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Inserts an account, stamping the audit trail with the acting user. A
@@ -270,7 +267,7 @@ export class AccountRepository {
   /** Clears the default flag from every account of the tenant but `keepId`
    * — the step that keeps the one-default promise before a write sets it. */
   private clearDefaultStatement(
-    db: DbOrTx,
+    db: Database,
     tenantId: number,
     keepId: number | null
   ) {

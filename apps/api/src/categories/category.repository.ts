@@ -1,6 +1,4 @@
 import { and, asc, count, eq, like, sql } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Category, Database } from '@workspace/db'
 import { categories, normalizeSearchName } from '@workspace/db'
 import type { SearchCategoriesArgs, SplitInput } from '@workspace/poco'
@@ -27,9 +25,8 @@ export interface CategoryWrite {
  * method takes the tenant id explicitly — the repository never decides who
  * is asking.
  */
-@Injectable()
 export class CategoryRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Inserts a category, stamping the audit trail with the acting user. */
   async insert(

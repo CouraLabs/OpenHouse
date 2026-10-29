@@ -1,11 +1,9 @@
-import type { INestApplication } from '@nestjs/common'
 import {
   todayIn,
   type HouseholdMember,
   type HouseholdOverview,
   type Transaction,
 } from '@workspace/poco'
-import type { App } from 'supertest/types.js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
@@ -19,7 +17,6 @@ import {
 } from './support.js'
 
 describe('household splitting and settle-up (e2e, #14)', () => {
-  let app: INestApplication<App>
   let owner: Agent
   let member: { agent: Agent; id: number }
   let ownerId: number
@@ -30,51 +27,56 @@ describe('household splitting and settle-up (e2e, #14)', () => {
   let currency: string
 
   beforeAll(async () => {
-    app = await startApp()
+    const { app } = startApp()
     owner = await signUp(app)
     member = await joinAsMember(app, owner)
     categoryId = await createCategory(owner)
 
-    const members = await owner.get('/household/members').expect(200)
+    const members = await owner.get('/api/household/members')
 
+    expect(members.status).toBe(200)
     const owned = (members.body as HouseholdMember[]).find(
       (candidate) => candidate.id !== member.id
     )
     expect(owned).toBeDefined()
     ownerId = owned?.id ?? 0
 
-    const settings = await owner.get('/settings').expect(200)
+    const settings = await owner.get('/api/settings')
 
+    expect(settings.status).toBe(200)
     today = todayIn(settings.body.timezone)
     currency = settings.body.mainCurrency
     accountId = await createAccount(owner, { currency })
     memberAccountId = await createAccount(owner, { currency })
   })
 
-  afterAll(async () => {
-    await app.close()
+  afterAll(() => {
+    // The storage is per-test isolated; nothing to close.
   })
 
-  const overview = async (): Promise<HouseholdOverview> =>
-    (await owner.post('/household/overview').send({}).expect(200)).body
+  const overview = async (): Promise<HouseholdOverview> => {
+    const response = await owner.post('/api/household/overview', {})
 
-  const spend = async (
-    body: Record<string, unknown>
-  ): Promise<Transaction> =>
-    (
-      await owner
-        .post('/transactions')
-        .send({
-          name: 'Dinner',
-          amount: '100.00',
-          transactionDt: today,
-          linkedAccountId: accountId,
-          categoryId,
-          type: 'Expense',
-          ...body,
-        })
-        .expect(201)
-    ).body
+    expect(response.status).toBe(200)
+
+    return response.body
+  }
+
+  const spend = async (body: Record<string, unknown>): Promise<Transaction> => {
+    const response = await owner.post('/api/transactions', {
+      name: 'Dinner',
+      amount: '100.00',
+      transactionDt: today,
+      linkedAccountId: accountId,
+      categoryId,
+      type: 'Expense',
+      ...body,
+    })
+
+    expect(response.status).toBe(201)
+
+    return response.body
+  }
 
   it('splits an expense, shows the balance, and settles it to zero', async () => {
     const created = await spend({
@@ -97,19 +99,17 @@ describe('household splitting and settle-up (e2e, #14)', () => {
       }),
     ])
 
-    const settled = await member.agent
-      .post('/transactions/settle')
-      .send({
-        fromUserId: member.id,
-        toUserId: ownerId,
-        amount: '50.00',
-        currency,
-        fromAccountId: memberAccountId,
-        toAccountId: accountId,
-        transactionDt: today,
-      })
-      .expect(201)
+    const settled = await member.agent.post('/api/transactions/settle', {
+      fromUserId: member.id,
+      toUserId: ownerId,
+      amount: '50.00',
+      currency,
+      fromAccountId: memberAccountId,
+      toAccountId: accountId,
+      transactionDt: today,
+    })
 
+    expect(settled.status).toBe(201)
     expect(settled.body).toHaveLength(2)
     expect(settled.body[0].isSettlement).toBe(true)
 
@@ -118,46 +118,42 @@ describe('household splitting and settle-up (e2e, #14)', () => {
     expect(after.suggestions).toEqual([])
     expect(after.settlements).toHaveLength(1)
     // The settlement is no income or expense.
-    const summary = await owner
-      .post('/transactions/summary')
-      .send({})
-      .expect(201)
+    const summary = await owner.post('/api/transactions/summary', {})
 
+    expect(summary.status).toBe(201)
     expect(JSON.stringify(summary.body)).not.toContain('50.00,')
     expect(await balanceOf(owner, memberAccountId)).toBe('950.00')
   })
 
   it('rejects a split that does not add up and a split transfer', async () => {
-    await owner
-      .post('/transactions')
-      .send({
-        name: 'Bad',
-        amount: '10.00',
-        transactionDt: today,
-        linkedAccountId: accountId,
-        categoryId,
-        type: 'Expense',
-        split: {
-          mode: 'exact',
-          entries: [
-            { userId: ownerId, value: '1.00' },
-            { userId: member.id, value: '1.00' },
-          ],
-        },
-      })
-      .expect(400)
+    const bad = await owner.post('/api/transactions', {
+      name: 'Bad',
+      amount: '10.00',
+      transactionDt: today,
+      linkedAccountId: accountId,
+      categoryId,
+      type: 'Expense',
+      split: {
+        mode: 'exact',
+        entries: [
+          { userId: ownerId, value: '1.00' },
+          { userId: member.id, value: '1.00' },
+        ],
+      },
+    })
 
-    await owner
-      .post('/transactions/transfer')
-      .send({
-        fromAccountId: accountId,
-        toAccountId: memberAccountId,
-        categoryId,
-        amount: '5.00',
-        transactionDt: today,
-        split: { mode: 'equal', entries: [{ userId: ownerId }] },
-      })
-      .expect(400)
+    expect(bad.status).toBe(400)
+
+    const splitTransfer = await owner.post('/api/transactions/transfer', {
+      fromAccountId: accountId,
+      toAccountId: memberAccountId,
+      categoryId,
+      amount: '5.00',
+      transactionDt: today,
+      split: { mode: 'equal', entries: [{ userId: ownerId }] },
+    })
+
+    expect(splitTransfer.status).toBe(400)
   })
 
   it('creates no debts on a shared account', async () => {
@@ -167,20 +163,21 @@ describe('household splitting and settle-up (e2e, #14)', () => {
     })
     const base = await overview()
 
-    await owner
-      .post('/transactions')
-      .send({
-        name: 'Joint',
-        amount: '40.00',
-        transactionDt: today,
-        linkedAccountId: shared,
-        categoryId,
-        type: 'Expense',
-        split: { mode: 'equal', entries: [{ userId: member.id }] },
-      })
-      .expect(409)
+    const refused = await owner.post('/api/transactions', {
+      name: 'Joint',
+      amount: '40.00',
+      transactionDt: today,
+      linkedAccountId: shared,
+      categoryId,
+      type: 'Expense',
+      split: { mode: 'equal', entries: [{ userId: member.id }] },
+    })
 
-    expect((await overview()).balances).toEqual(base.balances)
+    expect(refused.status).toBe(409)
+
+    const after = await overview()
+
+    expect(after.balances).toEqual(base.balances)
   })
 
   it('warns about a member balance and keeps it after removal', async () => {
@@ -189,13 +186,14 @@ describe('household splitting and settle-up (e2e, #14)', () => {
       split: { mode: 'equal', entries: [{ userId: member.id }] },
     })
 
-    const check = await owner
-      .get(`/household/members/${member.id}/balance`)
-      .expect(200)
+    const check = await owner.get(`/api/household/members/${member.id}/balance`)
 
+    expect(check.status).toBe(200)
     expect(check.body.lines).toEqual([{ currency, balance: '-30.00' }])
 
-    await owner.post(`/tenants/users/${member.id}/deactivate`).expect(200)
+    const removed = await owner.post(`/api/tenants/users/${member.id}/deactivate`)
+
+    expect(removed.status).toBe(200)
 
     const after = await overview()
 
@@ -204,16 +202,15 @@ describe('household splitting and settle-up (e2e, #14)', () => {
     ).toEqual(expect.objectContaining({ isActive: false, balance: '-30.00' }))
 
     // A removed member can still be settled.
-    await owner
-      .post('/transactions/settle')
-      .send({
-        fromUserId: member.id,
-        toUserId: ownerId,
-        amount: '30.00',
-        currency,
-        fromAccountId: memberAccountId,
-        transactionDt: today,
-      })
-      .expect(201)
+    const settled = await owner.post('/api/transactions/settle', {
+      fromUserId: member.id,
+      toUserId: ownerId,
+      amount: '30.00',
+      currency,
+      fromAccountId: memberAccountId,
+      transactionDt: today,
+    })
+
+    expect(settled.status).toBe(201)
   })
 })

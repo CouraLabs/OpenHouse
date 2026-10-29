@@ -1,10 +1,7 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, count, eq, inArray, ne } from 'drizzle-orm'
 import type {
   Currency,
   Database,
-  DbOrTx,
   TenantSettingsRow,
   UnsplitMode,
 } from '@workspace/db'
@@ -22,19 +19,17 @@ export interface SettingsWrite {
  * The tenant settings rows — one per tenant. Every method takes the tenant
  * id explicitly; the repository never decides who is asking.
  *
- * Exported by `SettingsModule` so other features (the recurring job, the
- * sign-up) read and seed the settings through it.
+ * Exported so other features (the recurring job, the sign-up) read and
+ * seed the settings through it.
  */
-@Injectable()
 export class SettingsRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Reads the tenant's settings row. */
   async findByTenant(
-    tenantId: number,
-    tx: DbOrTx = this.db
+    tenantId: number
   ): Promise<TenantSettingsRow | undefined> {
-    const [row] = await tx
+    const [row] = await this.db
       .select()
       .from(tenantSettings)
       .where(eq(tenantSettings.tenantId, tenantId))
@@ -67,10 +62,9 @@ export class SettingsRepository {
    */
   async insert(
     tenantId: number,
-    data: SettingsWrite & { timezoneConfirmed: boolean },
-    tx: DbOrTx = this.db
+    data: SettingsWrite & { timezoneConfirmed: boolean }
   ): Promise<TenantSettingsRow> {
-    const [row] = await tx
+    const [row] = await this.db
       .insert(tenantSettings)
       .values({ tenantId, ...data })
       .returning()

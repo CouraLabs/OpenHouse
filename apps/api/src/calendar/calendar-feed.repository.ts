@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '@workspace/db'
 import { calendarFeeds, users } from '@workspace/db'
@@ -11,9 +9,8 @@ export interface FeedOwner {
 }
 
 /** The secret calendar feed tokens, one per user. */
-@Injectable()
 export class CalendarFeedRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Reads the user's token, or nothing while no feed was created. */
   async findToken(userId: number): Promise<string | undefined> {

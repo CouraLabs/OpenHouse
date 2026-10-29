@@ -1,9 +1,3 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type { Currency } from '@workspace/db'
 import type {
   CreateGoalBody,
@@ -12,6 +6,7 @@ import type {
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { BadRequestError, ConflictError, NotFoundError } from '../common/errors.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import {
   GoalRepository,
@@ -30,7 +25,6 @@ export type GoalView = GoalRow & { currency: Currency }
  * trail records the user the session acted as. The tenant and the user
  * always arrive from the caller — this service never reads a request.
  */
-@Injectable()
 export class GoalService {
   constructor(
     private readonly repository: GoalRepository,
@@ -84,7 +78,7 @@ export class GoalService {
     ])
 
     if (row === undefined) {
-      throw new NotFoundException(`No goal with id ${id}.`)
+      throw new NotFoundError(`No goal with id ${id}.`)
     }
 
     return { ...row, currency: mainCurrency }
@@ -100,7 +94,7 @@ export class GoalService {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(`No goal with id ${body.id}.`)
+      throw new NotFoundError(`No goal with id ${body.id}.`)
     }
 
     await this.assertSavingsAccountUsable(
@@ -119,7 +113,7 @@ export class GoalService {
     })
 
     if (updated === undefined) {
-      throw new NotFoundException(`No goal with id ${body.id}.`)
+      throw new NotFoundError(`No goal with id ${body.id}.`)
     }
 
     return { ...updated, currency: row.currency }
@@ -140,7 +134,7 @@ export class GoalService {
     const settings = await this.settings.findByTenant(tenantId)
 
     if (settings === undefined) {
-      throw new NotFoundException('Settings not found.')
+      throw new NotFoundError('Settings not found.')
     }
 
     return settings.mainCurrency
@@ -161,15 +155,15 @@ export class GoalService {
     const account = await this.accounts.findById(tenantId, accountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${accountId}.`)
+      throw new NotFoundError(`No account with id ${accountId}.`)
     }
 
     if (account.type !== 'Savings') {
-      throw new BadRequestException('Only a Savings account can back a goal.')
+      throw new BadRequestError('Only a Savings account can back a goal.')
     }
 
     if (account.currency !== mainCurrency) {
-      throw new ConflictException(
+      throw new ConflictError(
         `This account is in ${account.currency}; goals use your main currency (${mainCurrency}).`
       )
     }

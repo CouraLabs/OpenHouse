@@ -1,8 +1,3 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import type {
   Account,
@@ -14,6 +9,11 @@ import { CARD_PAYMENT_CATEGORY } from '@workspace/poco'
 import { HouseholdMembers } from '../common/household/household-members.js'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from '../common/errors.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
 import {
@@ -306,25 +306,25 @@ describe('TransactionService', () => {
             ],
           },
         })
-      ).rejects.toThrow(BadRequestException)
+      ).rejects.toThrow(BadRequestError)
     })
 
     it('rejects a payer or a member outside the household', async () => {
       await expect(
         service().create(1, 7, { ...createBody, paidByUserId: 99 })
-      ).rejects.toThrow(BadRequestException)
+      ).rejects.toThrow(BadRequestError)
       await expect(
         service().create(1, 7, {
           ...createBody,
           split: { mode: 'equal', entries: [{ userId: 3 }] },
         })
-      ).rejects.toThrow(BadRequestException)
+      ).rejects.toThrow(BadRequestError)
     })
 
     it('does not split an income, or what a shared account pays', async () => {
       await expect(
         service().create(1, 7, { ...createBody, type: 'Income', split: equal })
-      ).rejects.toThrow(BadRequestException)
+      ).rejects.toThrow(BadRequestError)
 
       const accs = accounts()
       accs.findById.mockResolvedValue(account({ ownership: 'shared' }))
@@ -334,7 +334,7 @@ describe('TransactionService', () => {
           ...createBody,
           split: equal,
         })
-      ).rejects.toThrow(ConflictException)
+      ).rejects.toThrow(ConflictError)
     })
 
     it('rescales the shares when an edit changes the amount', async () => {
@@ -388,7 +388,7 @@ describe('TransactionService', () => {
 
       await expect(
         service(repo).update(1, 7, { ...createBody, id: 1 })
-      ).rejects.toThrow(ConflictException)
+      ).rejects.toThrow(ConflictError)
     })
 
     it('does not split a transfer side', async () => {
@@ -397,7 +397,7 @@ describe('TransactionService', () => {
 
       await expect(
         service(repo).update(1, 7, { ...createBody, id: 1, split: equal })
-      ).rejects.toThrow(ConflictException)
+      ).rejects.toThrow(ConflictError)
     })
   })
 
@@ -480,17 +480,17 @@ describe('TransactionService', () => {
     it('rejects strangers, cards, and another currency', async () => {
       await expect(
         service().settle(1, 7, { ...settleBody, fromUserId: 99 })
-      ).rejects.toThrow(BadRequestException)
+      ).rejects.toThrow(BadRequestError)
 
       const card = accounts()
       card.findById.mockResolvedValue(account({ type: 'Credit Card' }))
 
       await expect(
         service(repository(), card).settle(1, 7, settleBody)
-      ).rejects.toThrow(ConflictException)
+      ).rejects.toThrow(ConflictError)
       await expect(
         service().settle(1, 7, { ...settleBody, currency: 'BRL' })
-      ).rejects.toThrow(ConflictException)
+      ).rejects.toThrow(ConflictError)
     })
   })
 
@@ -501,7 +501,7 @@ describe('TransactionService', () => {
 
     await expect(
       service(repo, accs).create(1, 7, { ...createBody, linkedAccountId: 999 })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.insertWithBalance).not.toHaveBeenCalled()
   })
 
@@ -511,7 +511,7 @@ describe('TransactionService', () => {
 
     await expect(
       service(repo).update(1, 7, { ...createBody, id: 1 })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
   })
 
   it('changes the status through the narrow route, not the ledger', async () => {
@@ -534,7 +534,7 @@ describe('TransactionService', () => {
 
     await expect(
       service(repo).changeStatus(1, 7, { id: 1, status: 'Checked' })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.updateStatus).not.toHaveBeenCalled()
   })
 
@@ -570,16 +570,20 @@ describe('TransactionService', () => {
     const accs = accounts()
     accs.findById.mockResolvedValue(account({ id: 11, currency: 'USD' }))
 
-    await expect(
-      service(repo, accs).update(1, 7, {
+    const error = await service(repo, accs)
+      .update(1, 7, {
         ...createBody,
         id: 1,
         linkedAccountId: 11,
       })
-    ).rejects.toThrow(
-      new ConflictException(
-        'Move the transaction to an account of the same currency.'
+      .then(
+        () => null,
+        (error: unknown) => error
       )
+
+    expect(error).toBeInstanceOf(ConflictError)
+    expect((error as ConflictError).payload).toBe(
+      'Move the transaction to an account of the same currency.'
     )
     expect(repo.updateWithBalance).not.toHaveBeenCalled()
   })
@@ -611,7 +615,7 @@ describe('TransactionService', () => {
 
     await expect(
       service(repo).update(1, 7, { ...createBody, id: 1, type: 'Income' })
-    ).rejects.toThrow(ConflictException)
+    ).rejects.toThrow(ConflictError)
     expect(repo.updateWithBalance).not.toHaveBeenCalled()
   })
 
@@ -621,7 +625,7 @@ describe('TransactionService', () => {
 
     await expect(
       service(repo).update(1, 7, { ...createBody, id: 1, linkedAccountId: 11 })
-    ).rejects.toThrow(ConflictException)
+    ).rejects.toThrow(ConflictError)
     expect(repo.updateWithBalance).not.toHaveBeenCalled()
   })
 
@@ -757,7 +761,7 @@ describe('TransactionService', () => {
             ...transferBody,
             paymentStatementId: 41,
           })
-        ).rejects.toThrow(ConflictException)
+        ).rejects.toThrow(ConflictError)
         expect(repo.insertTransfer).not.toHaveBeenCalled()
       })
 
@@ -795,7 +799,7 @@ describe('TransactionService', () => {
           ...transferBody,
           categoryId: undefined,
         })
-      ).rejects.toThrow(BadRequestException)
+      ).rejects.toThrow(BadRequestError)
     })
 
     it('names a bill only on a transfer into a card', async () => {
@@ -810,7 +814,7 @@ describe('TransactionService', () => {
           ...transferBody,
           paymentStatementId: 41,
         })
-      ).rejects.toThrow(ConflictException)
+      ).rejects.toThrow(ConflictError)
     })
 
     it('rejects accounts of different currencies', async () => {
@@ -822,7 +826,7 @@ describe('TransactionService', () => {
 
       await expect(
         service(repo, accs).transfer(1, 7, transferBody)
-      ).rejects.toThrow(ConflictException)
+      ).rejects.toThrow(ConflictError)
       expect(repo.insertTransfer).not.toHaveBeenCalled()
     })
 
@@ -836,7 +840,7 @@ describe('TransactionService', () => {
           ...transferBody,
           toAccountId: 10,
         })
-      ).rejects.toThrow(ConflictException)
+      ).rejects.toThrow(ConflictError)
     })
   })
 })

@@ -1,6 +1,3 @@
-import { randomBytes } from 'node:crypto'
-
-import { Injectable, NotFoundException } from '@nestjs/common'
 import {
   forecastOccurrences,
   shiftDay,
@@ -9,6 +6,7 @@ import {
 } from '@workspace/poco'
 
 import { Clock } from '../common/clock/clock.js'
+import { NotFoundError } from '../common/errors.js'
 import {
   BillSource,
   RecurringSource,
@@ -25,13 +23,24 @@ function feedPath(token: string): string {
   return `/calendar/${token}.ics`
 }
 
+/** The token's spelling: base64url, the URL-safe alphabet a calendar app
+ * fetches without escaping. */
+function base64UrlOf(bytes: Uint8Array): string {
+  let binary = ''
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
+
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
+}
+
 /**
  * The per-user calendar feed: a secret `.ics` URL listing the tenant's
  * pending card bills and recurring items as all-day events, for Google or
  * Apple Calendar to subscribe to. The token is the only credential; a new
  * one replaces the old, which stops working.
  */
-@Injectable()
 export class CalendarService {
   constructor(
     private readonly feeds: CalendarFeedRepository,
@@ -50,7 +59,9 @@ export class CalendarService {
 
   /** Creates the user's feed, or rotates its token. */
   async rotate(tenantId: number, userId: number): Promise<CalendarFeed> {
-    const token = randomBytes(32).toString('base64url')
+    const bytes = new Uint8Array(32)
+    crypto.getRandomValues(bytes)
+    const token = base64UrlOf(bytes)
 
     await this.feeds.save(tenantId, userId, token)
 
@@ -71,7 +82,7 @@ export class CalendarService {
         : await this.settings.findByTenant(owner.tenantId)
 
     if (owner === undefined || settings === undefined) {
-      throw new NotFoundException('No such calendar.')
+      throw new NotFoundError('No such calendar.')
     }
 
     const now = this.clock.now()

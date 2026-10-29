@@ -1,14 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
 import {
   toStartPage,
   type UpdatePreferencesBody,
   type UserPreferences,
 } from '@workspace/poco'
 
+import { NotFoundError } from '../common/errors.js'
 import { PreferencesRepository } from './preferences.repository.js'
 
 /** Saves the signed-in user's own preferences. */
-@Injectable()
 export class PreferencesService {
   constructor(private readonly preferences: PreferencesRepository) {}
 
@@ -19,7 +18,7 @@ export class PreferencesService {
   ): Promise<UserPreferences> {
     const row = await this.preferences.update(tenantId, userId, body)
     if (row === undefined) {
-      throw new NotFoundException('User not found.')
+      throw new NotFoundError('User not found.')
     }
 
     return { startPage: toStartPage(row.startPage) }

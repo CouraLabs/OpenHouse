@@ -5,6 +5,17 @@ import { readOfxFile } from './import-file-reader.js'
 import { OfxFormatError, parseOfx } from './ofx-parser.js'
 import { BANK_OFX_SGML, CARD_OFX_XML } from './ofx-samples.fixture-spec.js'
 
+/** Runs `read` and answers the payload of the `DomainError` it raises. */
+function errorPayloadOf(read: () => unknown): unknown {
+  try {
+    read()
+  } catch (error) {
+    return (error as { payload: unknown }).payload
+  }
+
+  return expect.unreachable('the read was expected to fail')
+}
+
 describe('parseOfx', () => {
   it('reads an OFX 1.x SGML bank statement', () => {
     const statement = parseOfx(BANK_OFX_SGML)
@@ -176,7 +187,7 @@ describe('readOfxFile sign convention', () => {
     const row = '<STMTTRN><DTPOSTED>20260105<TRNAMT>-1.00<FITID>x</STMTTRN>'
     const big = `<OFX><STMTRS><CURDEF>USD<BANKTRANLIST>${row.repeat(5001)}</BANKTRANLIST></STMTRS></OFX>`
 
-    expect(() => readOfxFile(Uint8Array.from(Buffer.from(big)))).toThrow(
+    expect(errorPayloadOf(() => readOfxFile(Uint8Array.from(Buffer.from(big))))).toMatch(
       /at most 5000 rows/
     )
   })

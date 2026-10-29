@@ -1,7 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Database, } from '@workspace/db'
+import type { Database } from '@workspace/db'
 import { importMappings } from '@workspace/db'
 import { importMappingSchema, type ImportMapping } from '@workspace/poco'
 
@@ -11,9 +9,8 @@ import { importMappingSchema, type ImportMapping } from '@workspace/poco'
  * parsed with the poco schema on every read, so a mapping written by an older
  * shape is ignored instead of crashing a preview.
  */
-@Injectable()
 export class ImportMappingRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** The account's saved mapping, or nothing when none was saved or the
    * stored one no longer fits the schema. */

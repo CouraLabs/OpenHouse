@@ -1,13 +1,11 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common'
-import bcrypt from 'bcrypt'
-import { InjectDrizzle } from '@nestjs/drizzle'
+import bcrypt from 'bcryptjs'
 import { and, eq, isNull, sql } from 'drizzle-orm'
+
+import {
+  BadRequestError,
+  ConflictError,
+  UnauthorizedError,
+} from '../common/errors.js'
 import type {
   Currency,
   Database,
@@ -21,7 +19,7 @@ import { tenants, tenantCodes, tenantSettings, users } from '@workspace/db'
 import { toStartPage, type SessionResponse } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
-import { JWT_TTLS, type JwtTtls } from './jwt-ttls.js'
+import type { JwtTtls } from '../config/env.js'
 import { hashToken, TokenService } from './token.service.js'
 
 /**
@@ -63,13 +61,12 @@ export interface PublicTenant {
  * Every tenant context comes from the database row of the user the session
  * belongs to — no route ever accepts a tenant id from a client.
  */
-@Injectable()
 export class AuthService {
   constructor(
-    @InjectDrizzle() private readonly db: Database,
-    @Inject(TokenService) private readonly tokens: TokenService,
-    @Inject(SettingsRepository) private readonly settings: SettingsRepository,
-    @Inject(JWT_TTLS) private readonly ttls: JwtTtls
+    private readonly db: Database,
+    private readonly tokens: TokenService,
+    private readonly settings: SettingsRepository,
+    private readonly ttls: JwtTtls
   ) {}
 
   /**
@@ -166,13 +163,13 @@ export class AuthService {
       limit: 1,
     })
     if (code === undefined) {
-      throw new UnauthorizedException('Unknown tenant code.')
+      throw new UnauthorizedError('Unknown tenant code.')
     }
     if (code.usedAt !== null) {
-      throw new ConflictException('This tenant code was already used.')
+      throw new ConflictError('This tenant code was already used.')
     }
     if (code.expiresAt !== null && code.expiresAt < now) {
-      throw new ConflictException('This tenant code has expired.')
+      throw new ConflictError('This tenant code has expired.')
     }
 
     const stamp = new Date()
@@ -202,7 +199,7 @@ export class AuthService {
 
       if (claimed.length === 0) {
         // Another request redeemed it between the check above and here.
-        throw new ConflictException('This tenant code was already used.')
+        throw new ConflictError('This tenant code was already used.')
       }
 
       user = inserted[0]
@@ -236,7 +233,7 @@ export class AuthService {
       user?.password ?? NO_USER_HASH
     )
     if (!passwordMatches || user === undefined || !user.isActive) {
-      throw new UnauthorizedException('Invalid email or password.')
+      throw new UnauthorizedError('Invalid email or password.')
     }
 
     return this.sessionFor(user)
@@ -261,7 +258,7 @@ export class AuthService {
       user === undefined ||
       !user.isActive ||
       user.refreshTokenHash === null ||
-      user.refreshTokenHash !== hashToken(presentedToken)
+      user.refreshTokenHash !== (await hashToken(presentedToken))
     ) {
       // The presented token is not the one this session was issued with.
       // Revoke everything this user could still have in flight.
@@ -270,7 +267,7 @@ export class AuthService {
         .set({ refreshTokenHash: null })
         .where(eq(users.id, userId))
 
-      throw new UnauthorizedException('Session expired or invalid.')
+      throw new UnauthorizedError('Session expired or invalid.')
     }
 
     return this.sessionFor(user)
@@ -297,11 +294,11 @@ export class AuthService {
       limit: 1,
     })
     if (user === undefined || !user.isActive) {
-      throw new UnauthorizedException('Session expired or invalid.')
+      throw new UnauthorizedError('Session expired or invalid.')
     }
 
     if (!(await bcrypt.compare(body.currentPassword, user.password))) {
-      throw new BadRequestException('Current password is incorrect.')
+      throw new BadRequestError('Current password is incorrect.')
     }
 
     const passwordHash = await bcrypt.hash(body.newPassword, 10)
@@ -340,14 +337,17 @@ export class AuthService {
     accessMaxAgeS: number
     refreshMaxAgeS: number
   }> {
-    const accessToken = this.tokens.signAccessToken(user.id)
-    const { token: refreshToken } = this.tokens.signRefreshToken(
+    const accessToken = await this.tokens.signAccessToken(user.id)
+    const { token: refreshToken } = await this.tokens.signRefreshToken(
       user.id,
       rememberMe
     )
     await this.db
       .update(users)
-      .set({ refreshTokenHash: hashToken(refreshToken), updatedAt: new Date() })
+      .set({
+        refreshTokenHash: await hashToken(refreshToken),
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, user.id))
 
     return {
@@ -382,7 +382,7 @@ export class AuthService {
     settings: TenantSettingsRow | undefined
   ): SessionResponse {
     if (tenant === undefined || settings === undefined) {
-      throw new UnauthorizedException('Session expired or invalid.')
+      throw new UnauthorizedError('Session expired or invalid.')
     }
 
     const {
@@ -427,10 +427,10 @@ export class AuthService {
    */
   private conflictFor(error: unknown): Error {
     if (isUniqueViolation(error, 'users', ['email'])) {
-      return new ConflictException('This email already has an account.')
+      return new ConflictError('This email already has an account.')
     }
     if (isUniqueViolation(error, 'tenants', ['name'])) {
-      return new ConflictException('This tenant name is already taken.')
+      return new ConflictError('This tenant name is already taken.')
     }
 
     return error instanceof Error ? error : new Error(String(error))

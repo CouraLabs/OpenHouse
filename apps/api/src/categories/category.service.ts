@@ -1,12 +1,9 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type { Category } from '@workspace/db'
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import {
   HouseholdMembers,
 } from '../common/household/household-members.js'
+import { isUniqueViolation } from '../common/db-errors.js'
 import { assertMembers } from '../common/household/split-members.js'
 import type {
   CreateCategoryBody,
@@ -25,7 +22,6 @@ import {
  * user the session acted as. The tenant and the user always arrive from the
  * caller — this service never reads a request.
  */
-@Injectable()
 export class CategoryService {
   constructor(
     private readonly repository: CategoryRepository,
@@ -46,8 +42,8 @@ export class CategoryService {
     } catch (error) {
       // The partial unique index is the backstop for a race the check above
       // can lose; the check is what makes the common case a friendly 409.
-      if (isDuplicateActiveName(error)) {
-        throw new ConflictException(
+      if (isUniqueViolation(error, 'categories', ['name_active'])) {
+        throw new ConflictError(
           `A category named "${body.name}" already exists.`
         )
       }
@@ -74,7 +70,7 @@ export class CategoryService {
     const row = await this.repository.findById(tenantId, id)
 
     if (row === undefined) {
-      throw new NotFoundException(`No category with id ${id}.`)
+      throw new NotFoundError(`No category with id ${id}.`)
     }
 
     return row
@@ -90,7 +86,7 @@ export class CategoryService {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(`No category with id ${body.id}.`)
+      throw new NotFoundError(`No category with id ${body.id}.`)
     }
 
     await this.assertNameFree(tenantId, body.name, body.id)
@@ -105,13 +101,13 @@ export class CategoryService {
       )
 
       if (row === undefined) {
-        throw new NotFoundException(`No category with id ${body.id}.`)
+        throw new NotFoundError(`No category with id ${body.id}.`)
       }
 
       return row
     } catch (error) {
-      if (isDuplicateActiveName(error)) {
-        throw new ConflictException(
+      if (isUniqueViolation(error, 'categories', ['name_active'])) {
+        throw new ConflictError(
           `A category named "${body.name}" already exists.`
         )
       }
@@ -153,7 +149,7 @@ export class CategoryService {
     )
 
     if (taken > 0) {
-      throw new ConflictException(`A category named "${name}" already exists.`)
+      throw new ConflictError(`A category named "${name}" already exists.`)
     }
   }
 }
@@ -168,11 +164,4 @@ function writeOf(body: CreateCategoryBody) {
       ? {}
       : { defaultSplit: body.defaultSplit }),
   }
-}
-
-/** Whether the error is the partial unique index rejecting a duplicate name. */
-function isDuplicateActiveName(error: unknown): boolean {
-  const cause = (error as { cause?: { code?: string } } | undefined)?.cause
-
-  return cause?.code === '23505'
 }

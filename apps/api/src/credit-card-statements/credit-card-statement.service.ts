@@ -1,8 +1,3 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type {
   CreditCardStatement,
   ReconcileConflict,
@@ -11,6 +6,7 @@ import type {
   StatementBankFiguresBody,
 } from '@workspace/poco'
 
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { CreditCardStatementRepository } from './credit-card-statement.repository.js'
 import { toStatement } from './statement-view.js'
 
@@ -19,7 +15,6 @@ import { toStatement } from './statement-view.js'
  * transactions; this service adds what depends on the tenant's today — the
  * status — and the amounts composed from the totals.
  */
-@Injectable()
 export class CreditCardStatementService {
   constructor(private readonly repository: CreditCardStatementRepository) {}
 
@@ -39,7 +34,7 @@ export class CreditCardStatementService {
     const row = await this.repository.findTotals(tenantId, id)
 
     if (row === undefined) {
-      throw new NotFoundException(`No bill with id ${id}.`)
+      throw new NotFoundError(`No bill with id ${id}.`)
     }
 
     return toStatement(row, await this.repository.todayOf(tenantId))
@@ -60,7 +55,7 @@ export class CreditCardStatementService {
     )
 
     if (row === undefined) {
-      throw new NotFoundException(`No bill with id ${id}.`)
+      throw new NotFoundError(`No bill with id ${id}.`)
     }
 
     return this.find(tenantId, id)
@@ -86,14 +81,14 @@ export class CreditCardStatementService {
 
     switch (outcome.kind) {
       case 'missing':
-        throw new NotFoundException(`No bill with id ${id}.`)
+        throw new NotFoundError(`No bill with id ${id}.`)
       case 'mismatch': {
         const conflict: ReconcileConflict = {
           message: "The bank's total does not match the bill's.",
           total: outcome.total,
         }
 
-        throw new ConflictException(conflict)
+        throw new ConflictError(conflict)
       }
       case 'reconciled':
         return this.find(tenantId, id)

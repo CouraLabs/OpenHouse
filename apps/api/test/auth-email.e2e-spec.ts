@@ -1,54 +1,48 @@
 import { randomUUID } from 'node:crypto'
-import type { INestApplication } from '@nestjs/common'
-import request from 'supertest'
-import type { App } from 'supertest/types.js'
+import { describe, expect, it } from 'vitest'
 
 import { signUp, startApp, uniqueEmail } from './support.js'
 
 describe('one email is one user (e2e, #16)', () => {
-  let app: INestApplication<App>
-
-  beforeAll(async () => {
-    app = await startApp()
-  })
-
-  afterAll(async () => {
-    await app.close()
-  })
-
   it('signs in with any casing of the email it signed up with', async () => {
+    const { app } = startApp()
     const email = uniqueEmail()
-    await signUp(app, email)
+    const agent = await signUp(app, email)
 
-    await request(app.getHttpServer())
-      .post('/auth/sign-in')
-      .send({ email: `  ${email.toUpperCase()} `, password: 'password-a' })
-      .expect(200)
+    const signedIn = await agent.post('/api/auth/sign-in', {
+      email: `  ${email.toUpperCase()} `,
+      password: 'password-a',
+    })
+
+    expect(signedIn.status).toBe(200)
   })
 
   it('stores the email lowercased and trimmed', async () => {
+    const { app } = startApp()
     const email = uniqueEmail()
-    const agent = await signUp(app, ` ${email.replace('user', 'User')}`)
+    const agent = await signUp(app, ` ${email.replace('user', 'User')} `)
 
-    const me = await agent.get('/auth/me').expect(200)
+    const me = await agent.get('/api/auth/me')
 
+    expect(me.status).toBe(200)
     expect(me.body.user.email).toBe(email)
   })
 
   it('rejects a second sign-up with the same email in another tenant', async () => {
+    const { app } = startApp()
     const email = uniqueEmail()
-    await signUp(app, email)
+    const agent = await signUp(app, email)
 
-    const response = await request(app.getHttpServer())
-      .post('/auth/sign-up')
-      .send({
-        tenantName: `t-${randomUUID()}`,
-        name: 'Ana',
-        email: email.toUpperCase(),
-        password: 'password-b',
-      })
-      .expect(409)
+    const response = await agent.post('/api/auth/sign-up', {
+      tenantName: `t-${randomUUID()}`,
+      name: 'Ana',
+      email: email.toUpperCase(),
+      password: 'password-b',
+    })
 
-    expect(response.body.message).toBe('This email already has an account.')
+    expect(response.status).toBe(409)
+    expect(response.body.message).toBe(
+      'This email already has an account.'
+    )
   })
 })

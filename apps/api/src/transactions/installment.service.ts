@@ -1,9 +1,3 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type { Account } from '@workspace/db'
 import type {
   CreateTransactionBody,
@@ -21,8 +15,9 @@ import {
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { BadRequestError, ConflictError, NotFoundError } from '../common/errors.js'
 import { HouseholdMembers } from '../common/household/household-members.js'
-import { assertMembers } from '../common/household/split-members.js'
+import { assertMembers } from './split-members.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
@@ -52,7 +47,6 @@ export interface InstallmentGroupView {
  * whole purchase — need every installment still on an Open bill; the
  * shared fields (name, note, category, receiver) change on every one.
  */
-@Injectable()
 export class InstallmentService {
   constructor(
     private readonly repository: InstallmentRepository,
@@ -106,7 +100,7 @@ export class InstallmentService {
     const group = await this.repository.findGroup(tenantId, groupId, today)
 
     if (group === undefined) {
-      throw new NotFoundException(`No installment purchase ${groupId}.`)
+      throw new NotFoundError(`No installment purchase ${groupId}.`)
     }
 
     return {
@@ -147,7 +141,7 @@ export class InstallmentService {
       const account = await this.accounts.findById(tenantId, first.linkedAccountId)
 
       if (account?.ownership === 'shared') {
-        throw new ConflictException(
+        throw new ConflictError(
           'Expenses from a shared account create no debts.'
         )
       }
@@ -235,21 +229,21 @@ export class InstallmentService {
     const row = await this.transactions.findById(tenantId, id)
 
     if (row === undefined || row.status === 'DELETED') {
-      throw new NotFoundException(`No transaction with id ${id}.`)
+      throw new NotFoundError(`No transaction with id ${id}.`)
     }
 
     const account = await this.accounts.findById(tenantId, row.linkedAccountId)
 
     if (account === undefined) {
-      throw new NotFoundException(`No account with id ${row.linkedAccountId}.`)
+      throw new NotFoundError(`No account with id ${row.linkedAccountId}.`)
     }
 
     if (row.installmentGroupId !== null) {
-      throw new ConflictException('This purchase is already in installments.')
+      throw new ConflictError('This purchase is already in installments.')
     }
 
     if (row.transferGroupId !== null || row.recurringId !== null) {
-      throw new ConflictException(
+      throw new ConflictError(
         'Only a purchase entered by hand splits into installments.'
       )
     }
@@ -300,14 +294,14 @@ export class InstallmentService {
     const category = await this.categories.findById(tenantId, body.categoryId)
 
     if (category === undefined || category.status === 'DELETED') {
-      throw new NotFoundException(`No category with id ${body.categoryId}.`)
+      throw new NotFoundError(`No category with id ${body.categoryId}.`)
     }
 
     if (body.receiverId != null) {
       const receiver = await this.receivers.findById(tenantId, body.receiverId)
 
       if (receiver === undefined || receiver.status === 'DELETED') {
-        throw new NotFoundException(`No receiver with id ${body.receiverId}.`)
+        throw new NotFoundError(`No receiver with id ${body.receiverId}.`)
       }
     }
   }
@@ -323,7 +317,7 @@ function sharesOf(
   const resolved = resolveSplit(total, split, payerUserId)
 
   if (!resolved.ok) {
-    throw new BadRequestException(resolved.message)
+    throw new BadRequestError(resolved.message)
   }
 
   return resolved.shares
@@ -333,13 +327,13 @@ function sharesOf(
  * exist — its close and due days set. */
 function assertSplittable(account: Account, type: string): void {
   if (account.type !== 'Credit Card' || type !== 'Expense') {
-    throw new ConflictException(
+    throw new ConflictError(
       'Only a credit card expense splits into installments.'
     )
   }
 
   if (cardCycleOf(account) === null) {
-    throw new ConflictException(
+    throw new ConflictError(
       "Set the card's close and due days before splitting a purchase."
     )
   }
@@ -351,9 +345,9 @@ function unwrap<T>(outcome: GroupOutcome<T>, groupId: string): T {
     case 'done':
       return outcome.value
     case 'missing':
-      throw new NotFoundException(`No installment purchase ${groupId}.`)
+      throw new NotFoundError(`No installment purchase ${groupId}.`)
     case 'billed':
-      throw new ConflictException(INSTALLMENTS_BILLED)
+      throw new ConflictError(INSTALLMENTS_BILLED)
     default: {
       const exhaustive: never = outcome
       throw new Error(`Unhandled outcome: ${String(exhaustive)}`)

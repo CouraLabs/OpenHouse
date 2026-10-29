@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common'
+import { NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Receiver } from '@workspace/db'
 
@@ -64,7 +64,7 @@ describe('ReceiverService', () => {
     repo.findById = vi.fn(async () => undefined)
     const service = new ReceiverService(repo as unknown as ReceiverRepository)
 
-    await expect(service.find(1, 999)).rejects.toThrow(NotFoundException)
+    await expect(service.find(1, 999)).rejects.toThrow(NotFoundError)
   })
 
   it('updates an ACTIVE receiver', async () => {
@@ -88,7 +88,7 @@ describe('ReceiverService', () => {
 
     await expect(
       service.update(1, 7, { id: 999, name: 'X', type: 'Person' })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.update).not.toHaveBeenCalled()
   })
 

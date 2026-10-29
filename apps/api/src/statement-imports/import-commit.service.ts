@@ -1,10 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
-import type { Account } from '@workspace/db'
+import type { Account, Database } from '@workspace/db'
 import {
   cardCycleOf,
   IMPORT_CHUNK_SIZE,
@@ -17,12 +12,10 @@ import {
   type ReconciledEditConflict,
 } from '@workspace/poco'
 
-import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Database } from '@workspace/db'
-
 import { LedgerBatchPlan } from '../common/ledger/ledger-batch.js'
 import { AccountRepository } from '../accounts/account.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { Clock } from '../common/clock/clock.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
 import {
@@ -56,10 +49,9 @@ interface PlannedRow {
  * every row carries makes a partially applied import detectable and
  * re-runnable: a re-import skips the rows the bank ids already hold.
  */
-@Injectable()
 export class ImportCommitService {
   constructor(
-    @InjectDrizzle() private readonly db: Database,
+    private readonly db: Database,
     private readonly transactions: TransactionRepository,
     private readonly imports: ImportTransactionRepository,
     private readonly mappings: ImportMappingRepository,
@@ -162,16 +154,16 @@ export class ImportCommitService {
     userId: number,
     batchId: string
   ): Promise<ImportUndoResult> {
-    const batch = await this.imports.findBatch(this.db, tenantId, batchId)
+    const batch = await this.imports.findBatch(tenantId, batchId)
 
     if (batch === undefined) {
-      throw new NotFoundException(`No import ${batchId}.`)
+      throw new NotFoundError(`No import ${batchId}.`)
     }
 
     const deadline = batch.importedAt.getTime() + IMPORT_UNDO_HOURS * HOUR_MS
 
     if (this.clock.now().getTime() > deadline) {
-      throw new ConflictException(
+      throw new ConflictError(
         `An import can only be undone within ${IMPORT_UNDO_HOURS} hours.`
       )
     }
@@ -224,11 +216,11 @@ export class ImportCommitService {
 
     for (const row of rows) {
       if (!categoryIds.has(row.categoryId)) {
-        throw new NotFoundException(`No category with id ${row.categoryId}.`)
+        throw new NotFoundError(`No category with id ${row.categoryId}.`)
       }
 
       if (row.receiverId != null && !receiverIds.has(row.receiverId)) {
-        throw new NotFoundException(`No receiver with id ${row.receiverId}.`)
+        throw new NotFoundError(`No receiver with id ${row.receiverId}.`)
       }
     }
   }
@@ -240,7 +232,7 @@ export class ImportCommitService {
     const account = await this.accounts.findById(tenantId, accountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${accountId}.`)
+      throw new NotFoundError(`No account with id ${accountId}.`)
     }
 
     return account
@@ -322,7 +314,7 @@ function assertDatesOpen(
     reconciledThrough: through,
   }
 
-  throw new ConflictException(conflict)
+  throw new ConflictError(conflict)
 }
 
 /** Only a credit card expense can be an installment, on a card whose bill
@@ -342,7 +334,7 @@ function assertInstallmentsAllowed(
     cardCycleOf(account) === null ||
     linked.some((row) => row.type !== 'Expense')
   ) {
-    throw new ConflictException(
+    throw new ConflictError(
       'Only a credit card expense can be linked as an installment.'
     )
   }

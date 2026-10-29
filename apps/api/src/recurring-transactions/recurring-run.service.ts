@@ -1,10 +1,3 @@
-import {
-  Injectable,
-  Logger,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from '@nestjs/common'
-import { Cron } from '@nestjs/schedule'
 import type { RecurringTransaction } from '@workspace/db'
 import {
   dayIn,
@@ -25,25 +18,20 @@ import { TransactionRepository } from '../transactions/transaction.repository.js
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
 
 /**
- * The background service that materializes due recurring rules into real
- * transactions. "Today" is each tenant's own: a rule is evaluated against
- * the calendar day of the tenant's time zone, never the server's. The job
- * runs every hour, so every zone's new day is picked up soon after its
- * midnight, and it is idempotent: a
- * rule due on a day whose transaction already exists is skipped, so a
- * restarted process never double-bills — and the partial unique index in
- * the schema makes that claim atomic even between replicas.
+ * Materializes a tenant's due recurring rules into real transactions.
+ * "Today" is the tenant's own: a rule is evaluated against the calendar
+ * day of the tenant's time zone, never the server's. The run is
+ * idempotent: a rule due on a day whose transaction already exists is
+ * skipped, so a re-run never double-bills — and the partial unique index
+ * in the schema makes that claim atomic even between replicas.
  *
- * Each run also looks a few days back: a process down over the cron's
- * minute (a deploy, a crash) catches the missed day up on the next run,
- * and a boot after downtime runs the same window immediately.
+ * Each run also looks a few days back: the queue's retry with backoff, or
+ * a downtime, catches the missed days up on the next message.
  */
-@Injectable()
-export class RecurringRunService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(RecurringRunService.name)
-
-  /** The boot catch-up, kept so shutdown can wait for it to finish. */
-  private bootRun: Promise<void> | undefined
+export class RecurringRunService {
+  /** How many days back a run looks for days it missed — the downtime a
+   * redelivery or an outage covers. */
+  private static readonly CATCH_UP_DAYS = 7
 
   constructor(
     private readonly rules: RecurringTransactionRepository,
@@ -56,36 +44,53 @@ export class RecurringRunService implements OnModuleInit, OnModuleDestroy {
     private readonly members: HouseholdMembers
   ) {}
 
-  /** How many days back a run looks for days it missed — the downtime a
-   * deploy over the cron's minute, or a weekend outage, recovers from. */
-  private static readonly CATCH_UP_DAYS = 7
-
-  /** Materializes every due rule of every tenant; answers how many rows
-   * it created. One failing tenant never stops the others. `days` widens
-   * the catch-up window — the tests pin it to one day. */
-  @Cron('0 30 * * * *')
-  async runDue(
+  /**
+   * Materializes every due rule of ONE tenant over the last `days` days of
+   * its calendar, oldest first, ending on the tenant's today — the day
+   * order keeps an outage's days landing in sequence. Rules do not
+   * generate before the day they were created. One failing rule never
+   * stops the others.
+   */
+  async runForTenant(
+    tenantId: number,
     days: number = RecurringRunService.CATCH_UP_DAYS
   ): Promise<number> {
-    return this.materializeWindow(days)
-  }
-
-  /** A boot is a run too: the process may have been down over the cron's
-   * minute. The idempotency check makes re-running the window harmless. */
-  onModuleInit(): void {
-    this.bootRun = this.runDue().then(
-      () => undefined,
-      (error: unknown) => {
-        this.logger.error('The recurring catch-up on boot failed.', error)
-      }
+    const now = this.clock.now()
+    const rules = await this.rules.listActiveRules(tenantId)
+    const timezones = await this.settings.timezonesOf([tenantId])
+    // A tenant always has its settings row; UTC only guards a gap.
+    const timezone = timezones.get(tenantId) ?? 'UTC'
+    const today = todayIn(timezone, now)
+    const window = Array.from(
+      { length: days },
+      (_, index) => shiftDay(today, index - (days - 1))
     )
-  }
+    let created = 0
 
-  /** Shutdown waits for the boot catch-up, so it never queries a pool the
-   * database module has already closed. Nest destroys this service before
-   * the module that owns the pool. */
-  async onModuleDestroy(): Promise<void> {
-    await this.bootRun
+    for (const rule of rules) {
+      const firstDay = dayIn(rule.createdDt, timezone)
+
+      for (const day of window) {
+        if (day < firstDay || !isDueOn(rule, day)) {
+          continue
+        }
+
+        try {
+          created += await this.materialize(rule, day)
+        } catch (error) {
+          console.error(
+            `Recurring rule ${rule.id} of tenant ${rule.tenantId} failed to materialize on ${day}.`,
+            error
+          )
+        }
+      }
+    }
+
+    if (created > 0) {
+      console.log(`Materialized ${created} recurring transactions.`)
+    }
+
+    return created
   }
 
   /** The member a rule's expenses are paid by. A removed member can no longer
@@ -102,60 +107,11 @@ export class RecurringRunService implements OnModuleInit, OnModuleDestroy {
     }
 
     const owner = await this.members.ownerId(rule.tenantId)
-    this.logger.warn(
+    console.warn(
       `Recurring rule ${rule.id} of tenant ${rule.tenantId} names a removed member as payer; its expenses are paid by the owner.`
     )
 
     return owner ?? rule.paidByUserId
-  }
-
-  /** Materializes every due rule over the last `days` days of its
-   * tenant's calendar, oldest first, ending on the tenant's today — the
-   * day order keeps an outage's days landing in sequence. Rules do not
-   * generate before the day they were created. */
-  private async materializeWindow(days: number): Promise<number> {
-    const now = this.clock.now()
-    const rules = await this.rules.listActiveAllTenants()
-    const timezones = await this.settings.timezonesOf([
-      ...new Set(rules.map((rule) => rule.tenantId)),
-    ])
-    const windows = new Map<string, string[]>()
-    let created = 0
-
-    for (const rule of rules) {
-      // A tenant always has its settings row; UTC only guards a gap.
-      const timezone = timezones.get(rule.tenantId) ?? 'UTC'
-      let window = windows.get(timezone)
-      if (window === undefined) {
-        const today = todayIn(timezone, now)
-        window = Array.from({ length: days }, (_, index) =>
-          shiftDay(today, index - (days - 1))
-        )
-        windows.set(timezone, window)
-      }
-      const firstDay = dayIn(rule.createdDt, timezone)
-
-      for (const day of window) {
-        if (day < firstDay || !isDueOn(rule, day)) {
-          continue
-        }
-
-        try {
-          created += await this.materialize(rule, day)
-        } catch (error) {
-          this.logger.error(
-            `Recurring rule ${rule.id} of tenant ${rule.tenantId} failed to materialize on ${day}.`,
-            error
-          )
-        }
-      }
-    }
-
-    if (created > 0) {
-      this.logger.log(`Materialized ${created} recurring transactions.`)
-    }
-
-    return created
   }
 
   /** Creates one rule's transaction for one day, unless it already exists.
@@ -200,7 +156,7 @@ export class RecurringRunService implements OnModuleInit, OnModuleDestroy {
     // A default split that no longer resolves must not quietly become an
     // unsplit expense: skip and say why, as for a deleted account.
     if (shares?.ok === false && account?.ownership !== 'shared') {
-      this.logger.error(
+      console.error(
         `Recurring rule ${rule.id} of tenant ${rule.tenantId} has a default split that no longer resolves (${shares.message}); skipping until the rule is fixed.`
       )
 
@@ -249,7 +205,7 @@ export class RecurringRunService implements OnModuleInit, OnModuleDestroy {
       category === undefined ||
       category.status === 'DELETED'
     ) {
-      this.logger.error(
+      console.error(
         `Recurring rule ${rule.id} of tenant ${rule.tenantId} points at a deleted account or category; skipping until the rule is fixed.`
       )
 
@@ -263,7 +219,7 @@ export class RecurringRunService implements OnModuleInit, OnModuleDestroy {
       )
 
       if (receiver === undefined || receiver.status === 'DELETED') {
-        this.logger.error(
+        console.error(
           `Recurring rule ${rule.id} of tenant ${rule.tenantId} points at a deleted receiver; skipping until the rule is fixed.`
         )
 

@@ -1,5 +1,3 @@
-import { Injectable, StreamableFile } from '@nestjs/common'
-import { Readable } from 'node:stream'
 import type { CsvLocale } from '@workspace/poco'
 
 import { AuditRecorder } from '../audit/audit-recorder.js'
@@ -22,32 +20,56 @@ export interface CsvDownload<Row> {
 }
 
 /**
- * Builds the streamed CSV every `POST <entity>/export` route answers with.
- * The rows are read page by page while the response is written, so a large
- * range never sits in memory and never passes through the browser's JS
- * before the download starts. Every export is recorded in the audit log.
+ * Builds the response every `POST <entity>/export` route answers with. The
+ * rows are read page by page while the response is written, so a large
+ * range never sits in memory, and every export is recorded in the audit
+ * log. This is the shared helper the features' routes files should call —
+ * several of them still carry an inline copy of the response builder from
+ * the port, which this file replaces.
  */
-@Injectable()
-export class CsvExporter {
-  constructor(private readonly audit: AuditRecorder) {}
+export async function csvDownload<Row>(
+  audit: AuditRecorder,
+  options: CsvDownload<Row>
+): Promise<Response> {
+  await audit.record({
+    tenantId: options.session.tenant.id,
+    actorId: options.session.user.id,
+    action: 'csv.export',
+    details: { entity: options.entity, locale: options.locale },
+  })
 
-  async download<Row>(options: CsvDownload<Row>): Promise<StreamableFile> {
-    await this.audit.record({
-      tenantId: options.session.tenant.id,
-      actorId: options.session.user.id,
-      action: 'csv.export',
-      details: { entity: options.entity, locale: options.locale },
-    })
-
-    const chunks = csvChunks(
+  return csvResponse(
+    options.entity,
+    csvChunks(
       options.columns,
       pagesOf(options.read, CSV_PAGE_SIZE),
       options.locale
     )
+  )
+}
 
-    return new StreamableFile(Readable.from(chunks), {
-      type: 'text/csv; charset=utf-8',
-      disposition: `attachment; filename="${options.entity}.csv"`,
-    })
-  }
+/** The response of a CSV download: the file, streamed page by page, with
+ * the content type and file name the previous framework set. */
+export function csvResponse(entity: string, chunks: AsyncGenerator<string>): Response {
+  const encoder = new TextEncoder()
+  const iterator = chunks[Symbol.asyncIterator]()
+
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { done, value } = await iterator.next()
+
+      if (done) {
+        controller.close()
+      } else {
+        controller.enqueue(encoder.encode(value))
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="${entity}.csv"`,
+    },
+  })
 }

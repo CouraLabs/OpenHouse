@@ -1,6 +1,4 @@
 import { and, asc, count, eq, getTableColumns, sql } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Limit, Database } from '@workspace/db'
 import { categories, limits } from '@workspace/db'
 import type { SearchLimitsArgs } from '@workspace/poco'
@@ -29,9 +27,8 @@ export interface LimitWrite {
  * is asking. Every read joins the category's name, so a client never has to
  * resolve a `categoryId`, and the name survives a deleted category.
  */
-@Injectable()
 export class LimitRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Inserts a limit, stamping the audit trail with the acting user. */
   async insert(

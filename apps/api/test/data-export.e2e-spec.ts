@@ -1,15 +1,17 @@
-import type { INestApplication } from '@nestjs/common'
-import { getDrizzleToken } from '@nestjs/drizzle'
-import type { Database } from '@workspace/db'
+import { eq } from 'drizzle-orm'
+import { strFromU8, unzipSync } from 'fflate'
+import { describe, expect, it } from 'vitest'
+import { env } from 'cloudflare:workers'
+
 import {
   accounts,
   auditLog,
   categories,
+  createDatabase,
   creditCardStatements,
   goals,
   importMappings,
   limits,
-  passwordResetCodes,
   receivers,
   recurringTransactions,
   tenantCodes,
@@ -20,54 +22,42 @@ import {
   transactions,
   users,
 } from '@workspace/db'
-import type { DataExportJob, ExportManifest } from '@workspace/poco'
+import type { ExportManifest } from '@workspace/poco'
 import { todayIn } from '@workspace/poco'
-import { eq } from 'drizzle-orm'
-import { strFromU8, unzipSync } from 'fflate'
-import type { App } from 'supertest/types.js'
 
-import { DataExportService } from '../src/data-exports/data-export.service.js'
+import { AuditLogRepository } from '../src/audit/audit-log.repository.js'
+import { AuditLogService } from '../src/audit/audit-log.service.js'
+import { SystemClock } from '../src/common/clock/clock.js'
+import { SettingsRepository } from '../src/settings/settings.repository.js'
+import { deleteTenantNow } from '../src/tenant-deletion/tenant-deletion.jobs.js'
+import { TenantDeletionRepository } from '../src/tenant-deletion/tenant-deletion.repository.js'
 import { TenantDeletionService } from '../src/tenant-deletion/tenant-deletion.service.js'
 import {
+  type Agent,
   createAccount,
   createCategory,
   joinAsMember,
   signUp,
   startApp,
-  type Agent,
 } from './support.js'
 
-/** Reads a binary response body. */
-function binary(
-  res: NodeJS.ReadableStream & {
-    on: (e: string, cb: (c: Buffer) => void) => void
-  },
-  done: (error: Error | null, body: Buffer) => void
-): void {
-  const chunks: Buffer[] = []
-  res.on('data', (chunk: Buffer) => chunks.push(chunk))
-  res.on('end', () => done(null, Buffer.concat(chunks)))
-}
-
 describe('data export and tenant deletion (e2e, #10)', () => {
-  let app: INestApplication<App>
-  let db: Database
+  // The app is built per spec; the storage is per-test isolated.
+  const { app } = startApp()
 
-  beforeAll(async () => {
-    app = await startApp()
-    db = app.get<Database>(getDrizzleToken())
-  })
-
-  afterAll(async () => {
-    await app.close()
-  })
+  /** The tenant's tables, through the isolate's D1 — created per test, the
+   * storage being per-test isolated. */
+  const database = () => createDatabase(env.DB as never)
 
   /** Seeds one row of every entity type a tenant owns. */
   async function seedEverything(owner: Agent) {
-    const me = (await owner.get('/auth/me').expect(200)).body
-    const tenantId: number = me.tenant.id
-    const userId: number = me.user.id
-    const currency: string = me.settings.mainCurrency
+    const me = await owner.get('/api/auth/me')
+
+    expect(me.status).toBe(200)
+
+    const tenantId: number = me.body.tenant.id
+    const userId: number = me.body.user.id
+    const currency: string = me.body.settings.mainCurrency
     const checking = await createAccount(owner, { currency })
     const savings = await createAccount(owner, { type: 'Savings', currency })
     const card = await createAccount(owner, {
@@ -81,69 +71,83 @@ describe('data export and tenant deletion (e2e, #10)', () => {
       currency,
     })
     const categoryId = await createCategory(owner)
-    const receiver = await owner
-      .post('/receivers')
-      .send({ name: 'Shop', type: 'Service' })
-      .expect(201)
-    const today = todayIn(me.settings.timezone)
+    const receiver = await owner.post('/api/receivers', {
+      name: 'Shop',
+      type: 'Service',
+    })
 
-    await owner
-      .post('/transactions')
-      .send({
-        name: 'Lunch',
-        amount: '12.00',
-        transactionDt: today,
-        linkedAccountId: checking,
-        categoryId,
-        receiverId: receiver.body.id,
-        type: 'Expense',
-      })
-      .expect(201)
-    await owner
-      .post('/transactions')
-      .send({
-        name: 'Card charge',
-        amount: '30.00',
-        transactionDt: today,
-        linkedAccountId: card,
-        categoryId,
-        type: 'Expense',
-      })
-      .expect(201)
-    await owner
-      .post('/limits')
-      .send({ categoryId, amount: '500.00', type: 'Monthly' })
-      .expect(201)
-    await owner
-      .post('/goals')
-      .send({
-        name: 'Trip',
-        linkedAccountId: savings,
-        balance: '0.00',
-        balanceDt: today,
-        targetBalance: '900.00',
-      })
-      .expect(201)
-    await owner
-      .post('/recurring-transactions')
-      .send({
-        receiverId: receiver.body.id,
-        categoryId,
-        linkedAccountId: checking,
-        amount: '9.90',
-        type: 'Expense',
-        frequency: 'Monthly',
-        frequencyDay: 3,
-      })
-      .expect(201)
-    await owner
-      .post('/transaction-linkers')
-      .send({ description: 'LUNCH', categoryId })
-      .expect(201)
-    await owner
-      .post('/tenants/invite-codes')
-      .send({ expiresInDays: 7 })
-      .expect(201)
+    expect(receiver.status).toBe(201)
+
+    const today = todayIn(me.body.settings.timezone)
+
+    const lunch = await owner.post('/api/transactions', {
+      name: 'Lunch',
+      amount: '12.00',
+      transactionDt: today,
+      linkedAccountId: checking,
+      categoryId,
+      receiverId: receiver.body.id,
+      type: 'Expense',
+    })
+
+    expect(lunch.status).toBe(201)
+
+    const charge = await owner.post('/api/transactions', {
+      name: 'Card charge',
+      amount: '30.00',
+      transactionDt: today,
+      linkedAccountId: card,
+      categoryId,
+      type: 'Expense',
+    })
+
+    expect(charge.status).toBe(201)
+
+    const limit = await owner.post('/api/limits', {
+      categoryId,
+      amount: '500.00',
+      type: 'Monthly',
+    })
+
+    expect(limit.status).toBe(201)
+
+    const goal = await owner.post('/api/goals', {
+      name: 'Trip',
+      linkedAccountId: savings,
+      balance: '0.00',
+      balanceDt: today,
+      targetBalance: '900.00',
+    })
+
+    expect(goal.status).toBe(201)
+
+    const recurring = await owner.post('/api/recurring-transactions', {
+      receiverId: receiver.body.id,
+      categoryId,
+      linkedAccountId: checking,
+      amount: '9.90',
+      type: 'Expense',
+      frequency: 'Monthly',
+      frequencyDay: 3,
+    })
+
+    expect(recurring.status).toBe(201)
+
+    const linker = await owner.post('/api/transaction-linkers', {
+      description: 'LUNCH',
+      categoryId,
+    })
+
+    expect(linker.status).toBe(201)
+
+    const invite = await owner.post('/api/tenants/invite-codes', {
+      expiresInDays: 7,
+    })
+
+    expect(invite.status).toBe(201)
+
+    const db = database()
+
     await db.insert(importMappings).values({
       tenantId,
       accountId: checking,
@@ -154,27 +158,29 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     return { tenantId, userId }
   }
 
-  async function exportZip(owner: Agent, body: object) {
-    const created = await owner.post('/data-exports').send(body).expect(201)
-    const job: DataExportJob = created.body
-    await app.get(DataExportService).settled(job.id)
-    const status = await owner.get(`/data-exports/${job.id}`).expect(200)
-    expect(status.body.status).toBe('ready')
-    const download = await owner
-      .get(`/data-exports/${job.id}/download`)
-      .buffer(true)
-      .parse(binary as never)
-      .expect(200)
+  /** Exports and answers the unzipped files: the single POST is the whole
+   * export — the ZIP rides the response, nothing is polled or downloaded
+   * by id. */
+  async function exportZip(
+    owner: Agent,
+    body: Record<string, unknown>
+  ): Promise<Record<string, Uint8Array>> {
+    const response = await owner.post('/api/data-exports', body)
 
-    return { job, files: unzipSync(new Uint8Array(download.body as Buffer)) }
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/zip')
+    expect(response.headers.get('content-disposition')).toContain('attachment')
+    expect(response.headers.get('cache-control')).toBe('no-store')
+
+    return unzipSync(response.body as Uint8Array)
   }
 
   it('exports the tenant as a ZIP without secrets, once, owner only', async () => {
     const owner = await signUp(app)
     const { tenantId } = await seedEverything(owner)
-    const member = await joinAsMember(app, owner)
+    await joinAsMember(app, owner)
 
-    const { job, files } = await exportZip(owner, { scope: 'tenant' })
+    const files = await exportZip(owner, { scope: 'tenant' })
     const manifest = JSON.parse(
       strFromU8(files['manifest.json'])
     ) as ExportManifest
@@ -201,20 +207,21 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     expect(exportedUsers).toHaveLength(2)
     expect(Object.keys(exportedUsers[0])).not.toContain('password')
 
-    // The first download deleted the file.
-    await owner.get(`/data-exports/${job.id}/download`).expect(404)
-    await owner.get(`/data-exports/${job.id}`).expect(404)
+    // The export is stateless: asking again answers the ZIP again.
+    const again = await owner.post('/api/data-exports', { scope: 'tenant' })
 
-    // Members cannot export; the audit log recorded the owner's export.
-    await member.agent
-      .post('/data-exports')
-      .send({ scope: 'tenant' })
-      .expect(403)
-    await member.agent
-      .post('/tenant-deletion')
-      .send({ tenantName: 'x' })
-      .expect(403)
-    await member.agent.delete('/tenant-deletion').expect(403)
+    expect(again.status).toBe(200)
+
+    // Members cannot export. The audit log recorded the owner's exports.
+    const refused = await joinAsMember(app, owner)
+
+    const forbidden = await refused.agent.post('/api/data-exports', {
+      scope: 'tenant',
+    })
+
+    expect(forbidden.status).toBe(403)
+
+    const db = database()
     const audit = await db
       .select()
       .from(auditLog)
@@ -222,13 +229,12 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     expect(audit.map((line) => line.action)).toContain('tenant.export')
   })
 
-  it("exports one member's data, and another tenant's job is invisible", async () => {
+  it("exports one member's data", async () => {
     const owner = await signUp(app)
     const member = await joinAsMember(app, owner)
     const categoryId = await createCategory(member.agent)
-    const stranger = await signUp(app)
 
-    const { files } = await exportZip(owner, {
+    const files = await exportZip(owner, {
       scope: 'member',
       userId: member.id,
     })
@@ -239,32 +245,46 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     expect(cats.map((row: { id: number }) => row.id)).toEqual([categoryId])
     expect(strFromU8(files['user.json'])).not.toContain('password')
 
-    await owner
-      .post('/data-exports')
-      .send({ scope: 'member', userId: 999999999 })
-      .expect(404)
-    const job = await owner
-      .post('/data-exports')
-      .send({ scope: 'tenant' })
-      .expect(201)
-    await stranger.get(`/data-exports/${job.body.id}`).expect(404)
+    // A user outside the tenant does not exist for the export.
+    const unknown = await owner.post('/api/data-exports', {
+      scope: 'member',
+      userId: 999999999,
+    })
+
+    expect(unknown.status).toBe(404)
   })
 
   it('anonymizes a removed member, keeping the rows they created', async () => {
     const owner = await signUp(app)
     const member = await joinAsMember(app, owner)
     const categoryId = await createCategory(member.agent)
+    const db = database()
 
-    await owner.post(`/tenants/users/${member.id}/anonymize`).expect(409)
-    await owner.post(`/tenants/users/${member.id}/deactivate`).expect(200)
-    const anonymized = await owner
-      .post(`/tenants/users/${member.id}/anonymize`)
-      .expect(200)
+    const active = await owner.post(
+      `/api/tenants/users/${member.id}/anonymize`
+    )
 
+    expect(active.status).toBe(409)
+
+    const removed = await owner.post(`/api/tenants/users/${member.id}/deactivate`)
+
+    expect(removed.status).toBe(200)
+
+    const anonymized = await owner.post(
+      `/api/tenants/users/${member.id}/anonymize`
+    )
+
+    expect(anonymized.status).toBe(200)
     expect(anonymized.body.name).toBe('Former member')
     expect(anonymized.body.email).not.toBe(member.email)
     expect(anonymized.body.anonymizedAt).not.toBeNull()
-    await owner.post(`/tenants/users/${member.id}/reactivate`).expect(409)
+
+    const restored = await owner.post(
+      `/api/tenants/users/${member.id}/reactivate`
+    )
+
+    expect(restored.status).toBe(409)
+
     const [row] = await db.select().from(users).where(eq(users.id, member.id))
     expect(row.password).toBe('')
     const [category] = await db
@@ -283,83 +303,106 @@ describe('data export and tenant deletion (e2e, #10)', () => {
       ['=cmd|calc', '1234.50', categoryId],
       ['Other', '2.00', otherCategoryId],
     ] as const) {
-      await owner
-        .post('/transactions')
-        .send({
-          name,
-          amount,
-          transactionDt: '2026-03-05',
-          linkedAccountId: account,
-          categoryId: category,
-          type: 'Expense',
-        })
-        .expect(201)
+      const created = await owner.post('/api/transactions', {
+        name,
+        amount,
+        transactionDt: '2026-03-05',
+        linkedAccountId: account,
+        categoryId: category,
+        type: 'Expense',
+      })
+
+      expect(created.status).toBe(201)
     }
 
-    const ptBr = await owner
-      .post('/transactions/export')
-      .send({
-        locale: 'pt-BR',
-        sort: [{ field: 'name', dir: 'asc' }],
-        filter: { linkedAccountId: account, categoryId },
-      })
-      .expect(200)
-    const enUs = await owner
-      .post('/transactions/export')
-      .send({ locale: 'en-US', filter: { linkedAccountId: account } })
-      .expect(200)
+    const ptBr = await owner.post('/api/transactions/export', {
+      locale: 'pt-BR',
+      sort: [{ field: 'name', dir: 'asc' }],
+      filter: { linkedAccountId: account, categoryId },
+    })
+    const enUs = await owner.post('/api/transactions/export', {
+      locale: 'en-US',
+      filter: { linkedAccountId: account },
+    })
 
-    expect(ptBr.headers['content-type']).toContain('text/csv')
-    expect(ptBr.text.startsWith('﻿Date;Name;Type;Amount')).toBe(true)
-    expect(ptBr.text).toContain("05/03/2026;'=cmd|calc;")
-    expect(ptBr.text).toContain('1234,50')
-    expect(ptBr.text).not.toContain('Other')
-    expect(enUs.text.startsWith('﻿Date,Name,Type,Amount')).toBe(true)
-    expect(enUs.text).toContain('2026-03-05')
-    expect(enUs.text).toContain('Other')
+    expect(ptBr.status).toBe(200)
+    expect(ptBr.headers.get('content-type')).toContain('text/csv')
+    // The file opens with the UTF-8 BOM on the wire; the harness's text
+    // decoding strips it, so the assertion reads the header alone.
+    expect((ptBr.body as string).startsWith('Date;Name;Type;Amount')).toBe(
+      true
+    )
+    expect(ptBr.body).toContain("05/03/2026;'=cmd|calc;")
+    expect(ptBr.body).toContain('1234,50')
+    expect(ptBr.body).not.toContain('Other')
+    expect(enUs.status).toBe(200)
+    expect((enUs.body as string).startsWith('Date,Name,Type,Amount')).toBe(
+      true
+    )
+    expect(enUs.body).toContain('2026-03-05')
+    expect(enUs.body).toContain('Other')
   })
 
+  // The deletion has no HTTP routes in this port: the owner schedules
+  // through the service and the queue job carries the deletion out, so the
+  // spec drives those two directly — the same units the routes and the
+  // cron call.
   it('schedules, cancels, and carries out the deletion of a tenant with every entity', async () => {
     const owner = await signUp(app)
-    const { tenantId } = await seedEverything(owner)
+    const { tenantId, userId } = await seedEverything(owner)
+    const db = database()
     const [tenant] = await db
       .select()
       .from(tenants)
       .where(eq(tenants.id, tenantId))
 
-    await owner
-      .post('/tenant-deletion')
-      .send({ tenantName: 'wrong name' })
-      .expect(400)
-    const scheduled = await owner
-      .post('/tenant-deletion')
-      .send({ tenantName: tenant.name })
-      .expect(201)
-    expect(scheduled.body.deletionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    const audit = new AuditLogService(new AuditLogRepository(db))
+    const deletion = new TenantDeletionService(
+      db,
+      new TenantDeletionRepository(db),
+      new SettingsRepository(db),
+      audit,
+      new SystemClock()
+    )
+    const clock = new SystemClock()
+
+    await expect(
+      deletion.schedule(tenantId, userId, 'wrong name')
+    ).rejects.toMatchObject({ name: 'BadRequestError', status: 400 })
+
+    const scheduled = await deletion.schedule(tenantId, userId, tenant.name)
+
+    expect(scheduled.deletionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(
-      (await owner.get('/auth/me').expect(200)).body.tenant.deletionDate
-    ).toBe(scheduled.body.deletionDate)
-    await owner
-      .post('/tenant-deletion')
-      .send({ tenantName: tenant.name })
-      .expect(409)
+      (await owner.get('/api/auth/me')).body.tenant.deletionDate
+    ).toBe(scheduled.deletionDate)
+    await expect(
+      deletion.schedule(tenantId, userId, tenant.name)
+    ).rejects.toMatchObject({ name: 'ConflictError', status: 409 })
 
     // Not due yet: the job leaves it alone. Cancel, then schedule again.
-    expect(await app.get(TenantDeletionService).deleteDue()).toBe(0)
-    await owner.delete('/tenant-deletion').expect(204)
-    await owner.delete('/tenant-deletion').expect(404)
-    await owner
-      .post('/tenant-deletion')
-      .send({ tenantName: tenant.name })
-      .expect(201)
+    await deleteTenantNow(db, clock, tenantId, audit)
+    expect(
+      (
+        await db
+          .select()
+          .from(transactions)
+          .where(eq(transactions.tenantId, tenantId))
+      ).length
+    ).toBeGreaterThan(0)
+
+    await deletion.cancel(tenantId, userId)
+    await expect(deletion.cancel(tenantId, userId)).rejects.toMatchObject({
+      name: 'NotFoundError',
+      status: 404,
+    })
+    await deletion.schedule(tenantId, userId, tenant.name)
 
     await db
       .update(tenants)
       .set({ deletionDate: '2000-01-01' })
       .where(eq(tenants.id, tenantId))
-    expect(
-      await app.get(TenantDeletionService).deleteDue()
-    ).toBeGreaterThanOrEqual(1)
+    await deleteTenantNow(db, clock, tenantId, audit)
 
     const left = await Promise.all(
       [
@@ -385,11 +428,10 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     expect(
       await db.select().from(tenants).where(eq(tenants.id, tenantId))
     ).toEqual([])
-    expect(await db.select().from(passwordResetCodes).limit(0)).toEqual([])
-    const audit = await db
+    const auditLines = await db
       .select()
       .from(auditLog)
       .where(eq(auditLog.tenantId, tenantId))
-    expect(audit.map((line) => line.action)).toContain('tenant.deleted')
+    expect(auditLines.map((line) => line.action)).toContain('tenant.deleted')
   })
 })

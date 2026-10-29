@@ -1,7 +1,5 @@
 import { and, asc, count, eq, getTableColumns, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Currency, Database, RecurringTransaction } from '@workspace/db'
 import {
   accounts,
@@ -58,13 +56,12 @@ const payers = alias(users, 'payer')
 
 /**
  * The recurring rule rows, reached only through the tenant of the session
- * — except `listActiveAllTenants`, which the cron reads to materialize
- * every tenant's rules. Every read joins the three display names, so a
- * client never has to resolve an id.
+ * — except the plain ACTIVE listing the materialization job reads. Every
+ * read joins the three display names, so a client never has to resolve an
+ * id.
  */
-@Injectable()
 export class RecurringTransactionRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Inserts a rule, stamping the audit trail with the acting user. */
   async insert(
@@ -215,12 +212,19 @@ export class RecurringTransactionRepository {
       .orderBy(asc(recurringTransactions.id))
   }
 
-  /** Lists every tenant's ACTIVE rules — what the daily cron iterates. */
-  async listActiveAllTenants(): Promise<RecurringTransaction[]> {
+  /** Lists the tenant's ACTIVE rules, plain — what the materialization
+   * job iterates. No names joined: the run re-reads the one rule it
+   * materializes for its receiver's name. */
+  async listActiveRules(tenantId: number): Promise<RecurringTransaction[]> {
     return this.db
       .select()
       .from(recurringTransactions)
-      .where(eq(recurringTransactions.status, 'ACTIVE'))
+      .where(
+        and(
+          eq(recurringTransactions.tenantId, tenantId),
+          eq(recurringTransactions.status, 'ACTIVE')
+        )
+      )
   }
 
   /** Re-reads one row with the joined names. */

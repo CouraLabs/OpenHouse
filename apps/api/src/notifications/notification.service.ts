@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common'
 import type { NotificationList, NotificationPreferences } from '@workspace/poco'
 
 import { Clock } from '../common/clock/clock.js'
@@ -7,7 +6,6 @@ import { NotificationRepository } from './notification.repository.js'
 
 /** The notification centre and the reminder preferences of the signed-in
  * user. Every method names the user: a user only ever reaches their own. */
-@Injectable()
 export class NotificationService {
   constructor(
     private readonly notifications: NotificationRepository,

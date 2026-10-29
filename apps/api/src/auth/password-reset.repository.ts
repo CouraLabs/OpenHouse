@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import { and, count, desc, eq, gt, isNull, max, or, sql } from 'drizzle-orm'
 import type {
   Database,
@@ -26,9 +24,8 @@ function isOpen(now: Date) {
  * code names its user, so redeeming needs no tenant; issuing one for a
  * member reads the member through the owner's tenant, passed explicitly.
  */
-@Injectable()
 export class PasswordResetRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Reads one user of the tenant. */
   async findUserInTenant(

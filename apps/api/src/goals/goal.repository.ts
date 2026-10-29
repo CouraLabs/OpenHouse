@@ -1,6 +1,4 @@
 import { and, asc, count, eq, getTableColumns } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Currency, Database, Goal } from '@workspace/db'
 import { accounts, goals } from '@workspace/db'
 import type { SearchGoalsArgs } from '@workspace/poco'
@@ -41,9 +39,8 @@ export interface GoalWrite {
  * has to resolve a `linkedAccountId`, and the name survives a deleted
  * account.
  */
-@Injectable()
 export class GoalRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Inserts a goal, stamping the audit trail with the acting user. */
   async insert(

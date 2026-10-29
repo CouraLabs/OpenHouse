@@ -11,13 +11,26 @@ import type { SettingsRepository } from '../settings/settings.repository.js'
 import type { NotificationPreferencesRepository } from './notification-preferences.repository.js'
 import type { ReminderDeliveryService } from './reminder-delivery.service.js'
 import { bill } from './reminder-fixtures.js'
-import { ReminderRunService } from './reminder-run.service.js'
+import { ReminderRunService, type ReminderSources } from './reminder-run.service.js'
 
 /** A household at UTC-03:00 (Sao Paulo has no daylight saving time). */
 const SAO_PAULO = 'America/Sao_Paulo'
 
 function build(now: string, timezone: string) {
   const deliver = vi.fn().mockResolvedValue(0)
+  const sources: ReminderSources = {
+    bills: {
+      pendingBills: vi
+        .fn()
+        .mockResolvedValue([bill({ dueDate: '2026-11-05', status: 'Closed' })]),
+    } as unknown as BillSource,
+    recurring: {
+      activeRules: vi.fn().mockResolvedValue([]),
+      generatedOn: vi.fn().mockResolvedValue(new Set()),
+    } as unknown as RecurringSource,
+    limits: { usage: vi.fn().mockResolvedValue([]) } as unknown as LimitSource,
+    delivery: { deliver } as unknown as ReminderDeliveryService,
+  }
   const service = new ReminderRunService(
     {
       listRecipients: vi.fn().mockResolvedValue([
@@ -31,17 +44,7 @@ function build(now: string, timezone: string) {
     {
       timezonesOf: vi.fn().mockResolvedValue(new Map([[1, timezone]])),
     } as unknown as SettingsRepository,
-    {
-      pendingBills: vi
-        .fn()
-        .mockResolvedValue([bill({ dueDate: '2026-11-05', status: 'Closed' })]),
-    } as unknown as BillSource,
-    {
-      activeRules: vi.fn().mockResolvedValue([]),
-      generatedOn: vi.fn().mockResolvedValue(new Set()),
-    } as unknown as RecurringSource,
-    { usage: vi.fn().mockResolvedValue([]) } as unknown as LimitSource,
-    { deliver } as unknown as ReminderDeliveryService,
+    sources,
     { now: () => new Date(now) } as Clock
   )
 

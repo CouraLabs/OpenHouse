@@ -1,7 +1,5 @@
 import { and, asc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
-import type { Database, DbOrTx, Transaction } from '@workspace/db'
+import type { Database, Transaction } from '@workspace/db'
 import { transactions } from '@workspace/db'
 
 import type { ExistingRow } from './import-duplicates.js'
@@ -22,21 +20,19 @@ const LOOKUP_CHUNK = 1000
  * and the rows of one import batch. The writes go through the transactions
  * feature's ledger repository, never around it.
  */
-@Injectable()
 export class ImportTransactionRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** The ACTIVE rows of an account holding any of these bank ids, by id. */
   async findByExternalIds(
     tenantId: number,
     accountId: number,
-    externalIds: readonly string[],
-    db: DbOrTx = this.db
+    externalIds: readonly string[]
   ): Promise<Map<string, ExistingRow>> {
     const found = new Map<string, ExistingRow>()
 
     for (let start = 0; start < externalIds.length; start += LOOKUP_CHUNK) {
-      const rows = await db
+      const rows = await this.db
         .select({
           id: transactions.id,
           name: transactions.name,
@@ -105,11 +101,10 @@ export class ImportTransactionRepository {
    * instead of being overwritten.
    */
   async findBatch(
-    db: DbOrTx = this.db,
     tenantId: number,
     batchId: string
   ): Promise<{ rows: Transaction[]; importedAt: Date } | undefined> {
-    const [stamp] = await db
+    const [stamp] = await this.db
       .select({ importedAt: sql<number>`min(${transactions.createdDt})` })
       .from(transactions)
       .where(
@@ -123,7 +118,7 @@ export class ImportTransactionRepository {
       return undefined
     }
 
-    const rows = await db
+    const rows = await this.db
       .select()
       .from(transactions)
       .where(
@@ -140,11 +135,10 @@ export class ImportTransactionRepository {
 
   /** The account ids of one batch's rows, ACTIVE or not. */
   async accountsOfBatch(
-    db: DbOrTx,
     tenantId: number,
     batchId: string
   ): Promise<number[]> {
-    const rows = await db
+    const rows = await this.db
       .selectDistinct({ accountId: transactions.linkedAccountId })
       .from(transactions)
       .where(

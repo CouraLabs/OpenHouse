@@ -1,4 +1,3 @@
-import { Injectable, Logger } from '@nestjs/common'
 import type {
   NotificationBody,
   PushConfig,
@@ -18,9 +17,7 @@ const GONE_STATUSES = new Set([404, 410])
  * dead (the user revoked it, or the browser profile is gone) and its row is
  * deleted; any other failure is logged and the row kept for the next try.
  */
-@Injectable()
 export class PushService {
-  private readonly logger = new Logger(PushService.name)
 
   constructor(
     private readonly subscriptions: PushSubscriptionRepository,
@@ -85,7 +82,7 @@ export class PushService {
         ) {
           await this.subscriptions.deleteById(subscription.id)
         } else {
-          this.logger.warn(
+          console.warn(
             `A push to subscription ${subscription.id} failed: ${String(error)}`
           )
         }

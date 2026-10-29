@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common'
+import { NotFoundError } from '../common/errors.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Category, Limit } from '@workspace/db'
 
@@ -118,7 +118,7 @@ describe('LimitService', () => {
         amount: '12.34',
         type: 'Monthly',
       })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
@@ -140,7 +140,7 @@ describe('LimitService', () => {
         amount: '12.34',
         type: 'Monthly',
       })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.insert).not.toHaveBeenCalled()
   })
 
@@ -200,7 +200,7 @@ describe('LimitService', () => {
         amount: '99.00',
         type: 'Monthly',
       })
-    ).rejects.toThrow(NotFoundException)
+    ).rejects.toThrow(NotFoundError)
     expect(repo.update).not.toHaveBeenCalled()
   })
 
@@ -216,7 +216,7 @@ describe('LimitService', () => {
       clock
     )
 
-    await expect(service.find(1, 999)).rejects.toThrow(NotFoundException)
+    await expect(service.find(1, 999)).rejects.toThrow(NotFoundError)
   })
 
   it('soft-deletes a limit as a status change', async () => {

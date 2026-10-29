@@ -1,8 +1,3 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type { Account } from '@workspace/db'
 import {
   BALANCE_ADJUSTMENT_CATEGORY,
@@ -18,6 +13,7 @@ import {
 import { AccountRepository } from '../accounts/account.repository.js'
 import { BalanceRepository } from '../balances/balance.repository.js'
 import { CategoryRepository } from '../categories/category.repository.js'
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import {
   TransactionRepository,
   type TransactionRow,
@@ -51,7 +47,6 @@ export interface ReconcileOutcome {
  * rows up to it behind a confirmation. The balance on the day is always
  * derived from the rows — never from the cached `accounts.balance`.
  */
-@Injectable()
 export class ReconciliationService {
   constructor(
     private readonly transactions: TransactionRepository,
@@ -109,7 +104,7 @@ export class ReconciliationService {
     )
 
     if (!isZeroMoney(difference) && !body.createAdjustment) {
-      throw new ConflictException(
+      throw new ConflictError(
         'The balance differs from the bank. Create an adjustment, or fix the transactions first.'
       )
     }
@@ -231,7 +226,7 @@ export class ReconciliationService {
     const account = await this.accounts.findById(tenantId, accountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${accountId}.`)
+      throw new NotFoundError(`No account with id ${accountId}.`)
     }
 
     return account

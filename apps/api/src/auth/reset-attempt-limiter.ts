@@ -1,6 +1,5 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
-
 import { Clock } from '../common/clock/clock.js'
+import { TooManyRequestsError } from '../common/errors.js'
 
 /** Failures one code prefix may collect per window. */
 const MAX_FAILURES = 10
@@ -16,10 +15,10 @@ const WINDOW_MS = 60 * 60 * 1000
  * route — an attacker working through one code from many addresses still
  * hits this. Enforced in every environment, unlike the global throttler.
  *
- * The counts live in memory: enough while the API is one process, like the
- * throttler's store.
+ * The counts live in memory: per isolate on Workers — one deployment's
+ * isolates share nothing, so the limiter is a damper, not a wall; the
+ * per-IP rate-limit binding is the wall.
  */
-@Injectable()
 export class ResetAttemptLimiter {
   private readonly failures = new Map<string, number[]>()
 
@@ -28,9 +27,8 @@ export class ResetAttemptLimiter {
   /** Throws 429 while the prefix is out of attempts. */
   assertAllowed(prefix: string): void {
     if (this.recent(prefix).length >= MAX_FAILURES) {
-      throw new HttpException(
-        'Too many attempts with this code. Try again later.',
-        HttpStatus.TOO_MANY_REQUESTS
+      throw new TooManyRequestsError(
+        'Too many attempts with this code. Try again later.'
       )
     }
   }

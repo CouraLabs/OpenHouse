@@ -1,8 +1,3 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type { TenantSettingsRow } from '@workspace/db'
 import type {
   CurrencyChangeConflict,
@@ -10,6 +5,7 @@ import type {
   UpdateSettingsBody,
 } from '@workspace/poco'
 
+import { ConflictError, NotFoundError } from '../common/errors.js'
 import { SettingsRepository } from './settings.repository.js'
 
 /** Maps a settings row onto the wire shape the session and routes carry. */
@@ -27,14 +23,13 @@ export function toWireSettings(row: TenantSettingsRow): TenantSettings {
  * from sign-up (or the migration), so a missing row is a 404, never a
  * silent default.
  */
-@Injectable()
 export class SettingsService {
   constructor(private readonly settings: SettingsRepository) {}
 
   async get(tenantId: number): Promise<TenantSettings> {
     const row = await this.settings.findByTenant(tenantId)
     if (row === undefined) {
-      throw new NotFoundException('Settings not found.')
+      throw new NotFoundError('Settings not found.')
     }
 
     return toWireSettings(row)
@@ -53,7 +48,7 @@ export class SettingsService {
   ): Promise<TenantSettings> {
     const current = await this.settings.findByTenant(tenantId)
     if (current === undefined) {
-      throw new NotFoundException('Settings not found.')
+      throw new NotFoundError('Settings not found.')
     }
 
     if (
@@ -71,7 +66,7 @@ export class SettingsService {
           ...affected,
         }
 
-        throw new ConflictException(conflict)
+        throw new ConflictError(conflict)
       }
     }
 
@@ -83,7 +78,7 @@ export class SettingsService {
         : { unsplitMode: body.unsplitMode }),
     })
     if (row === undefined) {
-      throw new NotFoundException('Settings not found.')
+      throw new NotFoundError('Settings not found.')
     }
 
     return toWireSettings(row)

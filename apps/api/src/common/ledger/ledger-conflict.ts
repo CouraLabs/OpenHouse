@@ -1,34 +1,12 @@
-import {
-  type ArgumentsHost,
-  Catch,
-  ConflictException,
-  type ExceptionFilter,
-} from '@nestjs/common'
-import { BaseExceptionFilter } from '@nestjs/core'
-
-/** Raised when a ledger write kept losing to concurrent writes on the same
- * accounts after every retry. */
+/** Raised when a ledger write's guard matched no rows — the account is
+ * gone or no longer ACTIVE, or the row changed under the writer (the
+ * optimistic `update_dt` guard). The error handler answers it 409. */
 export class LedgerConflictError extends Error {
-  constructor(options?: { cause?: unknown }) {
-    super(
-      'Another change to these accounts happened at the same time. Try again.',
-      options
-    )
+  constructor(cause?: unknown) {
+    super('Another change to these accounts happened at the same time. Try again.')
+    if (cause !== undefined && cause !== null) {
+      this.cause = cause
+    }
     this.name = 'LedgerConflictError'
-  }
-}
-
-/**
- * Answers a ledger write that kept losing to concurrent writes on the same
- * accounts with a 409 the client can retry, instead of the 500 an uncaught
- * driver error would become.
- */
-@Catch(LedgerConflictError)
-export class LedgerConflictFilter
-  extends BaseExceptionFilter
-  implements ExceptionFilter
-{
-  catch(error: LedgerConflictError, host: ArgumentsHost): void {
-    super.catch(new ConflictException(error.message), host)
   }
 }

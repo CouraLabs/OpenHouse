@@ -1,11 +1,11 @@
-import { BadRequestException } from '@nestjs/common'
+import { BadRequestError } from '../common/errors.js'
 import type { ImportFormat } from '@workspace/poco'
 
-/** The part of an uploaded file the import reads — what multer's memory
- * storage provides. */
+/** The part of an uploaded file the import reads — the file part of the
+ * multipart body, held in memory for the length of the request. */
 export interface UploadedImport {
   originalname: string
-  buffer: Buffer
+  bytes: Uint8Array
   size: number
 }
 
@@ -21,5 +21,5 @@ export function formatOfUpload(fileName: string): ImportFormat {
     return 'csv'
   }
 
-  throw new BadRequestException('Upload a .ofx, .qfx or .csv file.')
+  throw new BadRequestError('Upload a .ofx, .qfx or .csv file.')
 }

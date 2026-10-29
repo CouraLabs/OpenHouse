@@ -1,9 +1,3 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
 import type { Account } from '@workspace/db'
 import {
   CARD_PAYMENT_CATEGORY,
@@ -28,8 +22,9 @@ import type {
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
+import { BadRequestError, ConflictError, NotFoundError } from '../common/errors.js'
 import { HouseholdMembers } from '../common/household/household-members.js'
-import { assertMembers } from '../common/household/split-members.js'
+import { assertMembers } from './split-members.js'
 import { CategoryRepository } from '../categories/category.repository.js'
 import { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import { ReceiverRepository } from '../receivers/receiver.repository.js'
@@ -64,18 +59,18 @@ function assertDateOpen(
     reconciledThrough: account.reconciledThrough,
   }
 
-  throw new ConflictException(conflict)
+  throw new ConflictError(conflict)
 }
 
 /** Only an expense of the household's own splits: not an income, and not
  * what a shared account pays (it creates no debts). */
 function assertSplittable(account: Account, type: string): void {
   if (type !== 'Expense') {
-    throw new BadRequestException('Only an expense can be split.')
+    throw new BadRequestError('Only an expense can be split.')
   }
 
   if (account.ownership === 'shared') {
-    throw new ConflictException(
+    throw new ConflictError(
       'Expenses from a shared account create no debts.'
     )
   }
@@ -90,7 +85,7 @@ function sharesOf(
   const resolved = resolveSplit(amount, split, payerUserId)
 
   if (!resolved.ok) {
-    throw new BadRequestException(resolved.message)
+    throw new BadRequestError(resolved.message)
   }
 
   return resolved.shares
@@ -105,7 +100,6 @@ function sharesOf(
  * currency. The tenant and the user always arrive from the caller — this
  * service never reads a request.
  */
-@Injectable()
 export class TransactionService {
   constructor(
     private readonly repository: TransactionRepository,
@@ -225,7 +219,7 @@ export class TransactionService {
     const row = await this.repository.findById(tenantId, id)
 
     if (row === undefined) {
-      throw new NotFoundException(`No transaction with id ${id}.`)
+      throw new NotFoundError(`No transaction with id ${id}.`)
     }
 
     return row
@@ -259,7 +253,7 @@ export class TransactionService {
       reconciledThrough: account?.reconciledThrough ?? row.transactionDt,
     }
 
-    throw new ConflictException(conflict)
+    throw new ConflictError(conflict)
   }
 
   /** Updates a transaction, rejecting references it cannot use. A deleted
@@ -272,7 +266,7 @@ export class TransactionService {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(`No transaction with id ${body.id}.`)
+      throw new NotFoundError(`No transaction with id ${body.id}.`)
     }
 
     // A transfer side's type and account are what pair it with its sibling:
@@ -283,7 +277,7 @@ export class TransactionService {
       row.transferGroupId !== null &&
       (body.type !== row.type || body.linkedAccountId !== row.linkedAccountId)
     ) {
-      throw new ConflictException(
+      throw new ConflictError(
         "A transfer's type and account cannot be changed."
       )
     }
@@ -291,7 +285,7 @@ export class TransactionService {
     // A settlement moves a debt between two members: it is deleted and
     // recorded again, never edited into a different one.
     if (row.isSettlement) {
-      throw new ConflictException(
+      throw new ConflictError(
         'A settlement cannot be edited. Delete it and settle up again.'
       )
     }
@@ -315,7 +309,7 @@ export class TransactionService {
     // silently change the money (R$ 500 becoming US$ 500). Converting is out
     // of scope: it would need an exchange rate stored on the transaction.
     if (account.currency !== row.currency) {
-      throw new ConflictException(
+      throw new ConflictError(
         'Move the transaction to an account of the same currency.'
       )
     }
@@ -351,7 +345,7 @@ export class TransactionService {
     )
 
     if (updated === undefined) {
-      throw new NotFoundException(`No transaction with id ${body.id}.`)
+      throw new NotFoundError(`No transaction with id ${body.id}.`)
     }
 
     return updated
@@ -377,13 +371,13 @@ export class TransactionService {
 
     if (split !== undefined) {
       if (row.transferGroupId !== null) {
-        throw new ConflictException(
+        throw new ConflictError(
           'Transfers and bill payments cannot be split.'
         )
       }
 
       if (row.installmentGroupId !== null) {
-        throw new ConflictException(
+        throw new ConflictError(
           'Edit the whole purchase to change how it is split.'
         )
       }
@@ -432,7 +426,7 @@ export class TransactionService {
       !memberIds.includes(body.fromUserId) ||
       !memberIds.includes(body.toUserId)
     ) {
-      throw new BadRequestException('Settle up between members only.')
+      throw new BadRequestError('Settle up between members only.')
     }
 
     const from = await this.usableSettleAccount(
@@ -455,7 +449,7 @@ export class TransactionService {
       )
 
       if (to.id === from.id) {
-        throw new ConflictException('Pick two different accounts.')
+        throw new ConflictError('Pick two different accounts.')
       }
 
       const rows = await this.repository.insertTransfer(tenantId, userId, {
@@ -512,15 +506,15 @@ export class TransactionService {
     const account = await this.accounts.findById(tenantId, accountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${accountId}.`)
+      throw new NotFoundError(`No account with id ${accountId}.`)
     }
 
     if (account.type === 'Credit Card') {
-      throw new ConflictException('A settle-up cannot use a credit card.')
+      throw new ConflictError('A settle-up cannot use a credit card.')
     }
 
     if (account.currency !== currency) {
-      throw new ConflictException(
+      throw new ConflictError(
         `Pick an account in ${currency}: settlements are not converted.`
       )
     }
@@ -541,7 +535,7 @@ export class TransactionService {
     const row = await this.find(tenantId, body.id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(`No transaction with id ${body.id}.`)
+      throw new NotFoundError(`No transaction with id ${body.id}.`)
     }
 
     await this.assertNotReconciled(tenantId, row, body.confirmReconciled)
@@ -554,7 +548,7 @@ export class TransactionService {
     )
 
     if (updated === undefined) {
-      throw new NotFoundException(`No transaction with id ${body.id}.`)
+      throw new NotFoundError(`No transaction with id ${body.id}.`)
     }
 
     return updated
@@ -575,23 +569,23 @@ export class TransactionService {
     const row = await this.find(tenantId, id)
 
     if (row.status === 'DELETED') {
-      throw new NotFoundException(`No transaction with id ${id}.`)
+      throw new NotFoundError(`No transaction with id ${id}.`)
     }
 
     const payment = row.type === 'Income' && row.transferGroupId !== null
 
     if (row.statementId === null && !payment) {
-      throw new ConflictException('Only a card charge is on a bill.')
+      throw new ConflictError('Only a card charge is on a bill.')
     }
 
     const statement = await this.statements.findById(tenantId, body.statementId)
 
     if (statement === undefined || statement.status === 'DELETED') {
-      throw new NotFoundException(`No bill with id ${body.statementId}.`)
+      throw new NotFoundError(`No bill with id ${body.statementId}.`)
     }
 
     if (statement.accountId !== row.linkedAccountId) {
-      throw new ConflictException('Pick a bill of the same card.')
+      throw new ConflictError('Pick a bill of the same card.')
     }
 
     const moved = await this.repository.moveToStatement(
@@ -602,7 +596,7 @@ export class TransactionService {
     )
 
     if (moved === undefined) {
-      throw new NotFoundException(`No transaction with id ${id}.`)
+      throw new NotFoundError(`No transaction with id ${id}.`)
     }
 
     return moved
@@ -625,7 +619,7 @@ export class TransactionService {
     await this.assertNotReconciled(tenantId, row, confirmReconciled)
 
     if (row.installmentGroupId !== null) {
-      throw new ConflictException(
+      throw new ConflictError(
         "Delete an installment purchase as a whole, or its remaining installments."
       )
     }
@@ -651,21 +645,21 @@ export class TransactionService {
     const from = await this.accounts.findById(tenantId, body.fromAccountId)
 
     if (from === undefined || from.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${body.fromAccountId}.`)
+      throw new NotFoundError(`No account with id ${body.fromAccountId}.`)
     }
 
     const to = await this.accounts.findById(tenantId, body.toAccountId)
 
     if (to === undefined || to.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${body.toAccountId}.`)
+      throw new NotFoundError(`No account with id ${body.toAccountId}.`)
     }
 
     if (from.id === to.id) {
-      throw new ConflictException('Pick two different accounts.')
+      throw new ConflictError('Pick two different accounts.')
     }
 
     if (from.currency !== to.currency) {
-      throw new ConflictException(
+      throw new ConflictError(
         'Transfer needs two accounts of the same currency.'
       )
     }
@@ -673,7 +667,7 @@ export class TransactionService {
     const paysCard = to.type === 'Credit Card'
 
     if (body.paymentStatementId !== undefined && !paysCard) {
-      throw new ConflictException('Only a transfer into a card pays a bill.')
+      throw new ConflictError('Only a transfer into a card pays a bill.')
     }
 
     const categoryId = await this.transferCategoryId(
@@ -697,7 +691,7 @@ export class TransactionService {
     })
 
     if (rows === undefined) {
-      throw new NotFoundException(`No bill with id ${paymentStatementId}.`)
+      throw new NotFoundError(`No bill with id ${paymentStatementId}.`)
     }
 
     return rows
@@ -713,7 +707,7 @@ export class TransactionService {
   ): Promise<number> {
     if (categoryId === undefined) {
       if (!paysCard) {
-        throw new BadRequestException('Pick a category.')
+        throw new BadRequestError('Pick a category.')
       }
 
       const category = await this.categories.getOrCreateByName(
@@ -728,7 +722,7 @@ export class TransactionService {
     const category = await this.categories.findById(tenantId, categoryId)
 
     if (category === undefined || category.status === 'DELETED') {
-      throw new NotFoundException(`No category with id ${categoryId}.`)
+      throw new NotFoundError(`No category with id ${categoryId}.`)
     }
 
     return categoryId
@@ -752,11 +746,11 @@ export class TransactionService {
     )
 
     if (statement === undefined || statement.status === 'DELETED') {
-      throw new NotFoundException(`No bill with id ${body.paymentStatementId}.`)
+      throw new NotFoundError(`No bill with id ${body.paymentStatementId}.`)
     }
 
     if (statement.accountId !== cardId) {
-      throw new ConflictException('Pick a bill of the card being paid.')
+      throw new ConflictError('Pick a bill of the card being paid.')
     }
 
     return statement.id
@@ -780,7 +774,7 @@ export class TransactionService {
       (body.receiverId ?? null) !== row.receiverId ||
       (body.invoice ?? null) !== row.invoice
     ) {
-      throw new ConflictException(
+      throw new ConflictError(
         'Edit the whole purchase to change its name, day, account, or receiver.'
       )
     }
@@ -792,7 +786,7 @@ export class TransactionService {
     const today = await this.statements.todayOf(tenantId)
 
     if (statement !== undefined && statement.closeDate <= today) {
-      throw new ConflictException(
+      throw new ConflictError(
         'This installment was already billed and can no longer change.'
       )
     }
@@ -807,20 +801,20 @@ export class TransactionService {
     const account = await this.accounts.findById(tenantId, body.linkedAccountId)
 
     if (account === undefined || account.status === 'DELETED') {
-      throw new NotFoundException(`No account with id ${body.linkedAccountId}.`)
+      throw new NotFoundError(`No account with id ${body.linkedAccountId}.`)
     }
 
     const category = await this.categories.findById(tenantId, body.categoryId)
 
     if (category === undefined || category.status === 'DELETED') {
-      throw new NotFoundException(`No category with id ${body.categoryId}.`)
+      throw new NotFoundError(`No category with id ${body.categoryId}.`)
     }
 
     if (body.receiverId != null) {
       const receiver = await this.receivers.findById(tenantId, body.receiverId)
 
       if (receiver === undefined || receiver.status === 'DELETED') {
-        throw new NotFoundException(`No receiver with id ${body.receiverId}.`)
+        throw new NotFoundError(`No receiver with id ${body.receiverId}.`)
       }
     }
 

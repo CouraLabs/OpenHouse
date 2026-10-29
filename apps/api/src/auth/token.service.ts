@@ -1,13 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common'
-import { JwtService } from '@nestjs/jwt'
-import { createHash } from 'node:crypto'
-import { JWT_TTLS, type JwtTtls } from './jwt-ttls.js'
+import { sign, verify } from 'hono/jwt'
+
+import type { JwtTtls } from '../config/env.js'
 
 /**
  * The claims an access token carries. Deliberately only the user id: the
  * tenant a request acts on comes from the user the session was issued to,
- * which the guard re-reads from the database on every request, never from the
- * token.
+ * which the auth middleware re-reads from the database on every request,
+ * never from the token.
  */
 export interface AccessTokenClaims {
   sub: string
@@ -34,65 +33,86 @@ interface UnverifiedClaims {
   typ?: unknown
   jti?: unknown
   rem?: unknown
-}
-
-/** The hash format the user row stores for the current refresh token. */
-export function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex')
+  exp?: unknown
 }
 
 /**
- * Signs and verifies the two JWTs of a session. The secret is the one
- * `AuthModule` registered `JwtModule` with; the lifetimes are injected.
- *
- * Both kinds share a secret, so each carries a `typ` claim and each verifier
- * accepts only its own kind: a refresh token presented as an access token —
- * which would outlive a sign-out, since the guard never consults the stored
- * refresh hash — is rejected.
+ * The SHA-256 hex of a token — the hash the user row stores for the current
+ * refresh token, and the shape every other hash of the session stores.
+ * WebCrypto, so it runs on Workers.
  */
-@Injectable()
+export async function hashToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(token)
+  )
+
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+/**
+ * Signs and verifies the two JWTs of a session, HS256 with the deployment's
+ * secret. Both kinds share a secret, so each carries a `typ` claim and each
+ * verifier accepts only its own kind: a refresh token presented as an
+ * access token — which would outlive a sign-out, since the middleware never
+ * consults the stored refresh hash — is rejected.
+ *
+ * The claims and the secret are the ones the previous implementation signed,
+ * so tokens issued before the migration stay valid.
+ */
 export class TokenService {
   constructor(
-    @Inject(JwtService) private readonly jwt: JwtService,
-    @Inject(JWT_TTLS) private readonly ttls: JwtTtls
+    private readonly secret: string,
+    private readonly ttls: JwtTtls
   ) {}
 
   /** Signs the access token a guarded request presents. */
-  signAccessToken(userId: number): string {
-    const claims: AccessTokenClaims = { sub: String(userId), typ: 'access' }
+  async signAccessToken(userId: number): Promise<string> {
+    const now = Math.floor(Date.now() / 1000)
 
-    return this.jwt.sign(claims, { expiresIn: this.ttls.accessTtlS })
+    return sign(
+      { sub: String(userId), typ: 'access', iat: now, exp: now + this.ttls.accessTtlS },
+      this.secret,
+      'HS256'
+    )
   }
 
   /**
    * Signs the refresh token of a new session, with its own id. A remembered
    * session's token lives as long as its cookie does.
    */
-  signRefreshToken(
+  async signRefreshToken(
     userId: number,
     rememberMe: boolean
-  ): { token: string; jti: string } {
+  ): Promise<{ token: string; jti: string }> {
     const jti = crypto.randomUUID()
-    const claims: RefreshTokenClaims = {
-      sub: String(userId),
-      typ: 'refresh',
-      jti,
-      rem: rememberMe,
-    }
+    const now = Math.floor(Date.now() / 1000)
+    const lifetime = rememberMe
+      ? this.ttls.rememberRefreshTtlS
+      : this.ttls.refreshTtlS
 
     return {
-      token: this.jwt.sign(claims, {
-        expiresIn: rememberMe
-          ? this.ttls.rememberRefreshTtlS
-          : this.ttls.refreshTtlS,
-      }),
+      token: await sign(
+        {
+          sub: String(userId),
+          typ: 'refresh',
+          jti,
+          rem: rememberMe,
+          iat: now,
+          exp: now + lifetime,
+        },
+        this.secret,
+        'HS256'
+      ),
       jti,
     }
   }
 
   /** Verifies an access token, returning its claims or `null`. */
-  verifyAccessToken(token: string): AccessTokenClaims | null {
-    const claims = this.verify(token)
+  async verifyAccessToken(token: string): Promise<AccessTokenClaims | null> {
+    const claims = await this.verify(token)
 
     if (claims === null || typeof claims.sub !== 'string') {
       return null
@@ -102,8 +122,8 @@ export class TokenService {
   }
 
   /** Verifies a refresh token, returning its claims or `null`. */
-  verifyRefreshToken(token: string): RefreshTokenClaims | null {
-    const claims = this.verify(token)
+  async verifyRefreshToken(token: string): Promise<RefreshTokenClaims | null> {
+    const claims = await this.verify(token)
 
     if (
       claims === null ||
@@ -122,10 +142,12 @@ export class TokenService {
     }
   }
 
-  /** Verifies either kind of token, hiding the reason a bad one failed. */
-  private verify(token: string): UnverifiedClaims | null {
+  /** Verifies either kind of token, or `null` when it does not verify. */
+  private async verify(token: string): Promise<UnverifiedClaims | null> {
     try {
-      return this.jwt.verify<UnverifiedClaims>(token)
+      const claims = (await verify(token, this.secret, 'HS256')) as UnverifiedClaims
+
+      return claims
     } catch {
       return null
     }

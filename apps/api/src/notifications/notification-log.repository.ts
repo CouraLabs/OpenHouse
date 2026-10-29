@@ -1,6 +1,4 @@
 import { sql } from 'drizzle-orm'
-import { Injectable } from '@nestjs/common'
-import { InjectDrizzle } from '@nestjs/drizzle'
 import type { Database } from '@workspace/db'
 import { notificationLog } from '@workspace/db'
 
@@ -36,9 +34,8 @@ export interface LogKey {
  * or a second replica inserting the same key gets nothing back and sends
  * nothing. No error is ever caught here.
  */
-@Injectable()
 export class NotificationLogRepository {
-  constructor(@InjectDrizzle() private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   /** Claims a reminder; answers whether this call won it. */
   async claim(key: LogKey): Promise<boolean> {
