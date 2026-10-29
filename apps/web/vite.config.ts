@@ -77,9 +77,9 @@ export default defineConfig({
       // processes; same-origin requests keep the session cookies from being
       // cross-site, so no CORS dance is needed.
       '/api': {
+        // Forwarded as-is: the Worker's API answers at /api/*.
         target: 'http://localhost:8787',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

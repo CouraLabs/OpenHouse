@@ -27,7 +27,19 @@ import { hashToken, TokenService } from './token.service.js'
  * a sign-in costs one bcrypt round either way — the response time does not
  * reveal which emails have an account.
  */
-const NO_USER_HASH = bcrypt.hashSync('no-user-has-this-password', 10)
+/**
+ * The hash no password matches, compared against when the email is unknown
+ * so the response cannot be timed to learn which emails exist. Computed on
+ * first use — module init is too early for the runtime's crypto in a
+ * Worker isolate.
+ */
+let noUserHash: string | undefined
+
+function noUserHashOf(): string {
+  noUserHash ??= bcrypt.hashSync('no-user-has-this-password', 10)
+
+  return noUserHash
+}
 
 /**
  * The piece of a user the API shares with the web app: never the password
@@ -230,7 +242,7 @@ export class AuthService {
 
     const passwordMatches = await bcrypt.compare(
       body.password,
-      user?.password ?? NO_USER_HASH
+      user?.password ?? noUserHashOf()
     )
     if (!passwordMatches || user === undefined || !user.isActive) {
       throw new UnauthorizedError('Invalid email or password.')

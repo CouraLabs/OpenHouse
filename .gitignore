@@ -46,3 +46,5 @@ plans/
 # Worker local secrets
 .dev.vars
 apps/api/.local
+.wrangler/*
+apps/api/.wrangler
