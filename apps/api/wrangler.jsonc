@@ -2,8 +2,21 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "openhouse",
   "main": "src/index.ts",
-  "compatibility_date": "2026-10-01",
+  "upload_source_maps": true,
+  "compatibility_date": "2026-10-30",
   "compatibility_flags": ["nodejs_compat"],
+  // Per-invocation safety net, not a monthly cap: the account's Workers Paid
+  // allotment is shared with other apps. CPU follows the API/CRUD budget.
+  // Subrequests count every D1 query too, and one queue invocation runs up
+  // to 10 tenant jobs (recurring rules, reminders with web-push fetches), so
+  // 20 would fail real batches; 500 still stops a runaway loop.
+  "limits": {
+    "cpu_ms": 3000,
+    "subrequests": 500
+  },
+  // D1 lives in one region and most requests make several queries, so run
+  // the Worker near the database (affects fetch handlers only).
+  "placement": { "mode": "smart" },
   // The web app ships from the same Worker: static assets with SPA fallback,
   // and every /api/* request runs the Worker first (sessions, JSON).
   "assets": {
@@ -77,8 +90,14 @@
     { "pattern": "openhouse.couralabs.dev/api*", "zone_name": "couralabs.dev" },
     { "pattern": "openhouse.couralabs.dev/app*", "zone_name": "couralabs.dev" }
   ],
-  // Workers Logs captures the request lines and the jobs' errors.
-  "observability": { "enabled": true },
+  // Workers Logs captures the request lines and the jobs' errors; traces are
+  // sampled at 1%; Issues groups production failures.
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 },
+    "issues": { "enabled": true }
+  },
   "vars": {
     // Non-secret defaults; secrets live in .dev.vars / `wrangler secret put`.
     "JWT_ACCESS_TTL_S": "900",
@@ -98,5 +117,7 @@
     // secret.
     "TURNSTILE_HOSTNAMES": "openhouse.couralabs.dev",
     "TURNSTILE_SITE_KEY": "0x4AAAAAAFr8E1AVU5Xzv0Ax"
-  }
+  },
+  // Secrets set with `wrangler secret put` survive every deploy.
+  "keep_vars": true
 }
