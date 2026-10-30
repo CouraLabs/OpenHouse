@@ -9,7 +9,7 @@ web
 ## Users
 
 Anyone who runs a home, alone or with other people. A person living alone
-uses Cantin as their own home's organizer; a couple, a family or a shared
+uses Kantim as their own home's organizer; a couple, a family or a shared
 flat signs in to the same home and runs it together. One tenant is one home.
 Members join with an invite code and are on equal footing: everyone reads
 and writes the same data. Roles exist only where the data model needs them
@@ -18,18 +18,18 @@ way for a home of one.
 
 ## Product purpose
 
-Cantin is an open-source home management app. It keeps what a home runs on
+Kantim is an open-source home management app. It keeps what a home runs on
 in one place: the money, the pantry, the chores, the pets, the upkeep of the
 house and the people who live in it. Today the money part is live. The rest
 arrives as modules of the same home, with the same sign-in and the same
 members.
 
-Cantin should also look ahead for the home: warn that the detergent is
+Kantim should also look ahead for the home: warn that the detergent is
 running low or the pet food expires soon, remind about the power bill, and
 suggest chores for the weekend. Storing the data comes first, and the
 reminders are built on top of it.
 
-Success is a home that trusts Cantin enough to drop its side spreadsheets,
+Success is a home that trusts Kantim enough to drop its side spreadsheets,
 fridge notes and group-chat reminders.
 
 ## Modules
@@ -73,7 +73,7 @@ parked.
 ## Positioning
 
 - A home management app, not a chore app, a shopping list or a finance
-  tracker. Each of those exists alone; Cantin is the one place for the
+  tracker. Each of those exists alone; Kantim is the one place for the
   whole home.
 - Three principles: everything about the home in one app; the app reminds
   you of due dates, bills, tasks and needs instead of waiting to be asked;
@@ -117,22 +117,25 @@ parked.
 
 ## Brand commitments
 
-- Name: Cantin, written in lowercase in the logo ("cantin."). It comes from
-  "meu cantin", the informal, affectionate Brazilian way of saying "meu
+- Name: Kantim, written in lowercase in the logo ("kantim."). It comes from
+  "meu cantim", the informal, affectionate Brazilian way of saying "meu
   cantinho": my own little place, where the routine happens and where people
-  live with the ones they love. The app is the digital version of that
-  place, where each person looks after their cantin.
+  live with the ones they love. The K keeps the sound and makes the name
+  ownable: "Cantin" sat one letter from a registered CANTINA software mark
+  in Brazil and had its .com and .com.br taken, while Kantim had no conflicting mark and
+  `kantim.app` and `kantim.com.br` were free (issue #30). The app is the
+  digital version of that place, where each person looks after their kantim.
 - Before money goes into identity, domain or store listings, the name's
   trademark and app store availability must be checked.
-- Tagline (pt-BR): "Tudo do seu cantin, em um só lugar." In English:
+- Tagline (pt-BR): "Tudo do seu kantim, em um só lugar." In English:
   "Everything about your home, in one place." The English line is
-  provisional; "cantin" does not translate, so the name stays as is in
+  provisional; "kantim" does not translate, so the name stays as is in
   every locale.
 - Brand line: "Seu cantinho, do seu jeito." Sign-off for campaigns: "Seu
   mundo começa em casa."
-- Other approved slogans for marketing: "Cuide do seu cantin. Viva
-  melhor.", "Seu lar no seu ritmo.", "Porque todo cantin merece cuidado.",
-  "A vida acontece no seu cantin.", "Mais cuidado, menos preocupação."
+- Other approved slogans for marketing: "Cuide do seu kantim. Viva
+  melhor.", "Seu lar no seu ritmo.", "Porque todo kantim merece cuidado.",
+  "A vida acontece no seu kantim.", "Mais cuidado, menos preocupação."
 - Personality: welcoming, contemporary, Brazilian, human.
 - Voice: plain, warm and concrete. Short sentences that name the actual
   thing ("a conta de luz", "o leite"), never feature jargon. Portuguese is
