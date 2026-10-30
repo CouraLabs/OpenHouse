@@ -1,10 +1,11 @@
+import { FormSheet } from '@workspace/ui/components/form-sheet'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
 import type { CreateLimitBody, Limit, LimitType } from '@workspace/poco'
 import { createLimitSchema, limitTypes } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
 import {
@@ -72,22 +73,20 @@ export function LimitForm({
   )
 
   return (
-    <form
+    <FormSheet
+      title={limit === null ? t('limits.new') : t('limits.edit-title')}
+      submitLabel={isSaving ? t('limits.saving') : t('limits.save')}
+      cancelLabel={t('limits.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit((values) => onSubmit(values))}
-      className="flex flex-col gap-4 rounded-lg border p-4"
-      noValidate
     >
-      <p className="text-sm font-medium">
-        {limit === null ? t('limits.new') : t('limits.edit-title')}
-      </p>
-      {}
-      <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
+      <div className="flex flex-col gap-4">
         <Field data-invalid={errors.categoryId !== undefined}>
           <FieldLabel htmlFor="limit-category">
             {t('limits.category')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={categoryId}
@@ -103,7 +102,6 @@ export function LimitForm({
             <SelectTrigger
               id="limit-category"
               className="w-full"
-              size="sm"
               aria-invalid={errors.categoryId !== undefined}
             >
               <SelectValue placeholder={t('limits.category-placeholder')}>
@@ -127,9 +125,7 @@ export function LimitForm({
         <Field data-invalid={errors.type !== undefined}>
           <FieldLabel htmlFor="limit-type">
             {t('limits.type')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={type}
@@ -144,7 +140,6 @@ export function LimitForm({
             <SelectTrigger
               id="limit-type"
               className="w-full"
-              size="sm"
               aria-invalid={errors.type !== undefined}
             >
               <SelectValue placeholder={t('limits.type-placeholder')}>
@@ -167,7 +162,7 @@ export function LimitForm({
         </Field>
         <MoneyField
           locale={formattingLocale()}
-          className="h-8"
+
           label={t('limits.amount-in', { currency: mainCurrency })}
           labelFor="limit-amount"
           placeholder={t('limits.amount-placeholder')}
@@ -179,22 +174,6 @@ export function LimitForm({
           required
         />
       </div>
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('limits.saving') : t('limits.save')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isSaving}
-          onClick={onCancel}
-        >
-          {t('limits.cancel')}
-        </Button>
-      </div>
-    </form>
+    </FormSheet>
   )
 }

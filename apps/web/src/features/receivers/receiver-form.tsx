@@ -1,3 +1,5 @@
+import { FormSheet } from '@workspace/ui/components/form-sheet'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -8,7 +10,6 @@ import type {
   ReceiverType,
 } from '@workspace/poco'
 import { createReceiverSchema, receiverTypes } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {
   Select,
@@ -64,15 +65,16 @@ export function ReceiverForm({
   const type = watch('type')
 
   return (
-    <form
+    <FormSheet
+      title={receiver === null ? t('receivers.new') : t('receivers.edit-title')}
+      submitLabel={isSaving ? t('receivers.saving') : t('receivers.save')}
+      cancelLabel={t('receivers.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit((values) => onSubmit(values))}
-      className="flex flex-col gap-4 rounded-lg border p-4"
-      noValidate
     >
-      <p className="text-sm font-medium">
-        {receiver === null ? t('receivers.new') : t('receivers.edit-title')}
-      </p>
-      <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <TextField
           type="text"
           label={t('receivers.name')}
@@ -85,9 +87,7 @@ export function ReceiverForm({
         <Field data-invalid={errors.type !== undefined}>
           <FieldLabel htmlFor="receiver-type">
             {t('receivers.type')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           {}
           <Select
@@ -116,17 +116,6 @@ export function ReceiverForm({
           ) : null}
         </Field>
       </div>
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {t('receivers.cancel')}
-        </Button>
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('receivers.saving') : t('receivers.save')}
-        </Button>
-      </div>
-    </form>
+    </FormSheet>
   )
 }

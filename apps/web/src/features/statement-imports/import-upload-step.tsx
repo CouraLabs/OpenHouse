@@ -1,3 +1,4 @@
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Account } from '@workspace/poco'
@@ -50,9 +51,7 @@ export function ImportUploadStep({
       <Field data-invalid={problem !== undefined}>
         <FieldLabel htmlFor="import-file">
           {t('imports.file')}
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
+          <RequiredMark />
         </FieldLabel>
         <Input
           id="import-file"

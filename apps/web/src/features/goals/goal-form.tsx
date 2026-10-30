@@ -1,10 +1,11 @@
+import { FormSheet } from '@workspace/ui/components/form-sheet'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
 import type { CreateGoalBody, Goal } from '@workspace/poco'
 import { createGoalSchema } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import {
   Field,
@@ -99,19 +100,18 @@ export function GoalForm({
   const earliestTargetDt = parseDateOnly(today)
 
   return (
-    <form
+    <FormSheet
+      title={goal === null ? t('goals.new') : t('goals.edit-title')}
+      submitLabel={isSaving ? t('goals.saving') : t('goals.save')}
+      cancelLabel={t('goals.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit((values) => onSubmit(values))}
-      className="flex flex-col gap-4 rounded-lg border p-4"
-      noValidate
     >
-      <p className="text-sm font-medium">
-        {goal === null ? t('goals.new') : t('goals.edit-title')}
-      </p>
-      {}
-      <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
+      <div className="flex flex-col gap-4">
         <TextField
           type="text"
-          className="col-span-2 h-8"
           label={t('goals.name')}
           labelFor="goal-name"
           placeholder={t('goals.name-placeholder')}
@@ -122,9 +122,7 @@ export function GoalForm({
         <Field data-invalid={errors.linkedAccountId !== undefined}>
           <FieldLabel htmlFor="goal-account">
             {t('goals.account')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={linkedAccountId}
@@ -142,7 +140,6 @@ export function GoalForm({
             <SelectTrigger
               id="goal-account"
               className="w-full"
-              size="sm"
               aria-invalid={errors.linkedAccountId !== undefined}
             >
               <SelectValue placeholder={t('goals.account-placeholder')}>
@@ -175,7 +172,7 @@ export function GoalForm({
         </Field>
         <MoneyField
           locale={formattingLocale()}
-          className="h-8"
+
           label={t('goals.balance-in', { currency: mainCurrency })}
           labelFor="goal-balance"
           placeholder={t('goals.amount-placeholder')}
@@ -189,13 +186,11 @@ export function GoalForm({
         <Field data-invalid={errors.balanceDt !== undefined}>
           <FieldLabel htmlFor="goal-balance-dt">
             {t('goals.balance-date')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <DatePicker
             id="goal-balance-dt"
-            className="h-8"
+
             locale={formattingLocale()}
             value={parseDateOnly(balanceDt)}
             onChange={(date) =>
@@ -216,7 +211,7 @@ export function GoalForm({
         </Field>
         <MoneyField
           locale={formattingLocale()}
-          className="h-8"
+
           label={t('goals.target-balance-in', { currency: mainCurrency })}
           labelFor="goal-target-balance"
           placeholder={t('goals.amount-placeholder')}
@@ -233,7 +228,7 @@ export function GoalForm({
           </FieldLabel>
           <DatePicker
             id="goal-target-dt"
-            className="h-8"
+
             locale={formattingLocale()}
             disabledBefore={earliestTargetDt}
             value={parseDateOnly(targetDt)}
@@ -254,22 +249,6 @@ export function GoalForm({
           />
         </Field>
       </div>
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('goals.saving') : t('goals.save')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isSaving}
-          onClick={onCancel}
-        >
-          {t('goals.cancel')}
-        </Button>
-      </div>
-    </form>
+    </FormSheet>
   )
 }

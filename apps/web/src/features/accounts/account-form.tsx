@@ -1,3 +1,6 @@
+import { FormSection } from '@workspace/ui/components/form-section'
+import { FormSheet } from '@workspace/ui/components/form-sheet'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -9,7 +12,6 @@ import type {
   CreateAccountBody,
 } from '@workspace/poco'
 import { accountTypes, createAccountSchema, currencies } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
 import {
@@ -123,7 +125,13 @@ export function AccountForm({
   const hasNumber = !NUMBER_LESS_TYPES.includes(type)
 
   return (
-    <form
+    <FormSheet
+      title={account === null ? t('accounts.new') : t('accounts.edit-title')}
+      submitLabel={isSaving ? t('accounts.saving') : t('accounts.save')}
+      cancelLabel={t('accounts.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit((values) =>
         onSubmit({
           ...values,
@@ -136,17 +144,11 @@ export function AccountForm({
             : values.number,
         })
       )}
-      className="flex flex-col gap-4 rounded-lg border p-4"
-      noValidate
     >
-      <p className="text-sm font-medium">
-        {account === null ? t('accounts.new') : t('accounts.edit-title')}
-      </p>
-      {}
-      <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
+      <div className="flex flex-col gap-4">
         <TextField
           type="text"
-          className="h-8"
+
           label={t('accounts.name')}
           labelFor="account-name"
           placeholder={t('accounts.name-placeholder')}
@@ -157,7 +159,7 @@ export function AccountForm({
         {hasAgency ? (
           <TextField
             type="text"
-            className="h-8"
+
             label={t('accounts.agency')}
             labelFor="account-agency"
             placeholder={t('accounts.agency-placeholder')}
@@ -170,7 +172,7 @@ export function AccountForm({
         {hasNumber ? (
           <TextField
             type="text"
-            className="h-8"
+
             label={t('accounts.number')}
             labelFor="account-number"
             placeholder={t('accounts.number-placeholder')}
@@ -184,9 +186,7 @@ export function AccountForm({
         <Field data-invalid={errors.type !== undefined}>
           <FieldLabel htmlFor="account-type">
             {t('accounts.type')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={type}
@@ -214,7 +214,6 @@ export function AccountForm({
             <SelectTrigger
               id="account-type"
               className="w-full"
-              size="sm"
               aria-invalid={errors.type !== undefined}
             >
               <SelectValue placeholder={t('accounts.type-placeholder')}>
@@ -237,7 +236,7 @@ export function AccountForm({
         </Field>
         <MoneyField
           locale={formattingLocale()}
-          className="h-8"
+
           label={
             account === null
               ? t('accounts.balance')
@@ -257,9 +256,7 @@ export function AccountForm({
         <Field data-invalid={errors.currency !== undefined}>
           <FieldLabel htmlFor="account-currency">
             {t('accounts.currency')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <CurrencySelect
             id="account-currency"
@@ -313,10 +310,10 @@ export function AccountForm({
           <FieldDescription>{t('accounts.shared-hint')}</FieldDescription>
         </Field>
         {isCard ? (
-          <>
+          <FormSection legend={t('accounts.card-section')}>
             <MoneyField
               locale={formattingLocale()}
-              className="h-8"
+
               label={t('accounts.limit')}
               labelFor="account-limit"
               placeholder={t('accounts.amount-placeholder')}
@@ -341,7 +338,7 @@ export function AccountForm({
               }
               errors={{ closeDay: errors.closeDay, dueDay: errors.dueDay }}
             />
-          </>
+          </FormSection>
         ) : null}
       </div>
       <AccountAdvancedFields
@@ -349,22 +346,6 @@ export function AccountForm({
         spreadPctInput={register('spreadPct')}
         error={errors.spreadPct}
       />
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('accounts.saving') : t('accounts.save')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isSaving}
-          onClick={onCancel}
-        >
-          {t('accounts.cancel')}
-        </Button>
-      </div>
-    </form>
+    </FormSheet>
   )
 }

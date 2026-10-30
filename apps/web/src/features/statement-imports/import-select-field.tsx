@@ -1,3 +1,4 @@
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {
   NativeSelect,
@@ -30,11 +31,7 @@ export function ImportSelectField({
     <Field data-invalid={error !== undefined}>
       <FieldLabel htmlFor={id}>
         {label}
-        {required ? (
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
-        ) : null}
+        {required ? <RequiredMark /> : null}
       </FieldLabel>
       <NativeSelect
         id={id}

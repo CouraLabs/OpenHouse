@@ -1,3 +1,5 @@
+import { FormSheet } from '@workspace/ui/components/form-sheet'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +14,6 @@ import {
   frequencies,
   transactionTypes,
 } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
 import {
@@ -128,25 +129,24 @@ export function RecurringForm({
       : Array.from({ length: 31 }, (_, index) => index + 1)
 
   return (
-    <form
+    <FormSheet
+      title={rule === null ? t('recurring.new') : t('recurring.edit-title')}
+      submitLabel={isSaving ? t('recurring.saving') : t('recurring.save')}
+      cancelLabel={t('recurring.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit((values) =>
         onSubmit(
           type === 'Expense' ? values : { ...values, defaultSplit: null }
         )
       )}
-      className="flex flex-col gap-4 rounded-lg border p-4"
-      noValidate
     >
-      <p className="text-sm font-medium">
-        {rule === null ? t('recurring.new') : t('recurring.edit-title')}
-      </p>
-      <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className="flex flex-col gap-4">
         <Field data-invalid={errors.receiverId !== undefined}>
           <FieldLabel htmlFor="recurring-receiver">
             {t('recurring.receiver')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={receiverId}
@@ -175,9 +175,7 @@ export function RecurringForm({
         <Field data-invalid={errors.categoryId !== undefined}>
           <FieldLabel htmlFor="recurring-category">
             {t('recurring.category')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={categoryId}
@@ -206,9 +204,7 @@ export function RecurringForm({
         <Field data-invalid={errors.linkedAccountId !== undefined}>
           <FieldLabel htmlFor="recurring-account">
             {t('recurring.account')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={accountId}
@@ -276,9 +272,7 @@ export function RecurringForm({
         <Field data-invalid={errors.frequency !== undefined}>
           <FieldLabel htmlFor="recurring-frequency">
             {t('recurring.frequency')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={frequency}
@@ -313,9 +307,7 @@ export function RecurringForm({
           <Field data-invalid={errors.frequencyDay !== undefined}>
             <FieldLabel htmlFor="recurring-frequency-day">
               {t('recurring.frequency-day')}
-              <span aria-hidden="true" className="text-destructive">
-                *
-              </span>
+              <RequiredMark />
             </FieldLabel>
             <Select
               value={frequencyDay}
@@ -353,9 +345,7 @@ export function RecurringForm({
           <Field data-invalid={errors.frequencyMonth !== undefined}>
             <FieldLabel htmlFor="recurring-frequency-month">
               {t('recurring.frequency-month')}
-              <span aria-hidden="true" className="text-destructive">
-                *
-              </span>
+              <RequiredMark />
             </FieldLabel>
             <Select
               value={frequencyMonth}
@@ -403,17 +393,6 @@ export function RecurringForm({
           payerUserId={paidByUserId}
         />
       ) : null}
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {t('recurring.cancel')}
-        </Button>
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('recurring.saving') : t('recurring.save')}
-        </Button>
-      </div>
-    </form>
+    </FormSheet>
   )
 }

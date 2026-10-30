@@ -1,11 +1,11 @@
+import { FormSheet } from '@workspace/ui/components/form-sheet'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
 import type { AccountRef, Currency } from '@workspace/poco'
 import { transferSchema } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
-import { DialogFooter } from '@workspace/ui/components/dialog'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import { MoneyField } from '@workspace/ui/components/money-field'
@@ -80,7 +80,13 @@ export function TransferFormFields({
   )
 
   return (
-    <form
+    <FormSheet
+      title={t('transactions.transfer-title')}
+      submitLabel={isSaving ? t('transactions.saving') : t('transactions.save')}
+      cancelLabel={t('transactions.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit((values) => {
         if (values.categoryId === undefined && !paysCard) {
           setError('categoryId', { message: t('transactions.pick-category') })
@@ -92,8 +98,6 @@ export function TransferFormFields({
           paysCard ? values : { ...values, paymentStatementId: undefined }
         )
       })}
-      className="flex flex-col gap-4"
-      noValidate
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <RefPick
@@ -149,9 +153,7 @@ export function TransferFormFields({
       <Field data-invalid={errors.transactionDt !== undefined}>
         <FieldLabel htmlFor="transfer-dt">
           {t('transactions.transfer-date')}
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
+          <RequiredMark />
         </FieldLabel>
         <DatePicker
           id="transfer-dt"
@@ -174,11 +176,7 @@ export function TransferFormFields({
       <Field data-invalid={errors.categoryId !== undefined}>
         <FieldLabel htmlFor="transfer-category">
           {t('transactions.transfer-category')}
-          {paysCard ? null : (
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
-          )}
+          {paysCard ? null : <RequiredMark />}
         </FieldLabel>
         <Select
           value={watch('categoryId')}
@@ -220,18 +218,7 @@ export function TransferFormFields({
         error={errors.note}
         {...register('note')}
       />
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {t('transactions.cancel')}
-        </Button>
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('transactions.saving') : t('transactions.save')}
-        </Button>
-      </DialogFooter>
-    </form>
+    </FormSheet>
   )
 }
 

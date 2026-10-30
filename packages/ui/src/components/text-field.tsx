@@ -1,3 +1,4 @@
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { Input } from '@workspace/ui/components/input'
 import type { ComponentProps } from 'react'
@@ -41,11 +42,7 @@ export function TextField({
       {shownLabel !== '' && (
         <FieldLabel htmlFor={labelFor}>
           {shownLabel}
-          {required ? (
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
-          ) : null}
+          {required ? <RequiredMark /> : null}
         </FieldLabel>
       )}
       <Input

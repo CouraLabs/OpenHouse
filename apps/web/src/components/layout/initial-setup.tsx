@@ -1,3 +1,4 @@
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { currencies, type Currency } from '@workspace/poco'
@@ -16,11 +17,7 @@ import {
 } from '@/lib/settings.js'
 
 function RequiredStar() {
-  return (
-    <span aria-hidden="true" className="text-destructive">
-      *
-    </span>
-  )
+  return <RequiredMark />
 }
 
 export function InitialSetup({ tenantName }: { tenantName: string }) {

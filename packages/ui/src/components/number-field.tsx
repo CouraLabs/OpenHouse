@@ -1,3 +1,4 @@
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import type { ComponentProps } from 'react'
 
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
@@ -26,11 +27,7 @@ export function NumberField({
     <Field data-invalid={error !== undefined}>
       <FieldLabel htmlFor={labelFor}>
         {label}
-        {required ? (
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
-        ) : null}
+        {required ? <RequiredMark /> : null}
       </FieldLabel>
       <Input
         id={labelFor}

@@ -21,7 +21,7 @@ import { TimeZoneCombobox } from '@workspace/ui/components/time-zone-combobox'
 import { ApiError } from '@/lib/api.js'
 import { useSaveSettings, useTenantSettings } from '@/lib/settings.js'
 import { CurrencyChangeDialog } from './currency-change-dialog.js'
-import { RequiredMark } from './required-mark.js'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 
 function currencyConflictOf(error: unknown): CurrencyChangeConflict | null {
   if (

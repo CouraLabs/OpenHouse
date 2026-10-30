@@ -1,3 +1,5 @@
+import { FormSheet } from '@workspace/ui/components/form-sheet'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -8,7 +10,6 @@ import type {
   TransactionLinker,
 } from '@workspace/poco'
 import { createTransactionLinkerSchema } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {
   Select,
@@ -78,15 +79,16 @@ export function LinkerForm({
   )
 
   return (
-    <form
+    <FormSheet
+      title={linker === null ? t('linkers.new') : t('linkers.edit-title')}
+      submitLabel={isSaving ? t('linkers.saving') : t('linkers.save')}
+      cancelLabel={t('linkers.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit((values) => onSubmit(values))}
-      className="flex flex-col gap-4 rounded-lg border p-4"
-      noValidate
     >
-      <p className="text-sm font-medium">
-        {linker === null ? t('linkers.new') : t('linkers.edit-title')}
-      </p>
-      <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-3">
+      <div className="flex flex-col gap-4">
         <TextField
           type="text"
           label={t('linkers.description')}
@@ -99,9 +101,7 @@ export function LinkerForm({
         <Field data-invalid={errors.categoryId !== undefined}>
           <FieldLabel htmlFor="linker-category">
             {t('linkers.category')}
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
+            <RequiredMark />
           </FieldLabel>
           <Select
             value={categoryId}
@@ -167,17 +167,6 @@ export function LinkerForm({
           ) : null}
         </Field>
       </div>
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {t('linkers.cancel')}
-        </Button>
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('linkers.saving') : t('linkers.save')}
-        </Button>
-      </div>
-    </form>
+    </FormSheet>
   )
 }

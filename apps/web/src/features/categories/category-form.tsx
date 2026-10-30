@@ -1,10 +1,10 @@
+import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
 import type { Category, CreateCategoryBody } from '@workspace/poco'
 import { createCategorySchema } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
 import { ColorField } from '@workspace/ui/components/color-field'
 import { TextField } from '@workspace/ui/components/text-field'
 
@@ -54,18 +54,21 @@ export function CategoryForm({
   const defaultSplit = watch('defaultSplit') ?? null
 
   return (
-    <form
+    <FormSheet
+      title={
+        category === null ? t('categories.new') : t('categories.edit-title')
+      }
+      submitLabel={isSaving ? t('categories.saving') : t('categories.save')}
+      cancelLabel={t('categories.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit((values) => onSubmit(values))}
-      className="flex flex-col gap-4 rounded-lg border p-4"
-      noValidate
     >
-      <p className="text-sm font-medium">
-        {category === null ? t('categories.new') : t('categories.edit-title')}
-      </p>
-      <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <TextField
           type="text"
-          className="h-8"
+
           label={t('categories.name')}
           labelFor="category-name"
           placeholder={t('categories.name-placeholder')}
@@ -82,7 +85,6 @@ export function CategoryForm({
           required
         />
       </div>
-      {}
       <SplitSection
         idPrefix="category-split"
         value={defaultSplit}
@@ -93,22 +95,6 @@ export function CategoryForm({
         payerUserId={null}
         allowExact={false}
       />
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('categories.saving') : t('categories.save')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isSaving}
-          onClick={onCancel}
-        >
-          {t('categories.cancel')}
-        </Button>
-      </div>
-    </form>
+    </FormSheet>
   )
 }

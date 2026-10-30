@@ -14,7 +14,7 @@ import {
 } from '@workspace/ui/components/select'
 
 import { useSession } from '@/lib/auth.js'
-import { RequiredMark } from './required-mark.js'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { useSavePreferences } from './use-save-preferences.js'
 
 export function PreferencesForm() {

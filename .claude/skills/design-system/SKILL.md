@@ -20,7 +20,11 @@ Every signed-in page opens with exactly this wrapper and a `PageHeader`:
 
 ```tsx
 <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
-  <PageHeader title={t('x.title')} subtitle={t('x.subtitle')} actions={toolbar} />
+  <PageHeader
+    title={t('x.title')}
+    subtitle={t('x.subtitle')}
+    actions={toolbar}
+  />
   {/* form (when open), then DataTable or a card grid */}
 </main>
 ```
@@ -28,6 +32,30 @@ Every signed-in page opens with exactly this wrapper and a `PageHeader`:
 - Full-height pages that virtualize (transactions) keep `min-h-0`, drop `mx-auto max-w-7xl`, and use `gap-6`.
 - Toolbars go in `PageHeader.actions`: `FilterDialog`, then the primary `Button` (with a leading lucide icon) on the far right.
 - Signed-out pages render inside `AuthLayout`. It already provides the split hero and the double-bezel form card, so the page supplies only the form.
+
+## Forms recipe
+
+Every create/edit form opens in one `FormSheet` (`packages/ui/src/components/form-sheet.tsx`): a right sheet on desktop, full screen on mobile. No inline form boxes above tables, no centred dialogs for create/edit.
+
+```tsx
+<FormSheet
+  title={t('x.new')}
+  submitLabel={isSaving ? t('x.saving') : t('x.save')}
+  cancelLabel={t('x.cancel')}
+  isSaving={isSaving}
+  error={error}
+  onCancel={onCancel}
+  onSubmit={handleSubmit(onSubmit)}
+>
+  <FormSection legend={t('x.details')}>{/* up to ~4 fields */}</FormSection>
+</FormSheet>
+```
+
+- `FormSheet` owns the `<form>`, the scrollable body and the sticky footer: Cancel (ghost) on the left, the primary button on the right, at least 44px tall below `md`. Focus lands on the first editable field when it opens.
+- Mount the form only while open (`{formOpen ? <XForm key=... /> : null}`); `FormSheet` is portaled, so the page layout does not change.
+- One column of fields. Group with `FormSection` (legend plus up to about 4 fields) instead of grids. Never override control height (`h-8`, `size="sm"`): the default `h-9` is the only one.
+- Required fields use `RequiredMark` (`packages/ui`), never an inline `*`; follow the CLAUDE.md rule for when to mark.
+- Confirmations and one-shot utility dialogs (delete, export, reset code) stay `Dialog`/`ConfirmDialog`; they are not forms.
 
 ## Tokens, not values
 

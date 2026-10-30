@@ -1,3 +1,5 @@
+import { FormSheet } from '@workspace/ui/components/form-sheet'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -18,7 +20,6 @@ import {
   transactionStatuses,
   transactionTypes,
 } from '@workspace/poco'
-import { Button } from '@workspace/ui/components/button'
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
@@ -174,7 +175,17 @@ export function TransactionFormFields({
   }
 
   return (
-    <form
+    <FormSheet
+      title={
+        transaction === null
+          ? t('transactions.new-title')
+          : t('transactions.edit-title')
+      }
+      submitLabel={isSaving ? t('transactions.saving') : t('transactions.save')}
+      cancelLabel={t('transactions.cancel')}
+      isSaving={isSaving}
+      error={error}
+      onCancel={onCancel}
       onSubmit={handleSubmit(
         ({ installments: split, split: shares, ...values }) => {
           const body = isShareable ? { ...values, split: shares } : values
@@ -186,8 +197,6 @@ export function TransactionFormFields({
           )
         }
       )}
-      className="flex flex-col gap-4"
-      noValidate
     >
       <TextField
         type="text"
@@ -243,9 +252,7 @@ export function TransactionFormFields({
       <Field data-invalid={errors.transactionDt !== undefined}>
         <FieldLabel htmlFor="transaction-dt">
           {t('transactions.date')}
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
+          <RequiredMark />
         </FieldLabel>
         <DatePicker
           id="transaction-dt"
@@ -454,18 +461,7 @@ export function TransactionFormFields({
           {...register('statusNote')}
         />
       ) : null}
-      {error !== undefined ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {t('transactions.cancel')}
-        </Button>
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? t('transactions.saving') : t('transactions.save')}
-        </Button>
-      </div>
-    </form>
+    </FormSheet>
   )
 }
 

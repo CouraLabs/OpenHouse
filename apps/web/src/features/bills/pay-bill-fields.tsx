@@ -1,3 +1,4 @@
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -87,9 +88,7 @@ export function PayBillFields({
       <Field data-invalid={errors.transactionDt !== undefined}>
         <FieldLabel htmlFor="pay-dt">
           {t('bills.pay-date')}
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
+          <RequiredMark />
         </FieldLabel>
         <DatePicker
           id="pay-dt"
