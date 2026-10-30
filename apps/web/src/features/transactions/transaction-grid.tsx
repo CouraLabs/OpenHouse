@@ -156,7 +156,6 @@ export function TransactionGrid({
       aria-label={isMobile ? undefined : labels.gridLabel}
       className="flex min-h-0 flex-1 flex-col rounded-lg border"
     >
-      {}
       {!isMobile ? (
         <div
           role="row"
@@ -224,7 +223,6 @@ export function TransactionGrid({
               </div>
             )
           })}
-          {}
           {stickyItem !== undefined && stickyItem.kind === 'header' ? (
             <div
               className="absolute inset-x-0 z-10 shadow-sm"

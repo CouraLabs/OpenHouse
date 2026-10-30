@@ -1,3 +1,4 @@
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -50,7 +51,7 @@ export function ReceiverForm({
     watch,
     setValue,
     register,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ReceiverFormValues>({
     resolver: zodResolver(receiverFormSchema),
     defaultValues:
@@ -64,8 +65,11 @@ export function ReceiverForm({
 
   const type = watch('type')
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={receiver === null ? t('receivers.new') : t('receivers.edit-title')}
       submitLabel={isSaving ? t('receivers.saving') : t('receivers.save')}
       cancelLabel={t('receivers.cancel')}
@@ -89,11 +93,13 @@ export function ReceiverForm({
             {t('receivers.type')}
             <RequiredMark />
           </FieldLabel>
-          {}
           <Select
             value={type}
             onValueChange={(value) =>
-              setValue('type', value as ReceiverType, { shouldValidate: true })
+              setValue('type', value as ReceiverType, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
             }
           >
             <SelectTrigger id="receiver-type">

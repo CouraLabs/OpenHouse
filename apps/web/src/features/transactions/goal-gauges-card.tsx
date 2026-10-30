@@ -43,7 +43,6 @@ export function GoalGaugesCard({
             <div key={goal.id} className="flex flex-col gap-1">
               <span className="flex items-center gap-2 text-sm">
                 <span className="truncate">{goal.name}</span>
-                {}
                 {goal.accountCurrency !== goal.currency ? (
                   <Badge variant="outline">{labels.currencyMismatch}</Badge>
                 ) : null}

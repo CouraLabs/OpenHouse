@@ -1,4 +1,5 @@
 import { FormSection } from '@workspace/ui/components/form-section'
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -16,6 +17,7 @@ import { Checkbox } from '@workspace/ui/components/checkbox'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldError,
   FieldLabel,
@@ -83,7 +85,7 @@ export function AccountForm({
     watch,
     setValue,
     register,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<AccountFormValues, unknown, CreateAccountBody>({
     resolver: zodResolver(accountFormSchema),
     defaultValues:
@@ -124,8 +126,11 @@ export function AccountForm({
   const hasAgency = !AGENCY_LESS_TYPES.includes(type)
   const hasNumber = !NUMBER_LESS_TYPES.includes(type)
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={account === null ? t('accounts.new') : t('accounts.edit-title')}
       submitLabel={isSaving ? t('accounts.saving') : t('accounts.save')}
       cancelLabel={t('accounts.cancel')}
@@ -192,18 +197,21 @@ export function AccountForm({
             value={type}
             onValueChange={(value) => {
               const nextType = value as AccountType
-              setValue('type', nextType, { shouldValidate: true })
+              setValue('type', nextType, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
               if (nextType !== 'Credit Card') {
                 for (const field of CARD_ONLY_FIELDS) {
-                  setValue(field, null)
+                  setValue(field, null, { shouldDirty: true })
                 }
-                setValue('closeDayInclusive', false)
+                setValue('closeDayInclusive', false, { shouldDirty: true })
               }
               if (AGENCY_LESS_TYPES.includes(nextType)) {
-                setValue('agency', null)
+                setValue('agency', null, { shouldDirty: true })
               }
               if (NUMBER_LESS_TYPES.includes(nextType)) {
-                setValue('number', null)
+                setValue('number', null, { shouldDirty: true })
               }
             }}
             items={accountTypes.map((value) => ({
@@ -243,11 +251,13 @@ export function AccountForm({
               : t('accounts.opening-balance')
           }
           labelFor="account-balance"
+          currency={currency}
           placeholder={t('accounts.amount-placeholder')}
           value={balance ?? undefined}
           onValueChange={(value) =>
             setValue('balance', value === '' ? undefined : value, {
               shouldValidate: true,
+              shouldDirty: true,
             })
           }
           error={errors.balance}
@@ -262,7 +272,10 @@ export function AccountForm({
             id="account-currency"
             value={currency}
             onValueChange={(value) =>
-              setValue('currency', value as Currency, { shouldValidate: true })
+              setValue('currency', value as Currency, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
             }
             codes={currencies}
             labels={{
@@ -280,34 +293,37 @@ export function AccountForm({
             }
           />
         </Field>
-        <Field>
-          {}
+        <Field orientation="horizontal">
+          <Checkbox
+            id="account-is-default"
+            checked={isDefault}
+            onCheckedChange={(checked) =>
+              setValue('isDefault', checked === true, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }
+          />
           <FieldLabel htmlFor="account-is-default">
             {t('accounts.is-default')}
           </FieldLabel>
-          <Checkbox
-            id="account-is-default"
-            className="mt-1"
-            checked={isDefault}
-            onCheckedChange={(checked) =>
-              setValue('isDefault', checked === true, { shouldValidate: true })
-            }
-          />
         </Field>
-        <Field>
-          {}
-          <FieldLabel htmlFor="account-shared">
-            {t('accounts.shared')}
-          </FieldLabel>
+        <Field orientation="horizontal">
           <Checkbox
             id="account-shared"
-            className="mt-1"
             checked={ownership === 'shared'}
             onCheckedChange={(checked) =>
-              setValue('ownership', checked === true ? 'shared' : 'personal')
+              setValue('ownership', checked === true ? 'shared' : 'personal', {
+                shouldDirty: true,
+              })
             }
           />
-          <FieldDescription>{t('accounts.shared-hint')}</FieldDescription>
+          <FieldContent>
+            <FieldLabel htmlFor="account-shared">
+              {t('accounts.shared')}
+            </FieldLabel>
+            <FieldDescription>{t('accounts.shared-hint')}</FieldDescription>
+          </FieldContent>
         </Field>
         {isCard ? (
           <FormSection legend={t('accounts.card-section')}>
@@ -316,10 +332,14 @@ export function AccountForm({
 
               label={t('accounts.limit')}
               labelFor="account-limit"
+              currency={currency}
               placeholder={t('accounts.amount-placeholder')}
               value={limit ?? ''}
               onValueChange={(value) =>
-                setValue('limit', value, { shouldValidate: true })
+                setValue('limit', value, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
               }
               error={errors.limit}
             />
@@ -328,13 +348,19 @@ export function AccountForm({
               dueDay={dueDay}
               closeDayInclusive={closeDayInclusive}
               onCloseDayChange={(day) =>
-                setValue('closeDay', day, { shouldValidate: true })
+                setValue('closeDay', day, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
               }
               onDueDayChange={(day) =>
-                setValue('dueDay', day, { shouldValidate: true })
+                setValue('dueDay', day, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
               }
               onCloseDayInclusiveChange={(inclusive) =>
-                setValue('closeDayInclusive', inclusive)
+                setValue('closeDayInclusive', inclusive, { shouldDirty: true })
               }
               errors={{ closeDay: errors.closeDay, dueDay: errors.dueDay }}
             />

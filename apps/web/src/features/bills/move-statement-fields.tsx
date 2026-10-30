@@ -55,7 +55,6 @@ export function MoveStatementFields({
           }
         >
           <SelectTrigger id="move-statement" className="w-full">
-            {}
             <SelectValue>
               {selected === undefined
                 ? t('bills.move-placeholder')

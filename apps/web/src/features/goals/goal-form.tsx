@@ -1,3 +1,4 @@
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -64,7 +65,7 @@ export function GoalForm({
     register,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
     defaultValues:
@@ -99,8 +100,11 @@ export function GoalForm({
 
   const earliestTargetDt = parseDateOnly(today)
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={goal === null ? t('goals.new') : t('goals.edit-title')}
       submitLabel={isSaving ? t('goals.saving') : t('goals.save')}
       cancelLabel={t('goals.cancel')}
@@ -129,6 +133,7 @@ export function GoalForm({
             onValueChange={(value) =>
               setValue('linkedAccountId', value as number, {
                 shouldValidate: true,
+                shouldDirty: true,
               })
             }
             items={savings.map((account) => ({
@@ -172,13 +177,17 @@ export function GoalForm({
         </Field>
         <MoneyField
           locale={formattingLocale()}
+          currency={mainCurrency}
 
           label={t('goals.balance-in', { currency: mainCurrency })}
           labelFor="goal-balance"
           placeholder={t('goals.amount-placeholder')}
           value={balance}
           onValueChange={(value) =>
-            setValue('balance', value, { shouldValidate: true })
+            setValue('balance', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
           }
           error={errors.balance}
           required
@@ -196,6 +205,7 @@ export function GoalForm({
             onChange={(date) =>
               setValue('balanceDt', formatDateOnly(date), {
                 shouldValidate: true,
+                shouldDirty: true,
               })
             }
             labels={{
@@ -211,13 +221,17 @@ export function GoalForm({
         </Field>
         <MoneyField
           locale={formattingLocale()}
+          currency={mainCurrency}
 
           label={t('goals.target-balance-in', { currency: mainCurrency })}
           labelFor="goal-target-balance"
           placeholder={t('goals.amount-placeholder')}
           value={targetBalance}
           onValueChange={(value) =>
-            setValue('targetBalance', value, { shouldValidate: true })
+            setValue('targetBalance', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
           }
           error={errors.targetBalance}
           required
@@ -235,6 +249,7 @@ export function GoalForm({
             onChange={(date) =>
               setValue('targetDt', formatDateOnly(date), {
                 shouldValidate: true,
+                shouldDirty: true,
               })
             }
             labels={{

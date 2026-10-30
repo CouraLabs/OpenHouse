@@ -1,3 +1,4 @@
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -22,6 +23,7 @@ import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { RefPick } from '@workspace/ui/components/ref-pick'
 import { PaymentBillPick } from './payment-bill-pick.js'
 import { useActiveCategories } from './use-transactions.js'
+import { useTenantToday } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
 const transferFormSchema = transferSchema
@@ -46,13 +48,14 @@ export function TransferFormFields({
   isSaving = false,
 }: TransferFormFieldsProps) {
   const { t } = useTranslation()
+  const today = useTenantToday()
   const {
     handleSubmit,
     watch,
     setValue,
     setError,
     register,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<TransferFormValues, unknown, TransferFormValues>({
     resolver: zodResolver(transferFormSchema),
     defaultValues: newValues(defaultDt),
@@ -79,8 +82,11 @@ export function TransferFormFields({
       (chosenCurrency === undefined || account.currency === chosenCurrency)
   )
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={t('transactions.transfer-title')}
       submitLabel={isSaving ? t('transactions.saving') : t('transactions.save')}
       cancelLabel={t('transactions.cancel')}
@@ -108,7 +114,10 @@ export function TransferFormFields({
           options={sourceOptions}
           error={errors.fromAccountId?.message}
           onChange={(value) =>
-            setValue('fromAccountId', value, { shouldValidate: true })
+            setValue('fromAccountId', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
           }
         />
         <RefPick
@@ -119,8 +128,11 @@ export function TransferFormFields({
           options={destinationOptions}
           error={errors.toAccountId?.message}
           onChange={(value) => {
-            setValue('toAccountId', value, { shouldValidate: true })
-            setValue('paymentStatementId', undefined)
+            setValue('toAccountId', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+            setValue('paymentStatementId', undefined, { shouldDirty: true })
           }}
         />
       </div>
@@ -128,24 +140,33 @@ export function TransferFormFields({
         <PaymentBillPick
           cardId={to.id}
           value={watch('paymentStatementId')}
-          onChange={(value) => setValue('paymentStatementId', value)}
+          onChange={(value) =>
+            setValue('paymentStatementId', value, { shouldDirty: true })
+          }
         />
       ) : null}
       {from !== undefined &&
       to !== undefined &&
       from.currency !== to.currency ? (
-        <p className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive">
           {t('transactions.transfer-currency-mismatch')}
+        </p>
+      ) : chosenCurrency !== undefined ? (
+        <p className="text-sm text-muted-foreground">
+          {t('transactions.transfer-currency-hint', {
+            currency: chosenCurrency,
+          })}
         </p>
       ) : null}
       <MoneyField
         locale={formattingLocale()}
         label={t('transactions.transfer-amount')}
         labelFor="transfer-amount"
+        currency={chosenCurrency}
         placeholder={t('transactions.amount-placeholder')}
         value={amount}
         onValueChange={(value) =>
-          setValue('amount', value, { shouldValidate: true })
+          setValue('amount', value, { shouldValidate: true, shouldDirty: true })
         }
         error={errors.amount}
         required
@@ -157,16 +178,18 @@ export function TransferFormFields({
         </FieldLabel>
         <DatePicker
           id="transfer-dt"
+          today={parseDateOnly(today)}
           locale={formattingLocale()}
           value={parseDateOnly(transactionDt)}
           onChange={(date) =>
             setValue('transactionDt', formatDateOnly(date), {
               shouldValidate: true,
+              shouldDirty: true,
             })
           }
           labels={{
             placeholder: t('transactions.date-placeholder'),
-            today: t('transactions.date-placeholder'),
+            today: t('transactions.today'),
           }}
         />
         {errors.transactionDt !== undefined ? (
@@ -183,6 +206,7 @@ export function TransferFormFields({
           onValueChange={(rawValue) =>
             setValue('categoryId', Number(rawValue as unknown as string), {
               shouldValidate: true,
+              shouldDirty: true,
             })
           }
         >

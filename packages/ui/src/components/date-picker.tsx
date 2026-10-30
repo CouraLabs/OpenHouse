@@ -24,6 +24,7 @@ export interface DatePickerProps {
   locale: string
   labels: DatePickerLabels
   disabledBefore?: Date
+  today?: Date
   id?: string
   disabled?: boolean
   className?: string
@@ -35,6 +36,7 @@ export function DatePicker({
   locale,
   labels,
   disabledBefore,
+  today,
   id,
   disabled,
   className,
@@ -107,7 +109,7 @@ export function DatePicker({
                 size="sm"
                 className="w-full"
                 onClick={() => {
-                  onChange(new Date())
+                  onChange(today ?? new Date())
                   setOpen(false)
                 }}
               >

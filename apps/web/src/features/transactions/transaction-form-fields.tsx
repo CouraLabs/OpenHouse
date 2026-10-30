@@ -1,3 +1,4 @@
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -23,10 +24,8 @@ import {
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@workspace/ui/components/radio-group'
+import { RadioGroup } from '@workspace/ui/components/radio-group'
+import { RadioOption } from '@workspace/ui/components/radio-option'
 import { Textarea } from '@workspace/ui/components/textarea'
 import { TextField } from '@workspace/ui/components/text-field'
 
@@ -36,7 +35,7 @@ import { InstallmentFields } from './installment-fields.js'
 import { PurchasePreview } from './purchase-preview.js'
 import { SplitSection } from '@/components/split-section.js'
 import { useSession } from '@/lib/auth.js'
-import { useMainCurrency } from '@/lib/settings.js'
+import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
 import { useHouseholdMembers } from '@/lib/household.js'
 import { StringPick } from './string-pick.js'
 import {
@@ -71,13 +70,14 @@ export function TransactionFormFields({
 }: TransactionFormFieldsProps) {
   const { t } = useTranslation()
   const session = useSession()
+  const today = useTenantToday()
   const mainCurrency = useMainCurrency()
   const {
     handleSubmit,
     watch,
     setValue,
     register,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<TransactionFormInput, unknown, CreateTransactionBody>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues:
@@ -170,12 +170,16 @@ export function TransactionFormFields({
     setValue(
       'categoryId',
       inferCategory(name, categories.data ?? [])?.id ??
-        (undefined as unknown as number)
+        (undefined as unknown as number),
+      { shouldDirty: true }
     )
   }
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={
         transaction === null
           ? t('transactions.new-title')
@@ -212,25 +216,25 @@ export function TransactionFormFields({
         })}
       />
       <Field data-invalid={errors.type !== undefined}>
-        <FieldLabel>{t('transactions.type')}</FieldLabel>
+        <FieldLabel id="transaction-type-label">
+          {t('transactions.type')}
+        </FieldLabel>
         <RadioGroup
+          aria-labelledby="transaction-type-label"
           value={type}
           disabled={isTransfer || isInstallment}
           onValueChange={(value) =>
             setValue('type', value as TransactionType, {
               shouldValidate: true,
+              shouldDirty: true,
             })
           }
           className="grid-cols-2"
         >
           {transactionTypes.map((value) => (
-            <span
-              key={value}
-              className="flex items-center gap-2 rounded-lg border p-2 text-sm has-[[data-checked]]:border-primary"
-            >
-              <RadioGroupItem value={value} />
+            <RadioOption key={value} value={value}>
               {t(`transactions.type-${value.toLowerCase()}`)}
-            </span>
+            </RadioOption>
           ))}
         </RadioGroup>
         {errors.type !== undefined ? (
@@ -241,10 +245,11 @@ export function TransactionFormFields({
         locale={formattingLocale()}
         label={t('transactions.amount')}
         labelFor="transaction-amount"
+        currency={account?.currency}
         placeholder={t('transactions.amount-placeholder')}
         value={amount}
         onValueChange={(value) =>
-          setValue('amount', value, { shouldValidate: true })
+          setValue('amount', value, { shouldValidate: true, shouldDirty: true })
         }
         error={errors.amount}
         required
@@ -256,17 +261,19 @@ export function TransactionFormFields({
         </FieldLabel>
         <DatePicker
           id="transaction-dt"
+          today={parseDateOnly(today)}
           disabled={isInstallment}
           locale={formattingLocale()}
           value={parseDateOnly(transactionDt)}
           onChange={(date) =>
             setValue('transactionDt', formatDateOnly(date), {
               shouldValidate: true,
+              shouldDirty: true,
             })
           }
           labels={{
             placeholder: t('transactions.date-placeholder'),
-            today: t('transactions.date-placeholder'),
+            today: t('transactions.today'),
           }}
         />
         {errors.transactionDt !== undefined ? (
@@ -286,7 +293,7 @@ export function TransactionFormFields({
             value === undefined
               ? (undefined as unknown as number)
               : Number(value),
-            { shouldValidate: true }
+            { shouldValidate: true, shouldDirty: true }
           )
         }
         error={errors.linkedAccountId?.message}
@@ -305,7 +312,10 @@ export function TransactionFormFields({
           <InstallmentFields
             value={installments}
             onChange={(value) =>
-              setValue('installments', value, { shouldValidate: true })
+              setValue('installments', value, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
             }
             cashPrice={cashPrice}
             onCashPriceChange={setCashPrice}
@@ -343,14 +353,14 @@ export function TransactionFormFields({
             value === undefined
               ? (undefined as unknown as number)
               : Number(value),
-            { shouldValidate: true }
+            { shouldValidate: true, shouldDirty: true }
           )
           const preset = (categories.data ?? []).find(
             (category) => String(category.id) === value
           )?.defaultSplit
 
           if (transaction === null && touchedSplit == null && preset != null) {
-            setValue('split', preset)
+            setValue('split', preset, { shouldDirty: true })
           }
         }}
         error={errors.categoryId?.message}
@@ -368,7 +378,8 @@ export function TransactionFormFields({
         onChange={(value) =>
           setValue(
             'receiverId',
-            value === undefined ? undefined : Number(value)
+            value === undefined ? undefined : Number(value),
+            { shouldDirty: true }
           )
         }
         options={[
@@ -392,7 +403,8 @@ export function TransactionFormFields({
             onChange={(value) =>
               setValue(
                 'paidByUserId',
-                value === undefined ? undefined : Number(value)
+                value === undefined ? undefined : Number(value),
+                { shouldDirty: true }
               )
             }
             options={(members.data ?? [])
@@ -405,7 +417,7 @@ export function TransactionFormFields({
           <SplitSection
             idPrefix="transaction-split"
             value={shownSplit}
-            onChange={(next) => setValue('split', next)}
+            onChange={(next) => setValue('split', next, { shouldDirty: true })}
             amount={touchedSplit === undefined ? undefined : amount}
             currency={account?.currency ?? mainCurrency}
             payerUserId={paidByUserId ?? null}
@@ -444,6 +456,7 @@ export function TransactionFormFields({
         onChange={(value) =>
           setValue('status', (value ?? 'Verify') as TransactionStatus, {
             shouldValidate: true,
+            shouldDirty: true,
           })
         }
         options={transactionStatuses.map((value) => ({

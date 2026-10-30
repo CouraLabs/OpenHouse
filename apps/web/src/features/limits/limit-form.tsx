@@ -1,3 +1,4 @@
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -51,7 +52,7 @@ export function LimitForm({
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<LimitFormValues>({
     resolver: zodResolver(limitFormSchema),
     defaultValues:
@@ -72,8 +73,11 @@ export function LimitForm({
     (category) => category.id === categoryId
   )
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={limit === null ? t('limits.new') : t('limits.edit-title')}
       submitLabel={isSaving ? t('limits.saving') : t('limits.save')}
       cancelLabel={t('limits.cancel')}
@@ -91,7 +95,10 @@ export function LimitForm({
           <Select
             value={categoryId}
             onValueChange={(value) =>
-              setValue('categoryId', value as number, { shouldValidate: true })
+              setValue('categoryId', value as number, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
             }
             items={(categories.data ?? []).map((category) => ({
               label: category.name,
@@ -130,7 +137,10 @@ export function LimitForm({
           <Select
             value={type}
             onValueChange={(value) =>
-              setValue('type', value as LimitType, { shouldValidate: true })
+              setValue('type', value as LimitType, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
             }
             items={limitTypes.map((value) => ({
               label: t(`limits.type-${value.toLowerCase()}`),
@@ -162,13 +172,17 @@ export function LimitForm({
         </Field>
         <MoneyField
           locale={formattingLocale()}
+          currency={mainCurrency}
 
           label={t('limits.amount-in', { currency: mainCurrency })}
           labelFor="limit-amount"
           placeholder={t('limits.amount-placeholder')}
           value={amount}
           onValueChange={(value) =>
-            setValue('amount', value, { shouldValidate: true })
+            setValue('amount', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
           }
           error={errors.amount}
           required

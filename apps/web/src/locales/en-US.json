@@ -132,7 +132,7 @@
     "account-other-currencies_other": "{{count}} Savings accounts in other currencies are not listed: goals use your main currency ({{currency}}).",
     "currency-mismatch": "Currency mismatch",
     "currency-mismatch-hint": "The account is in {{account}}, but goals use your main currency ({{currency}}). This goal no longer tracks it.",
-    "account-placeholder": "Pick a savings account…",
+    "account-placeholder": "Savings account…",
     "balance": "Balance",
     "balance-in": "Balance ({{currency}})",
     "balance-date": "Balance date",
@@ -772,6 +772,7 @@
     "invoice-placeholder": "NF-001",
     "amount-placeholder": "0.00",
     "date": "Date",
+    "today": "Today",
     "date-placeholder": "Pick a date…",
     "receiver": "Receiver",
     "receiver-placeholder": "None",
@@ -834,15 +835,16 @@
     "transfer": "Transfer",
     "transfer-title": "Transfer between accounts",
     "transfer-from": "From account",
-    "transfer-from-placeholder": "Pick the source account…",
+    "transfer-from-placeholder": "Pick source…",
     "transfer-to": "To account",
-    "transfer-to-placeholder": "Pick the destination account…",
+    "transfer-to-placeholder": "Pick destination…",
     "transfer-category": "Category",
     "transfer-category-placeholder": "Pick a category…",
     "transfer-amount": "Amount",
     "transfer-date": "Date",
     "transfer-note": "Note",
     "transfer-currency-mismatch": "The two accounts must share a currency.",
+    "transfer-currency-hint": "Both accounts must be in the same currency; only {{currency}} accounts are listed.",
     "transfer-saved": "Transfer created.",
     "loading": "Loading transactions…",
     "load-more": "Load more",
@@ -1240,7 +1242,17 @@
       "dismiss": "Got it"
     }
   },
+  "discard": {
+    "title": "Discard your changes?",
+    "description": "What you entered has not been saved and will be lost.",
+    "confirm": "Discard",
+    "keep-editing": "Keep editing"
+  },
   "sign-in": {
+    "email-placeholder": "you@example.com",
+    "password-placeholder": "Your password",
+    "remember-me": "Remember me",
+    "submit": "Sign in",
     "forgot": "Forgot your password?",
     "forgot-hint": "Ask the owner of your household for a reset code.",
     "bot-check-required": "Too many tries in a row. Complete the check below, then sign in again."

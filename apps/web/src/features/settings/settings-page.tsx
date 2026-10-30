@@ -43,7 +43,6 @@ export function SettingsPage() {
           {active === 'security' ? (
             <div className="flex flex-col gap-6">
               <ChangePasswordForm />
-              {}
               {role === 'owner' ? <RecoveryCodesSection /> : null}
             </div>
           ) : null}

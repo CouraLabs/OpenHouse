@@ -555,7 +555,6 @@ export function TransactionsPage() {
                 {t('transactions.transfer')}
               </Button>
             </div>
-            {}
             <div className="flex items-center gap-2 min-[1100px]:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -606,7 +605,6 @@ export function TransactionsPage() {
           </>
         }
       />
-      {}
       <TransactionWindowNotice />
       <FilterChips chips={chips} />
       {view === 'metrics' ? (
@@ -781,7 +779,6 @@ export function TransactionsPage() {
       {deleteError ? (
         <p className="text-sm text-destructive">{deleteError}</p>
       ) : null}
-      {}
       {!formOpen && (saveError ?? statusChangeError) ? (
         <p className="text-sm text-destructive">
           {saveError ?? statusChangeError}

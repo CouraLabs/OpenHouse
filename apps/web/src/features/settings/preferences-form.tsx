@@ -64,7 +64,6 @@ export function PreferencesForm() {
             }}
           >
             <SelectTrigger id="preferences-start-page" className="w-full">
-              {}
               <SelectValue>{pageLabel(startPage)}</SelectValue>
             </SelectTrigger>
             <SelectContent>

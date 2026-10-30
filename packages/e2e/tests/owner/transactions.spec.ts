@@ -48,7 +48,7 @@ test.describe('transactions', () => {
       const dialog = page.getByRole('dialog')
       await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
       await dialog.getByRole('radiogroup').getByRole('radio').nth(0).check()
-      await dialog.getByRole('textbox', { name: 'Amount', exact: true }).fill('450000')
+      await dialog.getByRole('textbox', { name: 'Amount', exact: true }).fill('4500.00')
       await chooseOption(page, 'Account', account.name, dialog)
       await chooseOption(page, 'Category', category.name, dialog)
       await dialog.getByRole('button', { name: 'Save', exact: true }).click()
@@ -124,6 +124,34 @@ test.describe('transactions', () => {
 
     await test.step('Expect: the transaction is no longer listed', async () => {
       await expect(transactionRow(page, name)).toHaveCount(0)
+    })
+  })
+
+  test('closing a filled form asks before discarding it', async ({ page }) => {
+    await test.step('Action: type an amount and press Escape', async () => {
+      await page.goto('transactions')
+      await page.getByRole('button', { name: 'Add Transaction' }).click()
+      const dialog = page.getByRole('dialog')
+      await dialog
+        .getByRole('textbox', { name: 'Amount', exact: true })
+        .fill('45')
+      await page.keyboard.press('Escape')
+    })
+
+    await test.step('Expect: a discard prompt appears and Keep editing returns to the form', async () => {
+      await expect(page.getByText('Discard your changes?')).toBeVisible()
+      await page.getByRole('button', { name: 'Keep editing' }).click()
+      await expect(
+        page.getByRole('textbox', { name: 'Amount', exact: true })
+      ).toHaveValue('45.00')
+    })
+
+    await test.step('Expect: Discard closes the form', async () => {
+      await page.keyboard.press('Escape')
+      await page.getByRole('button', { name: 'Discard', exact: true }).click()
+      await expect(
+        page.getByRole('textbox', { name: 'Amount', exact: true })
+      ).toHaveCount(0)
     })
   })
 

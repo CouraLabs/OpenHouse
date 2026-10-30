@@ -7,6 +7,8 @@ import { EMAIL_UNVERIFIED, signInSchema } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { ApiError } from '@/lib/api.js'
 import { useSignIn } from '@/lib/auth.js'
+import { Checkbox } from '@workspace/ui/components/checkbox'
+import { Field, FieldLabel } from '@workspace/ui/components/field'
 import { TextField } from '@workspace/ui/components/text-field'
 import { CaptchaField } from '@/components/captcha-field.js'
 import { useAuthConfig } from '@/lib/auth-config.js'
@@ -48,6 +50,8 @@ export function SignInForm({ onSuccess, onUnverified }: SignInFormProps) {
   }, [])
   const {
     register,
+    watch,
+    setValue,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
@@ -92,7 +96,7 @@ export function SignInForm({ onSuccess, onUnverified }: SignInFormProps) {
       <TextField
         type="email"
         labelFor="sign-in-email"
-        placeholder="you@example.com"
+        placeholder={t('sign-in.email-placeholder')}
         autoComplete="email"
         required
         error={errors.email}
@@ -101,16 +105,24 @@ export function SignInForm({ onSuccess, onUnverified }: SignInFormProps) {
       <TextField
         type="password"
         labelFor="sign-in-password"
-        placeholder="Your password"
+        placeholder={t('sign-in.password-placeholder')}
         autoComplete="current-password"
         required
         error={errors.password}
         {...register('password')}
       />
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" className="size-4" {...register('rememberMe')} />
-        Remember me
-      </label>
+      <Field orientation="horizontal">
+        <Checkbox
+          id="sign-in-remember"
+          checked={watch('rememberMe')}
+          onCheckedChange={(checked) =>
+            setValue('rememberMe', checked === true)
+          }
+        />
+        <FieldLabel htmlFor="sign-in-remember">
+          {t('sign-in.remember-me')}
+        </FieldLabel>
+      </Field>
       {showCaptcha && (
         <CaptchaField
           siteKey={siteKey}
@@ -121,7 +133,7 @@ export function SignInForm({ onSuccess, onUnverified }: SignInFormProps) {
         />
       )}
       <Button type="submit" disabled={isSubmitting || signIn.isPending}>
-        Sign in
+        {t('sign-in.submit')}
       </Button>
     </form>
   )

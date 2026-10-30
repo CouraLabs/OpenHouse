@@ -1,3 +1,4 @@
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -37,7 +38,7 @@ export function CategoryForm({
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues:
@@ -53,8 +54,11 @@ export function CategoryForm({
   const color = watch('color')
   const defaultSplit = watch('defaultSplit') ?? null
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={
         category === null ? t('categories.new') : t('categories.edit-title')
       }
@@ -80,7 +84,9 @@ export function CategoryForm({
           label={t('categories.color')}
           labelFor="category-color"
           value={color}
-          onChange={(hex) => setValue('color', hex, { shouldValidate: true })}
+          onChange={(hex) =>
+            setValue('color', hex, { shouldValidate: true, shouldDirty: true })
+          }
           error={errors.color}
           required
         />
@@ -89,7 +95,10 @@ export function CategoryForm({
         idPrefix="category-split"
         value={defaultSplit}
         onChange={(next) =>
-          setValue('defaultSplit', next, { shouldValidate: true })
+          setValue('defaultSplit', next, {
+            shouldValidate: true,
+            shouldDirty: true,
+          })
         }
         currency={mainCurrency}
         payerUserId={null}

@@ -38,7 +38,6 @@ export function DayOfMonthPick({
           size="sm"
           aria-invalid={error !== undefined}
         >
-          {}
           <SelectValue placeholder={placeholder}>
             {value != null ? String(value).padStart(2, '0') : undefined}
           </SelectValue>

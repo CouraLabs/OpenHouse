@@ -89,7 +89,6 @@ export function NotificationPreferencesForm({
 
       <section className="flex flex-col gap-3">
         <h3 className="text-sm font-medium">{t('notifications.lead')}</h3>
-        {}
         <div className="flex flex-col gap-3">
           <NumberField
             label={t('notifications.bill-lead')}

@@ -1,3 +1,4 @@
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,11 +16,9 @@ import {
   transactionTypes,
 } from '@workspace/poco'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
+import { RadioOption } from '@workspace/ui/components/radio-option'
 import { MoneyField } from '@workspace/ui/components/money-field'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@workspace/ui/components/radio-group'
+import { RadioGroup } from '@workspace/ui/components/radio-group'
 import {
   Select,
   SelectContent,
@@ -74,7 +73,7 @@ export function RecurringForm({
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<RecurringFormValues>({
     resolver: zodResolver(recurringFormSchema),
     defaultValues:
@@ -128,8 +127,11 @@ export function RecurringForm({
       ? Array.from({ length: 7 }, (_, index) => index + 1)
       : Array.from({ length: 31 }, (_, index) => index + 1)
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={rule === null ? t('recurring.new') : t('recurring.edit-title')}
       submitLabel={isSaving ? t('recurring.saving') : t('recurring.save')}
       cancelLabel={t('recurring.cancel')}
@@ -151,7 +153,10 @@ export function RecurringForm({
           <Select
             value={receiverId}
             onValueChange={(value) =>
-              setValue('receiverId', value as number, { shouldValidate: true })
+              setValue('receiverId', value as number, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
             }
           >
             <SelectTrigger id="recurring-receiver">
@@ -180,7 +185,10 @@ export function RecurringForm({
           <Select
             value={categoryId}
             onValueChange={(value) =>
-              setValue('categoryId', value as number, { shouldValidate: true })
+              setValue('categoryId', value as number, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
             }
           >
             <SelectTrigger id="recurring-category">
@@ -211,6 +219,7 @@ export function RecurringForm({
             onValueChange={(value) =>
               setValue('linkedAccountId', value as number, {
                 shouldValidate: true,
+                shouldDirty: true,
               })
             }
           >
@@ -239,30 +248,33 @@ export function RecurringForm({
           placeholder={t('recurring.amount-placeholder')}
           value={amount}
           onValueChange={(value) =>
-            setValue('amount', value, { shouldValidate: true })
+            setValue('amount', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
           }
           error={errors.amount}
           required
         />
         <Field data-invalid={errors.type !== undefined}>
-          <FieldLabel>{t('recurring.type')}</FieldLabel>
+          <FieldLabel id="recurring-type-label">
+            {t('recurring.type')}
+          </FieldLabel>
           <RadioGroup
+            aria-labelledby="recurring-type-label"
             value={type}
             onValueChange={(value) =>
               setValue('type', value as RecurringFormValues['type'], {
                 shouldValidate: true,
+                shouldDirty: true,
               })
             }
             className="grid-cols-2"
           >
             {transactionTypes.map((value) => (
-              <span
-                key={value}
-                className="flex items-center gap-2 rounded-lg border p-2 text-sm has-[[data-checked]]:border-primary"
-              >
-                <RadioGroupItem value={value} />
+              <RadioOption key={value} value={value}>
                 {t(`recurring.type-${value.toLowerCase()}`)}
-              </span>
+              </RadioOption>
             ))}
           </RadioGroup>
           {errors.type !== undefined ? (
@@ -279,9 +291,10 @@ export function RecurringForm({
             onValueChange={(value) => {
               setValue('frequency', value as Frequency, {
                 shouldValidate: true,
+                shouldDirty: true,
               })
-              setValue('frequencyDay', undefined)
-              setValue('frequencyMonth', undefined)
+              setValue('frequencyDay', undefined, { shouldDirty: true })
+              setValue('frequencyMonth', undefined, { shouldDirty: true })
             }}
           >
             <SelectTrigger id="recurring-frequency">
@@ -314,6 +327,7 @@ export function RecurringForm({
               onValueChange={(value) =>
                 setValue('frequencyDay', Number(value), {
                   shouldValidate: true,
+                  shouldDirty: true,
                 })
               }
             >
@@ -352,6 +366,7 @@ export function RecurringForm({
               onValueChange={(value) =>
                 setValue('frequencyMonth', Number(value), {
                   shouldValidate: true,
+                  shouldDirty: true,
                 })
               }
             >
@@ -383,7 +398,10 @@ export function RecurringForm({
           idPrefix="recurring-split"
           value={defaultSplit}
           onChange={(next) =>
-            setValue('defaultSplit', next, { shouldValidate: true })
+            setValue('defaultSplit', next, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
           }
           amount={amount}
           currency={

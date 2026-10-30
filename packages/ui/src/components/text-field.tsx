@@ -50,9 +50,13 @@ export function TextField({
         type={INPUT_TYPES[type]}
         required={required}
         aria-invalid={error !== undefined}
+        aria-describedby={error !== undefined ? `${labelFor}-error` : undefined}
         {...inputProps}
       />
-      <FieldError errors={error !== undefined ? [error] : undefined} />
+      <FieldError
+        id={`${labelFor}-error`}
+        errors={error !== undefined ? [error] : undefined}
+      />
     </Field>
   )
 }

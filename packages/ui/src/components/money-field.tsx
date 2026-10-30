@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react'
 import type { ComponentProps } from 'react'
 
-import { TextField } from '@workspace/ui/components/text-field'
-
-const MAX_DIGITS = 16
+import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
+import { Input } from '@workspace/ui/components/input'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
+import { formatInput, parseInput } from '@workspace/ui/lib/money-input'
 
 interface MoneyFieldProps {
   locale: string
@@ -12,6 +14,7 @@ interface MoneyFieldProps {
   labelFor: string
   error?: { message?: string }
   required?: boolean
+  currency?: string
 }
 
 export function MoneyField({
@@ -22,70 +25,64 @@ export function MoneyField({
   labelFor,
   error,
   required,
+  currency,
+  onBlur,
   ...inputProps
 }: MoneyFieldProps &
   Omit<
-    ComponentProps<typeof TextField>,
-    'type' | 'id' | 'label' | 'value' | 'onChange'
+    ComponentProps<typeof Input>,
+    'type' | 'id' | 'value' | 'onChange' | 'ref'
   >) {
-  const display = toDisplay(value, locale)
+  const [text, setText] = useState(() => formatInput(value, locale))
+  const errorId = `${labelFor}-error`
+
+  useEffect(() => {
+    if (parseInput(text, locale) !== (value ?? '')) {
+      setText(formatInput(value, locale))
+    }
+  }, [value, locale, text])
 
   return (
-    <TextField
-      type="text"
-      label={label}
-      labelFor={labelFor}
-      error={error}
-      required={required}
-      inputMode="decimal"
-      value={display}
-      onChange={(event) => {
-        const raw = event.target.value
-        const parsed = parseInput(raw)
-        const erasing = raw.length < display.length && isZero(parsed)
-        onValueChange(erasing ? '' : parsed)
-      }}
-      {...inputProps}
-    />
+    <Field data-invalid={error !== undefined}>
+      <FieldLabel htmlFor={labelFor}>
+        {label}
+        {required ? <RequiredMark /> : null}
+      </FieldLabel>
+      <div className="relative">
+        {currency !== undefined ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-muted-foreground"
+          >
+            {currency}
+          </span>
+        ) : null}
+        <Input
+          id={labelFor}
+          type="text"
+          inputMode="decimal"
+          required={required}
+          aria-invalid={error !== undefined}
+          aria-describedby={error !== undefined ? errorId : undefined}
+          className={currency !== undefined ? 'pl-12' : undefined}
+          value={text}
+          onChange={(event) => {
+            const raw = event.target.value
+
+            setText(raw)
+            onValueChange(parseInput(raw, locale))
+          }}
+          onBlur={(event) => {
+            setText(formatInput(parseInput(text, locale), locale))
+            onBlur?.(event)
+          }}
+          {...inputProps}
+        />
+      </div>
+      <FieldError
+        id={errorId}
+        errors={error !== undefined ? [error] : undefined}
+      />
+    </Field>
   )
-}
-
-function isZero(amount: string): boolean {
-  return amount !== '' && BigInt(onlyDigits(amount)) === 0n
-}
-
-function onlyDigits(raw: string): string {
-  return raw.replace(/\D/g, '').slice(0, MAX_DIGITS)
-}
-
-function parseInput(raw: string): string {
-  const negative = raw.includes('-')
-  const digits = onlyDigits(raw)
-
-  if (digits === '') {
-    return ''
-  }
-
-  const cents = BigInt(digits)
-
-  return `${negative ? '-' : ''}${cents / 100n}.${String(cents % 100n).padStart(2, '0')}`
-}
-
-function toDisplay(value: string | undefined, locale: string): string {
-  const text = value ?? ''
-  const digits = onlyDigits(text)
-
-  if (digits === '') {
-    return ''
-  }
-
-  const cents = BigInt(digits)
-  const whole = cents / 100n
-  const fraction = String(cents % 100n).padStart(2, '0')
-  const formatted = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number(`${whole}.${fraction}`))
-
-  return text.startsWith('-') ? `-${formatted}` : formatted
 }

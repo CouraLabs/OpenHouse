@@ -109,7 +109,6 @@ export function AddUserDialog({ open, onClose }: AddUserDialogProps) {
               }))}
             >
               <SelectTrigger id="invite-expiry" className="w-full">
-                {}
                 <SelectValue>{expiryLabel(expiry)}</SelectValue>
               </SelectTrigger>
               <SelectContent>

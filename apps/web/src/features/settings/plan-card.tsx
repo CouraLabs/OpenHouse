@@ -69,7 +69,7 @@ export function PlanCard({ plan, current }: PlanCardProps) {
             {plan.name}
           </h3>
           {current && (
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/15">
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/15">
               {t('settings.plan.current')}
             </span>
           )}

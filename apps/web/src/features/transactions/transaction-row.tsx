@@ -177,7 +177,6 @@ export function TransactionRow({
         >
           {signedAmount(transaction, locale)}
         </span>
-        {}
         <span
           className="text-xs text-muted-foreground tabular-nums"
           title={t('transactions.running-balance')}

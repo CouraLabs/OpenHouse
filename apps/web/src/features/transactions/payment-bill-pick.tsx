@@ -52,7 +52,6 @@ export function PaymentBillPick({
         }}
       >
         <SelectTrigger id="transfer-bill" className="w-full">
-          {}
           <SelectValue>
             {shown === undefined
               ? t('transactions.transfer-bill-current')

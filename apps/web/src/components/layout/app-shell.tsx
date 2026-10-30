@@ -32,7 +32,6 @@ export function AppShell({
         <TenantDeletionBanner />
         <ServerResetNotice />
         <RecoveryCodesPrompt />
-        {}
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           {children}
         </main>

@@ -46,18 +46,17 @@ export function CardCycleFields({
         onChange={onDueDayChange}
         error={errors.dueDay}
       />
-      <Field>
-        <FieldLabel htmlFor="account-close-day-inclusive">
-          {t('accounts.close-day-inclusive')}
-        </FieldLabel>
+      <Field orientation="horizontal">
         <Checkbox
           id="account-close-day-inclusive"
-          className="mt-1"
           checked={closeDayInclusive}
           onCheckedChange={(checked) =>
             onCloseDayInclusiveChange(checked === true)
           }
         />
+        <FieldLabel htmlFor="account-close-day-inclusive">
+          {t('accounts.close-day-inclusive')}
+        </FieldLabel>
       </Field>
       {gap !== null ? (
         <p className="col-span-full text-sm text-muted-foreground">

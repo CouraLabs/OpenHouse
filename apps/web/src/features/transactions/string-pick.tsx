@@ -46,7 +46,12 @@ export function StringPick({
           onChange(chosen === '' ? undefined : chosen)
         }}
       >
-        <SelectTrigger id={id}>
+        <SelectTrigger
+          id={id}
+          aria-invalid={error !== undefined}
+          aria-required={required}
+          aria-describedby={error !== undefined ? `${id}-error` : undefined}
+        >
           <SelectValue>
             {selected === undefined ? placeholder : selected.label}
           </SelectValue>
@@ -59,7 +64,9 @@ export function StringPick({
           ))}
         </SelectContent>
       </Select>
-      {error !== undefined ? <FieldError>{error}</FieldError> : null}
+      {error !== undefined ? (
+        <FieldError id={`${id}-error`}>{error}</FieldError>
+      ) : null}
     </Field>
   )
 }

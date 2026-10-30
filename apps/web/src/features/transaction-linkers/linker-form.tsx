@@ -1,3 +1,4 @@
+import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -53,7 +54,7 @@ export function LinkerForm({
     watch,
     setValue,
     register,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<LinkerFormValues>({
     resolver: zodResolver(linkerFormSchema),
     defaultValues:
@@ -78,8 +79,11 @@ export function LinkerForm({
     (receiver) => receiver.id === receiverId
   )
 
+  const guard = useDiscardGuard(isDirty)
+
   return (
     <FormSheet
+      {...guard}
       title={linker === null ? t('linkers.new') : t('linkers.edit-title')}
       submitLabel={isSaving ? t('linkers.saving') : t('linkers.save')}
       cancelLabel={t('linkers.cancel')}
@@ -106,7 +110,10 @@ export function LinkerForm({
           <Select
             value={categoryId}
             onValueChange={(value) =>
-              setValue('categoryId', value as number, { shouldValidate: true })
+              setValue('categoryId', value as number, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
             }
           >
             <SelectTrigger id="linker-category">
@@ -140,7 +147,7 @@ export function LinkerForm({
               setValue(
                 'receiverId',
                 chosen === 'none' ? undefined : Number(chosen),
-                { shouldValidate: true }
+                { shouldValidate: true, shouldDirty: true }
               )
             }}
           >
