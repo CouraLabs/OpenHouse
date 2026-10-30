@@ -3,6 +3,8 @@ import {
   Bank,
   Calculator,
   CalendarCheck,
+  CreditCard,
+  FileArrowUp,
   Gauge,
   House,
   Lightbulb,
@@ -10,6 +12,7 @@ import {
   Plant,
   Repeat,
   Target,
+  TrendDown,
   UsersThree,
   Wallet,
 } from '@phosphor-icons/react'
@@ -17,21 +20,20 @@ import {
 import type { Content } from '@/lib/content.js'
 import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/links.js'
 
-/** The page in American English — the default and the fallback. */
 export const enUS: Content = {
   meta: {
-    title: 'OpenHouse — the open-source household app',
+    title: 'OpenHouse | Household money, shared',
     description:
-      'OpenHouse is the open-source household app. The money is live today — accounts, transactions, limits, and goals in one shared ledger — with pantry, meals, pets, health, and more on the way. Self-host it for free or let us run it for you.',
+      'OpenHouse keeps every account and credit card your household uses in one shared ledger. It records the recurring bills, adds up each card bill as you spend, and reminds you before anything is due. Free to start, open source, and free forever if you host it yourself.',
   },
 
   navLinks: [
-    { label: 'The house', href: '#the-house' },
+    { label: 'Why', href: '#why' },
     { label: 'Features', href: '#features' },
     { label: 'Planners', href: '#planners' },
+    { label: 'What’s next', href: '#the-house' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'Questions', href: '#faq' },
-    { label: 'Open source', href: '#open-source' },
   ],
 
   navActions: {
@@ -42,13 +44,13 @@ export const enUS: Content = {
   },
 
   hero: {
-    headline: 'One home for the whole house — starting with the money.',
+    headline: 'Know what the house owes before the bill arrives.',
     tagline:
-      'One shared place for what the house runs on. The ledger is live today — accounts, transactions, limits, goals — and the rest of home life is on the way. Open source end to end: run it on your own server for free, or let us run it for you.',
+      'OpenHouse puts every account and credit card your household uses in one ledger that everyone at home can see. It records the rent and subscriptions for you, adds up each card bill as you spend, and reminds you a few days before anything is due.',
     primary: { label: 'Start free', href: SIGN_UP_URL },
-    secondary: { label: 'Self-host it', href: GITHUB_URL },
-    stack: 'Built on Cloudflare Workers, Hono & React',
-    windowTitle: 'openhouse — Transactions',
+    secondary: { label: 'Host it yourself', href: GITHUB_URL },
+    stack: 'Free plan, no credit card. The code is open on GitHub.',
+    windowTitle: 'openhouse · Transactions',
     balance: { label: 'Checking · Main Street Bank', amount: '$8,412.36' },
     limitsTitle: 'Limits · October',
   },
@@ -143,63 +145,94 @@ export const enUS: Content = {
 
   ruleStatus: { posted: 'Posted', scheduled: 'Scheduled' },
 
-  /** The house index: the ledger live today, the announced rooms to come. */
-  houseIntro: {
-    eyebrow: 'The house',
-    title: 'One place for everything the house runs on.',
-    lede: 'Money is live today. Each part of home life arrives as a room of the same house — same sign-in, same members, same books.',
+  problemsIntro: {
+    eyebrow: 'Why OpenHouse',
+    title: 'Household money goes wrong in the same few ways.',
+    lede: 'The numbers usually live in one person’s head, a spreadsheet nobody updates, and three or four banking apps. OpenHouse brings them into one place and keeps them current.',
   },
 
-  houseStatus: { live: 'Live', coming: 'Coming' },
+  problems: [
+    {
+      icon: CreditCard,
+      tone: 'red',
+      pain: 'The card bill is bigger than anyone expected.',
+      fix: 'Every charge lands on the bill it belongs to, so you see the running total all month. A reminder arrives a few days before the due date.',
+    },
+    {
+      icon: TrendDown,
+      tone: 'yellow',
+      pain: 'An account dips below zero and the bank tells you first.',
+      fix: 'The Upcoming page projects your balances from scheduled bills and card payments, and shows the date an account would go negative.',
+    },
+    {
+      icon: FileArrowUp,
+      tone: 'blue',
+      pain: 'The budget spreadsheet lasted two weeks.',
+      fix: 'Upload your bank’s OFX, QFX or CSV statement and the transactions come in. Rent and subscriptions record themselves every month.',
+    },
+    {
+      icon: UsersThree,
+      tone: 'green',
+      pain: 'Only one person knows where the money stands.',
+      fix: 'Everyone in the house signs in to the same books and sees the same balances, limits and goals. New members join with an invite code.',
+    },
+  ],
+
+  houseIntro: {
+    eyebrow: 'What’s next',
+    title: 'Money is the first room. More are on the way.',
+    lede: 'OpenHouse is growing into one app for running the home. Each new part will use the same sign-in and the same household members.',
+  },
+
+  houseStatus: { live: 'Available now', coming: 'Planned' },
 
   houseModules: [
     {
       name: 'Money',
       kind: 'The ledger',
-      description:
-        'Accounts, transactions, limits, goals — the shared books, live today.',
+      description: 'Accounts, cards, bills, transactions, limits and goals.',
       tone: 'green',
       status: 'live',
     },
     {
       name: 'Pantry',
       kind: 'The cupboards',
-      description: 'What’s in the cupboards, what runs out, what to buy.',
+      description: 'What’s in the cupboards, what’s running out, what to buy.',
       tone: 'yellow',
       status: 'coming',
     },
     {
       name: 'Meals',
       kind: 'The table',
-      description: 'Plan the week’s food, from pantry to table.',
+      description: 'Plan the week’s meals from what’s in the pantry.',
       tone: 'red',
       status: 'coming',
     },
     {
       name: 'Laundry & storage',
       kind: 'The closets',
-      description: 'Where things live, what’s clean, what’s where.',
+      description: 'Where things are kept and what’s clean.',
       tone: 'blue',
       status: 'coming',
     },
     {
       name: 'Pets',
       kind: 'The animals',
-      description: 'Feeding, vet dates, and the animals’ own records.',
+      description: 'Feeding, vet appointments and each pet’s records.',
       tone: 'yellow',
       status: 'coming',
     },
     {
       name: 'Health',
       kind: 'Wellbeing',
-      description: 'Appointments, medications, and the family’s records.',
+      description: 'Appointments, medications and the family’s records.',
       tone: 'red',
       status: 'coming',
     },
     {
       name: 'Todos',
       kind: 'The list',
-      description: 'The house’s list, visible to every hand.',
+      description: 'One to-do list the whole house can see.',
       tone: 'blue',
       status: 'coming',
     },
@@ -213,23 +246,23 @@ export const enUS: Content = {
     {
       name: 'Mail',
       kind: 'The letters',
-      description: 'The house’s letters, connected to your inboxes.',
+      description: 'Household mail, connected to your inboxes.',
       tone: 'blue',
       status: 'coming',
     },
     {
       name: 'Telegram & WhatsApp',
       kind: 'The conversations',
-      description: 'The house talks where the house already talks.',
+      description: 'Reminders and updates in the chat apps you already use.',
       tone: 'red',
       status: 'coming',
     },
   ],
 
   featuresIntro: {
-    eyebrow: 'The ledger',
-    title: 'Everything a household spends, saves, and owes.',
-    lede: 'The first room of the house is the money — and it’s fully furnished: set up your accounts once, then let the ledger stay true on its own — rules post the bills, presets fill the forms, limits and goals keep score.',
+    eyebrow: 'Features',
+    title: 'What the house spends, saves and owes, in one ledger.',
+    lede: 'Set up your accounts once. After that, most of the bookkeeping happens without you.',
   },
 
   features: {
@@ -237,57 +270,57 @@ export const enUS: Content = {
       key: 'transactions',
       tone: 'blue',
       icon: ArrowsLeftRight,
-      title: 'Every movement, grouped by day',
-      body: 'Filter by month, see the day’s totals at a glance, and keep every account balance true as money comes in and goes out.',
+      title: 'Every transaction, day by day',
+      body: 'See what went out each day with the day’s totals, filter by month, and watch each balance update as money comes in and goes out.',
     },
     accounts: {
       key: 'accounts',
       tone: 'yellow',
       icon: Wallet,
-      title: 'Accounts and cards',
-      body: 'Bank accounts and credit cards with their balances, closing and due dates — in dollars, reais, or euros.',
+      title: 'Bank accounts and cards',
+      body: 'Checking, savings and credit cards side by side, with each card’s closing and due dates. Accounts can be in US dollars, reais or euros.',
     },
     recurring: {
       key: 'recurring',
       tone: 'green',
       icon: Repeat,
-      title: 'Bills that post themselves',
-      body: 'Recurring rules materialize the transaction on schedule, so rent and subscriptions never go unrecorded.',
+      title: 'Bills that record themselves',
+      body: 'Tell OpenHouse the rent is due on the 1st and it records the payment every month, so nothing goes missing from the books.',
     },
     limits: {
       key: 'limits',
       tone: 'red',
       icon: Gauge,
-      title: 'Limits per category',
-      body: 'Cap what a category may cost across a day, a week, a month, or a year — and watch the bar fill before it overflows.',
+      title: 'Spending limits',
+      body: 'Set a cap for groceries or dining out per day, week, month or year, and see how close you are before you go over.',
     },
     goals: {
       key: 'goals',
       tone: 'green',
       icon: Target,
-      title: 'Goals with a gauge',
-      body: 'Point a goal at a savings account and a target balance. The gauge fills as the account grows.',
+      title: 'Savings goals',
+      body: 'Pick a savings account and a target balance. The goal fills as the account grows.',
     },
     household: {
       key: 'household',
       tone: 'blue',
       icon: UsersThree,
-      title: 'One house, many hands',
-      body: 'Everyone in the household signs in to the same books — new members join with an invite code.',
+      title: 'Shared with the house',
+      body: 'Partners and family sign in to the same books. New members join with an invite code.',
     },
     linkers: {
       key: 'linkers',
       tone: 'yellow',
       icon: CalendarCheck,
-      title: 'Presets that fill the form',
-      body: 'Type “Monthly rent” and the category and receiver fill in. Receivers know whether money went to a person, a service, a merchant, or a charity.',
+      title: 'Less typing',
+      body: 'Type “Monthly rent” and the category and payee fill in for you. Each payee is marked as a person, a service, a store or a charity.',
     },
   },
 
   plannersIntro: {
     eyebrow: 'Planners',
-    title: 'Do the math before the money moves.',
-    lede: 'Calculators that need no data from your ledger — open them, change a number, and see what the next twenty years look like.',
+    title: 'Run the numbers before you decide.',
+    lede: 'Calculators for the big money questions. They don’t touch your ledger: change a number and see what happens over the next twenty years.',
   },
 
   planners: [
@@ -295,52 +328,52 @@ export const enUS: Content = {
       icon: Percent,
       tone: 'blue',
       title: 'Simple vs compound interest',
-      body: 'The same money grown two ways — on the principal only, or on the interest too.',
+      body: 'How the same money grows when interest is paid only on what you put in, and when it is paid on the interest too.',
     },
     {
       icon: Calculator,
       tone: 'yellow',
       title: 'Rate conversion',
-      body: 'Translate a rate between year, month, and business day — by compounding, never by dividing.',
+      body: 'Turn a yearly rate into a monthly or business-day rate the right way, by compounding instead of dividing.',
     },
     {
       icon: Plant,
       tone: 'green',
       title: 'Financial independence',
-      body: 'What to put away each month to reach a target, and what a balance pays out once you stop.',
+      body: 'How much to set aside each month to reach a target, and how much that balance pays you once you stop.',
     },
     {
       icon: House,
       tone: 'red',
       title: 'Buy or rent',
-      body: 'Financing a property against renting and investing the difference, month by month.',
+      body: 'Compare financing a home with renting and investing the difference, month by month.',
     },
     {
       icon: Lightbulb,
       tone: 'yellow',
-      title: 'Financial tips',
-      body: 'Short guides — the six jars, saving habits, an organizing strategy — no account required.',
+      title: 'Money tips',
+      body: 'Short guides on the six jars method, saving habits and a way to organize your finances. No account needed.',
     },
   ],
 
   pricingIntro: {
     eyebrow: 'Pricing',
-    title: 'Four ways in. One of them is free forever.',
-    lede: 'The code is the same on every plan. You choose who runs the server — and whether an assistant reads the ledger with you.',
+    title: 'Start free. Pay when the house needs more.',
+    lede: 'Every plan runs the same code. Hosted prices are per month, in Brazilian reais. Hosting it yourself costs nothing.',
   },
 
   selfHosted: {
     badge: 'Free · Self-hosted',
     name: 'Host it yourself',
     tagline:
-      'Every feature, no limits, on your own Cloudflare account. Clone the repository, run one deploy command, and the books live where you say.',
+      'Every feature with no limits, on your own Cloudflare account. Clone the code, run one command, and your data stays on your account.',
     price: '$0',
-    priceNote: 'forever, open source',
+    priceNote: 'free forever, open source',
     perks: [
-      { label: 'Every feature, unlimited accounts and history' },
-      { label: 'Your own D1 database, your data, your backups' },
-      { label: 'One wrangler deploy, ready in minutes' },
-      { label: 'Community support on GitHub' },
+      { label: 'Every feature, no caps on accounts or history' },
+      { label: 'Your own D1 database and your own backups' },
+      { label: 'One deploy command, running in minutes' },
+      { label: 'Community help on GitHub' },
     ],
     commands: [
       `git clone ${GITHUB_URL}.git`,
@@ -352,53 +385,67 @@ export const enUS: Content = {
 
   hostedPlans: [
     {
-      name: 'Freemium',
-      tagline: 'Zero cost on our servers, sized for getting started.',
-      price: '$0',
-      priceNote: 'hosted by OpenHouse',
+      name: 'Free',
+      tagline: 'For one person getting started.',
+      price: 'R$0',
+      priceNote: 'per month',
       perks: [
-        { label: 'Up to 2 accounts' },
-        { label: '12 months of history' },
-        { label: 'Transactions, categories, limits & goals' },
+        {
+          label:
+            'Up to 2 accounts, categories, limits, goals and recurring bills',
+        },
+        { label: 'The last 3 months of transactions' },
+        { label: '1 statement import and 1 export a month' },
         { label: 'Every planner and guide' },
-        { label: 'Recurring rules & presets', included: false },
         { label: 'Household members', included: false },
       ],
       cta: { label: 'Start free', href: SIGN_UP_URL },
     },
     {
-      name: 'Premium',
-      tagline: 'Every feature, no limits — we keep the server running.',
-      price: 'Soon',
-      priceNote: 'pricing announced at launch',
+      name: 'Plus',
+      tagline: 'For a household that keeps its books here.',
+      price: 'R$15',
+      priceNote: 'per month, plus R$2 per extra member',
       perks: [
-        { label: 'Unlimited accounts and history' },
-        { label: 'Recurring rules & transaction presets' },
-        { label: 'Household members by invite code' },
-        { label: 'Managed backups and updates' },
-        { label: 'AI assistant', included: false },
-      ],
-      cta: { label: 'Join early access', href: SIGN_UP_URL },
-    },
-    {
-      name: 'Premium AI',
-      tagline:
-        'Everything in Premium, plus an assistant that reads the ledger with you.',
-      price: 'Soon',
-      priceNote: 'pricing announced at launch',
-      perks: [
-        { label: 'Everything in Premium' },
-        { label: 'Categories suggested from each description' },
-        { label: 'Ask your ledger in plain language' },
-        { label: 'Monthly insight summaries' },
-        { label: 'Nudges before a limit overflows' },
+        { label: 'Invite everyone in the house' },
+        {
+          label:
+            'Up to 10 accounts, categories, limits, goals and recurring bills',
+        },
+        { label: 'Your full transaction history' },
+        { label: '5 statement imports and 5 exports a month' },
+        { label: 'Every planner and guide' },
       ],
       cta: { label: 'Join early access', href: SIGN_UP_URL },
       featured: true,
     },
+    {
+      name: 'Pro',
+      tagline: 'Plus, with chat apps and AI.',
+      price: 'R$30',
+      priceNote: 'per month, plus R$2 per extra member',
+      perks: [
+        { label: 'Everything in Plus' },
+        { label: 'Telegram and WhatsApp updates (coming soon)' },
+        { label: 'AI features with a usage limit (coming soon)' },
+        { label: 'Household assistant', included: false },
+      ],
+      cta: { label: 'Join early access', href: SIGN_UP_URL },
+    },
+    {
+      name: 'Max',
+      tagline: 'Everything, including the household assistant.',
+      price: 'R$40',
+      priceNote: 'per month, plus R$2 per extra member',
+      perks: [
+        { label: 'Everything in Pro' },
+        { label: 'Household assistant (coming soon)' },
+      ],
+      cta: { label: 'Join early access', href: SIGN_UP_URL },
+    },
   ],
 
-  featuredBadge: 'Most complete',
+  featuredBadge: 'Best for households',
 
   faqIntro: {
     eyebrow: 'Questions',
@@ -407,51 +454,61 @@ export const enUS: Content = {
 
   faq: [
     {
-      question: 'Is it really free to self-host?',
+      question: 'Does OpenHouse connect to my bank?',
       answer:
-        'Yes. The self-hosted plan is $0 forever and carries every feature with no limits. Clone the repository, run npm run deploy, and the stack deploys to your own Cloudflare account — one Worker, one D1 database, your data.',
+        'No. You add transactions by hand, from recurring bills, or by uploading a statement file (OFX, QFX or CSV) from your bank. The file is read once and not stored, and an import can be undone for 24 hours.',
+    },
+    {
+      question: 'Is it really free to host it myself?',
+      answer:
+        'Yes. Self-hosting costs nothing and has every feature with no limits. Clone the repository, run npm run deploy, and it runs on your own Cloudflare account with your own database.',
     },
     {
       question: 'Where does my data live?',
       answer:
-        'Self-hosted, it lives in your own D1 database on your own Cloudflare account — your data, your backups. On a hosted plan, OpenHouse runs the server and keeps backups and updates managed for you.',
-    },
-    {
-      question: 'Is the hosted code different from the open-source code?',
-      answer:
-        'No. The code is the same on every plan. What changes is who runs the server and whether an assistant reads the ledger with you.',
+        'If you host it yourself, in a D1 database on your own Cloudflare account. On a hosted plan, OpenHouse runs the server and handles backups and updates.',
     },
     {
       question: 'Can more than one person use the same books?',
       answer:
-        'Yes. Everyone in the household signs in to the same ledger, and new members join with an invite code. Household members are part of Premium and of every self-hosted install.',
+        'Yes, on Plus and above, and on every self-hosted install. Everyone signs in to the same ledger, and new members join with an invite code. Each extra member is R$2 a month on a hosted plan.',
+    },
+    {
+      question: 'What happens to older transactions on the Free plan?',
+      answer:
+        'Free shows the last 3 months. Older transactions are hidden, not deleted, and they come back when you move to a paid plan.',
     },
     {
       question: 'Which currencies does it handle?',
       answer:
-        'Accounts and cards can be kept in dollars, reais, or euros, each with its own balance and, for cards, closing and due dates.',
+        'Accounts and cards can be in US dollars, reais or euros. Each account keeps its own currency, and amounts are not converted between them.',
+    },
+    {
+      question: 'Is the hosted code different from the open-source code?',
+      answer:
+        'No. Every plan runs the same code. The plans differ in who runs the server and how much you can store.',
     },
     {
       question: 'What comes after the money?',
       answer:
-        'Pantry, meals, todos, pets, health, calendar, mail, and the messaging integrations are announced and in the works. Each ships as part of the same shared home — same sign-in, same members — and the ledger keeps working exactly as it does today.',
+        'Pantry, meals, todos, pets, health, calendar, mail and Telegram and WhatsApp are planned. Each will join the same app with the same sign-in and members, and the money side keeps working as it does today.',
     },
   ],
 
   openSource: {
     eyebrow: 'Open source',
     title: 'Your house. Your server. Your code.',
-    body: 'OpenHouse is built in the open. Read every line, run it on your own machine, and send a pull request when the house needs a new room.',
+    body: 'All of OpenHouse is on GitHub. Read the code, run it on your own account, or send a pull request when the house needs a new room.',
     points: [
-      { icon: Bank, label: 'SQLite-backed D1, schema in the repo' },
+      { icon: Bank, label: 'Data in your own D1 database' },
       { icon: House, label: 'One Worker, one deploy command' },
-      { icon: UsersThree, label: 'Multi-member households built in' },
+      { icon: UsersThree, label: 'Households with several members' },
     ],
     cta: { label: 'Star on GitHub', href: GITHUB_URL },
   },
 
   footer: {
-    tagline: 'The open-source household app.',
+    tagline: 'Household money, shared.',
     copyright: `© ${new Date().getFullYear()} CouraLabs`,
     links: [
       { label: 'GitHub', href: GITHUB_URL },

@@ -8,6 +8,7 @@ import { SiteNav } from '@/sections/nav/site-nav.js'
 import { OpenSourceSection } from '@/sections/open-source/open-source-section.js'
 import { PlannersSection } from '@/sections/planners/planners-section.js'
 import { PricingSection } from '@/sections/pricing/pricing-section.js'
+import { ProblemsSection } from '@/sections/problems/problems-section.js'
 
 export function App() {
   return (
@@ -17,9 +18,10 @@ export function App() {
       <div className="sheet">
         <main>
           <HeroSection />
-          <HouseIndexSection />
+          <ProblemsSection />
           <FeaturesSection />
           <PlannersSection />
+          <HouseIndexSection />
           <PricingSection />
           <FaqSection />
           <OpenSourceSection />

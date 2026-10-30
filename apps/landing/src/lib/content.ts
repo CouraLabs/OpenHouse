@@ -73,6 +73,13 @@ export interface Planner {
   body: string
 }
 
+export interface Problem {
+  icon: Icon
+  tone: Tone
+  pain: string
+  fix: string
+}
+
 export interface HouseModule {
   name: string
   kind: string
@@ -131,6 +138,8 @@ export interface Content {
     balance: { label: string; amount: string }
     limitsTitle: string
   }
+  problemsIntro: Intro
+  problems: Problem[]
   houseIntro: Intro
   houseStatus: { live: string; coming: string }
   houseModules: HouseModule[]

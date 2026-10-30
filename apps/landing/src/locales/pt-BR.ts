@@ -3,6 +3,8 @@ import {
   Bank,
   Calculator,
   CalendarCheck,
+  CreditCard,
+  FileArrowUp,
   Gauge,
   House,
   Lightbulb,
@@ -10,6 +12,7 @@ import {
   Plant,
   Repeat,
   Target,
+  TrendDown,
   UsersThree,
   Wallet,
 } from '@phosphor-icons/react'
@@ -17,21 +20,20 @@ import {
 import type { Content } from '@/lib/content.js'
 import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/links.js'
 
-/** The page in Brazilian Portuguese; samples read in reais and Brazilian dates. */
 export const ptBR: Content = {
   meta: {
-    title: 'OpenHouse — o app da casa, em código aberto',
+    title: 'OpenHouse | O dinheiro da casa, em um só lugar',
     description:
-      'OpenHouse é o app da casa em código aberto. O dinheiro já está no ar — contas, transações, limites e metas em um livro-caixa compartilhado — e despensa, refeições, pets, saúde e mais estão a caminho. Hospede você mesmo de graça ou deixe que a gente rode para você.',
+      'O OpenHouse reúne todas as contas e cartões da casa em um livro-caixa compartilhado. Ele lança as contas fixas, soma a fatura do cartão enquanto você gasta e avisa antes de cada vencimento. Grátis para começar, de código aberto e grátis para sempre se você hospedar.',
   },
 
   navLinks: [
-    { label: 'A casa', href: '#the-house' },
+    { label: 'Por quê', href: '#why' },
     { label: 'Recursos', href: '#features' },
     { label: 'Planejadores', href: '#planners' },
+    { label: 'O que vem', href: '#the-house' },
     { label: 'Preços', href: '#pricing' },
     { label: 'Dúvidas', href: '#faq' },
-    { label: 'Código aberto', href: '#open-source' },
   ],
 
   navActions: {
@@ -42,13 +44,13 @@ export const ptBR: Content = {
   },
 
   hero: {
-    headline: 'Um só lugar para a casa inteira — começando pelo dinheiro.',
+    headline: 'Saiba quanto a casa deve antes da fatura chegar.',
     tagline:
-      'Um lugar compartilhado para o que mantém a casa funcionando. O livro-caixa já está no ar — contas, transações, limites, metas — e o resto da vida doméstica vem chegando. Código aberto de ponta a ponta: rode no seu próprio servidor de graça, ou deixe que a gente rode para você.',
+      'O OpenHouse junta todas as contas e cartões da casa em um livro-caixa que todo mundo pode ver. Ele lança o aluguel e as assinaturas sozinho, soma a fatura do cartão enquanto você gasta e avisa alguns dias antes de cada vencimento.',
     primary: { label: 'Comece grátis', href: SIGN_UP_URL },
     secondary: { label: 'Hospede você mesmo', href: GITHUB_URL },
-    stack: 'Feito com Cloudflare Workers, Hono e React',
-    windowTitle: 'openhouse — Transações',
+    stack: 'Plano grátis, sem cartão de crédito. O código é aberto no GitHub.',
+    windowTitle: 'openhouse · Transações',
     balance: {
       label: 'Conta corrente · Banco da Praça',
       amount: 'R$ 8.412,36',
@@ -146,21 +148,52 @@ export const ptBR: Content = {
 
   ruleStatus: { posted: 'Lançada', scheduled: 'Agendada' },
 
-  /** The house index: the ledger live today, the announced rooms to come. */
-  houseIntro: {
-    eyebrow: 'A casa',
-    title: 'Um lugar só para tudo o que faz a casa funcionar.',
-    lede: 'O dinheiro já está no ar. Cada parte da vida doméstica chega como um cômodo da mesma casa — o mesmo login, os mesmos membros, os mesmos livros.',
+  problemsIntro: {
+    eyebrow: 'Por que o OpenHouse',
+    title: 'O dinheiro da casa sai do controle sempre do mesmo jeito.',
+    lede: 'Os números costumam ficar na cabeça de uma pessoa, numa planilha que ninguém atualiza e em três ou quatro apps de banco. O OpenHouse junta tudo em um lugar e mantém em dia.',
   },
 
-  houseStatus: { live: 'Ativo', coming: 'Em breve' },
+  problems: [
+    {
+      icon: CreditCard,
+      tone: 'red',
+      pain: 'A fatura do cartão veio maior do que todo mundo esperava.',
+      fix: 'Cada compra entra na fatura certa, então você acompanha o total o mês inteiro. Um lembrete chega alguns dias antes do vencimento.',
+    },
+    {
+      icon: TrendDown,
+      tone: 'yellow',
+      pain: 'A conta fica no vermelho e quem avisa é o banco.',
+      fix: 'A página Próximos projeta seus saldos a partir das contas agendadas e das faturas, e mostra o dia em que uma conta ficaria negativa.',
+    },
+    {
+      icon: FileArrowUp,
+      tone: 'blue',
+      pain: 'A planilha de orçamento durou duas semanas.',
+      fix: 'Envie o extrato do banco em OFX, QFX ou CSV e as transações entram. Aluguel e assinaturas se lançam sozinhos todo mês.',
+    },
+    {
+      icon: UsersThree,
+      tone: 'green',
+      pain: 'Só uma pessoa sabe como está o dinheiro.',
+      fix: 'Todo mundo da casa entra nos mesmos livros e vê os mesmos saldos, limites e metas. Quem chega entra com um código de convite.',
+    },
+  ],
+
+  houseIntro: {
+    eyebrow: 'O que vem',
+    title: 'O dinheiro é o primeiro cômodo. Outros estão a caminho.',
+    lede: 'O OpenHouse está virando um app para cuidar da casa inteira. Cada parte nova vai usar o mesmo login e os mesmos membros da casa.',
+  },
+
+  houseStatus: { live: 'Disponível', coming: 'Planejado' },
 
   houseModules: [
     {
       name: 'Dinheiro',
       kind: 'O livro-caixa',
-      description:
-        'Contas, transações, limites e metas — os livros da casa, ao vivo desde hoje.',
+      description: 'Contas, cartões, faturas, transações, limites e metas.',
       tone: 'green',
       status: 'live',
     },
@@ -175,14 +208,14 @@ export const ptBR: Content = {
     {
       name: 'Refeições',
       kind: 'A mesa',
-      description: 'Planeje a comida da semana, da despensa à mesa.',
+      description: 'Planeje as refeições da semana com o que tem na despensa.',
       tone: 'red',
       status: 'coming',
     },
     {
       name: 'Lavanderia & organização',
       kind: 'Os guarda-roupas',
-      description: 'Onde cada coisa mora, o que está limpo, o que está onde.',
+      description: 'Onde as coisas estão guardadas e o que está limpo.',
       tone: 'blue',
       status: 'coming',
     },
@@ -190,7 +223,7 @@ export const ptBR: Content = {
       name: 'Pets',
       kind: 'Os bichos',
       description:
-        'Alimentação, datas do veterinário e os registros de cada bicho.',
+        'Alimentação, consultas no veterinário e a ficha de cada bicho.',
       tone: 'yellow',
       status: 'coming',
     },
@@ -204,37 +237,39 @@ export const ptBR: Content = {
     {
       name: 'Tarefas',
       kind: 'A lista',
-      description: 'A lista da casa, visível para todas as mãos.',
+      description: 'Uma lista de tarefas que a casa inteira vê.',
       tone: 'blue',
       status: 'coming',
     },
     {
       name: 'Calendário',
       kind: 'As datas',
-      description: 'Um calendário só, para a casa inteira.',
+      description: 'Um calendário só para a casa toda.',
       tone: 'yellow',
       status: 'coming',
     },
     {
       name: 'E-mail',
       kind: 'As cartas',
-      description: 'As cartas da casa, conectadas às suas caixas de entrada.',
+      description:
+        'A correspondência da casa, ligada às suas caixas de entrada.',
       tone: 'blue',
       status: 'coming',
     },
     {
       name: 'Telegram & WhatsApp',
       kind: 'As conversas',
-      description: 'A casa conversa onde a casa já conversa.',
+      description:
+        'Lembretes e novidades nos apps de conversa que você já usa.',
       tone: 'red',
       status: 'coming',
     },
   ],
 
   featuresIntro: {
-    eyebrow: 'O livro-caixa',
-    title: 'Tudo o que a casa gasta, guarda e deve.',
-    lede: 'O primeiro cômodo da casa é o dinheiro — e ele vem todo mobiliado: cadastre suas contas uma vez e deixe o livro-caixa se manter certo sozinho — as regras lançam as contas, os atalhos preenchem os formulários, limites e metas marcam o placar.',
+    eyebrow: 'Recursos',
+    title: 'O que a casa gasta, guarda e deve, em um só livro-caixa.',
+    lede: 'Cadastre suas contas uma vez. Depois disso, quase toda a contabilidade acontece sem você.',
   },
 
   features: {
@@ -242,57 +277,57 @@ export const ptBR: Content = {
       key: 'transactions',
       tone: 'blue',
       icon: ArrowsLeftRight,
-      title: 'Cada movimento, agrupado por dia',
-      body: 'Filtre por mês, veja os totais do dia de relance e mantenha o saldo de cada conta certo enquanto o dinheiro entra e sai.',
+      title: 'Cada transação, dia a dia',
+      body: 'Veja o que saiu em cada dia com o total do dia, filtre por mês e acompanhe cada saldo mudar conforme o dinheiro entra e sai.',
     },
     accounts: {
       key: 'accounts',
       tone: 'yellow',
       icon: Wallet,
       title: 'Contas e cartões',
-      body: 'Contas bancárias e cartões de crédito com seus saldos, datas de fechamento e vencimento — em reais, dólares ou euros.',
+      body: 'Conta corrente, poupança e cartões lado a lado, com o fechamento e o vencimento de cada cartão. As contas podem ser em reais, dólares ou euros.',
     },
     recurring: {
       key: 'recurring',
       tone: 'green',
       icon: Repeat,
       title: 'Contas que se lançam sozinhas',
-      body: 'Regras recorrentes criam a transação na data certa, para que aluguel e assinaturas nunca fiquem sem registro.',
+      body: 'Diga ao OpenHouse que o aluguel vence dia 1º e ele lança o pagamento todo mês, para nada sumir dos livros.',
     },
     limits: {
       key: 'limits',
       tone: 'red',
       icon: Gauge,
-      title: 'Limites por categoria',
-      body: 'Defina quanto uma categoria pode custar no dia, na semana, no mês ou no ano — e veja a barra encher antes de estourar.',
+      title: 'Limites de gasto',
+      body: 'Defina um teto para mercado ou restaurantes por dia, semana, mês ou ano, e veja quanto falta antes de estourar.',
     },
     goals: {
       key: 'goals',
       tone: 'green',
       icon: Target,
-      title: 'Metas com medidor',
-      body: 'Aponte uma meta para uma conta de reserva e um saldo-alvo. O medidor enche conforme a conta cresce.',
+      title: 'Metas de economia',
+      body: 'Escolha uma conta de reserva e um saldo-alvo. A meta enche conforme a conta cresce.',
     },
     household: {
       key: 'household',
       tone: 'blue',
       icon: UsersThree,
-      title: 'Uma casa, várias mãos',
-      body: 'Todos da casa entram no mesmo livro-caixa — novos membros chegam com um código de convite.',
+      title: 'Compartilhado com a casa',
+      body: 'Parceiros e família entram nos mesmos livros. Quem chega entra com um código de convite.',
     },
     linkers: {
       key: 'linkers',
       tone: 'yellow',
       icon: CalendarCheck,
-      title: 'Atalhos que preenchem o formulário',
-      body: 'Digite “Aluguel do mês” e a categoria e o favorecido se preenchem. Os favorecidos sabem se o dinheiro foi para uma pessoa, um serviço, um comércio ou uma instituição de caridade.',
+      title: 'Menos digitação',
+      body: 'Digite “Aluguel do mês” e a categoria e o favorecido se preenchem. Cada favorecido é marcado como pessoa, serviço, loja ou instituição de caridade.',
     },
   },
 
   plannersIntro: {
     eyebrow: 'Planejadores',
-    title: 'Faça as contas antes de o dinheiro se mexer.',
-    lede: 'Calculadoras que não precisam de dados do seu livro-caixa — abra, mude um número e veja como ficam os próximos vinte anos.',
+    title: 'Faça as contas antes de decidir.',
+    lede: 'Calculadoras para as grandes perguntas sobre dinheiro. Elas não mexem no seu livro-caixa: mude um número e veja o que acontece nos próximos vinte anos.',
   },
 
   planners: [
@@ -300,56 +335,56 @@ export const ptBR: Content = {
       icon: Percent,
       tone: 'blue',
       title: 'Juros simples vs compostos',
-      body: 'O mesmo dinheiro crescendo de dois jeitos — só sobre o principal, ou sobre os juros também.',
+      body: 'Como o mesmo dinheiro cresce quando os juros incidem só sobre o que você aplicou, e quando incidem também sobre os juros.',
     },
     {
       icon: Calculator,
       tone: 'yellow',
       title: 'Conversão de taxas',
-      body: 'Converta uma taxa entre ano, mês e dia útil — por capitalização, nunca por divisão.',
+      body: 'Transforme uma taxa anual em mensal ou por dia útil do jeito certo, compondo em vez de dividir.',
     },
     {
       icon: Plant,
       tone: 'green',
       title: 'Independência financeira',
-      body: 'Quanto guardar por mês para chegar a um alvo, e quanto um saldo rende quando você para.',
+      body: 'Quanto guardar por mês para chegar a um valor, e quanto esse saldo rende quando você parar.',
     },
     {
       icon: House,
       tone: 'red',
       title: 'Comprar ou alugar',
-      body: 'Financiar um imóvel contra alugar e investir a diferença, mês a mês.',
+      body: 'Compare financiar um imóvel com alugar e investir a diferença, mês a mês.',
     },
     {
       icon: Lightbulb,
       tone: 'yellow',
       title: 'Dicas financeiras',
-      body: 'Guias curtos — os seis potes, hábitos de poupança, uma estratégia de organização — sem precisar de conta.',
+      body: 'Guias curtos sobre o método dos seis potes, hábitos de economia e um jeito de organizar as finanças. Não precisa de conta.',
     },
   ],
 
   pricingIntro: {
     eyebrow: 'Preços',
-    title: 'Quatro formas de entrar. Uma delas é grátis para sempre.',
-    lede: 'O código é o mesmo em todos os planos. Você escolhe quem roda o servidor — e se um assistente lê o livro-caixa com você.',
+    title: 'Comece grátis. Pague quando a casa precisar de mais.',
+    lede: 'Todos os planos rodam o mesmo código. Os preços hospedados são por mês. Hospedar você mesmo não custa nada.',
   },
 
   selfHosted: {
     badge: 'Grátis · Auto-hospedado',
     name: 'Hospede você mesmo',
     tagline:
-      'Todos os recursos, sem limites, no seu próprio hardware. Clone o repositório, suba a stack e as finanças nunca saem de casa.',
+      'Todos os recursos, sem limites, na sua própria conta Cloudflare. Clone o código, rode um comando e seus dados ficam na sua conta.',
     price: 'R$ 0',
-    priceNote: 'para sempre, código aberto',
+    priceNote: 'grátis para sempre, código aberto',
     perks: [
-      { label: 'Todos os recursos, contas e histórico ilimitados' },
-      { label: 'Seu banco D1, seus dados, seus backups' },
-      { label: 'Um wrangler deploy, pronto em minutos' },
-      { label: 'Suporte da comunidade no GitHub' },
+      { label: 'Todos os recursos, sem limite de contas ou histórico' },
+      { label: 'Seu próprio banco D1 e seus próprios backups' },
+      { label: 'Um comando de deploy, no ar em minutos' },
+      { label: 'Ajuda da comunidade no GitHub' },
     ],
     commands: [
       `git clone ${GITHUB_URL}.git`,
-      'cd OpenHouse',
+      'cd OpenHouse && npm install',
       'npx wrangler login && npm run deploy',
     ],
     cta: { label: 'Baixe no GitHub', href: GITHUB_URL },
@@ -357,108 +392,124 @@ export const ptBR: Content = {
 
   hostedPlans: [
     {
-      name: 'Freemium',
-      tagline:
-        'Custo zero nos nossos servidores, do tamanho certo para começar.',
+      name: 'Free',
+      tagline: 'Para uma pessoa começar.',
       price: 'R$ 0',
-      priceNote: 'hospedado pelo OpenHouse',
+      priceNote: 'por mês',
       perks: [
-        { label: 'Até 2 contas' },
-        { label: '12 meses de histórico' },
-        { label: 'Transações, categorias, limites e metas' },
+        { label: 'Até 2 contas, categorias, limites, metas e contas fixas' },
+        { label: 'Os últimos 3 meses de transações' },
+        { label: '1 importação de extrato e 1 exportação por mês' },
         { label: 'Todos os planejadores e guias' },
-        { label: 'Regras recorrentes e atalhos', included: false },
         { label: 'Membros da casa', included: false },
       ],
       cta: { label: 'Comece grátis', href: SIGN_UP_URL },
     },
     {
-      name: 'Premium',
-      tagline:
-        'Todos os recursos, sem limites — a gente mantém o servidor rodando.',
-      price: 'Em breve',
-      priceNote: 'preço anunciado no lançamento',
+      name: 'Plus',
+      tagline: 'Para a casa que cuida das finanças aqui.',
+      price: 'R$ 15',
+      priceNote: 'por mês, mais R$ 2 por membro extra',
       perks: [
-        { label: 'Contas e histórico ilimitados' },
-        { label: 'Regras recorrentes e atalhos de transação' },
-        { label: 'Membros da casa por código de convite' },
-        { label: 'Backups e atualizações gerenciados' },
-        { label: 'Assistente de IA', included: false },
-      ],
-      cta: { label: 'Entre no acesso antecipado', href: SIGN_UP_URL },
-    },
-    {
-      name: 'Premium IA',
-      tagline:
-        'Tudo do Premium, mais um assistente que lê o livro-caixa com você.',
-      price: 'Em breve',
-      priceNote: 'preço anunciado no lançamento',
-      perks: [
-        { label: 'Tudo do Premium' },
-        { label: 'Categorias sugeridas a partir de cada descrição' },
-        { label: 'Pergunte ao seu livro-caixa em linguagem natural' },
-        { label: 'Resumos mensais de insights' },
-        { label: 'Avisos antes de um limite estourar' },
+        { label: 'Convide todo mundo da casa' },
+        { label: 'Até 10 contas, categorias, limites, metas e contas fixas' },
+        { label: 'Todo o histórico de transações' },
+        { label: '5 importações de extrato e 5 exportações por mês' },
+        { label: 'Todos os planejadores e guias' },
       ],
       cta: { label: 'Entre no acesso antecipado', href: SIGN_UP_URL },
       featured: true,
     },
+    {
+      name: 'Pro',
+      tagline: 'O Plus, com apps de conversa e IA.',
+      price: 'R$ 30',
+      priceNote: 'por mês, mais R$ 2 por membro extra',
+      perks: [
+        { label: 'Tudo do Plus' },
+        { label: 'Avisos no Telegram e no WhatsApp (em breve)' },
+        { label: 'Recursos de IA com limite de uso (em breve)' },
+        { label: 'Assistente da casa', included: false },
+      ],
+      cta: { label: 'Entre no acesso antecipado', href: SIGN_UP_URL },
+    },
+    {
+      name: 'Max',
+      tagline: 'Tudo, incluindo o assistente da casa.',
+      price: 'R$ 40',
+      priceNote: 'por mês, mais R$ 2 por membro extra',
+      perks: [
+        { label: 'Tudo do Pro' },
+        { label: 'Assistente da casa (em breve)' },
+      ],
+      cta: { label: 'Entre no acesso antecipado', href: SIGN_UP_URL },
+    },
   ],
 
-  featuredBadge: 'Mais completo',
+  featuredBadge: 'Ideal para a casa',
 
   faqIntro: {
     eyebrow: 'Dúvidas',
-    title: 'Antes de mudar as finanças para cá.',
+    title: 'Antes de trazer as contas para cá.',
   },
 
   faq: [
     {
+      question: 'O OpenHouse se conecta ao meu banco?',
+      answer:
+        'Não. Você lança as transações à mão, por contas fixas ou enviando o extrato do banco (OFX, QFX ou CSV). O arquivo é lido uma vez e não fica guardado, e uma importação pode ser desfeita por 24 horas.',
+    },
+    {
       question: 'É mesmo grátis hospedar por conta própria?',
       answer:
-        'Sim. O plano auto-hospedado custa R$ 0 para sempre e traz todos os recursos, sem limites. Clone o repositório, rode npm run deploy e a stack sobe na sua própria conta Cloudflare — um Worker, um banco D1, seus dados.',
+        'Sim. Hospedar você mesmo não custa nada e traz todos os recursos, sem limites. Clone o repositório, rode npm run deploy e ele sobe na sua própria conta Cloudflare, com o seu próprio banco de dados.',
     },
     {
       question: 'Onde ficam os meus dados?',
       answer:
-        'Auto-hospedado, eles ficam no seu próprio banco D1, na sua conta Cloudflare — seus dados, seus backups. Num plano hospedado, o OpenHouse roda o servidor e cuida dos backups e atualizações para você.',
+        'Se você hospedar, num banco D1 na sua própria conta Cloudflare. Num plano hospedado, o OpenHouse cuida do servidor, dos backups e das atualizações.',
     },
     {
-      question: 'O código hospedado é diferente do código aberto?',
+      question: 'Mais de uma pessoa pode usar os mesmos livros?',
       answer:
-        'Não. O código é o mesmo em todos os planos. O que muda é quem roda o servidor e se um assistente lê o livro-caixa com você.',
+        'Sim, a partir do Plus e em toda instalação própria. Todo mundo entra no mesmo livro-caixa, e quem chega entra com um código de convite. Cada membro extra custa R$ 2 por mês num plano hospedado.',
     },
     {
-      question: 'Mais de uma pessoa pode usar o mesmo livro-caixa?',
+      question: 'O que acontece com as transações antigas no plano Free?',
       answer:
-        'Sim. Todos da casa entram no mesmo livro-caixa, e novos membros chegam com um código de convite. Membros da casa fazem parte do Premium e de toda instalação auto-hospedada.',
+        'O Free mostra os últimos 3 meses. As transações mais antigas ficam ocultas, não são apagadas, e voltam a aparecer quando você muda para um plano pago.',
     },
     {
       question: 'Quais moedas ele aceita?',
       answer:
-        'Contas e cartões podem ser mantidos em reais, dólares ou euros, cada um com seu próprio saldo e, para cartões, datas de fechamento e vencimento.',
+        'Contas e cartões podem ser em reais, dólares ou euros. Cada conta tem a sua moeda, e os valores não são convertidos entre elas.',
+    },
+    {
+      question: 'O código hospedado é diferente do código aberto?',
+      answer:
+        'Não. Todos os planos rodam o mesmo código. Os planos mudam em quem cuida do servidor e em quanto você pode guardar.',
     },
     {
       question: 'O que vem depois do dinheiro?',
       answer:
-        'Despensa, refeições, tarefas, pets, saúde, calendário, e-mail e as integrações de mensagens estão anunciados e em construção. Cada um chega como parte da mesma casa compartilhada — o mesmo login, os mesmos membros — e o livro-caixa continua funcionando exatamente como hoje.',
+        'Despensa, refeições, tarefas, pets, saúde, calendário, e-mail e Telegram e WhatsApp estão planejados. Cada um vai entrar no mesmo app, com o mesmo login e os mesmos membros, e a parte do dinheiro continua funcionando como hoje.',
     },
   ],
 
   openSource: {
     eyebrow: 'Código aberto',
     title: 'Sua casa. Seu servidor. Seu código.',
-    body: 'O OpenHouse é construído às claras. Leia cada linha, rode na sua própria máquina e mande um pull request quando a casa precisar de um cômodo novo.',
+    body: 'Todo o OpenHouse está no GitHub. Leia o código, rode na sua própria conta ou mande um pull request quando a casa precisar de um cômodo novo.',
     points: [
-      { icon: Bank, label: 'SQLite no D1, schema no repositório' },
+      { icon: Bank, label: 'Dados no seu próprio banco D1' },
       { icon: House, label: 'Um Worker, um comando de deploy' },
-      { icon: UsersThree, label: 'Casas com vários membros, de fábrica' },
+      { icon: UsersThree, label: 'Casas com vários membros' },
     ],
     cta: { label: 'Dê uma estrela no GitHub', href: GITHUB_URL },
   },
 
   footer: {
-    tagline: 'O app da casa, em código aberto.',
+    tagline: 'O dinheiro da casa, em um só lugar.',
     copyright: `© ${new Date().getFullYear()} CouraLabs`,
     links: [
       { label: 'GitHub', href: GITHUB_URL },
