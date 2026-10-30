@@ -1,4 +1,4 @@
-import { clientsClaim } from 'workbox-core'
+import { clientsClaim, setCacheNameDetails } from 'workbox-core'
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,
@@ -9,34 +9,25 @@ import { NavigationRoute, registerRoute } from 'workbox-routing'
 
 import { parsePushPayload, pushMessage } from './push-message.js'
 
-/**
- * The application's service worker (vite-plugin-pwa `injectManifest`):
- * precaches the build like the generated worker did, and handles web push.
- */
+const BASE: string = new URL('.', self.location.href).pathname
+
 declare const self: ServiceWorkerGlobalScope
 
-// Auto-update: a new deployment's worker takes over without a manual reload.
+setCacheNameDetails({ prefix: 'openhouse' })
 void self.skipWaiting()
 clientsClaim()
 
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
-// Single-page app: navigations fall back to the shell — except the API,
-// whose `.ics` calendar feed is a real navigation the worker must not hijack.
-// The dev worker precaches nothing, and workbox throws for an unprecached
-// URL, which fails the worker's evaluation and so blocks push in dev. Only
-// a build that precaches the shell gets the fallback.
-if (getCacheKeyForURL('index.html') !== undefined) {
+if (getCacheKeyForURL(`${BASE}index.html`) !== undefined) {
   registerRoute(
-    new NavigationRoute(createHandlerBoundToURL('index.html'), {
+    new NavigationRoute(createHandlerBoundToURL(`${BASE}index.html`), {
       denylist: [/^\/api\//],
     })
   )
 }
 
-/** Shows the system notification for a push. A push must always show one
- * (iOS revokes the permission of a site that pushes silently). */
 self.addEventListener('push', (event) => {
   const payload = parsePushPayload(event.data?.text())
   const message = pushMessage(payload)
@@ -44,21 +35,18 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(message.title, {
       body: message.body,
-      icon: '/icon-192.png',
-      badge: '/icon-monochrome-512.png',
-      // One notification stands for the pending reminders: a new push
-      // replaces it rather than stacking.
+      icon: `${BASE}icon-192.png`,
+      badge: `${BASE}icon-monochrome-512.png`,
       tag: 'openhouse-reminders',
       data: { url: payload.url },
     })
   )
 })
 
-/** Tapping the notification focuses an open app window on the target page,
- * or opens one. */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = (event.notification.data as { url?: string } | null)?.url ?? '/'
+  const url = (event.notification.data as { url?: string } | null)?.url ?? ''
+  const target = new URL(url, self.registration.scope).href
 
   event.waitUntil(
     (async () => {
@@ -70,11 +58,11 @@ self.addEventListener('notificationclick', (event) => {
 
       if (open !== undefined) {
         await open.focus()
-        await open.navigate(url)
+        await open.navigate(target)
         return
       }
 
-      await self.clients.openWindow(url)
+      await self.clients.openWindow(target)
     })()
   )
 })

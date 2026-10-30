@@ -7,6 +7,7 @@ import {
   redirect,
 } from '@tanstack/react-router'
 
+import { APP_BASE } from '@/lib/app-url.js'
 import { currentSession } from '@/lib/query.js'
 import { SignInPage } from '@/features/sign-in/sign-in-page.js'
 import { SignUpPage } from '@/features/sign-up/sign-up-page.js'
@@ -34,13 +35,11 @@ import { SettingsPage } from '@/features/settings/settings-page.js'
 import { isSectionFor } from '@/features/settings/settings-sections.js'
 import { MainLayout } from '@/components/layout/main-layout.js'
 
-/** The root route renders nothing but the matched child. */
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
   notFoundComponent: () => <p>Nothing here.</p>,
 })
 
-/** The route a signed-out user signs in from. */
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-in',
@@ -54,8 +53,6 @@ const signInRoute = createRoute({
   },
 })
 
-/** The route a new user — or one joining with a code — signs up from. An
- * invite link carries the code as `?code=`, which prefills the form. */
 const signUpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-up',
@@ -71,21 +68,12 @@ const signUpRoute = createRoute({
   },
 })
 
-/** The route a forgotten password is reset from with a one-time code. A
- * reset link carries the code in its fragment, `#code=`, which prefills the
- * form. Open to a signed-in browser too: redeeming replaces its session. */
 const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reset-password',
   component: ResetPasswordPage,
 })
 
-/**
- * The signed-in area: the shell every page renders in. A pathless layout —
- * it owns no URL segment, so its children can claim `/` themselves. The
- * session is read from the cache; the guard below guarantees it is there
- * when the pages render.
- */
 const mainLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: '_main',
@@ -97,65 +85,54 @@ const mainLayoutRoute = createRoute({
   },
 })
 
-/** The page a signed-in user lands on. */
 const indexRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: '/',
   component: MainPage,
 })
 
-/** The page the tenant's categories are managed from. */
 const categoriesRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'categories',
   component: CategoriesPage,
 })
 
-/** The page the tenant's limits are managed from. */
 const limitsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'limits',
   component: LimitsPage,
 })
 
-/** The page the tenant's goals are managed from. */
 const goalsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'goals',
   component: GoalsPage,
 })
 
-/** The page where members see balances and settle up. */
 const householdRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'household',
   component: HouseholdPage,
 })
 
-/** The page the tenant's accounts are managed from. */
 const accountsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'accounts',
   component: AccountsPage,
 })
 
-/** The statement import of one account, opened from the account's Import
- * action: upload, map, preview, commit, undo. */
 const accountImportRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'accounts/$accountId/import',
   component: ImportPage,
 })
 
-/** The page the tenant's transactions are managed from. */
 const transactionsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'transactions',
   component: TransactionsPage,
 })
 
-/** The tenant's credit card bills. A card's Bills shortcut opens it
- * filtered to that card through `accountId`. */
 const billsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'bills',
@@ -167,8 +144,6 @@ const billsRoute = createRoute({
   },
 })
 
-/** One bill: its figures, its charges and payments. The dashboard's Pay
- * shortcut opens it with `pay`, which opens the payment dialog. */
 const billDetailRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'bills/$statementId',
@@ -177,81 +152,66 @@ const billDetailRoute = createRoute({
     search.pay === true || search.pay === 'true' ? { pay: true } : {},
 })
 
-/** The page the tenant's receivers are managed from. */
 const receiversRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'receivers',
   component: ReceiversPage,
 })
 
-/** The page the tenant's transaction linkers are managed from. */
 const transactionLinkersRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'transaction-linkers',
   component: TransactionLinkersPage,
 })
 
-/** The page the tenant's recurring rules are managed from. */
 const recurringTransactionsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'recurring-transactions',
   component: RecurringTransactionsPage,
 })
 
-/** What is coming due, with the projected balances. */
 const upcomingRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'upcoming',
   component: UpcomingPage,
 })
 
-/** The page with the financial tips guides. */
 const tipsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'tips',
   component: TipsPage,
 })
 
-/** The simple-vs-compound interest projection. */
 const interestComparisonRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'tips/interest-comparison',
   component: InterestComparisonPage,
 })
 
-/** The rate conversion tool. */
 const rateConversionRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'tips/rate-conversion',
   component: RateConversionPage,
 })
 
-/** The financial-independence calculators. */
 const financialIndependenceRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'tips/financial-independence',
   component: FinancialIndependencePage,
 })
 
-/** The buy-or-rent projection. */
 const rentVsBuyRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'tips/rent-vs-buy',
   component: RentVsBuyPage,
 })
 
-/** The Settings page, opening the first section the role may see. */
 const settingsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'settings',
   component: SettingsPage,
 })
 
-/**
- * One Settings section. A section the role may not open — a member asking
- * for General or Users — or an unknown one redirects to `/settings`; the
- * API refuses those routes on its own as well.
- */
 const settingsSectionRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'settings/$section',
@@ -294,8 +254,8 @@ const routeTree = rootRoute.addChildren([
   ]),
 ])
 
-/** The browser router the app mounts once the session query settles. */
 export const router = createRouter({
   routeTree,
   history: createBrowserHistory(),
+  basepath: APP_BASE,
 })

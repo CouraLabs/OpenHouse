@@ -2,11 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CreateInviteCodeBody, InviteCode } from '@workspace/poco'
 
 import { api } from '@/lib/api.js'
+import { appUrl } from '@/lib/app-url.js'
 
-/** The key every invite-code query and mutation lives under. */
 const INVITE_CODES_KEY = ['invite-codes'] as const
 
-/** The codes the tenant issued, newest first — owner only. */
 export function useInviteCodes() {
   return useQuery({
     queryKey: INVITE_CODES_KEY,
@@ -15,7 +14,6 @@ export function useInviteCodes() {
   })
 }
 
-/** Generates a new invite code. */
 export function useCreateInviteCode() {
   const queryClient = useQueryClient()
 
@@ -31,7 +29,6 @@ export function useCreateInviteCode() {
   })
 }
 
-/** Revokes an open invite code: it expires now. */
 export function useRevokeInviteCode() {
   const queryClient = useQueryClient()
 
@@ -44,7 +41,6 @@ export function useRevokeInviteCode() {
   })
 }
 
-/** Whether a code can still be redeemed: unused and not yet expired. */
 export function isPendingInvite(code: InviteCode, now: Date): boolean {
   return (
     code.usedAt === null &&
@@ -52,7 +48,6 @@ export function isPendingInvite(code: InviteCode, now: Date): boolean {
   )
 }
 
-/** The link a new user opens to sign up with a code already filled in. */
 export function inviteLinkFor(code: string): string {
-  return `${window.location.origin}/sign-up?code=${encodeURIComponent(code)}`
+  return appUrl(`/sign-up?code=${encodeURIComponent(code)}`)
 }
