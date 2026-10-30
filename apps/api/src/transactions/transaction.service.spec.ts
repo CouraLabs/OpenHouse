@@ -5,7 +5,7 @@ import type {
   CreditCardStatement,
   Receiver,
 } from '@workspace/db'
-import { CARD_PAYMENT_CATEGORY } from '@workspace/poco'
+import { CARD_PAYMENT_CATEGORY, TRANSFER_CATEGORY } from '@workspace/poco'
 import { HouseholdMembers } from '../common/household/household-members.js'
 
 import { AccountRepository } from '../accounts/account.repository.js'
@@ -58,7 +58,8 @@ const category = (overrides: Partial<Category> = {}): Category => ({
   id: 3,
   tenantId: 1,
   name: 'Groceries',
-  searchName: '',  color: '#1D4ED8',
+  searchName: '',
+  color: '#1D4ED8',
   defaultSplit: null,
   status: 'ACTIVE',
   createdBy: null,
@@ -73,7 +74,8 @@ const receiver = (overrides: Partial<Receiver> = {}): Receiver => ({
   id: 5,
   tenantId: 1,
   name: 'Market',
-  searchName: '',  type: 'Merchant',
+  searchName: '',
+  type: 'Merchant',
   status: 'ACTIVE',
   createdBy: null,
   createdDt: new Date('2026-01-01T00:00:00Z'),
@@ -355,7 +357,11 @@ describe('TransactionService', () => {
       )
       repo.updateWithBalance.mockResolvedValue(row())
 
-      await service(repo).update(1, 7, { ...createBody, id: 1, amount: '20.00' })
+      await service(repo).update(1, 7, {
+        ...createBody,
+        id: 1,
+        amount: '20.00',
+      })
 
       expect(repo.updateWithBalance).toHaveBeenCalledWith(
         1,
@@ -793,19 +799,25 @@ describe('TransactionService', () => {
       })
     })
 
-    it('needs a category on a transfer that pays no card', async () => {
+    it('lands an uncategorized transfer in the transfer category', async () => {
       const repo = repository()
       const accs = accounts()
+      const cats = categories()
+      repo.insertTransfer.mockResolvedValue([row(), row()])
       accs.findById
         .mockResolvedValueOnce(account())
         .mockResolvedValueOnce(account({ id: 11 }))
 
-      await expect(
-        service(repo, accs).transfer(1, 7, {
-          ...transferBody,
-          categoryId: undefined,
-        })
-      ).rejects.toThrow(BadRequestError)
+      await service(repo, accs, cats).transfer(1, 7, {
+        ...transferBody,
+        categoryId: undefined,
+      })
+
+      expect(cats.getOrCreateByName).toHaveBeenCalledWith(
+        1,
+        7,
+        TRANSFER_CATEGORY
+      )
     })
 
     it('names a bill only on a transfer into a card', async () => {

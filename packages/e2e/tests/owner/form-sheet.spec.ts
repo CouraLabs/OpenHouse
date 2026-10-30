@@ -13,9 +13,9 @@ test.describe('form sheet', () => {
 
     const dialog = page.getByRole('dialog')
 
-    await test.step('Expect: the sheet fills the screen and the name field has focus', async () => {
+    await test.step('Expect: the sheet fills the screen and the first field has focus', async () => {
       await expect(dialog).toBeVisible()
-      await expect(dialog.getByRole('textbox', { name: 'Name' })).toBeFocused()
+      await expect(dialog.getByRole('radio').first()).toBeFocused()
       const box = await dialog.boundingBox()
       expect(box?.width).toBeGreaterThanOrEqual(374)
     })

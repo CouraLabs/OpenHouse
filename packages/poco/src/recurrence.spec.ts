@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { isDueOn, occurrencesBetween, shiftDay } from './recurrence.js'
+import {
+  isDueOn,
+  nextOccurrence,
+  occurrencesBetween,
+  shiftDay,
+} from './recurrence.js'
 
 describe('isDueOn', () => {
   it('is due every day', () => {
@@ -102,5 +107,45 @@ describe('occurrencesBetween', () => {
       '2026-11-02',
       '2026-11-09',
     ])
+  })
+})
+
+describe('nextOccurrence', () => {
+  it('returns the same day when the rule is due that day', () => {
+    expect(
+      nextOccurrence(
+        { frequency: 'Monthly', frequencyDay: 14, frequencyMonth: null },
+        '2026-10-14'
+      )
+    ).toBe('2026-10-14')
+  })
+
+  it('rolls to the next month and clamps to the last day', () => {
+    const rule = {
+      frequency: 'Monthly' as const,
+      frequencyDay: 31,
+      frequencyMonth: null,
+    }
+
+    expect(nextOccurrence(rule, '2026-02-01')).toBe('2026-02-28')
+    expect(nextOccurrence(rule, '2026-04-01')).toBe('2026-04-30')
+  })
+
+  it('finds the next yearly date', () => {
+    expect(
+      nextOccurrence(
+        { frequency: 'Yearly', frequencyDay: 5, frequencyMonth: 3 },
+        '2026-10-14'
+      )
+    ).toBe('2027-03-05')
+  })
+
+  it('finds nothing for an incomplete rule', () => {
+    expect(
+      nextOccurrence(
+        { frequency: 'Monthly', frequencyDay: null, frequencyMonth: null },
+        '2026-10-14'
+      )
+    ).toBeNull()
   })
 })

@@ -26,6 +26,7 @@ import { TextField } from '@workspace/ui/components/text-field'
 
 import { formatDateOnly, parseDateOnly } from '@/lib/format-date-only.js'
 import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
+import { NoSavingsAccount } from './no-savings-account.js'
 import { useActiveAccounts } from './use-goals.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
@@ -130,12 +131,21 @@ export function GoalForm({
           </FieldLabel>
           <Select
             value={linkedAccountId}
-            onValueChange={(value) =>
+            onValueChange={(value) => {
               setValue('linkedAccountId', value as number, {
                 shouldValidate: true,
                 shouldDirty: true,
               })
-            }
+
+              const picked = savings.find((account) => account.id === value)
+
+              if (goal === null && picked !== undefined && balance === '') {
+                setValue('balance', picked.balance, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+            }}
             items={savings.map((account) => ({
               label: account.name,
               value: account.id,
@@ -166,6 +176,9 @@ export function GoalForm({
                 : undefined
             }
           />
+          {!accounts.isPending && savings.length === 0 ? (
+            <NoSavingsAccount />
+          ) : null}
           {otherCurrencySavings > 0 ? (
             <FieldDescription>
               {t('goals.account-other-currencies', {

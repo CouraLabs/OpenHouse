@@ -32,7 +32,6 @@ export type TransferFormValues = z.infer<typeof transferFormSchema>
 
 export interface TransferFormFieldsProps {
   accounts: AccountRef[]
-  defaultDt: string
   onSubmit: (body: TransferFormValues) => void
   onCancel: () => void
   error?: string
@@ -41,7 +40,6 @@ export interface TransferFormFieldsProps {
 
 export function TransferFormFields({
   accounts,
-  defaultDt,
   onSubmit,
   onCancel,
   error,
@@ -53,12 +51,11 @@ export function TransferFormFields({
     handleSubmit,
     watch,
     setValue,
-    setError,
     register,
     formState: { errors, isDirty },
   } = useForm<TransferFormValues, unknown, TransferFormValues>({
     resolver: zodResolver(transferFormSchema),
-    defaultValues: newValues(defaultDt),
+    defaultValues: newValues(today),
   })
 
   const fromId = watch('fromAccountId')
@@ -94,12 +91,6 @@ export function TransferFormFields({
       error={error}
       onCancel={onCancel}
       onSubmit={handleSubmit((values) => {
-        if (values.categoryId === undefined && !paysCard) {
-          setError('categoryId', { message: t('transactions.pick-category') })
-
-          return
-        }
-
         onSubmit(
           paysCard ? values : { ...values, paymentStatementId: undefined }
         )
@@ -199,7 +190,6 @@ export function TransferFormFields({
       <Field data-invalid={errors.categoryId !== undefined}>
         <FieldLabel htmlFor="transfer-category">
           {t('transactions.transfer-category')}
-          {paysCard ? null : <RequiredMark />}
         </FieldLabel>
         <Select
           value={watch('categoryId')}
@@ -217,7 +207,7 @@ export function TransferFormFields({
               )?.name ??
                 (paysCard
                   ? t('transactions.card-payment-category')
-                  : t('transactions.transfer-category-placeholder'))}
+                  : t('transactions.transfer-category-default'))}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>

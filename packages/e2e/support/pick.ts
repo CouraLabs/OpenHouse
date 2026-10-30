@@ -29,3 +29,7 @@ function transactionRowMenu(page: Page, rowText: string): Locator {
     .filter({ hasText: rowText })
     .getByRole('button', { name: 'More actions' })
 }
+
+export async function chooseRadio(page: Page, name: string): Promise<void> {
+  await page.getByRole('radio', { name, exact: true }).check()
+}

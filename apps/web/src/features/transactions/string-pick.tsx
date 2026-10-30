@@ -1,3 +1,4 @@
+import { SearchPick } from '@workspace/ui/components/search-pick'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {
@@ -18,6 +19,7 @@ export function StringPick({
   options,
   error,
   disabled = false,
+  searchEmptyLabel,
 }: {
   id: string
   label: string
@@ -28,7 +30,25 @@ export function StringPick({
   options: Array<{ value: string; label: string }>
   error?: string
   disabled?: boolean
+  searchEmptyLabel?: string
 }) {
+  if (searchEmptyLabel !== undefined) {
+    return (
+      <SearchPick
+        id={id}
+        label={label}
+        placeholder={placeholder}
+        emptyLabel={searchEmptyLabel}
+        value={value}
+        options={options.filter((option) => option.value !== '')}
+        onChange={onChange}
+        required={required}
+        disabled={disabled}
+        error={error}
+      />
+    )
+  }
+
   const selected = options.find((option) => option.value === value)
 
   return (

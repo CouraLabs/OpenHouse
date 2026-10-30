@@ -37,6 +37,7 @@ export function CardCycleFields({
         value={closeDay}
         onChange={onCloseDayChange}
         error={errors.closeDay}
+        required
       />
       <DayOfMonthPick
         id="account-due-day"
@@ -45,6 +46,7 @@ export function CardCycleFields({
         value={dueDay}
         onChange={onDueDayChange}
         error={errors.dueDay}
+        required
       />
       <Field orientation="horizontal">
         <Checkbox

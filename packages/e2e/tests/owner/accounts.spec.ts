@@ -1,7 +1,7 @@
 import { expect, test } from '../../support/test.js'
 import type { Page } from '../../support/test.js'
 
-import { chooseOption, currencyOption } from '../../support/pick.js'
+import { chooseOption, chooseRadio, currencyOption } from '../../support/pick.js'
 import { uniqueName } from '../../support/names.js'
 
 test.describe('accounts', () => {
@@ -15,7 +15,7 @@ test.describe('accounts', () => {
 
     await test.step('Action: fill a Checking account with agency, number, balance and currency', async () => {
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
-      await chooseOption(page, 'Type', 'Checking')
+      await chooseRadio(page, 'Checking')
       await page.getByRole('textbox', { name: 'Agency', exact: true }).fill('1234')
       await page.getByRole('textbox', { name: 'Number', exact: true }).fill('98765')
       await page.getByRole('textbox', { name: 'Balance', exact: true }).fill('1200.00')
@@ -36,7 +36,7 @@ test.describe('accounts', () => {
       await page.goto('accounts')
       await page.getByRole('button', { name: 'New account' }).click()
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(uniqueName('QA No Agency'))
-      await chooseOption(page, 'Type', 'Checking')
+      await chooseRadio(page, 'Checking')
       await page.getByRole('textbox', { name: 'Balance', exact: true }).fill('10.00')
       await chooseOption(page, 'Currency', currencyOption('BRL'))
       await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -54,7 +54,7 @@ test.describe('accounts', () => {
       await page.goto('accounts')
       await page.getByRole('button', { name: 'New account' }).click()
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(uniqueName('QA Card Empty'))
-      await chooseOption(page, 'Type', 'Credit Card')
+      await chooseRadio(page, 'Credit Card')
       await chooseOption(page, 'Currency', currencyOption('BRL'))
       await page.getByRole('button', { name: 'Save', exact: true }).click()
     })
@@ -71,7 +71,7 @@ test.describe('accounts', () => {
       await page.goto('accounts')
       await page.getByRole('button', { name: 'New account' }).click()
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(uniqueName('QA Card Same Day'))
-      await chooseOption(page, 'Type', 'Credit Card')
+      await chooseRadio(page, 'Credit Card')
       await page.getByRole('textbox', { name: 'Limit', exact: true }).fill('5000.00')
       await page.getByRole('textbox', { name: 'Balance', exact: true }).fill('100.00')
       await chooseOption(page, 'Currency', currencyOption('BRL'))
@@ -92,7 +92,7 @@ test.describe('accounts', () => {
       await page.goto('accounts')
       await page.getByRole('button', { name: 'New account' }).click()
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
-      await chooseOption(page, 'Type', 'Credit Card')
+      await chooseRadio(page, 'Credit Card')
       await page.getByRole('textbox', { name: 'Limit', exact: true }).fill('5000.00')
       await chooseOption(page, 'Currency', currencyOption('BRL'))
       await chooseDay(page, 'Close date', 5)
@@ -112,7 +112,7 @@ test.describe('accounts', () => {
       await page.goto('accounts')
       await page.getByRole('button', { name: 'New account' }).click()
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
-      await chooseOption(page, 'Type', 'Credit Card')
+      await chooseRadio(page, 'Credit Card')
       await page.getByRole('textbox', { name: 'Limit', exact: true }).fill('5000.00')
       await page.getByRole('textbox', { name: 'Balance', exact: true }).fill('100.00')
       await chooseOption(page, 'Currency', currencyOption('BRL'))
@@ -137,7 +137,7 @@ test.describe('accounts', () => {
       await page.goto('accounts')
       await page.getByRole('button', { name: 'New account' }).click()
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
-      await chooseOption(page, 'Type', 'Wallet')
+      await chooseRadio(page, 'Wallet')
       await page.getByRole('textbox', { name: 'Balance', exact: true }).fill('0.00')
       await chooseOption(page, 'Currency', currencyOption('BRL'))
       await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -157,7 +157,7 @@ test.describe('accounts', () => {
       await page.goto('accounts')
       await page.getByRole('button', { name: 'New account' }).click()
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(original)
-      await chooseOption(page, 'Type', 'Wallet')
+      await chooseRadio(page, 'Wallet')
       await page.getByRole('textbox', { name: 'Balance', exact: true }).fill('50.00')
       await chooseOption(page, 'Currency', currencyOption('BRL'))
       await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -184,7 +184,7 @@ test.describe('accounts', () => {
       await page.goto('accounts')
       await page.getByRole('button', { name: 'New account' }).click()
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
-      await chooseOption(page, 'Type', 'Savings')
+      await chooseRadio(page, 'Savings')
       await page.getByRole('textbox', { name: 'Agency', exact: true }).fill('0002')
       await page.getByRole('textbox', { name: 'Number', exact: true }).fill('55555')
       await page.getByRole('textbox', { name: 'Balance', exact: true }).fill('300.00')

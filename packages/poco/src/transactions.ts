@@ -168,6 +168,11 @@ export const CARD_PAYMENT_CATEGORY = {
   color: '#64748B',
 } as const
 
+export const TRANSFER_CATEGORY = {
+  name: 'Transfer',
+  color: '#64748B',
+} as const
+
 export const transferSchema = z
   .object({
     fromAccountId: z

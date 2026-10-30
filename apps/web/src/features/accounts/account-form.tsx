@@ -23,13 +23,8 @@ import {
   FieldLabel,
 } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@workspace/ui/components/select'
+import { RadioGroup } from '@workspace/ui/components/radio-group'
+import { RadioOption } from '@workspace/ui/components/radio-option'
 import { TextField } from '@workspace/ui/components/text-field'
 
 import { useMainCurrency } from '@/lib/settings.js'
@@ -151,6 +146,45 @@ export function AccountForm({
       )}
     >
       <div className="flex flex-col gap-4">
+        <Field data-invalid={errors.type !== undefined}>
+          <FieldLabel id="account-type-label">
+            {t('accounts.type')}
+            <RequiredMark />
+          </FieldLabel>
+          <RadioGroup
+            aria-labelledby="account-type-label"
+            value={type}
+            onValueChange={(value) => {
+              const nextType = value as AccountType
+              setValue('type', nextType, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+              if (nextType !== 'Credit Card') {
+                for (const field of CARD_ONLY_FIELDS) {
+                  setValue(field, null, { shouldDirty: true })
+                }
+                setValue('closeDayInclusive', false, { shouldDirty: true })
+              }
+              if (AGENCY_LESS_TYPES.includes(nextType)) {
+                setValue('agency', null, { shouldDirty: true })
+              }
+              if (NUMBER_LESS_TYPES.includes(nextType)) {
+                setValue('number', null, { shouldDirty: true })
+              }
+            }}
+            className="grid-cols-2"
+          >
+            {accountTypes.map((value) => (
+              <RadioOption key={value} value={value}>
+                {t(`accounts.type-${value.toLowerCase()}`)}
+              </RadioOption>
+            ))}
+          </RadioGroup>
+          <FieldError
+            errors={errors.type !== undefined ? [errors.type] : undefined}
+          />
+        </Field>
         <TextField
           type="text"
 
@@ -188,60 +222,6 @@ export function AccountForm({
             })}
           />
         ) : null}
-        <Field data-invalid={errors.type !== undefined}>
-          <FieldLabel htmlFor="account-type">
-            {t('accounts.type')}
-            <RequiredMark />
-          </FieldLabel>
-          <Select
-            value={type}
-            onValueChange={(value) => {
-              const nextType = value as AccountType
-              setValue('type', nextType, {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-              if (nextType !== 'Credit Card') {
-                for (const field of CARD_ONLY_FIELDS) {
-                  setValue(field, null, { shouldDirty: true })
-                }
-                setValue('closeDayInclusive', false, { shouldDirty: true })
-              }
-              if (AGENCY_LESS_TYPES.includes(nextType)) {
-                setValue('agency', null, { shouldDirty: true })
-              }
-              if (NUMBER_LESS_TYPES.includes(nextType)) {
-                setValue('number', null, { shouldDirty: true })
-              }
-            }}
-            items={accountTypes.map((value) => ({
-              label: t(`accounts.type-${value.toLowerCase()}`),
-              value,
-            }))}
-          >
-            <SelectTrigger
-              id="account-type"
-              className="w-full"
-              aria-invalid={errors.type !== undefined}
-            >
-              <SelectValue placeholder={t('accounts.type-placeholder')}>
-                {type !== undefined
-                  ? t(`accounts.type-${type.toLowerCase()}`)
-                  : undefined}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {accountTypes.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {t(`accounts.type-${value.toLowerCase()}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError
-            errors={errors.type !== undefined ? [errors.type] : undefined}
-          />
-        </Field>
         <MoneyField
           locale={formattingLocale()}
 
@@ -287,12 +267,55 @@ export function AccountForm({
             invalid={errors.currency !== undefined}
             disabled={account !== null}
           />
+          <FieldDescription>{t('accounts.currency-hint')}</FieldDescription>
           <FieldError
             errors={
               errors.currency !== undefined ? [errors.currency] : undefined
             }
           />
         </Field>
+        {isCard ? (
+          <FormSection legend={t('accounts.card-section')}>
+            <MoneyField
+              locale={formattingLocale()}
+
+              label={t('accounts.limit')}
+              labelFor="account-limit"
+              currency={currency}
+              placeholder={t('accounts.amount-placeholder')}
+              value={limit ?? ''}
+              onValueChange={(value) =>
+                setValue('limit', value, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+              error={errors.limit}
+              required
+            />
+            <CardCycleFields
+              closeDay={closeDay}
+              dueDay={dueDay}
+              closeDayInclusive={closeDayInclusive}
+              onCloseDayChange={(day) =>
+                setValue('closeDay', day, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+              onDueDayChange={(day) =>
+                setValue('dueDay', day, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+              onCloseDayInclusiveChange={(inclusive) =>
+                setValue('closeDayInclusive', inclusive, { shouldDirty: true })
+              }
+              errors={{ closeDay: errors.closeDay, dueDay: errors.dueDay }}
+            />
+          </FormSection>
+        ) : null}
         <Field orientation="horizontal">
           <Checkbox
             id="account-is-default"
@@ -325,47 +348,6 @@ export function AccountForm({
             <FieldDescription>{t('accounts.shared-hint')}</FieldDescription>
           </FieldContent>
         </Field>
-        {isCard ? (
-          <FormSection legend={t('accounts.card-section')}>
-            <MoneyField
-              locale={formattingLocale()}
-
-              label={t('accounts.limit')}
-              labelFor="account-limit"
-              currency={currency}
-              placeholder={t('accounts.amount-placeholder')}
-              value={limit ?? ''}
-              onValueChange={(value) =>
-                setValue('limit', value, {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                })
-              }
-              error={errors.limit}
-            />
-            <CardCycleFields
-              closeDay={closeDay}
-              dueDay={dueDay}
-              closeDayInclusive={closeDayInclusive}
-              onCloseDayChange={(day) =>
-                setValue('closeDay', day, {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                })
-              }
-              onDueDayChange={(day) =>
-                setValue('dueDay', day, {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                })
-              }
-              onCloseDayInclusiveChange={(inclusive) =>
-                setValue('closeDayInclusive', inclusive, { shouldDirty: true })
-              }
-              errors={{ closeDay: errors.closeDay, dueDay: errors.dueDay }}
-            />
-          </FormSection>
-        ) : null}
       </div>
       <AccountAdvancedFields
         spreadPct={spreadPct}

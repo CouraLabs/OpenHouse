@@ -199,6 +199,7 @@ export type AccountRef = {
   dueDay: number | null
   closeDayInclusive: boolean
   availableLimit: string | null
+  balance: string
 }
 
 export function availableLimit(account: {

@@ -1,6 +1,7 @@
 import type { Account } from '@workspace/db'
 import {
   CARD_PAYMENT_CATEGORY,
+  TRANSFER_CATEGORY,
   inheritShares,
   resolveSplit,
   FREE_TIER,
@@ -659,14 +660,10 @@ export class TransactionService {
     paysCard: boolean
   ): Promise<number> {
     if (categoryId === undefined) {
-      if (!paysCard) {
-        throw new BadRequestError('Pick a category.')
-      }
-
       const category = await this.categories.getOrCreateByName(
         tenantId,
         userId,
-        CARD_PAYMENT_CATEGORY
+        paysCard ? CARD_PAYMENT_CATEGORY : TRANSFER_CATEGORY
       )
 
       return category.id

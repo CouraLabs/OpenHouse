@@ -30,7 +30,7 @@ test.describe('recurring transactions', () => {
       const row = page.getByRole('row').filter({ hasText: receiver.name })
       await expect(row).toBeVisible()
       await expect(row).toContainText('89.90')
-      await expect(row).toContainText('Monthly')
+      await expect(row).toContainText('Every month on day 15')
     })
   })
 

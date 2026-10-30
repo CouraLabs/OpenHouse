@@ -36,7 +36,7 @@ interface LimitFormProps {
 const newLimit = (): LimitFormValues => ({
   categoryId: undefined as unknown as number,
   amount: '',
-  type: 'Daily',
+  type: 'Monthly',
 })
 
 export function LimitForm({

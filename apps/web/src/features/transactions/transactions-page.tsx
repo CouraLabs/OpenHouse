@@ -25,7 +25,6 @@ import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu'
 import {
@@ -543,18 +542,16 @@ export function TransactionsPage() {
                 cancel: t('filter.cancel'),
               }}
             />
-            <div className="hidden min-[1100px]:block">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  transfer.reset()
-                  setTransferOpen(true)
-                }}
-              >
-                <ArrowLeftRight />
-                {t('transactions.transfer')}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                transfer.reset()
+                setTransferOpen(true)
+              }}
+            >
+              <ArrowLeftRight />
+              {t('transactions.transfer')}
+            </Button>
             <div className="flex items-center gap-2 min-[1100px]:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -575,15 +572,6 @@ export function TransactionsPage() {
                     args={args}
                     csv={exportCsv}
                   />
-                  <DropdownMenuItem
-                    onClick={() => {
-                      transfer.reset()
-                      setTransferOpen(true)
-                    }}
-                  >
-                    <ArrowLeftRight />
-                    {t('transactions.transfer')}
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               {exportCsv.isError ? (
@@ -800,7 +788,6 @@ export function TransactionsPage() {
       <TransferForm
         open={transferOpen}
         accounts={accounts.data ?? []}
-        defaultDt={range.from}
         error={transferError}
         isSaving={transfer.isPending}
         onSubmit={submitTransfer}

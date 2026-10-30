@@ -18,10 +18,7 @@ import {
 
 import type { AuditRecorder } from '../common/audit/audit-recorder.js'
 import type { App, AppEnv } from '../common/context.js'
-import {
-  csvChunks,
-  pagesOf,
-} from '../common/csv/csv.js'
+import { csvChunks, pagesOf } from '../common/csv/csv.js'
 import { parseJsonBody, parseQuery } from '../common/validation/parse.js'
 import { ACCOUNT_CSV_COLUMNS } from './account-csv.js'
 import type { AccountService } from './account.service.js'
@@ -39,7 +36,9 @@ export function accountRoutes(deps: {
     const body = await parseJsonBody(context, createAccountSchema)
 
     return context.json(
-      toWire(await deps.accounts.create(session.tenant.id, session.user.id, body)),
+      toWire(
+        await deps.accounts.create(session.tenant.id, session.user.id, body)
+      ),
       201
     )
   })
@@ -86,20 +85,19 @@ export function accountRoutes(deps: {
     const rows = await deps.accounts.listActive(session.tenant.id)
 
     return context.json(
-      rows.map(
-        (row): AccountRef => ({
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          currency: row.currency,
-          isDefault: row.isDefault,
-          ownership: row.ownership,
-          closeDay: row.closeDay,
-          dueDay: row.dueDay,
-          closeDayInclusive: row.closeDayInclusive,
-          availableLimit: availableLimit(row),
-        })
-      )
+      rows.map((row): AccountRef => ({
+        id: row.id,
+        name: row.name,
+        type: row.type,
+        currency: row.currency,
+        isDefault: row.isDefault,
+        ownership: row.ownership,
+        closeDay: row.closeDay,
+        dueDay: row.dueDay,
+        closeDayInclusive: row.closeDayInclusive,
+        availableLimit: availableLimit(row),
+        balance: row.balance,
+      }))
     )
   })
 
@@ -115,7 +113,9 @@ export function accountRoutes(deps: {
     const body = await parseJsonBody(context, updateAccountSchema)
 
     return context.json(
-      toWire(await deps.accounts.update(session.tenant.id, session.user.id, body))
+      toWire(
+        await deps.accounts.update(session.tenant.id, session.user.id, body)
+      )
     )
   })
 

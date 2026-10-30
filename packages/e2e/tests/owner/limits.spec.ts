@@ -14,7 +14,7 @@ test.describe('limits', () => {
 
     await test.step('Action: pick the category and the Monthly period and enter 500.00', async () => {
       await chooseOption(page, 'Category', category.name)
-      await chooseOption(page, 'Type', 'Monthly')
+      await chooseOption(page, 'Period', 'Monthly')
       await page.getByRole('textbox', { name: /^Amount/ }).fill('500.00')
       await page.getByRole('button', { name: 'Save', exact: true }).click()
     })
@@ -30,7 +30,7 @@ test.describe('limits', () => {
     await test.step('Action: open New limit and save with only an amount and period', async () => {
       await page.goto('limits')
       await page.getByRole('button', { name: 'New limit' }).click()
-      await chooseOption(page, 'Type', 'Weekly')
+      await chooseOption(page, 'Period', 'Weekly')
       await page.getByRole('textbox', { name: /^Amount/ }).fill('80.00')
       await page.getByRole('button', { name: 'Save', exact: true }).click()
     })

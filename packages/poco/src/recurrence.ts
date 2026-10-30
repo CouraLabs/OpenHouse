@@ -59,3 +59,17 @@ export function occurrencesBetween(
 ): string[] {
   return daysInRange(from, to).filter((day) => isDueOn(rule, day))
 }
+
+const NEXT_OCCURRENCE_HORIZON_DAYS = 400
+
+export function nextOccurrence(rule: DueRule, from: string): string | null {
+  for (let offset = 0; offset <= NEXT_OCCURRENCE_HORIZON_DAYS; offset += 1) {
+    const day = shiftDay(from, offset)
+
+    if (isDueOn(rule, day)) {
+      return day
+    }
+  }
+
+  return null
+}

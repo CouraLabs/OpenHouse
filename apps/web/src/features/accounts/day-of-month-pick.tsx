@@ -1,4 +1,5 @@
 import type { FieldError as FormFieldError } from 'react-hook-form'
+import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {
   Select,
@@ -17,6 +18,7 @@ export function DayOfMonthPick({
   value,
   onChange,
   error,
+  required = false,
 }: {
   id: string
   label: string
@@ -24,10 +26,14 @@ export function DayOfMonthPick({
   value: number | null | undefined
   onChange: (day: number | null) => void
   error?: FormFieldError
+  required?: boolean
 }) {
   return (
     <Field data-invalid={error !== undefined}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id}>
+        {label}
+        {required ? <RequiredMark /> : null}
+      </FieldLabel>
       <Select
         value={value == null ? null : String(value)}
         onValueChange={(day) => onChange(day === null ? null : Number(day))}

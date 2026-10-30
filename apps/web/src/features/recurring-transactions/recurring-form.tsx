@@ -1,6 +1,5 @@
 import { useDiscardGuard } from '@/lib/use-discard-guard.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
-import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -12,23 +11,17 @@ import type {
 } from '@workspace/poco'
 import {
   createRecurringTransactionSchema,
-  frequencies,
   transactionTypes,
 } from '@workspace/poco'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { RadioOption } from '@workspace/ui/components/radio-option'
 import { MoneyField } from '@workspace/ui/components/money-field'
 import { RadioGroup } from '@workspace/ui/components/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@workspace/ui/components/select'
+import { SearchPick } from '@workspace/ui/components/search-pick'
 
+import { ScheduleFields } from './schedule-fields.js'
 import { SplitSection } from '@/components/split-section.js'
-import { useMainCurrency } from '@/lib/settings.js'
+import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
 import {
   useActiveAccounts,
   useActiveCategories,
@@ -69,6 +62,7 @@ export function RecurringForm({
 }: RecurringFormProps) {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
+  const today = useTenantToday()
   const {
     handleSubmit,
     watch,
@@ -117,16 +111,6 @@ export function RecurringForm({
     (account) => ruleCurrency === undefined || account.currency === ruleCurrency
   )
 
-  const findLabel = <T extends { id: number; name: string }>(
-    rows: T[] | undefined,
-    id: number | null | undefined
-  ) => rows?.find((row) => row.id === id)?.name
-
-  const dayOptions =
-    frequency === 'Weekly'
-      ? Array.from({ length: 7 }, (_, index) => index + 1)
-      : Array.from({ length: 31 }, (_, index) => index + 1)
-
   const guard = useDiscardGuard(isDirty)
 
   return (
@@ -145,117 +129,6 @@ export function RecurringForm({
       )}
     >
       <div className="flex flex-col gap-4">
-        <Field data-invalid={errors.receiverId !== undefined}>
-          <FieldLabel htmlFor="recurring-receiver">
-            {t('recurring.receiver')}
-            <RequiredMark />
-          </FieldLabel>
-          <Select
-            value={receiverId}
-            onValueChange={(value) =>
-              setValue('receiverId', value as number, {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-            }
-          >
-            <SelectTrigger id="recurring-receiver">
-              <SelectValue>
-                {findLabel(receivers.data, receiverId) ??
-                  t('recurring.receiver-placeholder')}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {(receivers.data ?? []).map((receiver) => (
-                <SelectItem key={receiver.id} value={receiver.id}>
-                  {receiver.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.receiverId !== undefined ? (
-            <FieldError>{errors.receiverId.message}</FieldError>
-          ) : null}
-        </Field>
-        <Field data-invalid={errors.categoryId !== undefined}>
-          <FieldLabel htmlFor="recurring-category">
-            {t('recurring.category')}
-            <RequiredMark />
-          </FieldLabel>
-          <Select
-            value={categoryId}
-            onValueChange={(value) =>
-              setValue('categoryId', value as number, {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-            }
-          >
-            <SelectTrigger id="recurring-category">
-              <SelectValue>
-                {findLabel(categories.data, categoryId) ??
-                  t('recurring.category-placeholder')}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {(categories.data ?? []).map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.categoryId !== undefined ? (
-            <FieldError>{errors.categoryId.message}</FieldError>
-          ) : null}
-        </Field>
-        <Field data-invalid={errors.linkedAccountId !== undefined}>
-          <FieldLabel htmlFor="recurring-account">
-            {t('recurring.account')}
-            <RequiredMark />
-          </FieldLabel>
-          <Select
-            value={accountId}
-            onValueChange={(value) =>
-              setValue('linkedAccountId', value as number, {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-            }
-          >
-            <SelectTrigger id="recurring-account">
-              <SelectValue>
-                {findLabel(accounts.data, accountId) ??
-                  t('recurring.account-placeholder')}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {accountOptions.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.linkedAccountId !== undefined ? (
-            <FieldError>{errors.linkedAccountId.message}</FieldError>
-          ) : null}
-        </Field>
-        <MoneyField
-          locale={formattingLocale()}
-          label={t('recurring.amount')}
-          labelFor="recurring-amount"
-          placeholder={t('recurring.amount-placeholder')}
-          value={amount}
-          onValueChange={(value) =>
-            setValue('amount', value, {
-              shouldValidate: true,
-              shouldDirty: true,
-            })
-          }
-          error={errors.amount}
-          required
-        />
         <Field data-invalid={errors.type !== undefined}>
           <FieldLabel id="recurring-type-label">
             {t('recurring.type')}
@@ -281,117 +154,106 @@ export function RecurringForm({
             <FieldError>{errors.type.message}</FieldError>
           ) : null}
         </Field>
-        <Field data-invalid={errors.frequency !== undefined}>
-          <FieldLabel htmlFor="recurring-frequency">
-            {t('recurring.frequency')}
-            <RequiredMark />
-          </FieldLabel>
-          <Select
-            value={frequency}
-            onValueChange={(value) => {
-              setValue('frequency', value as Frequency, {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-              setValue('frequencyDay', undefined, { shouldDirty: true })
-              setValue('frequencyMonth', undefined, { shouldDirty: true })
-            }}
-          >
-            <SelectTrigger id="recurring-frequency">
-              <SelectValue>
-                {frequency === undefined
-                  ? t('recurring.frequency-placeholder')
-                  : t(`recurring.frequency-${frequency.toLowerCase()}`)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {frequencies.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {t(`recurring.frequency-${value.toLowerCase()}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.frequency !== undefined ? (
-            <FieldError>{errors.frequency.message}</FieldError>
-          ) : null}
-        </Field>
-        {frequency !== undefined && frequency !== 'Daily' ? (
-          <Field data-invalid={errors.frequencyDay !== undefined}>
-            <FieldLabel htmlFor="recurring-frequency-day">
-              {t('recurring.frequency-day')}
-              <RequiredMark />
-            </FieldLabel>
-            <Select
-              value={frequencyDay}
-              onValueChange={(value) =>
-                setValue('frequencyDay', Number(value), {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                })
-              }
-            >
-              <SelectTrigger id="recurring-frequency-day">
-                <SelectValue>
-                  {frequencyDay === undefined
-                    ? t('recurring.frequency-day-placeholder')
-                    : frequency === 'Weekly'
-                      ? t(`recurring.weekday-${frequencyDay}`)
-                      : String(frequencyDay)}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {dayOptions.map((day) => (
-                  <SelectItem key={day} value={day}>
-                    {frequency === 'Weekly'
-                      ? t(`recurring.weekday-${day}`)
-                      : String(day)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.frequencyDay !== undefined ? (
-              <FieldError>{errors.frequencyDay.message}</FieldError>
-            ) : null}
-          </Field>
-        ) : null}
-        {frequency === 'Yearly' ? (
-          <Field data-invalid={errors.frequencyMonth !== undefined}>
-            <FieldLabel htmlFor="recurring-frequency-month">
-              {t('recurring.frequency-month')}
-              <RequiredMark />
-            </FieldLabel>
-            <Select
-              value={frequencyMonth}
-              onValueChange={(value) =>
-                setValue('frequencyMonth', Number(value), {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                })
-              }
-            >
-              <SelectTrigger id="recurring-frequency-month">
-                <SelectValue>
-                  {frequencyMonth === undefined
-                    ? t('recurring.frequency-month-placeholder')
-                    : String(frequencyMonth)}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, index) => index + 1).map(
-                  (month) => (
-                    <SelectItem key={month} value={month}>
-                      {String(month)}
-                    </SelectItem>
-                  )
-                )}
-              </SelectContent>
-            </Select>
-            {errors.frequencyMonth !== undefined ? (
-              <FieldError>{errors.frequencyMonth.message}</FieldError>
-            ) : null}
-          </Field>
-        ) : null}
+        <MoneyField
+          locale={formattingLocale()}
+          label={t('recurring.amount')}
+          labelFor="recurring-amount"
+          placeholder={t('recurring.amount-placeholder')}
+          value={amount}
+          onValueChange={(value) =>
+            setValue('amount', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+          error={errors.amount}
+          required
+          className="h-14 text-2xl font-semibold tabular-nums"
+        />
+        <SearchPick
+          id="recurring-account"
+          label={t('recurring.account')}
+          placeholder={t('recurring.account-placeholder')}
+          emptyLabel={t('recurring.no-match')}
+          required
+          value={accountId === undefined ? undefined : String(accountId)}
+          options={accountOptions.map((account) => ({
+            value: String(account.id),
+            label: account.name,
+          }))}
+          error={errors.linkedAccountId?.message}
+          onChange={(value) =>
+            setValue('linkedAccountId', Number(value), {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+        />
+        <SearchPick
+          id="recurring-category"
+          label={t('recurring.category')}
+          placeholder={t('recurring.category-placeholder')}
+          emptyLabel={t('recurring.no-match')}
+          required
+          value={categoryId === undefined ? undefined : String(categoryId)}
+          options={(categories.data ?? []).map((category) => ({
+            value: String(category.id),
+            label: category.name,
+          }))}
+          error={errors.categoryId?.message}
+          onChange={(value) =>
+            setValue('categoryId', Number(value), {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+        />
+        <SearchPick
+          id="recurring-receiver"
+          label={t('recurring.receiver')}
+          placeholder={t('recurring.receiver-placeholder')}
+          emptyLabel={t('recurring.no-match')}
+          required
+          value={receiverId === undefined ? undefined : String(receiverId)}
+          options={(receivers.data ?? []).map((receiver) => ({
+            value: String(receiver.id),
+            label: receiver.name,
+          }))}
+          error={errors.receiverId?.message}
+          onChange={(value) =>
+            setValue('receiverId', Number(value), {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+        />
+        <ScheduleFields
+          frequency={frequency}
+          frequencyDay={frequencyDay ?? undefined}
+          frequencyMonth={frequencyMonth ?? undefined}
+          today={today}
+          errors={errors}
+          onFrequencyChange={(value) => {
+            setValue('frequency', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+            setValue('frequencyDay', undefined, { shouldDirty: true })
+            setValue('frequencyMonth', undefined, { shouldDirty: true })
+          }}
+          onDayChange={(value) =>
+            setValue('frequencyDay', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+          onMonthChange={(value) =>
+            setValue('frequencyMonth', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+        />
       </div>
       {type === 'Expense' ? (
         <SplitSection

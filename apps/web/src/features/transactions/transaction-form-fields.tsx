@@ -24,6 +24,7 @@ import {
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
+import { MoreDetails } from '@workspace/ui/components/more-details'
 import { RadioGroup } from '@workspace/ui/components/radio-group'
 import { RadioOption } from '@workspace/ui/components/radio-option'
 import { Textarea } from '@workspace/ui/components/textarea'
@@ -105,6 +106,7 @@ export function TransactionFormFields({
 
   const type = watch('type')
   const status = watch('status')
+  const statusNote = watch('statusNote')
   const amount = watch('amount')
   const transactionDt = watch('transactionDt')
   const accountId = watch('linkedAccountId')
@@ -175,6 +177,14 @@ export function TransactionFormFields({
     )
   }
 
+  const hasDetails =
+    transaction !== null &&
+    (transaction.receiverId !== null ||
+      transaction.invoice !== null ||
+      transaction.note !== null ||
+      transaction.statusNote !== null ||
+      transaction.splits.length > 0)
+
   const guard = useDiscardGuard(isDirty)
 
   return (
@@ -202,6 +212,51 @@ export function TransactionFormFields({
         }
       )}
     >
+      <div className="flex flex-col gap-4">
+        <Field data-invalid={errors.type !== undefined}>
+          <FieldLabel id="transaction-type-label">
+            {t('transactions.type')}
+          </FieldLabel>
+          <RadioGroup
+            aria-labelledby="transaction-type-label"
+            value={type}
+            disabled={isTransfer || isInstallment}
+            onValueChange={(value) =>
+              setValue('type', value as TransactionType, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }
+            className="grid-cols-2"
+          >
+            {transactionTypes.map((value) => (
+              <RadioOption key={value} value={value}>
+                {t(`transactions.type-${value.toLowerCase()}`)}
+              </RadioOption>
+            ))}
+          </RadioGroup>
+          {errors.type !== undefined ? (
+            <FieldError>{errors.type.message}</FieldError>
+          ) : null}
+        </Field>
+        <MoneyField
+          locale={formattingLocale()}
+          label={t('transactions.amount')}
+          labelFor="transaction-amount"
+          currency={account?.currency}
+          placeholder={t('transactions.amount-placeholder')}
+          value={amount}
+          onValueChange={(value) =>
+            setValue('amount', value, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+          error={errors.amount}
+          required
+          className="h-14 text-2xl font-semibold tabular-nums"
+        />
+      </div>
       <TextField
         type="text"
         label={t('transactions.name')}
@@ -215,44 +270,63 @@ export function TransactionFormFields({
             inferFromName(event.target.value),
         })}
       />
-      <Field data-invalid={errors.type !== undefined}>
-        <FieldLabel id="transaction-type-label">
-          {t('transactions.type')}
-        </FieldLabel>
-        <RadioGroup
-          aria-labelledby="transaction-type-label"
-          value={type}
-          disabled={isTransfer || isInstallment}
-          onValueChange={(value) =>
-            setValue('type', value as TransactionType, {
-              shouldValidate: true,
-              shouldDirty: true,
-            })
-          }
-          className="grid-cols-2"
-        >
-          {transactionTypes.map((value) => (
-            <RadioOption key={value} value={value}>
-              {t(`transactions.type-${value.toLowerCase()}`)}
-            </RadioOption>
-          ))}
-        </RadioGroup>
-        {errors.type !== undefined ? (
-          <FieldError>{errors.type.message}</FieldError>
-        ) : null}
-      </Field>
-      <MoneyField
-        locale={formattingLocale()}
-        label={t('transactions.amount')}
-        labelFor="transaction-amount"
-        currency={account?.currency}
-        placeholder={t('transactions.amount-placeholder')}
-        value={amount}
-        onValueChange={(value) =>
-          setValue('amount', value, { shouldValidate: true, shouldDirty: true })
-        }
-        error={errors.amount}
+      <StringPick
+        id="transaction-account"
+        label={t('transactions.account')}
         required
+        searchEmptyLabel={t('transactions.no-match')}
+        disabled={isTransfer || isInstallment}
+        value={accountId === undefined ? undefined : String(accountId)}
+        placeholder={t('transactions.account-placeholder')}
+        onChange={(value) =>
+          setValue(
+            'linkedAccountId',
+            value === undefined
+              ? (undefined as unknown as number)
+              : Number(value),
+            { shouldValidate: true, shouldDirty: true }
+          )
+        }
+        error={errors.linkedAccountId?.message}
+        options={(accounts.data ?? [])
+          .filter(
+            (account) =>
+              transaction === null || account.currency === transaction.currency
+          )
+          .map((account) => ({
+            value: String(account.id),
+            label: account.name,
+          }))}
+      />
+      <StringPick
+        id="transaction-category"
+        label={t('transactions.category')}
+        required
+        searchEmptyLabel={t('transactions.no-match')}
+        value={categoryId === undefined ? undefined : String(categoryId)}
+        placeholder={t('transactions.category-placeholder')}
+        onChange={(value) => {
+          categoryPicked.current = true
+          setValue(
+            'categoryId',
+            value === undefined
+              ? (undefined as unknown as number)
+              : Number(value),
+            { shouldValidate: true, shouldDirty: true }
+          )
+          const preset = (categories.data ?? []).find(
+            (category) => String(category.id) === value
+          )?.defaultSplit
+
+          if (transaction === null && touchedSplit == null && preset != null) {
+            setValue('split', preset, { shouldDirty: true })
+          }
+        }}
+        error={errors.categoryId?.message}
+        options={(categories.data ?? []).map((category) => ({
+          value: String(category.id),
+          label: category.name,
+        }))}
       />
       <Field data-invalid={errors.transactionDt !== undefined}>
         <FieldLabel htmlFor="transaction-dt">
@@ -280,33 +354,6 @@ export function TransactionFormFields({
           <FieldError>{errors.transactionDt.message}</FieldError>
         ) : null}
       </Field>
-      <StringPick
-        id="transaction-account"
-        label={t('transactions.account')}
-        required
-        disabled={isTransfer || isInstallment}
-        value={accountId === undefined ? undefined : String(accountId)}
-        placeholder={t('transactions.filter-account-placeholder')}
-        onChange={(value) =>
-          setValue(
-            'linkedAccountId',
-            value === undefined
-              ? (undefined as unknown as number)
-              : Number(value),
-            { shouldValidate: true, shouldDirty: true }
-          )
-        }
-        error={errors.linkedAccountId?.message}
-        options={(accounts.data ?? [])
-          .filter(
-            (account) =>
-              transaction === null || account.currency === transaction.currency
-          )
-          .map((account) => ({
-            value: String(account.id),
-            label: account.name,
-          }))}
-      />
       {isCardPurchase && account !== undefined ? (
         <>
           <InstallmentFields
@@ -340,140 +387,121 @@ export function TransactionFormFields({
             : null
         }
       />
-      <StringPick
-        id="transaction-category"
-        label={t('transactions.category')}
-        required
-        value={categoryId === undefined ? undefined : String(categoryId)}
-        placeholder={t('transactions.filter-category-placeholder')}
-        onChange={(value) => {
-          categoryPicked.current = true
-          setValue(
-            'categoryId',
-            value === undefined
-              ? (undefined as unknown as number)
-              : Number(value),
-            { shouldValidate: true, shouldDirty: true }
-          )
-          const preset = (categories.data ?? []).find(
-            (category) => String(category.id) === value
-          )?.defaultSplit
-
-          if (transaction === null && touchedSplit == null && preset != null) {
-            setValue('split', preset, { shouldDirty: true })
+      <MoreDetails
+        label={t('transactions.more-details')}
+        defaultOpen={hasDetails}
+      >
+        <StringPick
+          id="transaction-receiver"
+          label={t('transactions.receiver')}
+          disabled={isInstallment}
+          searchEmptyLabel={t('transactions.no-match')}
+          value={receiverId == null ? undefined : String(receiverId)}
+          placeholder={t('transactions.receiver-placeholder')}
+          onChange={(value) =>
+            setValue(
+              'receiverId',
+              value === undefined ? undefined : Number(value),
+              { shouldDirty: true }
+            )
           }
-        }}
-        error={errors.categoryId?.message}
-        options={(categories.data ?? []).map((category) => ({
-          value: String(category.id),
-          label: category.name,
-        }))}
-      />
-      <StringPick
-        id="transaction-receiver"
-        label={t('transactions.receiver')}
-        disabled={isInstallment}
-        value={receiverId == null ? undefined : String(receiverId)}
-        placeholder={t('transactions.receiver-placeholder')}
-        onChange={(value) =>
-          setValue(
-            'receiverId',
-            value === undefined ? undefined : Number(value),
-            { shouldDirty: true }
-          )
-        }
-        options={[
-          {
-            value: '',
-            label: t('transactions.receiver-placeholder'),
-          },
-          ...(receivers.data ?? []).map((receiver: ReceiverRef) => ({
-            value: String(receiver.id),
-            label: receiver.name,
-          })),
-        ]}
-      />
-      {isShareable ? (
-        <>
-          <StringPick
-            id="transaction-paid-by"
-            label={t('split.paid-by')}
-            value={paidByUserId == null ? undefined : String(paidByUserId)}
-            placeholder={t('split.paid-by-placeholder')}
-            onChange={(value) =>
-              setValue(
-                'paidByUserId',
-                value === undefined ? undefined : Number(value),
-                { shouldDirty: true }
-              )
-            }
-            options={(members.data ?? [])
-              .filter((member) => member.isActive || member.id === paidByUserId)
-              .map((member) => ({
-                value: String(member.id),
-                label: member.name,
-              }))}
-          />
-          <SplitSection
-            idPrefix="transaction-split"
-            value={shownSplit}
-            onChange={(next) => setValue('split', next, { shouldDirty: true })}
-            amount={touchedSplit === undefined ? undefined : amount}
-            currency={account?.currency ?? mainCurrency}
-            payerUserId={paidByUserId ?? null}
-          />
-        </>
-      ) : null}
-      <TextField
-        type="text"
-        label={t('transactions.invoice')}
-        labelFor="transaction-invoice"
-        placeholder={t('transactions.invoice-placeholder')}
-        readOnly={isInstallment}
-        error={errors.invoice}
-        {...register('invoice', {
-          setValueAs: (value) => (value === '' ? undefined : value),
-        })}
-      />
-      <Field data-invalid={errors.note !== undefined}>
-        <FieldLabel htmlFor="transaction-note">
-          {t('transactions.note')}
-        </FieldLabel>
-        <Textarea
-          id="transaction-note"
-          placeholder={t('transactions.note-placeholder')}
-          {...register('note')}
+          options={[
+            {
+              value: '',
+              label: t('transactions.receiver-placeholder'),
+            },
+            ...(receivers.data ?? []).map((receiver: ReceiverRef) => ({
+              value: String(receiver.id),
+              label: receiver.name,
+            })),
+          ]}
         />
-        {errors.note !== undefined ? (
-          <FieldError>{errors.note.message}</FieldError>
+        {isShareable ? (
+          <>
+            <StringPick
+              id="transaction-paid-by"
+              label={t('split.paid-by')}
+              value={paidByUserId == null ? undefined : String(paidByUserId)}
+              placeholder={t('split.paid-by-placeholder')}
+              onChange={(value) =>
+                setValue(
+                  'paidByUserId',
+                  value === undefined ? undefined : Number(value),
+                  { shouldDirty: true }
+                )
+              }
+              options={(members.data ?? [])
+                .filter(
+                  (member) => member.isActive || member.id === paidByUserId
+                )
+                .map((member) => ({
+                  value: String(member.id),
+                  label: member.name,
+                }))}
+            />
+            <SplitSection
+              idPrefix="transaction-split"
+              value={shownSplit}
+              onChange={(next) =>
+                setValue('split', next, { shouldDirty: true })
+              }
+              amount={touchedSplit === undefined ? undefined : amount}
+              currency={account?.currency ?? mainCurrency}
+              payerUserId={paidByUserId ?? null}
+            />
+          </>
         ) : null}
-      </Field>
-      <StringPick
-        id="transaction-status"
-        label={t('transactions.status')}
-        value={status}
-        placeholder={t('transactions.status-placeholder')}
-        onChange={(value) =>
-          setValue('status', (value ?? 'Verify') as TransactionStatus, {
-            shouldValidate: true,
-            shouldDirty: true,
-          })
-        }
-        options={transactionStatuses.map((value) => ({
-          value,
-          label: t(`transactions.status-${value.toLowerCase()}`),
-        }))}
-      />
-      {status !== undefined && status !== 'Verify' ? (
         <TextField
           type="text"
-          label={t('transactions.status-note')}
-          labelFor="transaction-status-note"
-          placeholder={t('transactions.status-note-placeholder')}
-          error={errors.statusNote}
-          {...register('statusNote')}
+          label={t('transactions.invoice')}
+          labelFor="transaction-invoice"
+          placeholder={t('transactions.invoice-placeholder')}
+          readOnly={isInstallment}
+          error={errors.invoice}
+          {...register('invoice', {
+            setValueAs: (value) => (value === '' ? undefined : value),
+          })}
         />
-      ) : null}
+        <Field data-invalid={errors.note !== undefined}>
+          <FieldLabel htmlFor="transaction-note">
+            {t('transactions.note')}
+          </FieldLabel>
+          <Textarea
+            id="transaction-note"
+            placeholder={t('transactions.note-placeholder')}
+            {...register('note')}
+          />
+          {errors.note !== undefined ? (
+            <FieldError>{errors.note.message}</FieldError>
+          ) : null}
+        </Field>
+        <StringPick
+          id="transaction-status"
+          label={t('transactions.status')}
+          value={status}
+          placeholder={t('transactions.status-placeholder')}
+          onChange={(value) =>
+            setValue('status', (value ?? 'Verify') as TransactionStatus, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+          options={transactionStatuses.map((value) => ({
+            value,
+            label: t(`transactions.status-${value.toLowerCase()}`),
+          }))}
+        />
+        {status === 'Canceled' || statusNote ? (
+          <TextField
+            type="text"
+            label={t('transactions.status-note')}
+            labelFor="transaction-status-note"
+            placeholder={t('transactions.status-note-placeholder')}
+            error={errors.statusNote}
+            {...register('statusNote')}
+          />
+        ) : null}
+      </MoreDetails>
     </FormSheet>
   )
 }
