@@ -5,16 +5,20 @@ export interface RateLimitBinding {
   limit(input: { key: string }): Promise<{ success: boolean }>
 }
 
-export type RateLimitNamespace = 'general' | 'credentials'
+export type RateLimitNamespace = 'general' | 'credentials' | 'email'
+
+const bindingNames = {
+  general: 'RATE_LIMIT',
+  credentials: 'RATE_LIMIT_CREDENTIALS',
+  email: 'RATE_LIMIT_EMAIL',
+} as const
 
 export async function limitRequest(
   env: Env,
   namespace: RateLimitNamespace,
   clientAddress: string
 ): Promise<void> {
-  const binding = (
-    namespace === 'general' ? env.RATE_LIMIT : env.RATE_LIMIT_CREDENTIALS
-  ) as RateLimitBinding | undefined
+  const binding = env[bindingNames[namespace]] as RateLimitBinding | undefined
 
   if (binding === undefined || clientAddress === '') {
     return

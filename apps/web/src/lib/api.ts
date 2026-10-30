@@ -27,9 +27,16 @@ const AUTH_PATHS = new Set([
   '/auth/sign-up',
   '/auth/refresh',
   '/auth/password/reset',
+  '/auth/email/verify',
+  '/auth/email/resend',
 ])
 
-const PUBLIC_PATHS = new Set(['/sign-in', '/sign-up', '/reset-password'])
+const PUBLIC_PATHS = new Set([
+  '/sign-in',
+  '/sign-up',
+  '/reset-password',
+  '/verify-email',
+])
 
 let refreshInFlight: Promise<boolean> | null = null
 
@@ -92,7 +99,9 @@ async function parse<T>(response: Response): Promise<T> {
     return undefined as T
   }
 
-  return (await response.json()) as T
+  const text = await response.text()
+
+  return (text === '' ? undefined : JSON.parse(text)) as T
 }
 
 async function toError(response: Response): Promise<ApiError> {

@@ -1226,7 +1226,8 @@
     "submitting": "Signing up…",
     "error": "Something went wrong. Try again.",
     "have-account": "Already have an account?",
-    "sign-in-link": "Sign in"
+    "sign-in-link": "Sign in",
+    "bot-check-required": "Complete the check below before signing up."
   },
   "reset-password": {
     "title": "Reset your password",
@@ -1389,5 +1390,23 @@
     "recurring-due": "{{name}} ({{amount}}) is coming up on {{date}}.",
     "limit-80": "{{category}} reached {{percent}}% of its {{type}} limit ({{spent}} of {{amount}}).",
     "limit-100": "{{category}} hit its {{type}} limit ({{spent}} of {{amount}})."
+  },
+  "verify-email": {
+    "check-title": "Check your email",
+    "check-subtitle": "We sent a confirmation link to {{email}}. Open it on this device to finish signing up.",
+    "check-subtitle-generic": "Open the confirmation link we emailed you to finish signing up.",
+    "confirming": "Confirming your email…",
+    "failed-title": "This link didn't work",
+    "failed-subtitle": "It may have expired or been used already. Ask for a new one below.",
+    "resend-title": "Didn't get it?",
+    "resend-hint": "Check your spam folder, or send a new link. Links expire after 24 hours.",
+    "email": "Email",
+    "email-invalid": "Enter a valid email.",
+    "bot-check-required": "Complete the check above first.",
+    "resend": "Send a new link",
+    "resending": "Sending…",
+    "resent": "If that address has an unconfirmed account, a new link is on its way. You can ask again in a minute.",
+    "error": "Something went wrong. Try again.",
+    "back": "Back to sign in"
   }
 }

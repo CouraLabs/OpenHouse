@@ -70,7 +70,7 @@ export function createApp(env: AppEnv['Bindings']): {
   )
 
   const clock = new SystemClock()
-  const { publicRouter, protectedRouter, sessions } = authDeps(db, parsed, clock)
+  const { publicRouter, protectedRouter, sessions } = authDeps(db, parsed, clock, env)
 
   app.route('/auth', publicRouter)
 

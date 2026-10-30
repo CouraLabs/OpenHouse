@@ -6,6 +6,8 @@ const password = z.string().min(8).max(72)
 
 const email = z.string().trim().toLowerCase().email().max(320)
 
+export const turnstileTokenSchema = z.string().min(1).max(2048)
+
 export function hasExactlyOneTenantField(body: {
   tenantName?: string
   tenantCode?: string
@@ -22,6 +24,7 @@ export const signUpSchema = z
     password,
     timezone: timeZoneSchema.optional(),
     currency: currencySchema.optional(),
+    turnstileToken: turnstileTokenSchema,
   })
   .refine(hasExactlyOneTenantField, {
     message: 'Send exactly one of tenantName or tenantCode.',
@@ -43,7 +46,32 @@ export const changePasswordSchema = z
     path: ['newPassword'],
   })
 
+export const verifyEmailSchema = z.object({
+  token: z.string().trim().min(1).max(128),
+})
+
+export const resendVerificationSchema = z.object({
+  email,
+  turnstileToken: turnstileTokenSchema,
+})
+
+export const EMAIL_UNVERIFIED = 'email_unverified'
+
+export interface SignUpAccepted {
+  verificationRequired: true
+  email: string
+}
+
+export interface EmailUnverifiedError {
+  message: string
+  error: 'Forbidden'
+  statusCode: 403
+  code: typeof EMAIL_UNVERIFIED
+}
+
 export type SignUpBody = z.infer<typeof signUpSchema>
+export type VerifyEmailBody = z.infer<typeof verifyEmailSchema>
+export type ResendVerificationBody = z.infer<typeof resendVerificationSchema>
 export type SignInBody = z.infer<typeof signInSchema>
 export type ChangePasswordBody = z.infer<typeof changePasswordSchema>
 

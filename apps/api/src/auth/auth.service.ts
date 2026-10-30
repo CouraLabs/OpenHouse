@@ -4,6 +4,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 import {
   BadRequestError,
   ConflictError,
+  ForbiddenError,
   UnauthorizedError,
 } from '../common/errors.js'
 import type {
@@ -16,7 +17,12 @@ import type {
   UserRole,
 } from '@workspace/db'
 import { tenants, tenantCodes, tenantSettings, users } from '@workspace/db'
-import { toStartPage, type SessionResponse } from '@workspace/poco'
+import {
+  EMAIL_UNVERIFIED,
+  toStartPage,
+  type EmailUnverifiedError,
+  type SessionResponse,
+} from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import type { JwtTtls } from '../config/env.js'
@@ -65,7 +71,7 @@ export class AuthService {
     password: string
     timezone?: string
     currency?: Currency
-  }): Promise<SessionResponse> {
+  }): Promise<User> {
     const passwordHash = await bcrypt.hash(body.password, 10)
 
     const tenantName = body.tenantName
@@ -119,7 +125,7 @@ export class AuthService {
       throw new Error('The sign-up batch did not complete.')
     }
 
-    return this.sessionResponse(user, tenant, settings)
+    return user
   }
 
   async signUpWithCode(body: {
@@ -127,7 +133,7 @@ export class AuthService {
     name: string
     email: string
     password: string
-  }): Promise<SessionResponse> {
+  }): Promise<User> {
     const passwordHash = await bcrypt.hash(body.password, 10)
 
     const now = new Date()
@@ -179,7 +185,11 @@ export class AuthService {
       throw this.conflictFor(error)
     }
 
-    return this.sessionFor(user)
+    if (user === undefined) {
+      throw new Error('The sign-up batch did not complete.')
+    }
+
+    return user
   }
 
   async signIn(body: {
@@ -197,6 +207,15 @@ export class AuthService {
     )
     if (!passwordMatches || user === undefined || !user.isActive) {
       throw new UnauthorizedError('Invalid email or password.')
+    }
+
+    if (user.emailVerifiedAt === null) {
+      throw new ForbiddenError({
+        message: 'Confirm your email before signing in.',
+        error: 'Forbidden',
+        statusCode: 403,
+        code: EMAIL_UNVERIFIED,
+      } satisfies EmailUnverifiedError)
     }
 
     return this.sessionFor(user)
@@ -315,7 +334,7 @@ export class AuthService {
   }
 
   private sessionResponse(
-    user: PublicUser | Omit<User, 'password' | 'refreshTokenHash'>,
+    user: PublicUser | Session['user'],
     tenant: Tenant | undefined,
     settings: TenantSettingsRow | undefined
   ): SessionResponse {

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { signInSchema } from '@workspace/poco'
+import { EMAIL_UNVERIFIED, signInSchema } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { ApiError } from '@/lib/api.js'
 import { useSignIn } from '@/lib/auth.js'
@@ -17,9 +17,17 @@ type SignInFormValues = z.infer<typeof signInFormSchema>
 
 interface SignInFormProps {
   onSuccess: () => void
+  onUnverified: (email: string) => void
 }
 
-export function SignInForm({ onSuccess }: SignInFormProps) {
+function isUnverified(error: ApiError): boolean {
+  return (
+    error.status === 403 &&
+    (error.body as { code?: string } | undefined)?.code === EMAIL_UNVERIFIED
+  )
+}
+
+export function SignInForm({ onSuccess, onUnverified }: SignInFormProps) {
   const signIn = useSignIn()
   const {
     register,
@@ -36,7 +44,9 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
       await signIn.mutateAsync(values)
       onSuccess()
     } catch (error) {
-      if (error instanceof ApiError) {
+      if (error instanceof ApiError && isUnverified(error)) {
+        onUnverified(values.email)
+      } else if (error instanceof ApiError) {
         setError('password', { message: error.message })
       } else {
         setError('password', { message: 'Something went wrong. Try again.' })

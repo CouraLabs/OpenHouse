@@ -15,6 +15,9 @@ export function SignInPage() {
           onSuccess={() =>
             void navigate({ to: currentSession()?.user.startPage ?? '/' })
           }
+          onUnverified={(email) =>
+            void navigate({ to: '/verify-email', state: { email } })
+          }
         />
         <p className="text-sm text-muted-foreground">
           <Link

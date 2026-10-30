@@ -12,6 +12,7 @@ import { currentSession } from '@/lib/query.js'
 import { SignInPage } from '@/features/sign-in/sign-in-page.js'
 import { SignUpPage } from '@/features/sign-up/sign-up-page.js'
 import { ResetPasswordPage } from '@/features/reset-password/reset-password-page.js'
+import { VerifyEmailPage } from '@/features/verify-email/verify-email-page.js'
 import { CategoriesPage } from '@/features/categories/categories-page.js'
 import { LimitsPage } from '@/features/limits/limits-page.js'
 import { HouseholdPage } from '@/features/household/household-page.js'
@@ -72,6 +73,21 @@ const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reset-password',
   component: ResetPasswordPage,
+})
+
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/verify-email',
+  component: VerifyEmailPage,
+  validateSearch: (search: Record<string, unknown>): { token?: string } =>
+    typeof search.token === 'string' && search.token !== ''
+      ? { token: search.token }
+      : {},
+  beforeLoad: ({ search }) => {
+    if (search.token === undefined && currentSession() !== null) {
+      throw redirect({ to: '/' })
+    }
+  },
 })
 
 const mainLayoutRoute = createRoute({
@@ -229,6 +245,7 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
   resetPasswordRoute,
+  verifyEmailRoute,
   mainLayoutRoute.addChildren([
     indexRoute,
     categoriesRoute,
@@ -259,3 +276,9 @@ export const router = createRouter({
   history: createBrowserHistory(),
   basepath: APP_BASE,
 })
+
+declare module '@tanstack/react-router' {
+  interface HistoryState {
+    email?: string
+  }
+}

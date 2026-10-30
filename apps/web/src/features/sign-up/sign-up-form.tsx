@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { TFunction } from 'i18next'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
@@ -11,6 +11,8 @@ import { ApiError } from '@/lib/api.js'
 import { useSignUp } from '@/lib/auth.js'
 import { browserCurrency, browserTimeZone } from '@/lib/settings.js'
 import { TextField } from '@workspace/ui/components/text-field'
+import { TurnstileWidget } from '@workspace/ui/components/turnstile-widget'
+import { TURNSTILE_SITE_KEY } from '@/lib/turnstile.js'
 
 type HouseholdChoice = 'join' | 'create'
 
@@ -27,10 +29,7 @@ function buildSignUpSchema(t: TFunction) {
       tenantCode: z.string().max(120),
       name: z.string().min(1, t('sign-up.name-required')).max(120),
       email: z.string().email(t('sign-up.email-invalid')),
-      password: z
-        .string()
-        .min(8, t('sign-up.password-short'))
-        .max(72),
+      password: z.string().min(8, t('sign-up.password-short')).max(72),
     })
     .superRefine((values, ctx) => {
       const hasName = values.tenantName.trim() !== ''
@@ -53,7 +52,7 @@ function buildSignUpSchema(t: TFunction) {
 type SignUpFormValues = z.infer<ReturnType<typeof buildSignUpSchema>>
 
 interface SignUpFormProps {
-  onSuccess: () => void
+  onSuccess: (email: string) => void
   defaultTenantCode?: string
 }
 
@@ -66,6 +65,15 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
       : 'create'
   )
   const schema = useMemo(() => buildSignUpSchema(t), [t])
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileReset, setTurnstileReset] = useState(0)
+  const [botCheckMissing, setBotCheckMissing] = useState(false)
+  const onTurnstileToken = useCallback((token: string | null) => {
+    setTurnstileToken(token)
+    if (token !== null) {
+      setBotCheckMissing(false)
+    }
+  }, [])
   const {
     register,
     handleSubmit,
@@ -89,6 +97,11 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
   }
 
   const onSubmit = handleSubmit(async (values) => {
+    if (turnstileToken === null) {
+      setBotCheckMissing(true)
+      return
+    }
+
     const body =
       values.tenantCode.trim() !== ''
         ? {
@@ -96,6 +109,7 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
             name: values.name,
             email: values.email,
             password: values.password,
+            turnstileToken,
           }
         : {
             tenantName: values.tenantName.trim(),
@@ -104,12 +118,15 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
             password: values.password,
             timezone: browserTimeZone(),
             currency: browserCurrency(),
+            turnstileToken,
           }
 
     try {
-      await signUp.mutateAsync(body)
-      onSuccess()
+      const accepted = await signUp.mutateAsync(body)
+      onSuccess(accepted.email)
     } catch (error) {
+      setTurnstileReset((count) => count + 1)
+
       if (error instanceof ApiError) {
         const codeFieldIssue = error.issues?.find((issue) =>
           issue.path.includes('tenantCode')
@@ -135,7 +152,7 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
       onClick={() => switchChoice(value)}
       className={cn(
         'flex h-9 w-full cursor-pointer items-center justify-center rounded-full px-3 text-sm font-medium transition-colors sm:w-auto sm:flex-1 sm:px-2',
-        'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
         choice === value
           ? 'bg-card text-foreground shadow-soft'
           : 'text-muted-foreground hover:text-foreground'
@@ -205,8 +222,24 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
         error={errors.password}
         {...register('password')}
       />
+      <div className="flex flex-col gap-1.5">
+        <TurnstileWidget
+          siteKey={TURNSTILE_SITE_KEY}
+          action="signup"
+          onToken={onTurnstileToken}
+          resetKey={turnstileReset}
+          className="min-h-[65px]"
+        />
+        {botCheckMissing && (
+          <p role="alert" className="text-sm text-destructive">
+            {t('sign-up.bot-check-required')}
+          </p>
+        )}
+      </div>
       <Button type="submit" disabled={isSubmitting || signUp.isPending}>
-        {isSubmitting || signUp.isPending ? t('sign-up.submitting') : t('sign-up.submit')}
+        {isSubmitting || signUp.isPending
+          ? t('sign-up.submitting')
+          : t('sign-up.submit')}
       </Button>
     </form>
   )

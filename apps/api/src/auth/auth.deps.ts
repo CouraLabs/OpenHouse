@@ -1,10 +1,16 @@
 import type { Database } from '@workspace/db'
 
 import { SystemClock } from '../common/clock/clock.js'
-import type { App } from '../common/context.js'
+import type { App, AppEnv } from '../common/context.js'
+import {
+  BindingMailer,
+  type SendEmailBinding,
+} from '../common/mail/binding-mailer.js'
+import { TurnstileVerifier } from '../common/turnstile/turnstile-verifier.js'
 import type { Config } from '../config/env.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import { AuthService } from './auth.service.js'
+import { EmailVerificationService } from './email-verification.service.js'
 import { authRoutes } from './auth.routes.js'
 import { PasswordChangeLimiter } from './password-change-limiter.js'
 import { PasswordResetRepository } from './password-reset.repository.js'
@@ -22,7 +28,8 @@ export interface AuthDeps {
 export function authDeps(
   db: Database,
   config: Config,
-  clock: SystemClock
+  clock: SystemClock,
+  env: AppEnv['Bindings']
 ): AuthDeps {
   const tokens = new TokenService(config.jwtSecret, config.ttls)
   const settings = new SettingsRepository(db)
@@ -33,12 +40,24 @@ export function authDeps(
     clock
   )
   const passwordChanges = new PasswordChangeLimiter(clock)
+  const verification = new EmailVerificationService(
+    db,
+    new BindingMailer(
+      env.EMAIL as SendEmailBinding | undefined,
+      config.mail.from
+    ),
+    clock,
+    config.mail.appUrl
+  )
+  const turnstile = new TurnstileVerifier(config.turnstile)
 
   const { publicRouter, protectedRouter } = authRoutes({
     auth,
     tokens,
     passwordChanges,
     passwordResets,
+    verification,
+    turnstile,
   })
 
   return {

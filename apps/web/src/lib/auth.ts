@@ -2,10 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import type {
   ChangePasswordBody,
+  ResendVerificationBody,
   ResetPasswordBody,
   SessionResponse,
   SignInBody,
+  SignUpAccepted,
   SignUpBody,
+  VerifyEmailBody,
 } from '@workspace/poco'
 import { ApiError, api } from './api.js'
 import { SESSION_QUERY_KEY } from './query.js'
@@ -46,17 +49,37 @@ export function useSignIn() {
 }
 
 export function useSignUp() {
+  return useMutation({
+    mutationFn: (input: SignUpBody) =>
+      api<SignUpAccepted>('/auth/sign-up', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+  })
+}
+
+export function useVerifyEmail() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (input: SignUpBody) =>
-      api<SessionResponse>('/auth/sign-up', {
+    mutationFn: (input: VerifyEmailBody) =>
+      api<SessionResponse>('/auth/email/verify', {
         method: 'POST',
         body: JSON.stringify(input),
       }),
     onSuccess: (session) => {
       queryClient.setQueryData(SESSION_QUERY_KEY, session)
     },
+  })
+}
+
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: (input: ResendVerificationBody) =>
+      api<null>('/auth/email/resend', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
   })
 }
 

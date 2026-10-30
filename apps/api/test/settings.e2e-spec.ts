@@ -2,7 +2,15 @@ import { randomUUID } from 'node:crypto'
 import { createExecutionContext } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
 
-import { type Agent, joinAsMember, signUp, startApp, uniqueEmail } from './support.js'
+import {
+  type Agent,
+  confirmEmail,
+  joinAsMember,
+  signUp,
+  startApp,
+  TURNSTILE_TOKEN,
+  uniqueEmail,
+} from './support.js'
 import type { TestApp } from './support.js'
 
 /**
@@ -47,7 +55,7 @@ function freshBrowser(app: TestApp): Agent {
     const contentType = response.headers.get('content-type') ?? ''
     const body = contentType.includes('application/json')
       ? await response.json()
-      : ((await response.text()) || null)
+      : (await response.text()) || null
 
     return { status: response.status, body, headers: response.headers }
   }
@@ -83,17 +91,21 @@ describe('tenant settings (e2e, #15)', () => {
     const { app } = startApp()
     const browser = freshBrowser(app)
 
+    const email = uniqueEmail()
+
     const created = await browser.post('/api/auth/sign-up', {
       tenantName: `t-${randomUUID()}`,
       name: 'Ana',
-      email: uniqueEmail(),
+      email,
       password: 'password-a',
       timezone: 'America/Sao_Paulo',
       currency: 'BRL',
+      turnstileToken: TURNSTILE_TOKEN,
     })
     expect(created.status).toBe(201)
 
-    expect(created.body.settings).toEqual({
+    const confirmed = await confirmEmail(browser, email)
+    expect(confirmed.body.settings).toEqual({
       timezone: 'America/Sao_Paulo',
       mainCurrency: 'BRL',
       timezoneConfirmed: true,
@@ -114,6 +126,7 @@ describe('tenant settings (e2e, #15)', () => {
       email: uniqueEmail(),
       password: 'password-a',
       timezone: 'Mars/Olympus_Mons',
+      turnstileToken: TURNSTILE_TOKEN,
     })
 
     expect(response.status).toBe(400)
@@ -270,6 +283,7 @@ describe('users management (e2e, #15)', () => {
       name: 'Bia',
       email: uniqueEmail(),
       password: 'password-m',
+      turnstileToken: TURNSTILE_TOKEN,
     })
     expect(redeemed.status).toBe(409)
   })

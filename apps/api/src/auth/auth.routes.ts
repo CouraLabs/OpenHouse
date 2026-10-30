@@ -11,15 +11,19 @@ import {
 } from '../common/session/cookies.js'
 import { requireRole } from '../common/session/auth.middleware.js'
 import { parseJsonBody } from '../common/validation/parse.js'
-import type { SessionResponse } from '@workspace/poco'
+import type { TurnstileVerifier } from '../common/turnstile/turnstile-verifier.js'
+import type { SessionResponse, SignUpAccepted } from '@workspace/poco'
 import {
   changePasswordSchema,
   issueResetCodeSchema,
+  resendVerificationSchema,
   resetPasswordSchema,
   signInSchema,
   signUpSchema,
+  verifyEmailSchema,
 } from '@workspace/poco'
 import type { AuthService } from './auth.service.js'
+import type { EmailVerificationService } from './email-verification.service.js'
 import type { PasswordChangeLimiter } from './password-change-limiter.js'
 import type { PasswordResetService } from './password-reset.service.js'
 import type { TokenService } from './token.service.js'
@@ -29,12 +33,17 @@ export function authRoutes(deps: {
   tokens: TokenService
   passwordChanges: PasswordChangeLimiter
   passwordResets: PasswordResetService
+  verification: EmailVerificationService
+  turnstile: TurnstileVerifier
 }): { publicRouter: App; protectedRouter: App } {
   const publicRouter = new Hono<AppEnv>()
   const protectedRouter = new Hono<AppEnv>()
 
   const limitCredentials = async (context: import('hono').Context<AppEnv>) =>
     limitRequest(context.env, 'credentials', clientAddressOf(context.req.raw))
+
+  const limitEmail = async (context: import('hono').Context<AppEnv>) =>
+    limitRequest(context.env, 'email', clientAddressOf(context.req.raw))
 
   async function establish(
     context: import('hono').Context<AppEnv>,
@@ -48,16 +57,26 @@ export function authRoutes(deps: {
       ...options,
       maxAge: issued.accessMaxAgeS,
     })
-    setCookie(context, REFRESH_COOKIE, issued.refreshToken, rememberMe
-      ? { ...options, maxAge: issued.refreshMaxAgeS }
-      : options)
+    setCookie(
+      context,
+      REFRESH_COOKIE,
+      issued.refreshToken,
+      rememberMe ? { ...options, maxAge: issued.refreshMaxAgeS } : options
+    )
 
     return session
   }
 
   publicRouter.post('/sign-up', async (context) => {
     await limitCredentials(context)
+    await limitEmail(context)
     const body = await parseJsonBody(context, signUpSchema)
+
+    await deps.turnstile.verify(
+      body.turnstileToken,
+      'signup',
+      clientAddressOf(context.req.raw)
+    )
 
     const created =
       body.tenantName !== undefined
@@ -76,7 +95,42 @@ export function authRoutes(deps: {
             password: body.password,
           })
 
-    return context.json(await establish(context, created, false), 201)
+    await deps.verification.issue(created)
+
+    return context.json(
+      {
+        verificationRequired: true,
+        email: created.email,
+      } satisfies SignUpAccepted,
+      201
+    )
+  })
+
+  publicRouter.post('/email/verify', async (context) => {
+    await limitCredentials(context)
+    const body = await parseJsonBody(context, verifyEmailSchema)
+
+    const user = await deps.verification.verify(body.token)
+
+    return context.json(
+      await establish(context, await deps.auth.sessionFor(user), false)
+    )
+  })
+
+  publicRouter.post('/email/resend', async (context) => {
+    await limitCredentials(context)
+    await limitEmail(context)
+    const body = await parseJsonBody(context, resendVerificationSchema)
+
+    await deps.turnstile.verify(
+      body.turnstileToken,
+      'verify-resend',
+      clientAddressOf(context.req.raw)
+    )
+
+    await deps.verification.resend(body.email)
+
+    return context.body(null, 202)
   })
 
   publicRouter.post('/sign-in', async (context) => {
@@ -175,13 +229,17 @@ export function authRoutes(deps: {
     }
   )
 
-  protectedRouter.post('/recovery-codes', requireRole(['owner']), async (context) => {
-    const session = context.get('session')
+  protectedRouter.post(
+    '/recovery-codes',
+    requireRole(['owner']),
+    async (context) => {
+      const session = context.get('session')
 
-    return context.json({
-      codes: await deps.passwordResets.generateRecoveryCodes(session.user.id),
-    })
-  })
+      return context.json({
+        codes: await deps.passwordResets.generateRecoveryCodes(session.user.id),
+      })
+    }
+  )
 
   protectedRouter.get('/security', async (context) => {
     const session = context.get('session')

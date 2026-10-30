@@ -11,6 +11,8 @@ export interface Env {
   JOBS: unknown
   RATE_LIMIT: unknown
   RATE_LIMIT_CREDENTIALS: unknown
+  RATE_LIMIT_EMAIL?: unknown
+  EMAIL?: unknown
   ASSETS: unknown
 
   JWT_SECRET?: string
@@ -20,12 +22,27 @@ export interface Env {
   PUSH_VAPID_PUBLIC_KEY?: string
   PUSH_VAPID_PRIVATE_KEY?: string
   PUSH_VAPID_SUBJECT?: string
+  TURNSTILE_SECRET?: string
+  TURNSTILE_HOSTNAMES?: string
+  EMAIL_FROM?: string
+  EMAIL_FROM_NAME?: string
+  APP_URL?: string
 }
 
 export interface JwtTtls {
   accessTtlS: number
   refreshTtlS: number
   rememberRefreshTtlS: number
+}
+
+export interface TurnstileConfig {
+  secret: string
+  hostnames: string[]
+}
+
+export interface MailConfig {
+  from: { email: string; name: string }
+  appUrl: string
 }
 
 export interface PushConfig {
@@ -42,12 +59,23 @@ const varsSchema = z.object({
   PUSH_VAPID_PUBLIC_KEY: z.string().optional(),
   PUSH_VAPID_PRIVATE_KEY: z.string().optional(),
   PUSH_VAPID_SUBJECT: z.string().default('mailto:admin@openhouse.invalid'),
+  TURNSTILE_SECRET: z.string().min(1).optional(),
+  TURNSTILE_HOSTNAMES: z.string().default(''),
+  EMAIL_FROM: z.string().email().default('no-reply@couralabs.dev'),
+  EMAIL_FROM_NAME: z.string().min(1).default('OpenHouse'),
+  APP_URL: z
+    .string()
+    .url()
+    .default('http://localhost:5173/app')
+    .transform((value) => value.replace(/\/+$/, '')),
 })
 
 export interface Config {
   jwtSecret: string
   ttls: JwtTtls
   push: PushConfig | undefined
+  turnstile: TurnstileConfig | undefined
+  mail: MailConfig
 }
 
 let cached: Config | undefined
@@ -68,6 +96,16 @@ export function config(env: Env): Config {
     )
   }
 
+  const turnstileHostnames = vars.TURNSTILE_HOSTNAMES.split(',')
+    .map((hostname) => hostname.trim())
+    .filter((hostname) => hostname !== '')
+
+  if (vars.TURNSTILE_SECRET !== undefined && turnstileHostnames.length === 0) {
+    throw new Error(
+      'TURNSTILE_HOSTNAMES must list the frontend hostnames when TURNSTILE_SECRET is set.'
+    )
+  }
+
   cached = {
     jwtSecret: vars.JWT_SECRET,
     ttls: {
@@ -84,6 +122,14 @@ export function config(env: Env): Config {
             subject: vars.PUSH_VAPID_SUBJECT,
           }
         : undefined,
+    turnstile:
+      vars.TURNSTILE_SECRET !== undefined
+        ? { secret: vars.TURNSTILE_SECRET, hostnames: turnstileHostnames }
+        : undefined,
+    mail: {
+      from: { email: vars.EMAIL_FROM, name: vars.EMAIL_FROM_NAME },
+      appUrl: vars.APP_URL,
+    },
   }
 
   return cached

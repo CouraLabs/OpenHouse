@@ -38,8 +38,11 @@
       }
     ]
   },
-  // Two rate-limit namespaces: the general one for every route, the
-  // credential one (tighter) for sign-in, sign-up and password resets.
+  // Three rate-limit namespaces: the general one for every route, the
+  // credential one (tighter) for sign-in, sign-up and password resets, and
+  // the email one (tightest) for every route that sends mail: sign-up and
+  // confirmation resends. Each user also has a resend cooldown and a daily
+  // cap kept in D1.
   "ratelimits": [
     {
       "name": "RATE_LIMIT",
@@ -50,8 +53,17 @@
       "name": "RATE_LIMIT_CREDENTIALS",
       "namespace_id": "1002",
       "simple": { "limit": 10, "period": 60 }
+    },
+    {
+      "name": "RATE_LIMIT_EMAIL",
+      "namespace_id": "1003",
+      "simple": { "limit": 3, "period": 60 }
     }
   ],
+  // Transactional mail (email confirmation) through Cloudflare Email
+  // Sending; couralabs.dev must be onboarded for sending. `wrangler dev`
+  // simulates the binding locally and writes the message to disk.
+  "send_email": [{ "name": "EMAIL" }],
   "triggers": {
     // Hourly: tenant deletions at :15, recurring rules at :30, reminders at
     // :45 — each tenant's own calendar day decides what is due. Daily at
@@ -72,6 +84,12 @@
     "JWT_ACCESS_TTL_S": "900",
     "JWT_REFRESH_TTL_S": "86400",
     "JWT_REMEMBER_REFRESH_TTL_S": "2592000",
-    "PUSH_VAPID_SUBJECT": "mailto:openhouse@couralabs.dev"
+    "PUSH_VAPID_SUBJECT": "mailto:openhouse@couralabs.dev",
+    "EMAIL_FROM": "no-reply@couralabs.dev",
+    "EMAIL_FROM_NAME": "OpenHouse",
+    "APP_URL": "https://openhouse.couralabs.dev/app",
+    // The sign-up bot check accepts tokens minted on these hostnames only;
+    // the TURNSTILE_SECRET secret turns the check on (unset: no check).
+    "TURNSTILE_HOSTNAMES": "openhouse.couralabs.dev"
   }
 }

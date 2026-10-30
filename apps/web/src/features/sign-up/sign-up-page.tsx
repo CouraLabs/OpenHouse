@@ -14,7 +14,9 @@ export function SignUpPage() {
       <div className="flex w-full max-w-sm flex-col gap-6">
         <SignUpForm
           defaultTenantCode={code}
-          onSuccess={() => void navigate({ to: '/' })}
+          onSuccess={(email) =>
+            void navigate({ to: '/verify-email', state: { email } })
+          }
         />
         <p className="text-sm text-muted-foreground">
           {t('sign-up.have-account')}{' '}

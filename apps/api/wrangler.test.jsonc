@@ -28,6 +28,11 @@
       "name": "RATE_LIMIT_CREDENTIALS",
       "namespace_id": "2002",
       "simple": { "limit": 100000, "period": 60 }
+    },
+    {
+      "name": "RATE_LIMIT_EMAIL",
+      "namespace_id": "2003",
+      "simple": { "limit": 100000, "period": 60 }
     }
   ],
   "vars": {

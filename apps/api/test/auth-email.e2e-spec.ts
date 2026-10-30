@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 
-import { signUp, startApp, uniqueEmail } from './support.js'
+import { signUp, startApp, TURNSTILE_TOKEN, uniqueEmail } from './support.js'
 
 describe('one email is one user (e2e, #16)', () => {
   it('signs in with any casing of the email it signed up with', async () => {
@@ -38,11 +38,10 @@ describe('one email is one user (e2e, #16)', () => {
       name: 'Ana',
       email: email.toUpperCase(),
       password: 'password-b',
+      turnstileToken: TURNSTILE_TOKEN,
     })
 
     expect(response.status).toBe(409)
-    expect(response.body.message).toBe(
-      'This email already has an account.'
-    )
+    expect(response.body.message).toBe('This email already has an account.')
   })
 })

@@ -33,9 +33,7 @@ export interface Agent {
     path: string,
     body?: unknown
   ): Promise<{ status: number; body: any; headers: Headers }>
-  delete(
-    path: string
-  ): Promise<{ status: number; body: any; headers: Headers }>
+  delete(path: string): Promise<{ status: number; body: any; headers: Headers }>
   /** Sends a multipart form — a file upload. The fetch body serializes
    * the FormData itself, boundary and field types included. */
   form(
@@ -54,6 +52,8 @@ export function startApp(): { app: TestApp; bindings: AppEnv['Bindings'] } {
     JOBS: source.JOBS,
     RATE_LIMIT: source.RATE_LIMIT,
     RATE_LIMIT_CREDENTIALS: source.RATE_LIMIT_CREDENTIALS,
+    RATE_LIMIT_EMAIL: source.RATE_LIMIT_EMAIL,
+    EMAIL: { send: async (message: SentMail) => void outbox.push(message) },
     JWT_SECRET: source.JWT_SECRET,
   } as unknown as AppEnv['Bindings']
 
@@ -62,6 +62,56 @@ export function startApp(): { app: TestApp; bindings: AppEnv['Bindings'] } {
 
   return { app, bindings }
 }
+
+/** A message the app handed to the EMAIL binding. */
+export interface SentMail {
+  from: { email: string; name?: string }
+  to: string
+  subject: string
+  text: string
+  html: string
+}
+
+/** Every message the app sent in this test file, oldest first. */
+export const outbox: SentMail[] = []
+
+/** The messages sent to one address. */
+export function mailTo(email: string): SentMail[] {
+  const address = email.trim().toLowerCase()
+
+  return outbox.filter((message) => message.to === address)
+}
+
+/** The token of the latest confirmation link sent to an address. */
+export function verificationTokenFor(email: string): string {
+  const latest = mailTo(email).at(-1)
+  const match = latest?.text.match(/verify-email\?token=([^\s]+)/)
+  if (match === undefined || match === null) {
+    throw new Error(`no confirmation link was sent to ${email}`)
+  }
+
+  return decodeURIComponent(match[1])
+}
+
+/** Confirms an address through its latest link; the agent is signed in. */
+export async function confirmEmail(
+  agent: Agent,
+  email: string
+): Promise<{ status: number; body: any; headers: Headers }> {
+  const confirmed = await agent.post('/api/auth/email/verify', {
+    token: verificationTokenFor(email),
+  })
+  if (confirmed.status !== 200) {
+    throw new Error(
+      `email confirmation failed: ${confirmed.status} ${JSON.stringify(confirmed.body)}`
+    )
+  }
+
+  return confirmed
+}
+
+/** The bot-check token the specs send; no secret is configured in tests. */
+export const TURNSTILE_TOKEN = 'test-turnstile-token'
 
 /** A fresh email no other run used. */
 export function uniqueEmail(): string {
@@ -153,7 +203,8 @@ function agentOf(app: TestApp, cookieJar: { value: string }): Agent {
   }
 }
 
-/** Signs up a new tenant with its owner and answers the signed-in agent. */
+/** Signs up a new tenant with its owner, confirms the email, and answers
+ * the signed-in agent. */
 export async function signUp(
   app: TestApp,
   email = uniqueEmail(),
@@ -167,12 +218,15 @@ export async function signUp(
     name: 'Ana',
     email,
     password,
+    turnstileToken: TURNSTILE_TOKEN,
   })
   if (created.status !== 201) {
     throw new Error(
       `sign-up failed: ${created.status} ${JSON.stringify(created.body)}`
     )
   }
+
+  await confirmEmail(agent, email)
 
   return agent
 }
@@ -249,6 +303,7 @@ export async function joinAsMember(
     name: 'Bia',
     email,
     password: 'password-m',
+    turnstileToken: TURNSTILE_TOKEN,
   })
   if (joined.status !== 201) {
     throw new Error(
@@ -256,5 +311,7 @@ export async function joinAsMember(
     )
   }
 
-  return { agent, id: joined.body.user.id, email }
+  const confirmed = await confirmEmail(agent, email)
+
+  return { agent, id: confirmed.body.user.id, email }
 }

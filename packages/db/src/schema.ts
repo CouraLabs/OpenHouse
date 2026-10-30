@@ -70,10 +70,21 @@ export const users = sqliteTable(
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     anonymizedAt: dt('anonymized_at'),
     startPage: text('start_page').notNull().default('/'),
+    emailVerifiedAt: dt('email_verified_at'),
+    emailVerificationHash: text('email_verification_hash'),
+    emailVerificationExpiresAt: dt('email_verification_expires_at'),
+    emailVerificationSentAt: dt('email_verification_sent_at'),
+    emailVerificationWindowAt: dt('email_verification_window_at'),
+    emailVerificationSends: integer('email_verification_sends')
+      .notNull()
+      .default(0),
     createdAt: dt('created_at').notNull().default(NOW),
     updatedAt: dt('updated_at').notNull().default(NOW),
   },
   (table) => [
+    uniqueIndex('users_email_verification_hash_key').on(
+      table.emailVerificationHash
+    ),
     uniqueIndex('users_email_key').on(sql`lower(${table.email})`),
     index('users_tenant_id_idx').on(table.tenantId),
   ]
