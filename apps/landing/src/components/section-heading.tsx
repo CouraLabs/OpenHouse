@@ -4,11 +4,6 @@ import { Eyebrow } from './eyebrow.js'
 import { Reveal } from './reveal.js'
 import { Tick } from './tick.js'
 
-/**
- * A section's head row, ruled off the top of its cell: the path name and
- * lede left of the shared `split` column rule, the mono title right of it.
- * Its bottom rule runs frame to frame with ticks at the rails and the column.
- */
 export function SectionHeading({
   eyebrow,
   title,

@@ -24,13 +24,6 @@ import { PushToggle } from './push-toggle.js'
 import { SwitchField } from './switch-field.js'
 import { useSaveNotificationPreferences } from './use-notifications.js'
 
-/**
- * The reminder preferences of the signed-in user: the channels (the in-app
- * centre and web push — no email yet), how long before a due date to be
- * reminded, the limit thresholds, and individual alerts or a daily digest.
- * The rules are the poco schema the API runs. Push payloads stay quiet —
- * no amounts or names — unless the user opts in below.
- */
 export function NotificationPreferencesForm({
   initial,
   onSaved,
@@ -96,8 +89,7 @@ export function NotificationPreferencesForm({
 
       <section className="flex flex-col gap-3">
         <h3 className="text-sm font-medium">{t('notifications.lead')}</h3>
-        {/* Stacked, not side by side: the two labels wrap to different
-            heights, which put the inputs out of line in a two-column grid. */}
+        {}
         <div className="flex flex-col gap-3">
           <NumberField
             label={t('notifications.bill-lead')}

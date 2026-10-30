@@ -26,17 +26,6 @@ import { ReminderDeliveryService } from './reminder-delivery.service.js'
 import { runTenantReminders, type ReminderSources } from './reminder-run.service.js'
 import { SEND_FROM_HOUR } from './reminder-rules.js'
 
-/**
- * One tenant's reminder evaluation for the queue consumer. The tenant's
- * own time zone decides what day it is and whether the send window
- * (`SEND_FROM_HOUR`) has opened; the evaluation is idempotent — the
- * delivery claims every reminder in the `notification_log` first, so a
- * redelivered message sends nothing twice. The `PushService` pushes only
- * when the VAPID pair is configured (`config.push`); without it the
- * in-app centre still receives everything.
- *
- * Answers how many messages went out.
- */
 export async function runRemindersForTenant(
   db: Database,
   config: Config,

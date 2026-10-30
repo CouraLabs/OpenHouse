@@ -5,17 +5,10 @@ import { Button } from '@workspace/ui/components/button'
 
 import { useTheme } from '@workspace/ui/components/theme-provider'
 
-/** Whether the OS prefers dark — what a `system` theme renders as. */
 function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-/**
- * The theme toggle: one click flips between light and dark. A stored
- * `system` theme reads as whatever the OS renders, and the first click
- * leaves it for the opposite. Extracted from the app header so the auth
- * pages offer the same control.
- */
 export function ThemeSwitcher() {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()

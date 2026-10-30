@@ -14,7 +14,6 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The icon each kind of line carries. */
 const ICONS: Record<UpcomingItem['kind'], LucideIcon> = {
   bill: CalendarClock,
   recurring: Repeat,
@@ -22,11 +21,6 @@ const ICONS: Record<UpcomingItem['kind'], LucideIcon> = {
   goal: Target,
 }
 
-/**
- * One line of the upcoming list: an icon, what is coming and when, and the
- * amount on the right. An Income rule reads as incoming, an Open bill as an
- * estimate, a bill past due as overdue.
- */
 export function UpcomingItemRow({ item }: { item: UpcomingItem }) {
   const { t } = useTranslation()
   const Icon = ICONS[item.kind]
@@ -74,7 +68,6 @@ export function UpcomingItemRow({ item }: { item: UpcomingItem }) {
 interface Description {
   label: string
   amount: string
-  /** The muted line under the label, when the kind has one. */
   badge?: string
   tone?: 'in'
 }

@@ -14,12 +14,6 @@ import { ImportRowFlags } from './import-row-flags.js'
 import type { ResolvedRow, RowEdit } from './import-rows.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * One row of the preview table: the tick, the day, the description with its
- * flags, the signed amount, the category and receiver pickers (the
- * suggestion preselected, editable in place), and — on a card — the bill the
- * row lands on and the installment link. An unticked row is dimmed.
- */
 export function ImportRowLine({
   entry,
   currency,

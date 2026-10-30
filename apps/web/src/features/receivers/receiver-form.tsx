@@ -19,39 +19,23 @@ import {
 } from '@workspace/ui/components/select'
 import { TextField } from '@workspace/ui/components/text-field'
 
-/**
- * The fields the receiver form holds. The rules come straight from the
- * shared poco schema — the same check the API runs, whose messages are
- * already the UX messages — so the form never re-declares them.
- */
 const receiverFormSchema = createReceiverSchema
 
 type ReceiverFormValues = z.infer<typeof receiverFormSchema>
 
-/** The props `ReceiverForm` takes. */
 interface ReceiverFormProps {
-  /** The receiver being edited, or nothing while creating. */
   receiver: Receiver | null
-  /** What a submit should do; the page decides where it saves. */
   onSubmit: (body: CreateReceiverBody) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/** The default values of a new receiver: nothing chosen, nothing typed. */
 const NEW_RECEIVER: ReceiverFormValues = {
   name: '',
   type: undefined as unknown as ReceiverType,
 }
 
-/**
- * The insert and edit form of the receivers page: a name and the kind of
- * receiver. It renders above the table; the page decides when it is open
- * and what a submit saves.
- */
 export function ReceiverForm({
   receiver,
   onSubmit,
@@ -68,8 +52,6 @@ export function ReceiverForm({
     formState: { errors },
   } = useForm<ReceiverFormValues>({
     resolver: zodResolver(receiverFormSchema),
-    // The page keys the form by the receiver it edits, so switching rows
-    // remounts it with that row's values.
     defaultValues:
       receiver === null
         ? NEW_RECEIVER
@@ -107,9 +89,7 @@ export function ReceiverForm({
               *
             </span>
           </FieldLabel>
-          {/* The trigger's label is rendered explicitly: a prefilled value
-           * set while the popup is closed would otherwise fall back to the
-           * placeholder. */}
+          {}
           <Select
             value={type}
             onValueChange={(value) =>

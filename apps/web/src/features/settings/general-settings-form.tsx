@@ -23,8 +23,6 @@ import { useSaveSettings, useTenantSettings } from '@/lib/settings.js'
 import { CurrencyChangeDialog } from './currency-change-dialog.js'
 import { RequiredMark } from './required-mark.js'
 
-/** The 409 body a main-currency change answers until it is confirmed, or
- * nothing for any other failure. */
 function currencyConflictOf(error: unknown): CurrencyChangeConflict | null {
   if (
     error instanceof ApiError &&
@@ -40,13 +38,6 @@ function currencyConflictOf(error: unknown): CurrencyChangeConflict | null {
   return null
 }
 
-/**
- * The owner's General section: the tenant's time zone and main currency.
- * The rules are the poco schema the API runs. Changing the zone only moves
- * future evaluations of "today"; stored calendar days never shift. Changing
- * the main currency re-denominates limits and goals without converting
- * them, so when there are any, the API asks first and a dialog confirms.
- */
 export function GeneralSettingsForm() {
   const { t } = useTranslation()
   const settings = useTenantSettings()
@@ -68,7 +59,6 @@ export function GeneralSettingsForm() {
   const timezone = watch('timezone')
   const mainCurrency = watch('mainCurrency')
   const unsplitMode = watch('unsplitMode') ?? settings.unsplitMode
-  // The save the API asked to confirm, with what it would re-denominate.
   const [unconfirmed, setUnconfirmed] = useState<{
     values: UpdateSettingsBody
     conflict: CurrencyChangeConflict
@@ -86,7 +76,6 @@ export function GeneralSettingsForm() {
       },
     })
 
-  // The confirmation is the dialog's to show, not an error under the form.
   const saveError =
     save.isError && currencyConflictOf(save.error) === null
       ? save.error instanceof Error

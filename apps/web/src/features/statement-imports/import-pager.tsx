@@ -2,8 +2,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@workspace/ui/components/button'
 
-/** Previous/next over the pages of the preview table. Renders nothing when
- * everything fits on one page. */
 export function ImportPager({
   pageIndex,
   pageCount,

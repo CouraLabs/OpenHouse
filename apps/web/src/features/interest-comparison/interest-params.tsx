@@ -18,16 +18,13 @@ import {
 } from '@workspace/ui/components/select'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The period the projection counts in: whole years or whole months. */
 export type InterestUnit = 'year' | 'month'
 
-/** The unit choices the period select offers. */
 const UNITS: Array<{ value: InterestUnit; labelKey: string }> = [
   { value: 'year', labelKey: 'interest-comparison.params.unit-year' },
   { value: 'month', labelKey: 'interest-comparison.params.unit-month' },
 ]
 
-/** The props `InterestParams` takes: every value the page owns. */
 interface InterestParamsProps {
   presentValue: string
   rate: string
@@ -39,12 +36,6 @@ interface InterestParamsProps {
   onUnitChange: (unit: InterestUnit) => void
 }
 
-/**
- * The projection's inputs, one row: the present value, the net annual
- * rate, the span, and the unit that span counts in. The rate is always
- * quoted a year — the unit only decides what one period of the schedule
- * means, exactly as the sheet's `ano`/`mês` switch did.
- */
 export function InterestParams({
   presentValue,
   rate,
@@ -56,9 +47,6 @@ export function InterestParams({
   onUnitChange,
 }: InterestParamsProps) {
   const { t } = useTranslation()
-  // The trigger's label is rendered here, not derived by base-ui from
-  // `items`: a prefilled value set while the popup was closed would
-  // otherwise fall back to the placeholder.
   const selectedUnit = UNITS.find((choice) => choice.value === unit)
 
   return (

@@ -1,6 +1,5 @@
 import { useContent } from '@/lib/use-locale.js'
 
-/** Three accounts in three currencies, each with its balance. */
 export function AccountsVisual() {
   const { sampleAccounts } = useContent()
 

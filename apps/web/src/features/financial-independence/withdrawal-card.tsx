@@ -16,12 +16,6 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * Living off the accumulation: the constant monthly withdrawal an
- * accumulated balance supports over the span, net of the income tax the
- * gains pay — the sheet charged the tax on the interest share only, so
- * the first month's net interest is quoted beside the withdrawal.
- */
 export function WithdrawalCard() {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()

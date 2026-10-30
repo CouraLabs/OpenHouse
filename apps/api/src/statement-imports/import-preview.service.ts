@@ -34,16 +34,6 @@ import { ImportTransactionRepository } from './import-transaction.repository.js'
 import { buildSuggester } from './import-suggestions.js'
 import type { ParsedImportRow } from './parsed-import.js'
 
-/**
- * Turns an uploaded bank file into the preview the user edits: the parsed
- * rows, each with a suggested category and receiver (the file's own category,
- * a transaction linker, or the fuzzy name match), a duplicate flag (the bank
- * id already imported, or a probable repeat), the card bill it would land on,
- * and an installment marker. Nothing is written and the file is not kept.
- *
- * A CSV with no mapping yet — neither sent nor saved for the account —
- * answers its headers and a sample instead, so the user can map it.
- */
 export class ImportPreviewService {
   constructor(
     private readonly accounts: AccountRepository,
@@ -101,12 +91,6 @@ export class ImportPreviewService {
     }
   }
 
-  /**
-   * Reads a CSV with the mapping it was sent with, else the account's saved
-   * one (unless the user asked to map again). Answers the mapping to show:
-   * the one applied, or — while the file waits for a mapping — the saved
-   * one, to prefill the mapping step.
-   */
   private async readCsv(
     tenantId: number,
     accountId: number,
@@ -126,7 +110,6 @@ export class ImportPreviewService {
     }
   }
 
-  /** Matches the parsed rows against the tenant's data. */
   private async enrich(
     tenantId: number,
     account: Account,
@@ -195,8 +178,6 @@ export class ImportPreviewService {
     })
   }
 
-  /** The account's stored rows around the file's days, indexed by direction
-   * and amount — what a probable duplicate is searched in. */
   private async duplicatePool(
     tenantId: number,
     accountId: number,
@@ -249,8 +230,6 @@ export class ImportPreviewService {
   }
 }
 
-/** Rejects a file declaring a currency other than the account's: importing
- * it would write the file's digits as the account's money. */
 function assertCurrency(declared: readonly string[], account: Account): void {
   const other = declared.find((currency) => currency !== account.currency)
 

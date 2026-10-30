@@ -11,7 +11,6 @@ import { Skeleton } from '@workspace/ui/components/skeleton'
 import { NotificationPreferencesForm } from './notification-preferences-form.js'
 import { useNotificationPreferences } from './use-notifications.js'
 
-/** The dialog the bell menu opens: the user's reminder preferences. */
 export function NotificationPreferencesDialog({
   open,
   onOpenChange,

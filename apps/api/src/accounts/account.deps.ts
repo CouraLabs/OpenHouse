@@ -12,18 +12,10 @@ import { AccountRepository } from './account.repository.js'
 import { accountRoutes } from './account.routes.js'
 import { AccountService } from './account.service.js'
 
-/** The accounts feature's wiring: its routes, mounted under `/api/accounts`. */
 export interface AccountDeps {
   router: App
 }
 
-/**
- * Builds the accounts feature's services from the request's dependencies —
- * the explicit composition the DI container once did. The card-bill
- * resync rides the `CardCycleSync` port the credit-card-statements feature
- * implements; the export's audit lines ride the `AuditRecorder` port the
- * audit feature implements.
- */
 export function accountDeps(
   db: Database,
   _config: Config,

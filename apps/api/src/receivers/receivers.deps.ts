@@ -9,16 +9,10 @@ import { ReceiverRepository } from './receiver.repository.js'
 import { ReceiverService } from './receiver.service.js'
 import { receiversRoutes } from './receivers.routes.js'
 
-/** The receivers feature's wiring: its router. */
 export interface ReceiversDeps {
   router: App
 }
 
-/**
- * Builds the receivers feature's services from the request's dependencies
- * — the explicit composition the DI container once did. The services are
- * cheap objects, rebuilt per request from the same handles.
- */
 export function receiversDeps(
   db: Database,
   _config: Config,

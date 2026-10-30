@@ -3,10 +3,6 @@ import { cn } from 'cn'
 
 import { Tick } from './tick.js'
 
-/**
- * A cell on the sheet: a 1px top rule that runs past the rails to the window
- * edges, a crosshair where it meets each rail, and `pad` padding.
- */
 export function Section({
   id,
   children,

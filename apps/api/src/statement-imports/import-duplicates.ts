@@ -6,7 +6,6 @@ import {
   type TransactionType,
 } from '@workspace/poco'
 
-/** A stored transaction an imported row may repeat. */
 export interface ExistingRow {
   id: number
   name: string
@@ -15,8 +14,6 @@ export interface ExistingRow {
   type: TransactionType
 }
 
-/** Groups the stored rows by direction and amount, so a probable-duplicate
- * check only compares rows that already agree on the money. */
 export function indexByAmount(
   rows: readonly ExistingRow[]
 ): Map<string, ExistingRow[]> {
@@ -31,13 +28,6 @@ export function indexByAmount(
   return index
 }
 
-/**
- * Finds the stored row an imported one probably repeats: the same account
- * (the caller's index), the same direction and amount, a day within ±2 days,
- * and a description similar enough (lowercase, no digits or accents). The
- * most similar candidate wins. The row is flagged, never skipped — the user
- * decides.
- */
 export function findProbableDuplicate(
   row: {
     name: string

@@ -1,7 +1,6 @@
 import type { Database, NewAuditLogRow } from '@workspace/db'
 import { auditLog } from '@workspace/db'
 
-/** The append-only audit log. Rows are inserted and never changed. */
 export class AuditLogRepository {
   constructor(private readonly db: Database) {}
 
@@ -9,7 +8,6 @@ export class AuditLogRepository {
     await this.db.insert(auditLog).values(row)
   }
 
-  /** The line's insert statement, for the caller's batch. */
   statement(row: NewAuditLogRow) {
     return this.db.insert(auditLog).values(row)
   }

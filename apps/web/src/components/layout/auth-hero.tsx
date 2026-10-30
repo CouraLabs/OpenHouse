@@ -1,11 +1,5 @@
 import { useTranslation } from 'react-i18next'
 
-/**
- * The drawing half of the signed-out pages: a graph-paper sheet with the
- * OpenHouse primitive (a roof over a square) plotted stroke by stroke, a mono
- * tag, the mono headline, and the tagline. Hidden below `md`, where the form
- * takes the full width.
- */
 export function AuthHero() {
   const { t } = useTranslation()
 

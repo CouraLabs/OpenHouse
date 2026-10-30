@@ -33,32 +33,18 @@ import { AccountAdvancedFields } from './account-advanced-fields.js'
 import { CardCycleFields } from './card-cycle-fields.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The fields the account form holds. The rules come straight from the
- * shared poco schema — the same check the API runs, whose messages are
- * already the UX messages — so the form never re-declares them. Its
- * refinement is what makes the agency and the number required for Checking
- * and Savings and the limit and close/due days required for a Credit Card.
- */
 const accountFormSchema = createAccountSchema
 
 type AccountFormValues = z.input<typeof accountFormSchema>
 
-/** The props `AccountForm` takes. */
 interface AccountFormProps {
-  /** The account being edited, or nothing while creating. */
   account: Account | null
-  /** What a confirmed save should do; the page decides what it saves. */
   onSubmit: (body: CreateAccountBody) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/** The default values of a new account: nothing typed, and the tenant's
- * main currency preselected. */
 const newAccount = (mainCurrency: Currency): AccountFormValues => ({
   name: '',
   agency: null,
@@ -75,22 +61,12 @@ const newAccount = (mainCurrency: Currency): AccountFormValues => ({
   ownership: 'personal',
 })
 
-/** The fields only a Credit Card carries; the other types never keep them. */
 const CARD_ONLY_FIELDS = ['limit', 'closeDay', 'dueDay'] as const
 
-/** The types that have no bank behind them, so no agency field either. */
 const AGENCY_LESS_TYPES: readonly AccountType[] = ['Wallet', 'Credit Card']
 
-/** The types that carry no bank account number, so no number field either. */
 const NUMBER_LESS_TYPES: readonly AccountType[] = ['Wallet', 'Credit Card']
 
-/**
- * The insert and edit form of the accounts page. Card-only fields render
- * only while the type is Credit Card, and the agency and the number only
- * while the account sits at a bank; switching away clears what the previous
- * type owned, so a stale value can never ride along. It renders above the
- * table; the page decides when it is open and what a submit saves.
- */
 export function AccountForm({
   account,
   onSubmit,
@@ -108,16 +84,11 @@ export function AccountForm({
     formState: { errors },
   } = useForm<AccountFormValues, unknown, CreateAccountBody>({
     resolver: zodResolver(accountFormSchema),
-    // The page keys the form by the account it edits, so switching rows
-    // remounts it with that row's values.
     defaultValues:
       account === null
         ? newAccount(mainCurrency)
         : {
             name: account.name,
-            // A wallet or card has no agency or number — a legacy row that
-            // carried one must not fail the schema's check on a field with
-            // no input.
             agency: AGENCY_LESS_TYPES.includes(account.type)
               ? null
               : account.agency,
@@ -125,8 +96,6 @@ export function AccountForm({
               ? null
               : account.number,
             type: account.type,
-            // On edit the field is the opening balance: the API rebuilds the
-            // current balance from it plus the account's transactions.
             balance: account.openingBalance,
             currency: account.currency,
             spreadPct: account.spreadPct,
@@ -156,9 +125,6 @@ export function AccountForm({
   return (
     <form
       onSubmit={handleSubmit((values) =>
-        // An empty agency is no agency: the wire carries null, not '' — and
-        // a wallet or card has no agency or number at all, even when the row
-        // once did.
         onSubmit({
           ...values,
           agency:
@@ -176,8 +142,7 @@ export function AccountForm({
       <p className="text-sm font-medium">
         {account === null ? t('accounts.new') : t('accounts.edit-title')}
       </p>
-      {/* Rows of at most four: identity first, then money and dates. The
-      card-only fields join the money row when the type is Credit Card. */}
+      {}
       <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
         <TextField
           type="text"
@@ -228,9 +193,6 @@ export function AccountForm({
             onValueChange={(value) => {
               const nextType = value as AccountType
               setValue('type', nextType, { shouldValidate: true })
-              // Leaving Credit Card leaves the card-only fields behind, and
-              // a wallet or card has no agency or number: all are cleared,
-              // so a stale value never rides along into the next type.
               if (nextType !== 'Credit Card') {
                 for (const field of CARD_ONLY_FIELDS) {
                   setValue(field, null)
@@ -311,8 +273,6 @@ export function AccountForm({
             }}
             placeholder={t('accounts.currency-placeholder')}
             invalid={errors.currency !== undefined}
-            // The currency is frozen once the account exists: every
-            // transaction and balance already recorded is denominated in it.
             disabled={account !== null}
           />
           <FieldError
@@ -322,9 +282,7 @@ export function AccountForm({
           />
         </Field>
         <Field>
-          {/* The flag rides on the account, not on a type: any kind can be
-              the one new transactions start in. Raising it here takes it
-              from the previous holder — the API moves it, never refuses. */}
+          {}
           <FieldLabel htmlFor="account-is-default">
             {t('accounts.is-default')}
           </FieldLabel>
@@ -338,7 +296,7 @@ export function AccountForm({
           />
         </Field>
         <Field>
-          {/* A shared (joint) account creates no debts between members. */}
+          {}
           <FieldLabel htmlFor="account-shared">
             {t('accounts.shared')}
           </FieldLabel>

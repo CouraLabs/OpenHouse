@@ -17,25 +17,18 @@ import {
 import { OfxFormatError, parseOfx } from './ofx-parser.js'
 import type { ParsedImport, ParsedImportRow } from './parsed-import.js'
 
-/** How many data rows the mapping step shows. */
 const SAMPLE_ROWS = 5
 
-/** A bank file read as far as it can be without the tenant's data. */
 export interface ReadFile {
   format: ImportFormat
   encoding: ResolvedEncoding
-  /** The currencies the file declares (OFX `CURDEF`). */
   currencies: string[]
-  /** A card statement (`CCSTMTRS`) or a bank one, when the file says. */
   statementKind: 'bank' | 'card' | 'unknown'
-  /** The CSV header cells, or `Column N` without a header. */
   headers: string[]
   sample: string[][]
-  /** Nothing while a CSV waits for its mapping. */
   parsed: ParsedImport | null
 }
 
-/** Rejects a file with more rows than one import takes. */
 function assertRowCount(count: number): void {
   if (count > IMPORT_MAX_ROWS) {
     throw new BadRequestError(
@@ -44,13 +37,6 @@ function assertRowCount(count: number): void {
   }
 }
 
-/**
- * Reads an OFX/QFX file: the encoding its header declares (`CHARSET`) is
- * honored, else the bytes decide; the rows are read with the tolerant
- * tokenizer. Money out is negative, so the sign alone gives the direction —
- * for a bank statement and a `CCSTMTRS` card statement alike (a card
- * charge is negative, a payment or refund positive).
- */
 export function readOfxFile(bytes: Uint8Array): ReadFile {
   const { text, encoding } = decodeImportBytes(bytes, ofxEncodingHint(bytes))
   let statement: ReturnType<typeof parseOfx>
@@ -90,12 +76,6 @@ export function readOfxFile(bytes: Uint8Array): ReadFile {
   }
 }
 
-/**
- * Reads a CSV file. The encoding is the mapping's, else the one the mapping
- * step forced, else detected (BOM, then UTF-8 validity, then Windows-1252).
- * Without a mapping the file is only split into headers and a sample so the
- * user can map it; with one, every record becomes a row.
- */
 export function readCsvFile(
   bytes: Uint8Array,
   options: {

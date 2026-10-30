@@ -9,7 +9,10 @@
   "assets": {
     "directory": "../web/dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"],
+    // Both the API and the mounted app prefix must run the Worker first:
+    // /api/* is Hono, /app/* gets the prefix stripped before the assets
+    // binding resolves it (the landing Worker owns the domain root).
+    "run_worker_first": ["/api/*", "/app/*"],
     "not_found_handling": "single-page-application"
   },
   // One database for the whole app; every tenant's rows carry tenant_id.
@@ -17,7 +20,7 @@
     {
       "binding": "DB",
       "database_name": "openhouse",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "db289b16-8ae4-4970-9728-3b632623eb53",
       "migrations_dir": "../../packages/db/drizzle"
     }
   ],
@@ -55,7 +58,13 @@
     // 03:15: the balance-consistency check.
     "crons": ["15 * * * *", "30 * * * *", "45 * * * *", "15 3 * * *"]
   },
-  "limits": { "cpu_ms": 30000 },
+  // The app worker serves the domain's /api and /app; the landing Worker
+  // takes the rest of the zone (most-specific route wins). Requires the
+  // couralabs.dev zone in this Cloudflare account.
+  "routes": [
+    { "pattern": "openhouse.couralabs.dev/api*", "zone_name": "couralabs.dev" },
+    { "pattern": "openhouse.couralabs.dev/app*", "zone_name": "couralabs.dev" }
+  ],
   // Workers Logs captures the request lines and the jobs' errors.
   "observability": { "enabled": true },
   "vars": {
@@ -63,6 +72,6 @@
     "JWT_ACCESS_TTL_S": "900",
     "JWT_REFRESH_TTL_S": "86400",
     "JWT_REMEMBER_REFRESH_TTL_S": "2592000",
-    "PUSH_VAPID_SUBJECT": "mailto:admin@openhouse.invalid"
+    "PUSH_VAPID_SUBJECT": "mailto:openhouse@couralabs.dev"
   }
 }

@@ -10,11 +10,6 @@ import { cn } from 'cn'
 
 import { formatMoney } from '@/lib/format-money.js'
 
-/**
- * The last month's card: the income and the expenses the previous month
- * closed with, one card row per currency — the same summary the current
- * month's cards answer, asked about the month before it.
- */
 export function LastMonthCard({
   title,
   groups,
@@ -24,7 +19,6 @@ export function LastMonthCard({
   title: string
   groups: TransactionSummaryGroup[]
   locale: string
-  /** The labels the card cannot derive, translated by the page. */
   labels: { incomes: string; expenses: string }
 }) {
   return (

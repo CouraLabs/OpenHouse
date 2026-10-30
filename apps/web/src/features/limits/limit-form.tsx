@@ -19,42 +19,24 @@ import { useMainCurrency } from '@/lib/settings.js'
 import { useActiveCategories } from './use-limits.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The fields the limit form holds. The rules come straight from the shared
- * poco schema — the same check the API runs, whose messages are already the
- * UX messages — so the form never re-declares them.
- */
 const limitFormSchema = createLimitSchema
 
 type LimitFormValues = z.infer<typeof limitFormSchema>
 
-/** The props `LimitForm` takes. */
 interface LimitFormProps {
-  /** The limit being edited, or nothing while creating. */
   limit: Limit | null
-  /** What a confirmed save should do; the dialog asks before this runs. */
   onSubmit: (body: CreateLimitBody) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/** The default values of a new limit: nothing chosen, nothing typed. */
 const newLimit = (): LimitFormValues => ({
   categoryId: undefined as unknown as number,
   amount: '',
   type: 'Daily',
 })
 
-/**
- * The insert and edit form of the limits page: a category dropdown, the
- * period, and the amount with reverse input masking. A limit has no
- * currency of its own — it is in the tenant's main currency, which the
- * amount's label names. It renders above the table; the page decides when
- * it is open and what a submit saves.
- */
 export function LimitForm({
   limit,
   onSubmit,
@@ -71,8 +53,6 @@ export function LimitForm({
     formState: { errors },
   } = useForm<LimitFormValues>({
     resolver: zodResolver(limitFormSchema),
-    // The page keys the form by the limit it edits, so switching rows
-    // remounts it with that row's values.
     defaultValues:
       limit === null
         ? newLimit()
@@ -87,9 +67,6 @@ export function LimitForm({
   const type = watch('type')
   const amount = watch('amount')
   const categories = useActiveCategories()
-  // The trigger's label is rendered here, not derived by base-ui from
-  // `items`: a prefilled value set while the popup is closed would
-  // otherwise fall back to the placeholder.
   const selectedCategory = (categories.data ?? []).find(
     (category) => category.id === categoryId
   )
@@ -103,7 +80,7 @@ export function LimitForm({
       <p className="text-sm font-medium">
         {limit === null ? t('limits.new') : t('limits.edit-title')}
       </p>
-      {/* One row: what the cap is, and what it costs. */}
+      {}
       <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
         <Field data-invalid={errors.categoryId !== undefined}>
           <FieldLabel htmlFor="limit-category">

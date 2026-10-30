@@ -31,7 +31,6 @@ import type {
 import { HouseholdMembers } from '../common/household/household-members.js'
 import type { SpendingRow } from './household-spending.js'
 
-/** One recorded settle-up, before the names are joined on. */
 export interface SettlementRow {
   id: number
   transactionDt: string
@@ -42,20 +41,11 @@ export interface SettlementRow {
   note: string | null
 }
 
-/**
- * The household's reads: its members, and the expense rows balances,
- * spending, and the settlement history are derived from. Nothing here is
- * stored — a balance is computed from the transactions and their splits on
- * every read, so it cannot drift. Every method takes the tenant explicitly.
- * Also the implementation of the `HouseholdMembers` port.
- */
 export class HouseholdRepository extends HouseholdMembers {
   constructor(private readonly db: Database) {
     super()
   }
 
-  /** Lists the tenant's members — removed ones included, since their
-   * balance stays visible — oldest first. */
   async listMembers(tenantId: number): Promise<HouseholdMember[]> {
     return this.db
       .select({ id: users.id, name: users.name, isActive: users.isActive })
@@ -102,12 +92,6 @@ export class HouseholdRepository extends HouseholdMembers {
     return row?.id
   }
 
-  /**
-   * The entries balances are computed from: expenses somebody paid, on a
-   * personal account, not canceled — plus the settlements, which move a
-   * debt whatever account paid them. A shared account's expenses create no
-   * debts; transfers, adjustments, and deleted rows never count.
-   */
   async balanceEntries(tenantId: number): Promise<LedgerEntry[]> {
     const where = and(
       eq(transactions.tenantId, tenantId),
@@ -149,8 +133,6 @@ export class HouseholdRepository extends HouseholdMembers {
     }))
   }
 
-  /** The expenses of a window the spending report totals: every real
-   * expense, shared accounts included, never settlements or transfers. */
   async spendingRows(
     tenantId: number,
     range: HouseholdOverviewArgs
@@ -199,8 +181,6 @@ export class HouseholdRepository extends HouseholdMembers {
     }))
   }
 
-  /** The recorded settle-ups, newest first: the paying leg of each, with
-   * the member it paid read from its one share. */
   async settlements(tenantId: number): Promise<SettlementRow[]> {
     const rows = await this.db
       .select({
@@ -249,7 +229,6 @@ export class HouseholdRepository extends HouseholdMembers {
     })
   }
 
-  /** The ACTIVE shares of the given transactions, grouped by transaction. */
   private async sharesOf(
     tenantId: number,
     transactionIds: readonly number[]

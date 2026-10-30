@@ -9,10 +9,6 @@ import { PerkList } from './perk-list.js'
 import { PlanPrice } from './plan-price.js'
 import { TerminalSnippet } from './terminal-snippet.js'
 
-/**
- * The free self-hosted plan as one wide card: pitch, price, and perks on the
- * left; the three commands that start it on the right.
- */
 export function SelfHostPlan() {
   const { selfHosted } = useContent()
   return (

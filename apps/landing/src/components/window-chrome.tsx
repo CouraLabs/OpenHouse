@@ -1,10 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from 'cn'
 
-/**
- * A faux-OS window: a white title bar with three light-gray dots and an
- * optional monospace title, then the content.
- */
 export function WindowChrome({
   title,
   children,

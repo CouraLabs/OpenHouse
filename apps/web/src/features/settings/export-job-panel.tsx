@@ -5,19 +5,11 @@ import type { CreateDataExportBody } from '@workspace/poco'
 
 import { useDataExport } from './use-data-export.js'
 
-/** The props `ExportJobPanel` takes. */
 interface ExportJobPanelProps {
-  /** What to export: the tenant, or one member. */
   body: CreateDataExportBody
-  /** The label the start button carries. */
   startLabel: string
 }
 
-/**
- * Runs a full export and hands the file to the browser's save flow: one
- * request builds the ZIP in memory and answers the bytes — the button
- * shows the pending state while it builds. Nothing is stored server-side.
- */
 export function ExportJobPanel({ body, startLabel }: ExportJobPanelProps) {
   const { t } = useTranslation()
   const run = useDataExport()

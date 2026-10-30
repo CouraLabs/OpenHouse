@@ -7,12 +7,6 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 
-/**
- * One select field of the form, working in the string domain the Select's
- * generic admits: label, trigger with an explicit label (a prefilled value
- * set while the popup is closed would otherwise fall back to the
- * placeholder), options. The caller converts to and from numbers.
- */
 export function StringPick({
   id,
   label,
@@ -29,7 +23,6 @@ export function StringPick({
   required?: boolean
   value: string | undefined
   placeholder: string
-  /** Answers with nothing when the empty option — "None" — was picked. */
   onChange: (value: string | undefined) => void
   options: Array<{ value: string; label: string }>
   error?: string

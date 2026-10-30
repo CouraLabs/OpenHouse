@@ -15,19 +15,11 @@ import { Pencil, Trash2 } from 'lucide-react'
 
 import { formatMoney } from '@/lib/format-money.js'
 
-/** What a usage card's actions can do, reported upward. */
 export interface LimitUsageActions {
   onEdit: (limit: LimitUsage) => void
   onDelete: (limit: LimitUsage) => void
 }
 
-/**
- * One limit's usage as a card: the category, the period it covers, and the
- * gauge of what the period has spent against the cap — the API having done
- * the totaling. The fill runs the semantic green while there is room and
- * takes the destructive token once the spending passes the cap; the figure
- * beside the bar carries the exact numbers, so color never works alone.
- */
 export function LimitUsageCard({
   limit,
   locale,
@@ -95,11 +87,6 @@ export function LimitUsageCard({
   )
 }
 
-/**
- * The usage card grid: one card per ACTIVE limit, the ones closest to —
- * or past — their cap first, so what needs attention leads. Collapses to a
- * single column on mobile.
- */
 export function LimitUsageGrid({
   usage,
   locale,

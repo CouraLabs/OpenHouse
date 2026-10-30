@@ -15,27 +15,19 @@ import type {
 
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 
-/**
- * A recurring rule row with the receiver's, category's, and account's names
- * — and the account's currency, which the rule's amount is in — joined on:
- * what every read answers. The web never resolves an id into a label.
- */
 export type RecurringTransactionRow = RecurringTransaction & {
   receiverName: string
   categoryName: string
   accountName: string
   accountCurrency: Currency
-  /** The payer's name, joined; nothing for a rule with no payer. */
   paidByName: string | null
 }
 
-/** What a search answers with: the page's rows and how many match in all. */
 export interface RecurringTransactionSearch {
   rows: RecurringTransactionRow[]
   total: number
 }
 
-/** The fields a create or update writes, beyond the audit stamps. */
 export interface RecurringTransactionWrite {
   receiverId: number
   categoryId: number
@@ -46,24 +38,14 @@ export interface RecurringTransactionWrite {
   frequencyDay: number | null
   frequencyMonth: number | null
   paidByUserId: number | null
-  /** The shares generated transactions are split with; left out on an
-   * update, the stored shares are kept, and null clears them. */
   defaultSplit?: SplitInput | null
 }
 
-/** The payer's user row, joined for the name. */
 const payers = alias(users, 'payer')
 
-/**
- * The recurring rule rows, reached only through the tenant of the session
- * — except the plain ACTIVE listing the materialization job reads. Every
- * read joins the three display names, so a client never has to resolve an
- * id.
- */
 export class RecurringTransactionRepository {
   constructor(private readonly db: Database) {}
 
-  /** Inserts a rule, stamping the audit trail with the acting user. */
   async insert(
     tenantId: number,
     userId: number,
@@ -82,7 +64,6 @@ export class RecurringTransactionRepository {
     return this.withNames(row)
   }
 
-  /** Runs the paged search a `FetchArgs` describes, over the tenant's rows. */
   async search(
     tenantId: number,
     args: SearchRecurringTransactionsArgs
@@ -100,8 +81,6 @@ export class RecurringTransactionRepository {
     const [rows, [counted]] = await Promise.all([
       this.selectJoined()
         .where(query.where)
-        // The id is the tie-breaker: rows the sort clauses leave equal keep
-        // one order, so a page never shuffles its neighbors.
         .orderBy(...query.orderBy, asc(recurringTransactions.id))
         .limit(query.limit)
         .offset(query.offset),
@@ -126,7 +105,6 @@ export class RecurringTransactionRepository {
     return { rows, total: counted.value }
   }
 
-  /** Reads one rule of the tenant — deleted rows included. */
   async findById(
     tenantId: number,
     id: number
@@ -141,8 +119,6 @@ export class RecurringTransactionRepository {
     return row
   }
 
-  /** Updates a rule's fields and audit trail. The written columns are
-   * named one by one: the id is GENERATED ALWAYS and must never be in a SET. */
   async update(
     tenantId: number,
     id: number,
@@ -178,7 +154,6 @@ export class RecurringTransactionRepository {
     return row === undefined ? undefined : this.withNames(row)
   }
 
-  /** Soft-deletes a rule: a status change, stamped like any update. */
   async softDelete(
     tenantId: number,
     id: number,
@@ -198,8 +173,6 @@ export class RecurringTransactionRepository {
     return row
   }
 
-  /** Lists the tenant's ACTIVE rules of ACTIVE accounts, names joined —
-   * what the upcoming list projects. */
   async listActive(tenantId: number): Promise<RecurringTransactionRow[]> {
     return this.selectJoined()
       .where(
@@ -212,9 +185,6 @@ export class RecurringTransactionRepository {
       .orderBy(asc(recurringTransactions.id))
   }
 
-  /** Lists the tenant's ACTIVE rules, plain — what the materialization
-   * job iterates. No names joined: the run re-reads the one rule it
-   * materializes for its receiver's name. */
   async listActiveRules(tenantId: number): Promise<RecurringTransaction[]> {
     return this.db
       .select()
@@ -227,17 +197,14 @@ export class RecurringTransactionRepository {
       )
   }
 
-  /** Re-reads one row with the joined names. */
   private async withNames(
     row: RecurringTransaction
   ): Promise<RecurringTransactionRow> {
     const found = await this.findById(row.tenantId, row.id)
 
-    // The row was just written; the join cannot come back empty.
     return found as RecurringTransactionRow
   }
 
-  /** The joined select every read shares. */
   private selectJoined() {
     return this.db
       .select({
@@ -261,7 +228,6 @@ export class RecurringTransactionRepository {
       .leftJoin(payers, eq(recurringTransactions.paidByUserId, payers.id))
   }
 
-  /** Translates the wire filter into SQL, always inside the tenant. */
   private filterToSql(tenantId: number, args: SearchRecurringTransactionsArgs) {
     const conditions = [eq(recurringTransactions.tenantId, tenantId)]
 

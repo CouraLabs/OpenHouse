@@ -74,12 +74,6 @@
   --font-sans: 'Jost Variable', Jost, ui-sans-serif, system-ui, sans-serif;
 }
 
-/*
- * The Drafting Sheet (DESIGN.md): black, white and neutral gray ink in two
- * peer themes. Ink is the only accent; surfaces are opaque ground stepped one
- * tone (raised, lift) and separated by hairlines, never by shadows. The one
- * hue kept is `destructive`: a ledger must tell an error or a debit apart.
- */
 :root {
   --background: #f2f2f0;
   --foreground: #0c0c0c;
@@ -173,15 +167,12 @@
   ::selection {
     @apply bg-foreground text-background;
   }
-  /* Scrollbars drawn as hairline ink, not the browser's gray. */
   html {
     scrollbar-color: var(--border) transparent;
   }
-  /* Hairline icons: strokes on the sheet are drawn, never heavy. */
   svg.lucide {
     stroke-width: 1.5;
   }
-  /* The Mono Voice Rule: anything that names something is Geist Mono 500. */
   h1,
   h2,
   h3,
@@ -202,7 +193,6 @@
   [role='button']:not(:disabled) {
     cursor: pointer;
   }
-  /* Primitives plot in by stroke-dashoffset on a normalised path length. */
   .plot-stroke {
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
@@ -220,9 +210,7 @@
     *,
     *::before,
     *::after {
-      /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override every animation, including inline ones */
       animation-duration: 1ms !important;
-      /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override every transition, including inline ones */
       transition-duration: 1ms !important;
     }
   }

@@ -9,11 +9,6 @@ import { Cell, Pie, PieChart } from 'recharts'
 
 import { formatMoney } from '@/lib/format-money.js'
 
-/**
- * The series colors the slices whose entity carries no color of its own
- * wear, in a fixed order — never cycled, never derived from a value. The
- * validated categorical palette's first eight slots.
- */
 const SERIES = [
   '#2a78d6',
   '#eb6834',
@@ -25,13 +20,10 @@ const SERIES = [
   '#e34948',
 ] as const
 
-/** The color the tail past the series folds into. */
 const OTHER_COLOR = '#898781'
 
-/** How many slices keep their own color before the tail folds into Other. */
 const MAX_SLICES = SERIES.length
 
-/** One currency's pie and its legend. */
 export function PieGroup({
   group,
   locale,
@@ -97,8 +89,6 @@ export function PieGroup({
   )
 }
 
-/** A slice as the chart and legend read it: the exact money string the
- * legend formats, and the value the geometry plots. */
 interface Slice {
   name: string
   total: string
@@ -106,9 +96,6 @@ interface Slice {
   color: string
 }
 
-/** The currency's items as slices, largest first: each category paints in
- * its own color, each account in the next series slot, and the tail past
- * eight folds into Other — a ninth hue is never invented. */
 function slicesOf(
   group: TransactionBreakdownGroup,
   otherLabel: string
@@ -136,14 +123,12 @@ function slicesOf(
   return slices
 }
 
-/** Reads a money string as whole cents, exactly. */
 function centsOf(amount: string): bigint {
   const [whole, fraction = ''] = amount.split('.')
 
   return BigInt(`${whole}${fraction.padEnd(2, '0')}`)
 }
 
-/** Renders cents as the decimal money string the wire carries. */
 function formatCents(total: bigint): string {
   const digits = total.toString().padStart(3, '0')
 

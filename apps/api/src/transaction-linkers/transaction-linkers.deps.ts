@@ -9,16 +9,10 @@ import { TransactionLinkerRepository } from './transaction-linker.repository.js'
 import { TransactionLinkerService } from './transaction-linker.service.js'
 import { transactionLinkersRoutes } from './transaction-linkers.routes.js'
 
-/** The transaction linkers feature's wiring: its router. */
 export interface TransactionLinkersDeps {
   router: App
 }
 
-/**
- * Builds the transaction linkers feature's services from the request's
- * dependencies — the explicit composition the DI container once did. The
- * services are cheap objects, rebuilt per request from the same handles.
- */
 export function transactionLinkersDeps(
   db: Database,
   _config: Config,

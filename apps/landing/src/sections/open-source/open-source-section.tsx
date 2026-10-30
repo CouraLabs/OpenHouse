@@ -6,10 +6,6 @@ import { Reveal } from '@/components/reveal.js'
 import { Section } from '@/components/section.js'
 import { useContent } from '@/lib/use-locale.js'
 
-/**
- * The closing argument, centered over the hairline grid: mono title, body,
- * the three facts as a ruled row, and the call to star the repository.
- */
 export function OpenSourceSection() {
   const { openSource } = useContent()
   return (

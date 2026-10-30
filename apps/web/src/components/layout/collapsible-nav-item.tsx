@@ -17,7 +17,6 @@ import {
 
 import type { CollapsibleNavItem } from './nav.js'
 
-/** A navigation entry that expands in place to reveal nested links. */
 export function CollapsibleNavItemView({ item }: { item: CollapsibleNavItem }) {
   const { t } = useTranslation()
   const Icon = item.icon

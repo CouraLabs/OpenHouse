@@ -4,10 +4,6 @@ import { cn } from 'cn'
 
 import type { SettingsSection } from './settings-sections.js'
 
-/**
- * The Settings side navigation: one link per section the role may open,
- * stacked on wide screens and scrolling in a row on narrow ones.
- */
 export function SettingsNav({
   sections,
   active,

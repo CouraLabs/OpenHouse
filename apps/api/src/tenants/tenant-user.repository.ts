@@ -10,13 +10,11 @@ import {
   users,
 } from '@workspace/db'
 
-/** A user row without its secrets — what the Users section reads. */
 export type TenantUserRow = Pick<
   User,
   'id' | 'name' | 'email' | 'role' | 'isActive' | 'anonymizedAt' | 'createdAt'
 >
 
-/** The columns a `TenantUserRow` selects. */
 const PUBLIC_COLUMNS = {
   id: users.id,
   name: users.name,
@@ -27,15 +25,9 @@ const PUBLIC_COLUMNS = {
   createdAt: users.createdAt,
 }
 
-/**
- * The tenant's user rows, reached only through the tenant of the session.
- * Every method takes the tenant id explicitly.
- * Every method takes the tenant id explicitly.
- */
 export class TenantUserRepository {
   constructor(private readonly db: Database) {}
 
-  /** Lists the tenant's users, oldest first. */
   async list(tenantId: number): Promise<TenantUserRow[]> {
     return this.db
       .select(PUBLIC_COLUMNS)
@@ -44,7 +36,6 @@ export class TenantUserRepository {
       .orderBy(asc(users.createdAt), asc(users.id))
   }
 
-  /** Reads one user of the tenant. */
   async findById(
     tenantId: number,
     id: number
@@ -57,11 +48,6 @@ export class TenantUserRepository {
     return row
   }
 
-  /**
-   * Deactivates a user under the guard that keeps the tenant one active
-   * owner: removing the last active owner matches no rows, whichever
-   * writer gets there first — the re-check the row locks once did.
-   */
   async deactivate(
     tenantId: number,
     id: number
@@ -87,7 +73,6 @@ export class TenantUserRepository {
     return row
   }
 
-  /** Restores a removed user; they sign in again to get a session. */
   async setActive(
     tenantId: number,
     id: number,
@@ -102,14 +87,6 @@ export class TenantUserRepository {
     return row
   }
 
-  /**
-   * Anonymizes a user as one batch: the name and email are replaced, the
-   * password hash and the refresh hash are cleared, and the open reset
-   * codes expire — nothing can sign them back in. Nothing may reach an
-   * erased member either: their push subscriptions and calendar feed go,
-   * and so does their notification centre. The rows they created are not
-   * touched.
-   */
   async anonymizeWithAudit(
     tenantId: number,
     id: number,

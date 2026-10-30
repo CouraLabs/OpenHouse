@@ -7,19 +7,11 @@ import type { Session } from './session.js'
 import { ACCESS_COOKIE } from './cookies.js'
 import type { UserRole } from '@workspace/db'
 
-/**
- * The auth middleware: the replacement of the global `AuthGuard`. Mounted
- * on the authenticated router group after the public auth routes, it hands
- * the access cookie to the `SessionResolver` and attaches the session for
- * the handlers to read (`c.var.session`). A request without a session that
- * reaches here answers 401.
- */
 export function authMiddleware(sessions: SessionResolver) {
   return async (
     context: import('hono').Context<AppEnv>,
     next: () => Promise<void>
   ): Promise<void | Response> => {
-    // The deployment probe's route needs no session.
     if (context.req.path === '/api/health') {
       return next()
     }
@@ -42,11 +34,8 @@ export function authMiddleware(sessions: SessionResolver) {
   }
 }
 
-/** The roles a route accepts when it declares none: any signed-in user. */
 const ANY_ROLE: readonly UserRole[] = ['owner', 'user']
 
-/** The role middleware replacing `@Roles()`: a route it wraps answers 403
- * to a role outside the list. */
 export function requireRole(
   roles: readonly UserRole[]
 ): (

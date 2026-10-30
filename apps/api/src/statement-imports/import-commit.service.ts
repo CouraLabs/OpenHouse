@@ -32,23 +32,11 @@ import { ImportTransactionRepository } from './import-transaction.repository.js'
 
 const HOUR_MS = 60 * 60 * 1000
 
-/** One row of a commit with the group it joins, in write order. */
 interface PlannedRow {
   row: ImportCommitRow
   link: InstallmentLink | null
 }
 
-/**
- * Writes the rows the user picked from a preview, and takes a batch back.
- *
- * A commit is a series of ledger batches: rows already imported (their bank
- * id is on an ACTIVE row, read before writing) are skipped and counted, and
- * the rest go through the ledger's one insert group — the balance, the
- * history, and the card bill placement every other write gets — in chunks
- * of 500, oldest day first. Each chunk is atomic, and the `import_batch_id`
- * every row carries makes a partially applied import detectable and
- * re-runnable: a re-import skips the rows the bank ids already hold.
- */
 export class ImportCommitService {
   constructor(
     private readonly db: Database,
@@ -75,10 +63,6 @@ export class ImportCommitService {
     const batchId = randomUUID()
     const planned = planRows(body.rows)
 
-    // The duplicate check reads before writing: a re-import of the same
-    // file finds the first one's bank ids and skips them. (Two imports of
-    // the same file committed at the same instant would both pass this
-    // read; the partial unique index aborts the loser's chunk atomically.)
     const existing = await this.imports.findByExternalIds(
       tenantId,
       account.id,
@@ -142,13 +126,6 @@ export class ImportCommitService {
     }
   }
 
-  /**
-   * Soft-deletes every live row of a batch, reverting each row's balance
-   * delta, within 24 hours of the import. The batch's rows are locked first
-   * and their account after, like every other row write; a row deleted by
-   * hand since is left alone. Answers 404 for a batch the tenant never
-   * wrote and 409 once the window has passed.
-   */
   async undo(
     tenantId: number,
     userId: number,
@@ -168,8 +145,6 @@ export class ImportCommitService {
       )
     }
 
-    // Every row of the batch is soft-deleted in one batch: the guarded
-    // revert, the optimistic row write, and the gated history per row.
     const undoPlan = new LedgerBatchPlan()
 
     for (const row of batch.rows) {
@@ -183,7 +158,6 @@ export class ImportCommitService {
     return { undone: batch.rows.length }
   }
 
-  /** The account's imports that can still be undone, newest first. */
   async recent(tenantId: number, accountId: number): Promise<ImportBatch[]> {
     const since = new Date(
       this.clock.now().getTime() - IMPORT_UNDO_HOURS * HOUR_MS
@@ -201,8 +175,6 @@ export class ImportCommitService {
     }))
   }
 
-  /** The categories and receivers the rows name must be usable by the
-   * tenant. */
   private async assertReferences(
     tenantId: number,
     rows: readonly ImportCommitRow[]
@@ -239,8 +211,6 @@ export class ImportCommitService {
   }
 }
 
-/** Orders rows oldest day first (the file order within a day) and gives the
- * rows linked as installments their groups. */
 function planRows(rows: readonly ImportCommitRow[]): PlannedRow[] {
   const ordered = rows
     .map((row, index) => ({ row, index }))
@@ -255,8 +225,6 @@ function planRows(rows: readonly ImportCommitRow[]): PlannedRow[] {
   return ordered.map((row, index) => ({ row, link: links[index] }))
 }
 
-/** The ledger write of one imported row. An installment already sits in the
- * cycle its own day names, so it takes no bill offset. */
 function toWrite(
   accountId: number,
   batchId: string,
@@ -291,8 +259,6 @@ function toWrite(
   }
 }
 
-/** Rows on or before the account's `reconciledThrough` change a balance the
- * bank already confirmed: they ask first, like a hand-typed one does. */
 function assertDatesOpen(
   account: Account,
   rows: readonly ImportCommitRow[],
@@ -317,8 +283,6 @@ function assertDatesOpen(
   throw new ConflictError(conflict)
 }
 
-/** Only a credit card expense can be an installment, on a card whose bill
- * days are set — the same rule the installment split enforces. */
 function assertInstallmentsAllowed(
   account: Account,
   rows: readonly ImportCommitRow[]

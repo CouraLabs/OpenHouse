@@ -4,7 +4,6 @@ import type { AppNotification } from '@workspace/poco'
 import { reminderText } from './notification-text.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The lines a notification reads as: one reminder, or a digest's items. */
 function linesOf(
   notification: AppNotification,
   t: (key: string, options?: Record<string, unknown>) => string,
@@ -17,10 +16,6 @@ function linesOf(
     : [reminderText(body, t, locale)]
 }
 
-/**
- * One entry of the notification centre. An unread one carries a dot;
- * clicking it marks it read.
- */
 export function NotificationItem({
   notification,
   onRead,

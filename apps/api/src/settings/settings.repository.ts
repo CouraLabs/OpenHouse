@@ -7,25 +7,15 @@ import type {
 } from '@workspace/db'
 import { accounts, goals, limits, tenantSettings } from '@workspace/db'
 
-/** The fields a settings write carries, beyond the audit stamps. */
 export interface SettingsWrite {
   timezone: string
   mainCurrency: Currency
-  /** Left out, the stored mode is kept (and a new tenant starts personal). */
   unsplitMode?: UnsplitMode
 }
 
-/**
- * The tenant settings rows — one per tenant. Every method takes the tenant
- * id explicitly; the repository never decides who is asking.
- *
- * Exported so other features (the recurring job, the sign-up) read and
- * seed the settings through it.
- */
 export class SettingsRepository {
   constructor(private readonly db: Database) {}
 
-  /** Reads the tenant's settings row. */
   async findByTenant(
     tenantId: number
   ): Promise<TenantSettingsRow | undefined> {
@@ -37,7 +27,6 @@ export class SettingsRepository {
     return row
   }
 
-  /** Reads the time zones of several tenants at once, keyed by tenant id. */
   async timezonesOf(
     tenantIds: readonly number[]
   ): Promise<Map<number, string>> {
@@ -56,10 +45,6 @@ export class SettingsRepository {
     return new Map(rows.map((row) => [row.tenantId, row.timezone]))
   }
 
-  /**
-   * Inserts a new tenant's settings. A zone the signing-up browser sent
-   * starts confirmed.
-   */
   async insert(
     tenantId: number,
     data: SettingsWrite & { timezoneConfirmed: boolean }
@@ -72,7 +57,6 @@ export class SettingsRepository {
     return row
   }
 
-  /** The insert statement, for the sign-up batch. */
   insertStatement(
     tenantId: number,
     data: SettingsWrite & { timezoneConfirmed: boolean }
@@ -83,13 +67,6 @@ export class SettingsRepository {
       .returning()
   }
 
-  /**
-   * Counts what the main currency denominates — the tenant's ACTIVE limits
-   * and goals — and, of the goals, those whose account is not in
-   * `currency`. Read here rather than through the limits and goals
-   * features: both read the main currency through this module, so
-   * importing theirs back would close a module cycle.
-   */
   async countDenominated(
     tenantId: number,
     currency: Currency
@@ -123,7 +100,6 @@ export class SettingsRepository {
     }
   }
 
-  /** Saves the settings an owner submitted; saving confirms the zone. */
   async update(
     tenantId: number,
     userId: number,

@@ -25,15 +25,9 @@ import {
   users,
 } from '@workspace/db'
 
-/**
- * The tenant rows of a deletion. Every method takes the tenant explicitly.
- * `hardDelete` is the one place in the application that removes rows: the
- * sanctioned exception to soft delete.
- */
 export class TenantDeletionRepository {
   constructor(private readonly db: Database) {}
 
-  /** Reads the tenant's name and scheduled deletion day. */
   async find(
     tenantId: number
   ): Promise<{ name: string; deletionDate: string | null } | undefined> {
@@ -45,7 +39,6 @@ export class TenantDeletionRepository {
     return row
   }
 
-  /** Sets the day the tenant is deleted, or clears it with `null`. */
   setDeletionDateStatement(
     tenantId: number,
     deletionDate: string | null
@@ -56,7 +49,6 @@ export class TenantDeletionRepository {
       .where(eq(tenants.id, tenantId))
   }
 
-  /** Sets the day the tenant is deleted, or clears it with `null`. */
   async setDeletionDate(
     tenantId: number,
     deletionDate: string | null
@@ -64,7 +56,6 @@ export class TenantDeletionRepository {
     await this.setDeletionDateStatement(tenantId, deletionDate)
   }
 
-  /** Lists every tenant with a deletion scheduled. */
   listScheduled(): Promise<{ id: number; deletionDate: string }[]> {
     return this.db
       .select({ id: tenants.id, deletionDate: tenants.deletionDate })
@@ -74,20 +65,11 @@ export class TenantDeletionRepository {
     >
   }
 
-  /**
-   * Removes the tenant and everything it owns, children first so no
-   * foreign key is ever violated: the append-only history, then the
-   * transactions it points at, down to the tenant row — one atomic batch,
-   * with the audit line appended to it (the log has no foreign key and
-   * survives the delete; the `tenants` row goes last, so a crashed run
-   * resumes on the next hour and finds the tenant still listed).
-   */
   hardDeleteStatements(
     tenantId: number,
     auditStatement?: LedgerStatement
   ): LedgerStatement[] {
     const deletes = [
-      // The reminders and their per-user settings point at users: first.
       this.db.delete(notifications).where(eq(notifications.tenantId, tenantId)),
       this.db
         .delete(notificationLog)

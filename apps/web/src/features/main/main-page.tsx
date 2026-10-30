@@ -13,12 +13,6 @@ import { BalancesCard } from './balances-card.js'
 import { MonthSummaryCard } from './month-summary-card.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The page a signed-in user lands on: the house's balances lead — the
- * "every coin in the house, in its place" moment — then the month's flow,
- * what is coming due, and the gauges for goals and limits. The application
- * shell owns the chrome (sidebar, header, sign-out); this is a page slot.
- */
 export function MainPage() {
   const { t } = useTranslation()
   const goals = useGoals()

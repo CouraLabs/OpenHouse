@@ -6,11 +6,6 @@ import { useContent } from '@/lib/use-locale.js'
 import { FaqItem } from './faq-item.js'
 import { FaqTabs } from './faq-tabs.js'
 
-/**
- * The head row, then the questions: from `md` up an index left of the
- * `split` column rule with the selected answer right of it; below `md` an
- * accordion ledger, one row per question.
- */
 export function FaqSection() {
   const { faq, faqIntro } = useContent()
   return (

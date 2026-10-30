@@ -13,17 +13,10 @@ import { useMainCurrency } from '@/lib/settings.js'
 import type { RentVsBuyResult } from './simulate.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The props `RentVsBuySummary` takes. */
 interface RentVsBuySummaryProps {
   result: RentVsBuyResult
 }
 
-/**
- * Where both paths end: the buyer's totals — what went into the property,
- * what went to the bank — beside the renter's totals, the invested
- * difference included. Nothing is compared with a verdict; the numbers
- * carry the trade-off.
- */
 export function RentVsBuySummary({ result }: RentVsBuySummaryProps) {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()

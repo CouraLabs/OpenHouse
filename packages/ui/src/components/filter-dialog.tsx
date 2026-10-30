@@ -21,32 +21,24 @@ import {
 import { TextField } from '@workspace/ui/components/text-field'
 import { cn } from 'cn'
 
-/** The data types a filter field can hold. */
 export type FilterFieldType = 'text' | 'number' | 'select'
 
-/** One option a `select` filter field offers. */
 export interface FilterFieldOption {
   value: string | number
   label: string
 }
 
-/** One field of the filter dialog, described by the entity that owns it. */
 export interface FilterField {
   key: string
   label: string
   type: FilterFieldType
-  /** Shown while the field holds nothing. */
   placeholder?: string
-  /** The choices a `select` field offers. */
   options?: FilterFieldOption[]
 }
 
-/** The values a filter holds: one entry per field, absent when unset. */
 export type FilterValues = Record<string, string | number | undefined>
 
-/** The labels the dialog reads, all translated by the caller. */
 interface FilterDialogLabels {
-  /** The trigger's aria-label and title. */
   trigger: string
   title: string
   apply: string
@@ -55,22 +47,12 @@ interface FilterDialogLabels {
 }
 
 interface FilterDialogProps {
-  /** The fields the entity filters on, in display order. */
   fields: FilterField[]
-  /** The applied values; the trigger shows how many are set. */
   values: FilterValues
-  /** What applying does: receives the values, unset fields dropped. */
   onApply: (values: FilterValues) => void
   labels: FilterDialogLabels
 }
 
-/**
- * The toolbar filter of a data table: an icon button that opens a dialog
- * where the entity's fields are filled in. The entity describes its fields
- * (`text`, `number`, or `select`) and their choices; the dialog owns only
- * the draft editing and the apply/clear mechanics — the caller translates
- * every label and decides what the applied values filter.
- */
 export function FilterDialog({
   fields,
   values,
@@ -78,8 +60,6 @@ export function FilterDialog({
   labels,
 }: FilterDialogProps) {
   const [open, setOpen] = useState(false)
-  // The dialog edits a draft; applying commits it. Empty strings count as
-  // unset, so a cleared text field drops out of the applied values.
   const [draft, setDraft] = useState<FilterValues>({})
 
   const activeCount = fields.filter(
@@ -171,7 +151,6 @@ export function FilterDialog({
   )
 }
 
-/** The input of one filter field, shaped by its data type. */
 function FieldInput({
   field,
   value,
@@ -190,8 +169,6 @@ function FieldInput({
       <Field>
         <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
         <Select
-          // The runtime compares raw values (numbers included); the prop's
-          // default generic only admits strings, so the boundary is cast.
           value={value as string | undefined}
           onValueChange={(next) =>
             onChange((next as string | number) ?? undefined)
@@ -231,8 +208,6 @@ function FieldInput({
   )
 }
 
-/** Drops the empty entries and converts number fields, so the applied
- * values match what a wire filter schema expects: absent means unfiltered. */
 function cleanValues(
   fields: FilterField[],
   values: FilterValues
@@ -252,7 +227,6 @@ function cleanValues(
   return cleaned
 }
 
-/** The numeric value of an entry, or nothing when it is not a number. */
 function toNumber(value: string | number): number | undefined {
   const parsed = Number(value)
 

@@ -12,12 +12,6 @@ import { CalendarClock } from 'lucide-react'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 
-/**
- * What each card asks for next: its latest closed bill's amount due — which
- * already carries every earlier remainder, so nothing is counted twice —
- * and its due date, in red once overdue. Pay opens the bill with its
- * payment dialog.
- */
 export function NextDueCard({
   title,
   bills,
@@ -25,7 +19,6 @@ export function NextDueCard({
   labels,
 }: {
   title: string
-  /** The latest closed, unpaid bill per card. */
   bills: CreditCardStatement[]
   locale: string
   labels: {

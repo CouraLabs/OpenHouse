@@ -16,11 +16,6 @@ import {
 } from '../common/upcoming/upcoming-sources.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 
-/**
- * Builds the Upcoming panel: gathers the four sources through their ports
- * and the tenant's accounts, and lets poco's `assembleUpcoming` merge,
- * sort, and project them. "Today" is the tenant's own calendar day.
- */
 export class UpcomingService {
   constructor(
     private readonly bills: BillSource,
@@ -32,7 +27,6 @@ export class UpcomingService {
     private readonly clock: Clock
   ) {}
 
-  /** The next `days` days of the tenant, from its today. */
   async build(tenantId: number, days: number): Promise<UpcomingResponse> {
     const settings = await this.settings.findByTenant(tenantId)
 
@@ -41,7 +35,6 @@ export class UpcomingService {
     }
 
     const today = todayIn(settings.timezone, this.clock.now())
-    // The window ends `days` after today; a bill due later is not upcoming.
     const end = shiftDay(today, days)
 
     const [accounts, bills, rules, materializedToday, limits, goals] =

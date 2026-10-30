@@ -5,24 +5,18 @@ import type { SearchGoalsArgs } from '@workspace/poco'
 
 import { buildPagedQuery } from '../common/search/fetch.helper.js'
 
-/** A goal row with the linked account's name and currency joined on — what
- * every read answers. */
 export type GoalRow = Goal & { accountName: string; accountCurrency: Currency }
 
-/** The linked account's columns every read joins on. The FK guarantees the
- * account exists — deleting one is soft — so the join is inner. */
 const ACCOUNT_COLUMNS = {
   accountName: accounts.name,
   accountCurrency: accounts.currency,
 }
 
-/** What a search answers with: the page's rows and how many match in all. */
 export interface GoalSearch {
   rows: GoalRow[]
   total: number
 }
 
-/** The fields a create or update writes, beyond the audit stamps. */
 export interface GoalWrite {
   name: string
   linkedAccountId: number
@@ -32,17 +26,9 @@ export interface GoalWrite {
   targetDt: string | null
 }
 
-/**
- * The goal rows, reached only through the tenant of the session. Every
- * method takes the tenant id explicitly — the repository never decides who
- * is asking. Every read joins the linked account's name, so a client never
- * has to resolve a `linkedAccountId`, and the name survives a deleted
- * account.
- */
 export class GoalRepository {
   constructor(private readonly db: Database) {}
 
-  /** Inserts a goal, stamping the audit trail with the acting user. */
   async insert(
     tenantId: number,
     userId: number,
@@ -61,7 +47,6 @@ export class GoalRepository {
     return this.withAccountName(row)
   }
 
-  /** Runs the paged search a `FetchArgs` describes, over the tenant's rows. */
   async search(tenantId: number, args: SearchGoalsArgs): Promise<GoalSearch> {
     const query = buildPagedQuery(args, this.filterToSql(tenantId, args), {
       name: goals.name,
@@ -83,8 +68,6 @@ export class GoalRepository {
         .from(goals)
         .innerJoin(accounts, eq(goals.linkedAccountId, accounts.id))
         .where(query.where)
-        // The id is the tie-breaker: rows the sort clauses leave equal keep
-        // one order, so a page never shuffles its neighbors.
         .orderBy(...query.orderBy, asc(goals.id))
         .limit(query.limit)
         .offset(query.offset),
@@ -98,8 +81,6 @@ export class GoalRepository {
     return { rows, total: counted.value }
   }
 
-  /** Lists the tenant's ACTIVE goals of ACTIVE accounts, with the balance
-   * the linked account holds now. */
   async listActiveWithBalance(
     tenantId: number
   ): Promise<Array<GoalRow & { accountBalance: string }>> {
@@ -121,7 +102,6 @@ export class GoalRepository {
       .orderBy(asc(goals.id))
   }
 
-  /** Reads one goal of the tenant — deleted rows included. */
   async findById(tenantId: number, id: number): Promise<GoalRow | undefined> {
     const [row] = await this.db
       .select({
@@ -135,8 +115,6 @@ export class GoalRepository {
     return row
   }
 
-  /** Updates a goal's fields and audit trail. The written columns are
-   * named one by one: the id is GENERATED ALWAYS and must never be in a SET. */
   async update(
     tenantId: number,
     id: number,
@@ -161,7 +139,6 @@ export class GoalRepository {
     return row === undefined ? undefined : this.withAccountName(row)
   }
 
-  /** Soft-deletes a goal: a status change, stamped like any update. */
   async softDelete(
     tenantId: number,
     id: number,
@@ -176,15 +153,12 @@ export class GoalRepository {
     return row
   }
 
-  /** Re-reads one row with its account name joined on. */
   private async withAccountName(row: Goal): Promise<GoalRow> {
     const found = await this.findById(row.tenantId, row.id)
 
-    // The row was just written; the join cannot come back empty.
     return found as GoalRow
   }
 
-  /** Translates the wire filter into SQL, always inside the tenant. */
   private filterToSql(tenantId: number, args: SearchGoalsArgs) {
     const conditions = [eq(goals.tenantId, tenantId)]
 

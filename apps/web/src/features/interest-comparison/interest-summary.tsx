@@ -11,18 +11,12 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The props `InterestSummary` takes: the figures at the final period. */
 interface InterestSummaryProps {
   simpleCapital: number
   compoundCapital: number
   variation: number
 }
 
-/**
- * The three figures the projection ends at: what the principal grew to
- * under simple interest, under compound, and the gap between them — the
- * number the whole comparison is about.
- */
 export function InterestSummary({
   simpleCapital,
   compoundCapital,

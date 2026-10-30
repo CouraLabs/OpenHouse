@@ -7,11 +7,6 @@ import type {
   TransactionType,
 } from '@workspace/poco'
 
-/** Maps a row onto the wire shape: dates cross HTTP as ISO strings, the
- * day as `YYYY-MM-DD`. The entity lifecycle travels as `lifecycle`, so the
- * transaction's business `status` stays unambiguous. The `currency` and the
- * `transferGroupId` ride along: the UI formats every amount in its own
- * denomination and keeps a transfer's two sides out of the totals. */
 export function toWire(row: TransactionRowLike): Transaction {
   return {
     id: row.id,
@@ -56,7 +51,6 @@ export function toWire(row: TransactionRowLike): Transaction {
   }
 }
 
-/** The columns `toWire` reads, whatever else the row carries. */
 export interface TransactionRowLike {
   id: number
   name: string

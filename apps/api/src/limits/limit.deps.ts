@@ -15,19 +15,11 @@ import { LimitRepository } from './limit.repository.js'
 import { LimitService } from './limit.service.js'
 import { LimitUsageSource } from './limit-usage.source.js'
 
-/** The limits feature's wiring: its routes, mounted under `/api/limits`,
- * and the `LimitSource` port the upcoming list reads usage through. */
 export interface LimitDeps {
   router: App
-  /** The `LimitSource` port: every ACTIVE limit with what its period spent. */
   usageSource: LimitUsageSource
 }
 
-/**
- * Builds the limits feature's services from the request's dependencies —
- * the explicit composition the DI container once did. The export's audit
- * lines ride the `AuditRecorder` port the audit feature implements.
- */
 export function limitDeps(
   db: Database,
   _config: Config,

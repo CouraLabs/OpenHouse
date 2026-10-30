@@ -17,10 +17,6 @@ import type { SessionUser } from '@workspace/poco'
 
 import { useSignOut } from '@/lib/auth.js'
 
-/**
- * The user menu at the header's right end: the avatar, first name, and a
- * chevron as the trigger; the name and email, Settings, and the logout action in the dropdown.
- */
 export function UserMenu({ user }: { user: SessionUser }) {
   const { t } = useTranslation()
   const signOut = useSignOut()
@@ -69,12 +65,10 @@ export function UserMenu({ user }: { user: SessionUser }) {
   )
 }
 
-/** The first word of the user's name, e.g. "Ada Lovelace" → "Ada". */
 function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? ''
 }
 
-/** The user's initials for the avatar fallback, e.g. "shadcn" → "S". */
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2)
 

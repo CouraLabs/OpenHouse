@@ -7,33 +7,14 @@ import type { SQL } from 'drizzle-orm'
 
 import { appliedDeltaSql } from './balance-sql.js'
 
-/**
- * The reads that derive a balance from the ledger: the sum of an account's
- * applied deltas, its end-of-day balances, and the running-balance window
- * the transaction search joins. `accounts.balance` stays the cached current
- * balance the ledger writes move; everything here recomputes it from the
- * rows, which is what the consistency check compares against.
- */
 export class BalanceRepository {
   constructor(private readonly db: Database) {}
 
-  /**
-   * The running-balance window as a CTE of `(id, runningBalance)`: for every
-   * row, the account's opening balance plus the applied deltas of every row
-   * up to and including it in `(transactionDt, id)` order, per account.
-   *
-   * The window runs over the **whole account partition** — never over a
-   * filtered set — so the caller can filter and page the transactions it
-   * joins this to without the running sum skipping a row. `accountId` only
-   * narrows which partitions are computed, never what is inside one.
-   */
   runningBalanceCte(db: DbOrTx, tenantId: number, accountId?: number) {
     return db.$with('running_balances').as(
       db
         .select({
           id: transactions.id,
-          // The window sums integer cents exactly; the caller formats the
-          // materialized column into the two-decimal string.
           cents: sql<number>`(${accounts.openingBalance} + sum(${appliedDeltaSql}) over (
             partition by ${transactions.linkedAccountId}
             order by ${transactions.transactionDt}, ${transactions.id}
@@ -53,13 +34,6 @@ export class BalanceRepository {
     )
   }
 
-  /**
-   * One row's running balance as a correlated subquery — the single-row twin
-   * of the window, for reads that fetch a handful of rows by id and would
-   * waste the window's full-account pass. Same definition: the opening
-   * balance plus every applied delta up to the row in `(transactionDt, id)`
-   * order.
-   */
   runningBalanceOfRowSql() {
     const earlier = sql`(select coalesce(sum(case
         when e.status = 'ACTIVE' and e.review_status <> 'Canceled'
@@ -74,12 +48,10 @@ export class BalanceRepository {
     return centsToDecimalSql(sql`(${accounts.openingBalance} + ${earlier})`)
   }
 
-  /** Formats the running-balance CTE's materialized cents column. */
   formatRunningBalance(cents: SQL) {
     return centsToDecimalSql(cents)
   }
 
-  /** The opening balance and currency of one account of the tenant. */
   async findAccount(
     tenantId: number,
     accountId: number
@@ -97,7 +69,6 @@ export class BalanceRepository {
     return row
   }
 
-  /** `openingBalance + sum(applied deltas)` of one account, from the rows. */
   async ledgerBalance(
     db: DbOrTx,
     tenantId: number,
@@ -121,7 +92,6 @@ export class BalanceRepository {
     return addMoney(openingBalance, row.total)
   }
 
-  /** `balanceThrough` on the repository's own connection. */
   async balanceOn(
     tenantId: number,
     accountId: number,
@@ -137,8 +107,6 @@ export class BalanceRepository {
     )
   }
 
-  /** The account's balance at the end of `date`: opening plus every applied
-   * delta on or before it. */
   async balanceThrough(
     db: DbOrTx,
     tenantId: number,
@@ -164,8 +132,6 @@ export class BalanceRepository {
     return addMoney(openingBalance, row.total)
   }
 
-  /** The net applied delta per day of an account over `[from, to]`. Days
-   * with no movement have no row. */
   async dailyDeltas(
     tenantId: number,
     accountId: number,
@@ -190,7 +156,6 @@ export class BalanceRepository {
       .orderBy(asc(transactions.transactionDt))
   }
 
-  /** The applied delta of an account strictly before `date`. */
   async deltaBefore(
     tenantId: number,
     accountId: number,
@@ -214,12 +179,6 @@ export class BalanceRepository {
     return row.total
   }
 
-  /**
-   * Every ACTIVE account whose cached `balance` differs from `openingBalance`
-   * plus the sum of its applied deltas — drift the ledger writes should make
-   * impossible. `tenantId` narrows the check to one tenant; the nightly run
-   * passes none and covers them all. Answers how many accounts were checked.
-   */
   async findDrifts(
     tenantId?: number
   ): Promise<{ checked: number; drifts: Array<BalanceDrift & { tenantId: number }> }> {

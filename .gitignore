@@ -39,12 +39,12 @@ coverage
 .verify-scratch/
 plans/
 
-# local agent tooling (skills, harness agents)
-.agents/
-.claude/
-
-# Worker local secrets
+# Worker local secrets and Wrangler state (any app)
 .dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler
 apps/api/.local
-.wrangler/*
-apps/api/.wrangler
+
+# vite-plugin-pwa dev output
+dev-dist

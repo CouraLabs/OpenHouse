@@ -4,11 +4,6 @@ import { AuthLayout } from '@/components/layout/auth-layout.js'
 import { currentSession } from '@/lib/query.js'
 import { SignInForm } from './sign-in-form.js'
 
-/**
- * The page signing in from: brand and controls above, the sign-in form
- * centered, and the links to password recovery and to sign-up beside it. A
- * sign-in opens the page the user chose in their preferences.
- */
 export function SignInPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()

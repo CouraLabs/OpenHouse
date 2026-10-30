@@ -9,11 +9,6 @@ import {
 import { useTenantSettings } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * Tells a user that a reset code was issued for them from the server — the
- * self-hosted last resort, run outside the app — until they acknowledge it.
- * If they did not ask for it, they know to change their password.
- */
 export function ServerResetNotice() {
   const { t } = useTranslation()
   const { timezone } = useTenantSettings()

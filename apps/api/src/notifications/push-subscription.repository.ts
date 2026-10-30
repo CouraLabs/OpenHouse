@@ -3,13 +3,9 @@ import type { Database, PushSubscriptionRow } from '@workspace/db'
 import { pushSubscriptions } from '@workspace/db'
 import type { PushSubscriptionBody } from '@workspace/poco'
 
-/** The push subscriptions: one row per browser or device endpoint. */
 export class PushSubscriptionRepository {
   constructor(private readonly db: Database) {}
 
-  /** Stores a browser's subscription. An endpoint is one browser, so
-   * subscribing again (maybe as another user of a shared browser) replaces
-   * the row. */
   async upsert(
     tenantId: number,
     userId: number,
@@ -34,7 +30,6 @@ export class PushSubscriptionRepository {
       })
   }
 
-  /** A user's subscriptions. */
   listByUser(userId: number): Promise<PushSubscriptionRow[]> {
     return this.db
       .select()
@@ -42,7 +37,6 @@ export class PushSubscriptionRepository {
       .where(eq(pushSubscriptions.userId, userId))
   }
 
-  /** Removes one of the user's subscriptions by endpoint. */
   async deleteForUser(userId: number, endpoint: string): Promise<void> {
     await this.db
       .delete(pushSubscriptions)
@@ -54,7 +48,6 @@ export class PushSubscriptionRepository {
       )
   }
 
-  /** Removes a subscription by id — a push service said it is gone. */
   async deleteById(id: number): Promise<void> {
     await this.db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, id))
   }

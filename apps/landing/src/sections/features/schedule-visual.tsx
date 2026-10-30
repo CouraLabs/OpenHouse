@@ -1,7 +1,6 @@
 import { Tag } from '@/components/tag.js'
 import { useContent } from '@/lib/use-locale.js'
 
-/** Upcoming recurring rules — the first already posted by itself. */
 export function ScheduleVisual() {
   const { sampleRules, ruleStatus } = useContent()
 

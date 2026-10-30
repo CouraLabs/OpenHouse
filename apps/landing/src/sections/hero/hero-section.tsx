@@ -7,11 +7,6 @@ import { useContent } from '@/lib/use-locale.js'
 
 import { HeroPreview } from './hero-preview.js'
 
-/**
- * The opening, on the drafting sheet: the mono headline, tagline, and both
- * calls to action left, the OpenHouse primitive plotting itself inside a
- * hairline orbit right, all over the dot grid; then the app window below.
- */
 export function HeroSection() {
   const { hero } = useContent()
   return (

@@ -5,18 +5,11 @@ import type { DataTableColumn } from '@workspace/ui/components/data-table'
 import { Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-/** What the actions column can do to a row, reported upward. */
 export interface LinkerRowActions {
   onEdit: (linker: TransactionLinker) => void
   onDelete: (linker: TransactionLinker) => void
 }
 
-/**
- * The columns the linkers grid shows: the description, the category, the
- * receiver, and the row actions. The caller owns what edit and delete do;
- * the columns only route the events. Called during the page's render, so
- * the labels arrive translated.
- */
 export function buildLinkerColumns(
   t: (key: string) => string,
   actions: LinkerRowActions
@@ -51,7 +44,6 @@ export function buildLinkerColumns(
   ]
 }
 
-/** The actions cell: the edit and delete buttons, one per row. */
 function LinkerActionsCell({
   linker,
   actions,

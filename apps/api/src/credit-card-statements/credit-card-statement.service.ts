@@ -10,15 +10,9 @@ import { ConflictError, NotFoundError } from '../common/errors.js'
 import { CreditCardStatementRepository } from './credit-card-statement.repository.js'
 import { toStatement } from './statement-view.js'
 
-/**
- * The bill reads: the repository derives each bill's totals from its
- * transactions; this service adds what depends on the tenant's today — the
- * status — and the amounts composed from the totals.
- */
 export class CreditCardStatementService {
   constructor(private readonly repository: CreditCardStatementRepository) {}
 
-  /** Runs the tenant's paged bill search. */
   async search(
     tenantId: number,
     args: SearchStatementsArgs
@@ -29,7 +23,6 @@ export class CreditCardStatementService {
     return { rows: rows.map((row) => toStatement(row, today)), total }
   }
 
-  /** Reads one bill with its totals and derived status. */
   async find(tenantId: number, id: number): Promise<CreditCardStatement> {
     const row = await this.repository.findTotals(tenantId, id)
 
@@ -40,7 +33,6 @@ export class CreditCardStatementService {
     return toStatement(row, await this.repository.todayOf(tenantId))
   }
 
-  /** Writes the figures typed in from the bank's bill, and answers the bill. */
   async updateBankFigures(
     tenantId: number,
     userId: number,
@@ -61,11 +53,6 @@ export class CreditCardStatementService {
     return this.find(tenantId, id)
   }
 
-  /**
-   * Reconciles a bill with the bank's: 409 with the bill's own total while
-   * the two differ — the user moves late postings or checks rows until they
-   * match — otherwise the bill is stamped and its rows marked Checked.
-   */
   async reconcile(
     tenantId: number,
     userId: number,

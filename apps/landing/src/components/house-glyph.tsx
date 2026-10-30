@@ -1,17 +1,11 @@
 import { cn } from 'cn'
 
-/**
- * The OpenHouse primitive from `logos/openhouse-glyph.svg`: a roof over a
- * square, stroked, with one filled node dot at the ridge. `plot` draws the
- * strokes in by stroke-dashoffset, the square 380ms after the roof.
- */
 export function HouseGlyph({
   plot = false,
   weight = 1.5,
   className,
 }: {
   plot?: boolean
-  /** Stroke width in the 112-unit box; scale it up for small glyphs. */
   weight?: number
   className?: string
 }) {

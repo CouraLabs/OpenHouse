@@ -1,11 +1,3 @@
-/**
- * OFX files the specs read: the SGML of OFX 1.x with its plain-text header
- * (what Brazilian banks and `.qfx` exports write), the XML of OFX 2.x, and a
- * credit card statement (`CCSTMTRS`) where a charge is negative and a payment
- * positive. Shared by the parser, reader, and e2e specs.
- */
-
-/** A checking-account statement in OFX 1.x SGML, Windows-1252 charset. */
 export const BANK_OFX_SGML = [
   'OFXHEADER:100',
   'DATA:OFXSGML',
@@ -34,8 +26,6 @@ export const BANK_OFX_SGML = [
   '',
 ].join('\r\n')
 
-/** A credit card statement (`CCSTMTRS`) in OFX 2.x XML: two charges (negative),
- * a refund and a bill payment (positive), and an installment charge. */
 export const CARD_OFX_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <?OFX OFXHEADER="200" VERSION="211" SECURITY="NONE" OLDFILEUID="NONE" NEWFILEUID="NONE"?>
 <OFX>
@@ -56,5 +46,4 @@ export const CARD_OFX_XML = `<?xml version="1.0" encoding="UTF-8"?>
 </OFX>
 `
 
-/** The same shape in 1.x SGML, in a currency the specs treat as foreign. */
 export const FOREIGN_OFX = BANK_OFX_SGML.replace('<CURDEF>BRL', '<CURDEF>GBP')

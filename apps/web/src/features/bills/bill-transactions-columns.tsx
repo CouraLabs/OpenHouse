@@ -7,11 +7,6 @@ import { CalendarSync } from 'lucide-react'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 
-/**
- * The columns of a bill's charges: the day, the charge — marked when the
- * user pinned it to this bill by hand — its category, the signed amount
- * (a refund reduces the bill), and the move-to-another-bill action.
- */
 export function buildBillTransactionsColumns(
   t: (key: string) => string,
   locale: string,

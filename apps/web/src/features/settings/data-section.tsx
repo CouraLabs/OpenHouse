@@ -10,11 +10,6 @@ import { ExportJobPanel } from './export-job-panel.js'
 import { useCancelTenantDeletion } from './use-tenant-deletion.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The owner's Data section: export everything the household recorded as a
- * ZIP (delivered in the app, no email), and delete the tenant after a
- * 30-day grace period the owner can cancel.
- */
 export function DataSection() {
   const { t } = useTranslation()
   const session = useSession()

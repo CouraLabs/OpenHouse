@@ -2,7 +2,6 @@ import { IconWell } from '@/components/icon-well.js'
 import { Reveal } from '@/components/reveal.js'
 import type { Planner } from '@/lib/content.js'
 
-/** One planner as a document row: icon well, title, and its one-line body. */
 export function PlannerRow({
   planner,
   index,

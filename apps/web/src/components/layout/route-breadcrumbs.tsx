@@ -12,14 +12,6 @@ import {
 import { FINANCIAL_GROUP } from './nav.js'
 import { findNavTrail } from './nav-trail.js'
 
-/**
- * The breadcrumb trail for the current location: the sidebar's grouping for
- * the page, starting at its group (group, subgroup, item — groups are
- * labels, not links); the last is the current page. A route outside the menu
- * falls back to one entry per path segment, each linking to its own prefix,
- * labeled through i18n with the raw segment as fallback. The home page (no
- * segments) shows a single Home entry. Renders inside a `BreadcrumbList`.
- */
 export function RouteBreadcrumbs() {
   const { t } = useTranslation()
   const location = useLocation()

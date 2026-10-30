@@ -2,75 +2,41 @@ import { z } from 'zod'
 import { currencySchema, type Currency } from './currencies.js'
 import { unsplitModeSchema, type UnsplitMode } from './household.js'
 
-/**
- * The tenant's global settings: the time zone that decides what "today" is,
- * and the main currency new records default to. One row per tenant; every
- * signed-in user reads it, only an owner writes it.
- */
-
-/** The IANA zones the runtime knows, read once on first use. */
 let knownTimeZones: ReadonlySet<string> | undefined
 
-/**
- * Whether a string names an IANA time zone the runtime supports. `UTC` is
- * always accepted: some runtimes leave it out of `supportedValuesOf`.
- */
 export function isSupportedTimeZone(timeZone: string): boolean {
   knownTimeZones ??= new Set(Intl.supportedValuesOf('timeZone'))
 
   return timeZone === 'UTC' || knownTimeZones.has(timeZone)
 }
 
-/** An IANA time zone name, e.g. `America/Sao_Paulo`. */
 export const timeZoneSchema = z
   .string()
   .refine(isSupportedTimeZone, { error: 'Pick a supported time zone.' })
 
-/**
- * The body `PUT settings` accepts — owner only. Limits and goals are
- * denominated in the main currency, so changing it re-denominates them
- * without converting any amount: the API answers 409 with a
- * `CurrencyChangeConflict` until the body confirms the change.
- */
 export const updateSettingsSchema = z.object({
   timezone: timeZoneSchema,
   mainCurrency: currencySchema,
   confirmCurrencyChange: z.boolean().optional(),
-  /** How an expense with no split reads; left out, the setting is kept. */
   unsplitMode: unsplitModeSchema.optional(),
 })
 
 export type UpdateSettingsBody = z.infer<typeof updateSettingsSchema>
 
-/** The 409 body of a main-currency change that was not confirmed: what the
- * change would re-denominate. */
 export interface CurrencyChangeConflict {
   message: string
-  /** The ACTIVE limits that would be read in the new currency. */
   limits: number
-  /** The ACTIVE goals that would be read in the new currency. */
   goals: number
-  /** Of those goals, the ones whose account is not in the new currency —
-   * they stop tracking it. */
   goalsOffCurrency: number
 }
 
-/** The settings as `GET settings` and the session carry them. */
 export interface TenantSettings {
   timezone: string
   mainCurrency: Currency
-  /** False while a migrated tenant still runs on the `UTC` placeholder;
-   * the owner is asked to confirm the zone until it is saved once. */
   timezoneConfirmed: boolean
-  /** How an expense with no split reads: the payer's own (`personal`) or
-   * shared equally by every active member (`household`). */
   unsplitMode: UnsplitMode
 }
 
-/**
- * The `YYYY-MM-DD` calendar day an instant falls on in a time zone. Pure:
- * the instant is an argument, so callers inject their clock.
- */
 export function dayIn(instant: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -84,7 +50,6 @@ export function dayIn(instant: Date, timeZone: string): string {
   return `${part('year')}-${part('month')}-${part('day')}`
 }
 
-/** The hour of the day, 0–23, an instant falls on in a time zone. */
 export function hourIn(instant: Date, timeZone: string): number {
   const hour = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -97,12 +62,10 @@ export function hourIn(instant: Date, timeZone: string): number {
   return Number(hour ?? 0) % 24
 }
 
-/** Today, as a `YYYY-MM-DD` day, in the tenant's time zone. */
 export function todayIn(timeZone: string, now: Date = new Date()): string {
   return dayIn(now, timeZone)
 }
 
-/** The eurozone regions, whose locales default to the euro. */
 const EURO_REGIONS = new Set([
   'AD',
   'AT',
@@ -132,7 +95,6 @@ const EURO_REGIONS = new Set([
   'XK',
 ])
 
-/** The languages that, without a region, read as a eurozone locale. */
 const EURO_LANGUAGES = new Set([
   'de',
   'el',
@@ -149,11 +111,6 @@ const EURO_LANGUAGES = new Set([
   'sl',
 ])
 
-/**
- * The currency a browser locale suggests for a new tenant: `pt-BR` reads as
- * BRL, a eurozone locale as EUR, everything else as USD. The region decides
- * when the locale names one; a bare language falls back to its usual zone.
- */
 export function currencyForLocale(locale: string): Currency {
   const [language = '', region] = locale.split(/[-_]/)
 

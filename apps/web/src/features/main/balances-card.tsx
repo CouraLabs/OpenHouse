@@ -25,7 +25,6 @@ import { useAccountsSearch } from '@/features/accounts/use-accounts.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The icon that names each account type, drawn once per row. */
 const typeIcons: Record<AccountType, LucideIcon> = {
   Checking: Landmark,
   Wallet: Wallet,
@@ -33,12 +32,6 @@ const typeIcons: Record<AccountType, LucideIcon> = {
   'Credit Card': CreditCard,
 }
 
-/**
- * The dashboard's anchor: every account of the house, name, type, balance
- * in its own currency, and for a card its free credit and its due and
- * close days — the "every coin in the house, in its place" moment. It
- * wears the page's one double bezel, the focal element's silhouette.
- */
 export function BalancesCard({ className }: { className?: string }) {
   const { t } = useTranslation()
   const accounts = useAccountsSearch({
@@ -109,8 +102,6 @@ export function BalancesCard({ className }: { className?: string }) {
   )
 }
 
-/** One account of the strip: the typed icon well, the name, the balance
- * in its currency, and for a card the free credit and the bill days. */
 function AccountRow({ account }: { account: Account }) {
   const { t } = useTranslation()
   const Icon = typeIcons[account.type]
@@ -149,8 +140,6 @@ function AccountRow({ account }: { account: Account }) {
   )
 }
 
-/** The line under a balance: a card's free credit and its due and close
- * days; anything else stays quiet. */
 function AccountFootnote({ account }: { account: Account }) {
   const { t } = useTranslation()
 

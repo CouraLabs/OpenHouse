@@ -9,15 +9,8 @@ import { useMoveToStatement } from '@/lib/statements.js'
 import { useBillTransactions, useMarkChecked } from './use-bills.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** How far from the close a late posting is looked for, in days. */
 const LATE_POSTING_DAYS = 3
 
-/**
- * What may explain a difference against the bank's bill: charges of the
- * card on a neighbouring bill within three days of the close (a merchant
- * posted late, the bank billed it here) — offered "Move to this bill" — and
- * rows of this bill still in Verify — offered "Mark checked".
- */
 export function ReconcileCandidates({ bill }: { bill: CreditCardStatement }) {
   const { t } = useTranslation()
   const move = useMoveToStatement()
@@ -45,7 +38,6 @@ export function ReconcileCandidates({ bill }: { bill: CreditCardStatement }) {
     skip: 0,
     limit: 100,
   })
-  // Payments are on no bill, and rows already here are no late posting.
   const late = (nearClose.data?.items ?? []).filter(
     (row) => row.statementId !== null && row.statementId !== bill.id
   )

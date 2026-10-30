@@ -15,14 +15,8 @@ import type {
 
 import { api } from '@/lib/api.js'
 
-/** The key every receiver query and mutation lives under. */
 const RECEIVERS_KEY = ['receivers'] as const
 
-/**
- * The page of receivers a search describes. The args are the query key —
- * every distinct page, sort and filter is its own cache entry, and
- * `keepPreviousData` keeps the previous page on screen while the next loads.
- */
 export function useReceiversSearch(args: SearchReceiversArgs) {
   return useQuery({
     queryKey: [...RECEIVERS_KEY, 'search', args],
@@ -36,7 +30,6 @@ export function useReceiversSearch(args: SearchReceiversArgs) {
   })
 }
 
-/** Saves a receiver: creates when the body has no id, updates when it has. */
 export function useSaveReceiver() {
   const queryClient = useQueryClient()
 
@@ -57,7 +50,6 @@ export function useSaveReceiver() {
   })
 }
 
-/** Soft-deletes a receiver: the API marks it DELETED. */
 export function useDeleteReceiver() {
   const queryClient = useQueryClient()
 
@@ -70,7 +62,6 @@ export function useDeleteReceiver() {
   })
 }
 
-/** The tenant's ACTIVE receivers, by name — what pickers offer. */
 export function useActiveReceivers() {
   return useQuery({
     queryKey: [...RECEIVERS_KEY, 'active'],

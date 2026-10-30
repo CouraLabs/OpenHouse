@@ -23,22 +23,14 @@ import { parseJsonBody } from '../common/validation/parse.js'
 import { CATEGORY_CSV_COLUMNS } from './category-csv.js'
 import type { CategoryService } from './category.service.js'
 
-/** How many rows one page of an export reads. */
 const CSV_PAGE_SIZE = 500
 
-/**
- * The category routes. Everything here reads the tenant and the user from
- * the session, so a client can only ever see or act on its own tenant —
- * the request names no tenant anywhere. Every signed-in role manages
- * categories.
- */
 export function categoriesRoutes(deps: {
   categories: CategoryService
   audit: AuditRecorder
 }): { router: App } {
   const router = new Hono<AppEnv>()
 
-  /** Creates a category for the tenant. */
   router.post('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(
@@ -55,7 +47,6 @@ export function categoriesRoutes(deps: {
     return context.json(toWire(row), 201)
   })
 
-  /** Searches the tenant's categories, paged, sorted and filtered. */
   router.post('/search', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(
@@ -71,8 +62,6 @@ export function categoriesRoutes(deps: {
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
 
-  /** Streams the tenant's categories as a CSV: every row the search
-   * matches, unpaged, written in the locale of the body. */
   router.post('/export', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(
@@ -105,7 +94,6 @@ export function categoriesRoutes(deps: {
     )
   })
 
-  /** Lists the tenant's ACTIVE categories by name, for pickers. */
   router.get('/', async (context) => {
     const session = context.get('session')
     const rows = await deps.categories.listActive(session.tenant.id)
@@ -119,7 +107,6 @@ export function categoriesRoutes(deps: {
     return context.json(refs)
   })
 
-  /** Reads one category, deleted rows included. */
   router.get('/:id', async (context) => {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
@@ -127,7 +114,6 @@ export function categoriesRoutes(deps: {
     return context.json(toWire(await deps.categories.find(session.tenant.id, id)))
   })
 
-  /** Updates a category. */
   router.put('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(
@@ -144,7 +130,6 @@ export function categoriesRoutes(deps: {
     return context.json(toWire(row))
   })
 
-  /** Soft-deletes a category: its status becomes DELETED. */
   router.delete('/:id', async (context) => {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
@@ -157,7 +142,6 @@ export function categoriesRoutes(deps: {
   return { router }
 }
 
-/** Maps a row onto the wire shape: dates cross HTTP as ISO strings. */
 function toWire(row: {
   id: number
   name: string
@@ -178,8 +162,6 @@ function toWire(row: {
   }
 }
 
-/** The response of a CSV download: the file, streamed page by page, with
- * the content type and file name the previous framework set. */
 function csvResponse<Row>(
   columns: readonly CsvColumn<Row>[],
   pages: AsyncIterable<Row[]>,

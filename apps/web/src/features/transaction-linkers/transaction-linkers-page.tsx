@@ -27,25 +27,19 @@ import {
   useActiveCategories,
 } from './use-linkers.js'
 
-/** The page the tenant's transaction linkers are managed from: the form
- * above the table, the table below, and the delete confirmation in between. */
 export function TransactionLinkersPage() {
   const { t } = useTranslation()
 
-  // The table's state, held here so the search args derive from it.
   const [sorting, setSorting] = useState<SortingState>([])
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 20,
   })
 
-  // The form above the table, and what its buttons are about to do.
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<TransactionLinker | null>(null)
   const [deleting, setDeleting] = useState<TransactionLinker | null>(null)
-  // The filter the dialog applies; the args derive from it.
   const [filter, setFilter] = useState<FilterValues>({})
-  // The dropdown's choices: the tenant's categories.
   const categories = useActiveCategories()
 
   const args = useMemo(
@@ -75,8 +69,6 @@ export function TransactionLinkersPage() {
   const save = useSaveLinker()
   const remove = useDeleteLinker()
 
-  // The errors the mutations answer with, read from the state the query
-  // client already holds — no mirror of it in local state.
   const saveError = save.isError
     ? save.error instanceof Error
       ? save.error.message
@@ -88,7 +80,6 @@ export function TransactionLinkersPage() {
       : t('linkers.error')
     : undefined
 
-  // A new sort is a new first page.
   const resetToFirstPage = () => {
     setPagination((current) =>
       current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }
@@ -103,8 +94,6 @@ export function TransactionLinkersPage() {
           setFormOpen(true)
         },
         onDelete: (linker) => {
-          // Deleting any row cancels the edit in progress: the form would
-          // otherwise keep editing a row the grid no longer holds.
           setFormOpen(false)
           setEditing(null)
           save.reset()
@@ -114,8 +103,6 @@ export function TransactionLinkersPage() {
     [t, save.reset]
   )
 
-  // Saving needs no confirmation: the form's submit is the intent. A failure
-  // leaves the form open, holding the values, with the error shown.
   const submitSave = (body: CreateTransactionLinkerBody) => {
     save.mutate(editing === null ? body : { ...body, id: editing.id }, {
       onSuccess: () => {
@@ -135,7 +122,6 @@ export function TransactionLinkersPage() {
     })
   }
 
-  // The page's actions, on the header line: the filter and the insert.
   const toolbar = (
     <>
       <FilterDialog

@@ -4,18 +4,11 @@ import {
   NativeSelectOption,
 } from '@workspace/ui/components/native-select'
 
-/** One choice of the select: its value and the translated label. */
 export interface SelectChoice {
   value: string
   label: string
 }
 
-/**
- * A labelled native select of the mapping form. A native select keeps a
- * dozen column pickers cheap and keyboard-friendly; the caller passes the
- * choices already translated, and the red `*` shows only for a field the
- * schema always requires.
- */
 export function ImportSelectField({
   id,
   label,

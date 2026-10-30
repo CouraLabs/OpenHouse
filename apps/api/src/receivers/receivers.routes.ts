@@ -18,21 +18,14 @@ import { parseJsonBody } from '../common/validation/parse.js'
 import { RECEIVER_CSV_COLUMNS } from './receiver-csv.js'
 import type { ReceiverService } from './receiver.service.js'
 
-/** How many rows one page of an export reads. */
 const CSV_PAGE_SIZE = 500
 
-/**
- * The receiver routes. Everything here reads the tenant and the user from
- * the session, so a client can only ever see or act on its own tenant — the
- * request names no tenant anywhere. Every signed-in role manages receivers.
- */
 export function receiversRoutes(deps: {
   receivers: ReceiverService
   audit: AuditRecorder
 }): { router: App } {
   const router = new Hono<AppEnv>()
 
-  /** Creates a receiver for the tenant. */
   router.post('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, createReceiverSchema)
@@ -43,7 +36,6 @@ export function receiversRoutes(deps: {
     )
   })
 
-  /** Searches the tenant's receivers, paged, sorted and filtered. */
   router.post('/search', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchReceiversSchema)
@@ -53,8 +45,6 @@ export function receiversRoutes(deps: {
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
 
-  /** Streams the tenant's receivers as a CSV: every row the search
-   * matches, unpaged, written in the locale of the body. */
   router.post('/export', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, exportReceiversSchema)
@@ -84,14 +74,12 @@ export function receiversRoutes(deps: {
     )
   })
 
-  /** Lists the tenant's ACTIVE receivers by name, for pickers. */
   router.get('/', async (context) => {
     const session = context.get('session')
 
     return context.json(await deps.receivers.listActive(session.tenant.id))
   })
 
-  /** Reads one receiver, deleted rows included. */
   router.get('/:id', async (context) => {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
@@ -99,7 +87,6 @@ export function receiversRoutes(deps: {
     return context.json(toWire(await deps.receivers.find(session.tenant.id, id)))
   })
 
-  /** Updates a receiver. */
   router.put('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, updateReceiverSchema)
@@ -109,7 +96,6 @@ export function receiversRoutes(deps: {
     )
   })
 
-  /** Soft-deletes a receiver: its status becomes DELETED. */
   router.delete('/:id', async (context) => {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
@@ -122,7 +108,6 @@ export function receiversRoutes(deps: {
   return { router }
 }
 
-/** Maps a row onto the wire shape: dates cross HTTP as ISO strings. */
 function toWire(row: {
   id: number
   name: string
@@ -141,8 +126,6 @@ function toWire(row: {
   }
 }
 
-/** The response of a CSV download: the file, streamed page by page, with
- * the content type and file name the previous framework set. */
 function csvResponse<Row>(
   columns: readonly CsvColumn<Row>[],
   pages: AsyncIterable<Row[]>,

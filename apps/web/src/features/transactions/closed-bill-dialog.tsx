@@ -14,16 +14,10 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { useMoveToStatement, useStatementSearch } from '@/lib/statements.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * Asked after a save landed a card charge on a bill that is already
- * closed: keep it there, or move it to the card's open bill — which pins
- * it. Without an open bill yet, only keeping is offered.
- */
 export function ClosedBillDialog({
   transaction,
   onClose,
 }: {
-  /** The saved charge, or nothing while the dialog is closed. */
   transaction: Transaction | null
   onClose: () => void
 }) {

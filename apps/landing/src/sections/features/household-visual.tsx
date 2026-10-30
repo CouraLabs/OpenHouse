@@ -1,9 +1,7 @@
 import { useContent } from '@/lib/use-locale.js'
 
-/** Household members by initials; the last one joins by invite. */
 const MEMBERS = ['MR', 'JC', 'AL']
 
-/** The household's members, then the invite code a new one types in. */
 export function HouseholdVisual() {
   const { sampleHousehold } = useContent()
 

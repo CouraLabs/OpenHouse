@@ -9,11 +9,6 @@ import { RouteBreadcrumbs } from '@/components/layout/route-breadcrumbs.js'
 import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
 import { UserMenu } from '@/components/layout/user-menu.js'
 
-/**
- * The application top bar: sidebar trigger and breadcrumb on the left; theme
- * and language switchers, then the user menu, on the right. Renders inside
- * `SidebarInset`.
- */
 export function AppHeader({ user }: { user: SessionUser }) {
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-nav-glass px-4 backdrop-blur-[18px] backdrop-saturate-150 backdrop-saturate-[1.4] md:rounded-t-3xl md:px-6">

@@ -2,7 +2,6 @@ import type { RecurringTransaction } from '@workspace/poco'
 
 import { money, type CsvColumn } from '../common/csv/csv.js'
 
-/** The columns of the recurring rules export, in file order. */
 export const RECURRING_CSV_COLUMNS: readonly CsvColumn<RecurringTransaction>[] =
   [
     { header: 'Receiver', cell: (row) => row.receiverName },

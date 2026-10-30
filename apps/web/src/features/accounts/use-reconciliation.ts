@@ -11,15 +11,8 @@ import { balanceHistorySchema, reconcilePreviewSchema } from '@workspace/poco'
 
 import { api } from '@/lib/api.js'
 
-/** The key every account query lives under — a reconciliation moves
- * balances, so its mutation refreshes the whole key. */
 const ACCOUNTS_KEY = ['accounts'] as const
 
-/**
- * What the ledger computes for an account on the day the bank's balance was
- * read, and the difference. Runs only once the body is a valid preview — a
- * half-typed balance asks nothing. The answer writes nothing.
- */
 export function useReconcilePreview(
   accountId: number,
   body: ReconcilePreviewBody
@@ -36,11 +29,6 @@ export function useReconcilePreview(
   })
 }
 
-/**
- * Commits a reconciliation: the optional adjustment, the optional Checked
- * marks, and the `reconciledThrough` stamp. It moves balances and statuses,
- * so the accounts and the transactions refresh.
- */
 export function useReconcile() {
   const queryClient = useQueryClient()
 
@@ -60,8 +48,6 @@ export function useReconcile() {
   })
 }
 
-/** One end-of-day balance per day of the range, for one account. Runs only
- * while the range is valid (a start after the end asks nothing). */
 export function useBalanceHistory(
   accountId: number,
   range: BalanceHistoryBody

@@ -7,10 +7,6 @@ import { useSession } from '@/lib/auth.js'
 import { useCancelTenantDeletion } from '@/features/settings/use-tenant-deletion.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * Tells everyone who signs in that the household is scheduled for deletion,
- * and on which day; the owner can cancel it from here.
- */
 export function TenantDeletionBanner() {
   const { t } = useTranslation()
   const session = useSession()

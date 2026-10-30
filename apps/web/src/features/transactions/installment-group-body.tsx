@@ -6,20 +6,11 @@ import { Button } from '@workspace/ui/components/button'
 import { InstallmentGroupEditFields } from './installment-group-edit-fields.js'
 import { useInstallmentActions } from './use-transactions.js'
 
-/** What a confirmed group action does. */
 type GroupAction = 'remaining' | 'all' | 'refund' | 'collapse'
 
-/** Which screen of the dialog is showing. */
 type Step =
   { kind: 'menu' } | { kind: 'edit' } | { kind: 'confirm'; action: GroupAction }
 
-/**
- * What can be done to a whole installment purchase: edit it, delete the
- * installments still on an Open bill (early payoff), delete it entirely,
- * refund it in full, or merge it back into one charge. The last three
- * touch money, so each asks first; the whole-purchase ones are offered
- * only while every installment is on an Open bill.
- */
 export function InstallmentGroupBody({
   group,
   onClose,

@@ -12,20 +12,12 @@ import { creditCardStatementRoutes } from './credit-card-statements.routes.js'
 import { StatementBillSource } from './statement-bill.source.js'
 import { StatementCycleSyncService } from './statement-cycle-sync.service.js'
 
-/** The credit-card-statements feature's wiring: its routes, and the two
- * ports other features consume — the bills the upcoming list still asks
- * for, and the resync a card's day change writes into its own batch. */
 export interface CreditCardStatementDeps {
   router: App
   billSource: BillSource
   cycleSync: CardCycleSync
 }
 
-/**
- * Builds the feature's services from the request's dependencies — the
- * explicit composition the DI module once did. The services are cheap
- * objects, rebuilt per request from the same handles.
- */
 export function creditCardStatementDeps(
   db: Database,
   _config: Config,

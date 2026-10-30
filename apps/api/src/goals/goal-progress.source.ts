@@ -4,12 +4,6 @@ import { GoalSource } from '../common/upcoming/upcoming-sources.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import { GoalRepository } from './goal.repository.js'
 
-/**
- * Answers the `GoalSource` port: each active goal with the balance its
- * account holds now. A goal whose account is no longer in the main currency
- * (the main currency changed after it was set) tracks nothing comparable
- * and is left out.
- */
 export class GoalProgressSource extends GoalSource {
   constructor(
     private readonly goals: GoalRepository,

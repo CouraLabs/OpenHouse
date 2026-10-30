@@ -17,23 +17,12 @@ import { ImportPreviewService } from './import-preview.service.js'
 import { ImportTransactionRepository } from './import-transaction.repository.js'
 import { statementImportsRoutes } from './statement-imports.routes.js'
 
-/** The statement import feature's wiring: its routes — the upload preview,
- * the commit, the recent batches, and the undo. */
 export interface StatementImportsDeps {
-  /** Mounted at `/imports`. */
   router: App
 }
 
-/**
- * Builds the statement import feature's services from the request's
- * dependencies — the explicit composition the DI module once did. The
- * services and repositories are cheap objects, rebuilt per request from the
- * same handles.
- */
 export function statementImportsDeps(
   db: Database,
-  /** Unused today — kept in the signature every deps builder shares, so a
-   * rule that needs a secret or a ttl plugs in without a rewrite. */
   _config: Config,
   clock: SystemClock
 ): StatementImportsDeps {

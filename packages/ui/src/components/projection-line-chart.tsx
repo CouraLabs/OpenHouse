@@ -16,8 +16,6 @@ import {
 } from '@workspace/ui/components/chart'
 import { cn } from 'cn'
 
-/** One series a projection line chart plots: its identity and its values,
- * one per x label — a gap (undefined) breaks the line instead of faking zero. */
 export interface LineSeries {
   key: string
   label: string
@@ -26,25 +24,14 @@ export interface LineSeries {
 }
 
 interface ProjectionLineChartProps {
-  /** The series, in the fixed order their colors were assigned in. */
   series: LineSeries[]
-  /** The x axis labels, one per point — every series aligns on them. */
   xLabels: string[]
-  /** Formats a value the tooltip shows, translated by the caller. */
   formatValue: (value: number) => string
-  /** Formats a y axis tick, compact so the axis stays recessive. */
   formatTick: (value: number) => string
-  /** What the chart region reads as, for assistive tech. */
   ariaLabel: string
   className?: string
 }
 
-/**
- * A line chart over a shared x axis: two or more series of the same shape
- * compared by height, with a crosshair tooltip, a legend, and hairline
- * grid. The caller owns the colors — the validated palette's slots, in
- * order — and every string; this component decides nothing.
- */
 export function ProjectionLineChart({
   series,
   xLabels,
@@ -117,8 +104,6 @@ export function ProjectionLineChart({
   )
 }
 
-/** One tooltip row: the color key beside the series label, the value right-
- * aligned — text in text tokens, the mark carrying the identity. */
 function TooltipRow({
   value,
   name,

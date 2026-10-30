@@ -20,13 +20,6 @@ import { StatementSummary } from './statement-summary.js'
 import { useBillTransactions } from './use-bills.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * One bill: its card, period, and status in the header, its figures, the
- * charges on it — each of which can move to another bill of the card — and
- * the payments settling it. Pay bill opens the payment dialog (also reached
- * from the dashboard through the `pay` search param, which is its open
- * state); Reconcile checks the bill against the bank's.
- */
 export function BillDetailPage() {
   const { t } = useTranslation()
   const { statementId } = useParams({ from: '/_main/bills/$statementId' })

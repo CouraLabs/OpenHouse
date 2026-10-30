@@ -4,26 +4,17 @@ import { transactions } from '@workspace/db'
 
 import type { ExistingRow } from './import-duplicates.js'
 
-/** A recent import batch with its live row count. */
 export interface BatchSummary {
   batchId: string
   count: number
   importedAt: Date
 }
 
-/** The size of one `IN (...)` list when looking up bank ids. */
 const LOOKUP_CHUNK = 1000
 
-/**
- * The reads a statement import makes over the tenant's transactions: which
- * bank ids an account already holds, which rows could repeat an imported one,
- * and the rows of one import batch. The writes go through the transactions
- * feature's ledger repository, never around it.
- */
 export class ImportTransactionRepository {
   constructor(private readonly db: Database) {}
 
-  /** The ACTIVE rows of an account holding any of these bank ids, by id. */
   async findByExternalIds(
     tenantId: number,
     accountId: number,
@@ -64,8 +55,6 @@ export class ImportTransactionRepository {
     return found
   }
 
-  /** The ACTIVE rows of an account dated within a window — the pool a
-   * probable duplicate is searched in. */
   async findInWindow(
     tenantId: number,
     accountId: number,
@@ -92,14 +81,6 @@ export class ImportTransactionRepository {
       )
   }
 
-  /**
-   * Reads the ACTIVE rows of one batch, in id order. Also answers when the
-   * batch was written (its earliest row, deleted ones included) so the
-   * caller can enforce the undo window; `undefined` for a batch that never
-   * existed in the tenant. The rows the undo soft-deletes are guarded
-   * optimistically per row, so a row edited since the read fails the batch
-   * instead of being overwritten.
-   */
   async findBatch(
     tenantId: number,
     batchId: string
@@ -133,7 +114,6 @@ export class ImportTransactionRepository {
     return { rows, importedAt: new Date(stamp.importedAt) }
   }
 
-  /** The account ids of one batch's rows, ACTIVE or not. */
   async accountsOfBatch(
     tenantId: number,
     batchId: string
@@ -151,8 +131,6 @@ export class ImportTransactionRepository {
     return rows.map((row) => row.accountId)
   }
 
-  /** The account's batches written since `since` that still hold a live
-   * row, newest first. */
   async recentBatches(
     tenantId: number,
     accountId: number,

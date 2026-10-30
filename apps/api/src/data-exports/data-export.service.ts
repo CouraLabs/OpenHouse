@@ -8,19 +8,11 @@ import { NotFoundError } from '../common/errors.js'
 import { DataExportRepository } from './data-export.repository.js'
 import { buildExportZip } from './export-zip.js'
 
-/** The ZIP the export route answers with. */
 export interface ExportedZip {
   bytes: Uint8Array
-  /** The file name the response's `Content-Disposition` carries. */
   fileName: string
 }
 
-/**
- * The full export, in one request: the owner asks, the service reads the
- * tenant's tables, the ZIP is built in memory, the export is recorded in
- * the audit log, and the bytes answer the same request — nothing is stored
- * on disk and no job is polled.
- */
 export class DataExportService {
   constructor(
     private readonly repository: DataExportRepository,
@@ -28,8 +20,6 @@ export class DataExportService {
     private readonly clock: Clock
   ) {}
 
-  /** Reads, packs, and records the export. A member export of a user
-   * outside the tenant answers 404. */
   async export(
     tenantId: number,
     actorId: number,
@@ -73,7 +63,6 @@ export class DataExportService {
     }
   }
 
-  /** Today in the tenant's time zone, as `YYYY-MM-DD`. */
   private async todayOf(tenantId: number): Promise<string> {
     const timezone = await this.repository.timezoneOf(tenantId)
 

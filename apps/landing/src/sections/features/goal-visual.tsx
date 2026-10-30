@@ -1,7 +1,6 @@
 import { GoalRing } from '@/components/preview/goal-ring.js'
 import { useContent } from '@/lib/use-locale.js'
 
-/** The sample goal: its ring, name, and how far the account has come. */
 export function GoalVisual() {
   const { sampleGoal } = useContent()
 

@@ -3,12 +3,6 @@ import { Button } from '@workspace/ui/components/button'
 
 import { usePushSubscription } from './use-push-subscription.js'
 
-/**
- * Turns web push on or off for this browser. Enabling is the one place the
- * browser's permission prompt opens, and only from this click. On an iPhone
- * or iPad outside the Home Screen it explains what to do instead — iOS
- * allows web push only for installed web apps.
- */
 export function PushToggle() {
   const { t } = useTranslation()
   const push = usePushSubscription()

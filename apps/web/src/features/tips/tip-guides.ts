@@ -1,17 +1,9 @@
-/**
- * The tip guides the Tips page renders, adapted from Mobills' personal
- * finance infographics. Pure content: every user-facing string lives in
- * the locale files under `tips.` — this module only declares the shape.
- */
 export type TipItem = {
-  /** The item's locale key, under `tips.<guide>.items.` */
   key: string
-  /** When the item is a fixed share of income, its percentage (the six jars). */
   percent?: number
 }
 
 export type TipGuide = {
-  /** The guide's locale key, under `tips.` */
   key: string
   items: TipItem[]
 }

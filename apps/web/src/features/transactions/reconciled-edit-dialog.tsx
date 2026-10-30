@@ -5,20 +5,13 @@ import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The props `ReconciledEditDialog` takes. */
 interface ReconciledEditDialogProps {
-  /** The conflict the API answered, or nothing while the dialog is closed. */
   conflict: ReconciledEditConflict | null
   isPending: boolean
   onCancel: () => void
   onConfirm: () => void
 }
 
-/**
- * Asks before a change to a transaction that was reconciled with the bank:
- * the row sits on or before its account's `reconciledThrough`, so editing it
- * can break a balance already matched.
- */
 export function ReconciledEditDialog({
   conflict,
   isPending,

@@ -8,10 +8,8 @@ import {
   type ImportSignConvention,
 } from '@workspace/poco'
 
-/** A column choice as the selects hold it: a position as text, or `''`. */
 export type ColumnChoice = string
 
-/** The mapping form's values — every select holds text until submit. */
 export interface MappingDraft {
   hasHeader: boolean
   dateColumn: ColumnChoice
@@ -29,18 +27,12 @@ export interface MappingDraft {
   delimiter: ImportDelimiter
 }
 
-/** The position of the first header matching a pattern, as text, or `''`. */
 function find(headers: readonly string[], pattern: RegExp): ColumnChoice {
   const index = headers.findIndex((header) => pattern.test(header))
 
   return index === -1 ? '' : String(index)
 }
 
-/**
- * The form's starting values: the mapping saved for the account when there
- * is one, else a guess from the header names (`Data`, `Descrição`, `Valor`,
- * `Débito`/`Crédito`, `Categoria`, `Status`) with the Brazilian defaults.
- */
 export function initialDraft(
   headers: readonly string[],
   saved: ImportMapping | null
@@ -93,21 +85,14 @@ export function initialDraft(
   }
 }
 
-/** A select's text as a column position, or nothing for `''`. */
 function column(choice: ColumnChoice): number | undefined {
   return choice === '' ? undefined : Number(choice)
 }
 
-/** The validation result for a draft: the poco mapping, or the first
- * message for each field the schema rejected. */
 export type DraftResult =
   | { ok: true; mapping: ImportMapping }
   | { ok: false; errors: Record<string, string> }
 
-/**
- * Turns the form's values into the mapping and validates it with the poco
- * schema — the one both sides run — so the form restates no rule of its own.
- */
 export function draftToMapping(draft: MappingDraft): DraftResult {
   const single = draft.amountLayout === 'single'
   const parsed = importMappingSchema.safeParse({

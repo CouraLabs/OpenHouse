@@ -16,18 +16,12 @@ import {
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The props `BalancesCard` takes. */
 interface BalancesCardProps {
   balances: HouseholdBalance[]
   suggestions: SettleSuggestion[]
   onSettle: (suggestion: SettleSuggestion) => void
 }
 
-/**
- * Who is owed and who owes, per currency, and the fewest payments that
- * clear it. A suggestion carries its settle action; a removed member's
- * balance stays listed and settleable.
- */
 export function BalancesCard({
   balances,
   suggestions,

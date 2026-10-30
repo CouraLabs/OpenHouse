@@ -15,25 +15,14 @@ import { useMainCurrency } from '@/lib/settings.js'
 import type { InterestRow } from './interest-table.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The series colors, the validated categorical palette's first two slots —
- * simple interest takes blue, compound takes orange, in a fixed order.
- */
 const SIMPLE_COLOR = '#2a78d6'
 const COMPOUND_COLOR = '#eb6834'
 
-/** The props `InterestGrowthChart` takes. */
 interface InterestGrowthChartProps {
   rows: InterestRow[]
-  /** Every nth row the chart keeps — the curve samples past 150 points. */
   sampleStep: number
 }
 
-/**
- * The capital curves side by side: simple interest's straight line against
- * compound's bend, one point per sampled period. The x axis is the period
- * number itself, so the chart stays language-neutral.
- */
 export function InterestGrowthChart({
   rows,
   sampleStep,
@@ -41,8 +30,6 @@ export function InterestGrowthChart({
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
 
-  // The sample keeps the first row and always the last, so the curves end
-  // at the period the summary quotes.
   const sampled =
     sampleStep <= 1
       ? rows

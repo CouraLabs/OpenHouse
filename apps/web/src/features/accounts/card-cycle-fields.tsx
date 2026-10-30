@@ -6,13 +6,6 @@ import { Field, FieldLabel } from '@workspace/ui/components/field'
 
 import { DayOfMonthPick } from './day-of-month-pick.js'
 
-/**
- * A credit card's billing cycle: the close and due days, whether a
- * purchase on the close day still lands on the closing bill, and — under
- * them — the same-day error the API answers 409 with and the warning that
- * a gap under 5 or over 25 days usually means the days were swapped. The
- * warning never blocks a save.
- */
 export function CardCycleFields({
   closeDay,
   dueDay,

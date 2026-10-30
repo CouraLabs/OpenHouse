@@ -9,18 +9,10 @@ import { RentVsBuySummary } from './rent-vs-buy-summary.js'
 import { RentVsBuyTable } from './rent-vs-buy-table.js'
 import { simulateRentVsBuy, type AmortizationSystem } from './simulate.js'
 
-/** The most months a simulation may span — 50 years. */
 const MAX_TERM = 600
 
-/** The most points the chart draws: past that it samples the same curves. */
 const MAX_CHART_POINTS = 150
 
-/**
- * The buy-or-rent projection, ported from the Mobills spreadsheet: one
- * scenario in, both lifetimes out — financing the property against
- * renting and investing the difference. Local state only; nothing is
- * saved anywhere.
- */
 export function RentVsBuyPage() {
   const { t } = useTranslation()
 

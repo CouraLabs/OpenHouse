@@ -10,11 +10,6 @@ import { CreditCard } from 'lucide-react'
 
 import { formatMoney } from '@/lib/format-money.js'
 
-/**
- * The current bill of each card: the open bill's total so far, and how
- * many days are left until it closes. Each card's money stays in its own
- * currency — never summed across cards.
- */
 export function CurrentBillCard({
   title,
   bills,
@@ -23,7 +18,6 @@ export function CurrentBillCard({
   labels,
 }: {
   title: string
-  /** One open bill per card — the earliest to close. */
   bills: CreditCardStatement[]
   today: string
   locale: string

@@ -1,10 +1,6 @@
 import { LedgerRows } from '@/components/preview/ledger-rows.js'
 import { useContent } from '@/lib/use-locale.js'
 
-/**
- * The sample ledger with the month's totals pinned beneath it, so the tall
- * card ends on a summary instead of empty space.
- */
 export function TransactionsVisual() {
   const { sampleLedger, sampleTotals } = useContent()
   return (

@@ -13,23 +13,12 @@ import {
   type ParsedImportRow,
 } from './parsed-import.js'
 
-/** Pending flags banks write in a status column. */
 const PENDING = /^(?:pend\w*|true|sim|yes|s|y|1)$/
 
-/** The cells of the columns a mapping points at, or `undefined` past the
- * end of a short record. */
 function cell(record: readonly string[], column: number | null | undefined) {
   return column == null ? undefined : record[column]?.trim()
 }
 
-/**
- * Applies a saved or chosen mapping to the records of a CSV file, row by row.
- * Amounts go through `parseLocalizedAmount` — exact cents, the chosen
- * decimal separator — so `1.234,56` and `1,234.56` are both read right and a
- * float is never involved. A record whose day, amount, or description cannot
- * be read is counted as invalid (the first ones reported with their line)
- * rather than guessed at; a zero amount moves nothing and is dropped.
- */
 export function mapCsvRecords(
   records: readonly (readonly string[])[],
   mapping: ImportMapping
@@ -106,8 +95,6 @@ export function mapCsvRecords(
   return result
 }
 
-/** The amount of a record and whether it is an expense, by the mapping's
- * single signed column and sign convention, or its debit/credit pair. */
 function readSigned(
   record: readonly string[],
   mapping: ImportMapping
@@ -145,7 +132,6 @@ function readSigned(
   return { amount: credit, expense: false }
 }
 
-/** One side of a debit/credit pair: empty is zero, the sign is dropped. */
 function parseSide(text: string | undefined, mapping: ImportMapping) {
   if (text === undefined || text === '') {
     return '0.00'

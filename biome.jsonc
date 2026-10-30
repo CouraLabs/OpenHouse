@@ -44,6 +44,26 @@
   },
   "overrides": [
     {
+      "includes": ["apps/web/src/features/statement-imports/import-sample-table.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/features/sign-up/sign-up-form.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
       // NestJS resolves constructor parameters through `emitDecoratorMetadata`,
       // so a type-only import of an injectable silently breaks DI.
       "includes": ["apps/api/**"],

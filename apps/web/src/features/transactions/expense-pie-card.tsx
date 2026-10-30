@@ -8,14 +8,6 @@ import {
 
 import { PieGroup } from './pie-group.js'
 
-/**
- * One expense pie: the month's expenses split by the dimension the card
- * names — the categories they belong to or the accounts they moved
- * through — one pie per currency the expenses use. A category paints in
- * the color its tenant picked; an account takes the series colors. The
- * legend under each pie carries every figure, so no slice means color
- * alone.
- */
 export function ExpensePieCard({
   title,
   icon,
@@ -24,12 +16,9 @@ export function ExpensePieCard({
   labels,
 }: {
   title: string
-  /** The icon naming what the card shows, rendered beside the title. */
   icon: React.ReactNode
   groups: TransactionBreakdownGroup[]
-  /** The BCP-47 tag the money figures format in. */
   locale: string
-  /** The labels the chart cannot derive, translated by the page. */
   labels: { other: string; empty: string }
 }) {
   return (

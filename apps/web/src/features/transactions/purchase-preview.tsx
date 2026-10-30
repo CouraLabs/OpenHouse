@@ -12,13 +12,6 @@ import {
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * What a card purchase will do, before it is saved: how it splits (the
- * same `splitInstallments` the API writes with, so the preview never
- * drifts), what it costs over the cash price, and the card limit left —
- * the whole purchase holds the limit at once. A negative limit warns but
- * never blocks: the bank decides.
- */
 export function PurchasePreview({
   amount,
   installments,
@@ -29,7 +22,6 @@ export function PurchasePreview({
   amount: string
   installments: InstallmentsBody
   cashPrice: string
-  /** The card's available limit before this purchase, if it has a limit. */
   availableLimit: string | null
   currency: Currency
 }) {

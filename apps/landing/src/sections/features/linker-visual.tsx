@@ -3,10 +3,6 @@ import { ArrowRight } from '@phosphor-icons/react'
 import { Tag } from '@/components/tag.js'
 import { useContent } from '@/lib/use-locale.js'
 
-/**
- * A transaction preset at work: the typed description, then the category
- * and receiver it fills in.
- */
 export function LinkerVisual() {
   const { sampleLinker } = useContent()
 

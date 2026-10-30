@@ -3,7 +3,6 @@ import { cn } from 'cn'
 
 import type { Perk } from '@/lib/content.js'
 
-/** A plan's perks; one left out is struck through behind a dash. */
 export function PerkList({ perks }: { perks: Perk[] }) {
   return (
     <ul className="flex flex-col gap-2.5">

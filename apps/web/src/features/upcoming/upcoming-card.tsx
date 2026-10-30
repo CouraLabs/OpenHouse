@@ -16,14 +16,8 @@ import { UpcomingItemRow } from './upcoming-item-row.js'
 import { useUpcoming } from './use-upcoming.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** How many lines the dashboard card lists before pointing at the page. */
 const CARD_ITEMS = 5
 
-/**
- * The dashboard's Upcoming card: the next few things coming due, and a
- * warning for each balance heading below zero. The full list lives on the
- * Upcoming page.
- */
 export function UpcomingCard() {
   const { t } = useTranslation()
   const upcoming = useUpcoming(DEFAULT_UPCOMING_DAYS)

@@ -9,17 +9,10 @@ import {
   useRotateCalendarFeed,
 } from './use-notifications.js'
 
-/** The address a calendar app subscribes to: the API's origin plus the
- * feed path. */
 function feedUrl(path: string): string {
   return `${window.location.origin}/api${path}`
 }
 
-/**
- * The secret `.ics` calendar feed: create it, copy its URL into Google or
- * Apple Calendar, replace the secret if it leaked, or delete it. Anyone
- * holding the URL can read the feed, so it is shown only here.
- */
 export function CalendarFeedSection() {
   const { t } = useTranslation()
   const feed = useCalendarFeed()

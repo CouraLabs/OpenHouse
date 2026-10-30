@@ -18,20 +18,10 @@ import type { RecurringTransaction } from './recurring-transactions.js'
 import type { CreditCardStatement } from './credit-card-statements.js'
 import type { TransactionType } from './transactions.js'
 
-/**
- * The Upcoming contract: what money is coming due in the next days, merged
- * from four sources (card bills, recurring rules, limits close to their cap,
- * goals behind pace), with a projected balance per account and currency. The
- * API assembles it through `assembleUpcoming`; the web only renders it.
- */
-
-/** How many days the Upcoming panel looks ahead unless asked otherwise. */
 export const DEFAULT_UPCOMING_DAYS = 30
 
-/** The longest horizon `GET upcoming` accepts. */
 export const MAX_UPCOMING_DAYS = 365
 
-/** The query `GET upcoming` accepts: how many days ahead to look. */
 export const upcomingQuerySchema = z.object({
   days: z.coerce
     .number()
@@ -43,17 +33,12 @@ export const upcomingQuerySchema = z.object({
 
 export type UpcomingQuery = z.infer<typeof upcomingQuerySchema>
 
-/** A limit shows up in Upcoming from this share of its cap on. */
 export const LIMIT_WARNING_PERCENT = 80
 
-/** The kinds of line an Upcoming list holds, in the order same-day lines
- * sort by. */
 export const upcomingKinds = ['bill', 'recurring', 'limit', 'goal'] as const
 
 export type UpcomingKind = (typeof upcomingKinds)[number]
 
-/** A card bill due: `amount` is its `amountDue`. An `estimate` is a bill
- * still Open, whose running total can still change. */
 export interface UpcomingBill {
   kind: 'bill'
   key: string
@@ -67,7 +52,6 @@ export interface UpcomingBill {
   overdue: boolean
 }
 
-/** A recurring rule firing; an Income rule is `incoming`. */
 export interface UpcomingRecurring {
   kind: 'recurring'
   key: string
@@ -81,7 +65,6 @@ export interface UpcomingRecurring {
   type: TransactionType
 }
 
-/** A limit at or past the warning share of its cap. */
 export interface UpcomingLimit {
   kind: 'limit'
   key: string
@@ -95,7 +78,6 @@ export interface UpcomingLimit {
   percent: number
 }
 
-/** A goal behind its linear pace to the target. */
 export interface UpcomingGoal {
   kind: 'goal'
   key: string
@@ -110,24 +92,16 @@ export interface UpcomingGoal {
 export type UpcomingItem =
   UpcomingBill | UpcomingRecurring | UpcomingLimit | UpcomingGoal
 
-/** The balance after the day's movements. */
 export interface ProjectionPoint {
   date: string
   balance: string
 }
 
-/** The first day a projection dips below zero. */
 export interface FirstNegative {
   date: string
   balance: string
 }
 
-/**
- * One projected balance: a single account (`accountId` set), or every
- * non-card account of a currency together (`accountId` null) — the one that
- * also counts card bills, which no account is named to pay. Currencies are
- * never mixed.
- */
 export interface ProjectedBalance {
   accountId: number | null
   accountName: string | null
@@ -138,7 +112,6 @@ export interface ProjectedBalance {
   firstNegative: FirstNegative | null
 }
 
-/** What `GET upcoming` answers. Days are `YYYY-MM-DD`. */
 export interface UpcomingResponse {
   from: string
   to: string
@@ -146,19 +119,11 @@ export interface UpcomingResponse {
   balances: ProjectedBalance[]
 }
 
-/** A signed movement of a balance on a day. */
 export interface BalanceEvent {
   date: string
-  /** Positive adds to the balance, negative takes from it. */
   amount: string
 }
 
-/**
- * Projects a balance forward: the start plus each day's movements, one point
- * per day that moves it. A movement dated before `from` (an overdue bill)
- * lands on `from`. `firstNegative` is the first day the balance is below
- * zero — `from` itself when it already starts there.
- */
 export function projectBalance(
   startBalance: string,
   events: readonly BalanceEvent[],
@@ -189,19 +154,12 @@ export function projectBalance(
   return { points, endBalance: formatCents(balance), firstNegative }
 }
 
-/** How much of its cap a limit has used, in whole percent (rounded down). */
 export function limitPercent(spent: string, amount: string): number {
   const cap = toCents(amount)
 
   return cap <= 0n ? 0 : Number((toCents(spent) * 100n) / cap)
 }
 
-/**
- * How far behind its straight-line pace a goal is today, or nothing when it
- * is on pace, has no deadline, or is already reached. The pace runs from the
- * balance taken on `balanceDt` to the target on `targetDt`; `current` is the
- * linked account's balance now.
- */
 export function goalShortfall(
   goal: Pick<Goal, 'balance' | 'balanceDt' | 'targetBalance' | 'targetDt'>,
   current: string,
@@ -227,7 +185,6 @@ export function goalShortfall(
   return behind > 0n ? formatCents(behind) : null
 }
 
-/** An account as the projection reads it. */
 export interface UpcomingAccount {
   id: number
   name: string
@@ -236,7 +193,6 @@ export interface UpcomingAccount {
   balance: string
 }
 
-/** A goal with the balance its linked account holds now. */
 export interface UpcomingGoalInput {
   goal: Pick<
     Goal,
@@ -251,7 +207,6 @@ export interface UpcomingGoalInput {
   currentBalance: string
 }
 
-/** What the upcoming list reads of a recurring rule. */
 export type UpcomingRule = Pick<
   RecurringTransaction,
   | 'id'
@@ -266,29 +221,22 @@ export type UpcomingRule = Pick<
   | 'frequencyMonth'
 >
 
-/** What the upcoming list reads of a limit's usage. */
 export type UpcomingLimitInput = Pick<
   LimitUsage,
   'id' | 'categoryName' | 'amount' | 'type' | 'currency' | 'spent'
 >
 
-/** Everything `assembleUpcoming` merges. */
 export interface UpcomingInput {
-  /** The tenant's today. */
   today: string
-  /** How many days ahead to look; the window ends `days` after today. */
   days: number
   accounts: readonly UpcomingAccount[]
   bills: readonly CreditCardStatement[]
   rules: readonly UpcomingRule[]
-  /** Rules whose transaction for today already exists — already in the
-   * account's balance, so today's firing is not upcoming. */
   materializedToday: ReadonlySet<number>
   limits: readonly UpcomingLimitInput[]
   goals: readonly UpcomingGoalInput[]
 }
 
-/** The bill statuses that still ask for money. */
 const PENDING_BILL_STATUSES: readonly CreditCardStatement['status'][] = [
   'Open',
   'Closed',
@@ -296,13 +244,6 @@ const PENDING_BILL_STATUSES: readonly CreditCardStatement['status'][] = [
   'Overdue',
 ]
 
-/**
- * Merges the four sources into one chronological list and projects the
- * balances. Same-day lines sort bills, recurring, limits, goals; limit and
- * goal lines are states, not events, and sit on today. A bill already past
- * due keeps its due date (so it sorts first) but weighs on the projection
- * from today.
- */
 export function assembleUpcoming(input: UpcomingInput): UpcomingResponse {
   const { today } = input
   const to = shiftDay(today, input.days)
@@ -404,12 +345,6 @@ export function assembleUpcoming(input: UpcomingInput): UpcomingResponse {
   }
 }
 
-/**
- * What a listed bill adds on its own due date. Its `previousBalance` is the
- * remainder carried from the bill before it on the same card; when that bill
- * is listed too, it is already counted on its own date, so only the part this
- * bill adds is new. Otherwise the whole `amountDue` is.
- */
 function billPortion(
   bill: CreditCardStatement,
   listed: readonly CreditCardStatement[]
@@ -424,9 +359,6 @@ function billPortion(
     : bill.amountDue
 }
 
-/** The per-account and per-currency projections. A credit card has no
- * balance to run dry — its debt is the bills — so it is projected nowhere;
- * the bills weigh on the currency line instead. */
 function projectAll(
   input: UpcomingInput,
   firings: readonly ForecastOccurrence<UpcomingRule>[],

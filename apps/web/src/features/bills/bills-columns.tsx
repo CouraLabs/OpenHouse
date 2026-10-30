@@ -6,12 +6,6 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { StatementStatusBadge } from './statement-status-badge.js'
 
-/**
- * The columns the bills table shows: the bill — named by its due date, the
- * way a bank names it, and linking to its detail — with its card, the
- * period it bills, the amounts in the card's currency, and the status.
- * Called during the page's render, so the labels arrive translated.
- */
 export function buildBillsColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
   locale: string

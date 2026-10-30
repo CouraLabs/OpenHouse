@@ -7,10 +7,6 @@ import { useContent } from '@/lib/use-locale.js'
 import { LocaleToggle } from './locale-toggle.js'
 import { ThemeToggle } from './theme-toggle.js'
 
-/**
- * The sticky top bar: wordmark, section links (as `/path` labels, hidden below `lg`), the locale
- * and theme toggles, and the two account actions. The only blur on the page lives here.
- */
 export function SiteNav() {
   const { navActions, navLinks } = useContent()
   return (

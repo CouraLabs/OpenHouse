@@ -7,11 +7,6 @@ import { Tag } from '@/components/tag.js'
 import type { HouseModule } from '@/lib/content.js'
 import { useContent } from '@/lib/use-locale.js'
 
-/**
- * One module as a ruled row, read like a book's table of contents: mono
- * name, one plain line, then the room it is and its status as two tags.
- * Rows rule off rail to rail; the live module sits one ground step up.
- */
 function HouseRow({
   module,
   statusLabel,
@@ -44,10 +39,6 @@ function HouseRow({
   )
 }
 
-/**
- * The house index: the ledger-style list of what the shared home holds —
- * money live today, the rest of home life as announced arrivals.
- */
 export function HouseIndexSection() {
   const { houseIntro, houseModules, houseStatus } = useContent()
   return (

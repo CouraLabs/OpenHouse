@@ -14,17 +14,8 @@ import {
   type GoalSearch,
 } from './goal.repository.js'
 
-/** A goal row denominated: the tenant's main currency, which every goal is
- * in, filled in for the wire. */
 export type GoalView = GoalRow & { currency: Currency }
 
-/**
- * The rules of goals: a goal must point at a Savings account the tenant owns
- * and has not deleted, in the tenant's main currency — goals store no
- * currency of their own — a deleted goal is a status change, and the audit
- * trail records the user the session acted as. The tenant and the user
- * always arrive from the caller — this service never reads a request.
- */
 export class GoalService {
   constructor(
     private readonly repository: GoalRepository,
@@ -32,7 +23,6 @@ export class GoalService {
     private readonly settings: SettingsRepository
   ) {}
 
-  /** Creates a goal for the tenant, rejecting an account it cannot use. */
   async create(
     tenantId: number,
     userId: number,
@@ -53,7 +43,6 @@ export class GoalService {
     return { ...row, currency: mainCurrency }
   }
 
-  /** Runs the tenant's paged search. */
   async search(
     tenantId: number,
     args: SearchGoalsArgs
@@ -70,7 +59,6 @@ export class GoalService {
     }
   }
 
-  /** Reads one goal — deleted included; the caller decides what to show. */
   async find(tenantId: number, id: number): Promise<GoalView> {
     const [row, mainCurrency] = await Promise.all([
       this.repository.findById(tenantId, id),
@@ -84,8 +72,6 @@ export class GoalService {
     return { ...row, currency: mainCurrency }
   }
 
-  /** Updates a goal, rejecting an account it cannot use. A deleted goal
-   * updates like a missing one: it is gone for the UI. */
   async update(
     tenantId: number,
     userId: number,
@@ -119,7 +105,6 @@ export class GoalService {
     return { ...updated, currency: row.currency }
   }
 
-  /** Soft-deletes a goal. Deleting an already-deleted row is a no-op. */
   async softDelete(
     tenantId: number,
     userId: number,
@@ -129,7 +114,6 @@ export class GoalService {
     await this.repository.softDelete(tenantId, id, userId)
   }
 
-  /** The tenant's main currency — what every goal is denominated in. */
   private async mainCurrencyOf(tenantId: number): Promise<Currency> {
     const settings = await this.settings.findByTenant(tenantId)
 
@@ -140,13 +124,6 @@ export class GoalService {
     return settings.mainCurrency
   }
 
-  /**
-   * Rejects a linked account that is missing, no longer ACTIVE, or not a
-   * Savings account — only Savings can back a goal — and an account outside
-   * the main currency: the goal tracks a balance the account denominates,
-   * and until exchange rates exist, progress cannot be compared across
-   * currencies.
-   */
   private async assertSavingsAccountUsable(
     tenantId: number,
     accountId: number,

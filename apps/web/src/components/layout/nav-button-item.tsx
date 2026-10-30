@@ -8,7 +8,6 @@ import {
 
 import type { NavItem } from './nav.js'
 
-/** A plain navigation entry rendered as a link button. */
 export function NavButtonItem({ item }: { item: NavItem }) {
   const { t } = useTranslation()
   const Icon = item.icon

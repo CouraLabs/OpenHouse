@@ -6,12 +6,6 @@ import { BrandMark } from '@workspace/ui/components/brand-mark'
 import { LocaleSwitcher } from '@/components/layout/locale-switcher.js'
 import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
 
-/**
- * The chrome of the signed-out pages: an editorial split — the hero on the
- * left, the brand and switchers above the page's form on the right, the form
- * seated in a double-bezel card. The app shell takes over once a session
- * exists.
- */
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-[100dvh] gap-3 p-3 md:grid-cols-2">

@@ -21,22 +21,15 @@ import {
 import { CodeShare } from './code-share.js'
 import { inviteLinkFor, useCreateInviteCode } from './use-invite-codes.js'
 
-/** The lifetimes an invite can be given; `never` sends no expiry. */
 const EXPIRY_CHOICES = ['1', '7', 'never'] as const
 
 type ExpiryChoice = (typeof EXPIRY_CHOICES)[number]
 
-/** The props `AddUserDialog` takes. */
 interface AddUserDialogProps {
   open: boolean
   onClose: () => void
 }
 
-/**
- * Adds a user without email: the owner picks how long the invite lasts
- * (24 hours, 7 days, or never; 7 days by default), generates the code, and
- * shares the code or its link however they like.
- */
 export function AddUserDialog({ open, onClose }: AddUserDialogProps) {
   const { t } = useTranslation()
   const create = useCreateInviteCode()
@@ -85,8 +78,7 @@ export function AddUserDialog({ open, onClose }: AddUserDialogProps) {
               }))}
             >
               <SelectTrigger id="invite-expiry" className="w-full">
-                {/* Rendered explicitly: base-ui does not derive the label of
-                 * a value set while the popup was closed. */}
+                {}
                 <SelectValue>{expiryLabel(expiry)}</SelectValue>
               </SelectTrigger>
               <SelectContent>

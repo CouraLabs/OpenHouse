@@ -7,15 +7,10 @@ import { SettingsRepository } from './settings.repository.js'
 import { SettingsService } from './settings.service.js'
 import { settingsRoutes } from './settings.routes.js'
 
-/** The settings feature's wiring: its routes, mounted under `/api/settings`. */
 export interface SettingsDeps {
   router: App
 }
 
-/**
- * Builds the settings feature's services from the request's dependencies —
- * the explicit composition the DI container once did.
- */
 export function settingsDeps(
   db: Database,
   _config: Config,

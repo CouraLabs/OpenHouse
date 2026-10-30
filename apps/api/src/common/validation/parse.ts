@@ -3,13 +3,6 @@ import type { z, ZodType } from 'zod'
 
 import { BadRequestError } from '../errors.js'
 
-/**
- * Validates a request argument against a zod schema and answers the parsed
- * value — the replacement of the `ZodValidationPipe`. Parsing, not mere
- * validation: defaults are applied and the type a handler receives is the
- * schema's output type. A body that does not parse answers 400 with the
- * issue list, the same body the pipe threw.
- */
 export async function parseJsonBody<S extends ZodType>(
   context: Context,
   schema: S
@@ -24,7 +17,6 @@ export async function parseJsonBody<S extends ZodType>(
   return result.data
 }
 
-/** Validates the query string's parameters against a schema. */
 export function parseQuery<S extends ZodType>(
   context: Context,
   schema: S

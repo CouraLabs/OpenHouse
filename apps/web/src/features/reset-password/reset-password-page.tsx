@@ -5,23 +5,12 @@ import { AuthLayout } from '@/components/layout/auth-layout.js'
 import { currentSession } from '@/lib/query.js'
 import { ResetPasswordForm } from './reset-password-form.js'
 
-/**
- * Reads the code a reset link carries in its fragment (`#code=…`). The
- * fragment never leaves the browser, so the code stays out of server logs
- * and the Referer header.
- */
 function codeFromFragment(): string | undefined {
   const code = new URLSearchParams(window.location.hash.slice(1)).get('code')
 
   return code === null || code === '' ? undefined : code
 }
 
-/**
- * The page a forgotten password is reset from, without email: a member
- * enters the code their household's owner issued, an owner one of their
- * recovery codes. Setting the new password signs out every other session
- * and signs this browser in.
- */
 export function ResetPasswordPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()

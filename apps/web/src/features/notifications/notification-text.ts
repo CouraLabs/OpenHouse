@@ -3,11 +3,8 @@ import type { ReminderDetail } from '@workspace/poco'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 
-/** The translate function the text builders take. */
 type Translate = (key: string, options?: Record<string, unknown>) => string
 
-/** Spells a reminder out for the notification centre, in the user's
- * language. The wire carries structure only; the words are the app's. */
 export function reminderText(
   detail: ReminderDetail,
   t: Translate,

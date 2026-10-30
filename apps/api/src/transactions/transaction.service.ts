@@ -35,11 +35,6 @@ import {
   type TransactionSearch,
 } from './transaction.repository.js'
 
-/**
- * Answers 409 with the lock date when a day falls on or before the
- * account's `reconciledThrough` and the caller has not confirmed. Dates are
- * `YYYY-MM-DD`, so the string order is the calendar order.
- */
 function assertDateOpen(
   account: Account,
   date: string,
@@ -62,8 +57,6 @@ function assertDateOpen(
   throw new ConflictError(conflict)
 }
 
-/** Only an expense of the household's own splits: not an income, and not
- * what a shared account pays (it creates no debts). */
 function assertSplittable(account: Account, type: string): void {
   if (type !== 'Expense') {
     throw new BadRequestError('Only an expense can be split.')
@@ -76,7 +69,6 @@ function assertSplittable(account: Account, type: string): void {
   }
 }
 
-/** Resolves a split of an amount, answering 400 when it does not fit. */
 function sharesOf(
   amount: string,
   split: SplitInput,
@@ -91,15 +83,6 @@ function sharesOf(
   return resolved.shares
 }
 
-/**
- * The rules of transactions: every write moves the linked account's
- * balance in the same database transaction as the row, every change is
- * recorded as a full-snapshot history row, a deleted transaction is a
- * status change, a transfer moves money between two ACTIVE accounts of the
- * same currency, and an edit never moves a transaction into another
- * currency. The tenant and the user always arrive from the caller — this
- * service never reads a request.
- */
 export class TransactionService {
   constructor(
     private readonly repository: TransactionRepository,
@@ -111,9 +94,6 @@ export class TransactionService {
     private readonly members: HouseholdMembers
   ) {}
 
-  /** Creates a transaction, rejecting references the tenant cannot use. A
-   * card expense with `installments.count > 1` becomes one row per
-   * installment; the answer is the first. */
   async create(
     tenantId: number,
     userId: number,
@@ -121,15 +101,10 @@ export class TransactionService {
   ): Promise<TransactionRow> {
     const account = await this.assertReferencesUsable(tenantId, body)
 
-    // A backdated row inside a reconciled period changes a balance the
-    // bank already confirmed: it asks first, like an edit does.
     assertDateOpen(account, body.transactionDt, body.confirmReconciled)
 
     await this.assertPayerAndSplit(tenantId, body.paidByUserId, body.split)
 
-    // The wire's `status` is the review workflow; the row's `status` is the
-    // entity lifecycle, which only a soft delete changes — so the body's
-    // field is named out before the spread, never allowed to override it.
     const {
       status,
       installments,
@@ -176,8 +151,6 @@ export class TransactionService {
     })
   }
 
-  /** Rejects (400) a payer or a split naming someone who is not an active
-   * member of the household. */
   private async assertPayerAndSplit(
     tenantId: number,
     payerUserId: number | null | undefined,
@@ -194,7 +167,6 @@ export class TransactionService {
     )
   }
 
-  /** Runs the tenant's paged search. */
   async search(
     tenantId: number,
     args: SearchTransactionsArgs
@@ -202,19 +174,14 @@ export class TransactionService {
     return this.repository.search(tenantId, args)
   }
 
-  /** Totals the tenant's transactions over a filter, per currency. */
   async summary(tenantId: number, filter: TransactionFilter) {
     return this.repository.summary(tenantId, filter)
   }
 
-  /** Totals the tenant's expenses over a filter, grouped by a breakdown's
-   * dimension — category or account — per currency. */
   async breakdown(tenantId: number, args: TransactionBreakdownArgs) {
     return this.repository.breakdown(tenantId, args.dimension, args)
   }
 
-  /** Reads one transaction — deleted included; the caller decides what to
-   * show. */
   async find(tenantId: number, id: number): Promise<TransactionRow> {
     const row = await this.repository.findById(tenantId, id)
 
@@ -225,18 +192,12 @@ export class TransactionService {
     return row
   }
 
-  /** Reads a transaction's history, newest first. */
   async findHistory(tenantId: number, id: number) {
     await this.find(tenantId, id)
 
     return this.repository.findHistory(tenantId, id)
   }
 
-  /**
-   * A row on or before its account's `reconciledThrough` was matched to the
-   * bank: changing it answers 409 with the lock date until the caller
-   * confirms.
-   */
   private async assertNotReconciled(
     tenantId: number,
     row: TransactionRow,
@@ -256,8 +217,6 @@ export class TransactionService {
     throw new ConflictError(conflict)
   }
 
-  /** Updates a transaction, rejecting references it cannot use. A deleted
-   * transaction updates like a missing one: it is gone for the UI. */
   async update(
     tenantId: number,
     userId: number,
@@ -269,10 +228,6 @@ export class TransactionService {
       throw new NotFoundError(`No transaction with id ${body.id}.`)
     }
 
-    // A transfer side's type and account are what pair it with its sibling:
-    // the sibling only mirrors amount, day, category, note, and status, so
-    // flipping one side's type or moving it to another account would create
-    // or destroy money across the pair.
     if (
       row.transferGroupId !== null &&
       (body.type !== row.type || body.linkedAccountId !== row.linkedAccountId)
@@ -282,8 +237,6 @@ export class TransactionService {
       )
     }
 
-    // A settlement moves a debt between two members: it is deleted and
-    // recorded again, never edited into a different one.
     if (row.isSettlement) {
       throw new ConflictError(
         'A settlement cannot be edited. Delete it and settle up again.'
@@ -300,21 +253,14 @@ export class TransactionService {
 
     await this.assertPayerAndSplit(tenantId, body.paidByUserId, body.split)
 
-    // The row's new day and account count too: moving an open row into a
-    // reconciled period is as much a change to it as editing a locked one.
     assertDateOpen(account, body.transactionDt, body.confirmReconciled)
 
-    // A transaction has no currency of its own — it carries its account's.
-    // Moving it to an account of another currency would keep the digits and
-    // silently change the money (R$ 500 becoming US$ 500). Converting is out
-    // of scope: it would need an exchange rate stored on the transaction.
     if (account.currency !== row.currency) {
       throw new ConflictError(
         'Move the transaction to an account of the same currency.'
       )
     }
 
-    // As in create: the wire's `status` names out before the spread.
     const {
       status,
       id: _updateId,
@@ -332,7 +278,6 @@ export class TransactionService {
       userId,
       {
         ...rest,
-        // Left out, the stored payer and shares are kept.
         ...(paidByUserId == null ? {} : { paidByUserId }),
         ...(splits === undefined ? {} : { splits }),
         note: body.note ?? null,
@@ -351,13 +296,6 @@ export class TransactionService {
     return updated
   }
 
-  /**
-   * The shares an edit stores. A new split replaces them (and only an
-   * expense of the household's own, entered by hand, takes one); `null`
-   * clears them; left out, the shares follow the amount — each member keeps
-   * their proportion — and an income or a shared account carries none.
-   * `undefined` means "leave the stored shares alone".
-   */
   private splitsForUpdate(
     row: TransactionRow,
     account: Account,
@@ -407,14 +345,6 @@ export class TransactionService {
         )
   }
 
-  /**
-   * Records a settle-up between two members: `fromUserId` pays `toUserId`.
-   * With both accounts it is a transfer between them (the same path as any
-   * transfer, flagged as a settlement); with only the paying account it is
-   * an Expense on it with the receiving member as receiver. Either way the
-   * rows stay out of income and expense reports and move the pair's
-   * balance by exactly the amount. A removed member can still be settled.
-   */
   async settle(
     tenantId: number,
     userId: number,
@@ -466,8 +396,6 @@ export class TransactionService {
       return rows ?? []
     }
 
-    // The receiving member's account is not one the payer can use: the
-    // payment leaves the paying account as an expense to the member.
     const receiverName = await this.members.nameOf(tenantId, body.toUserId)
     const receiver = await this.receivers.getOrCreatePerson(
       tenantId,
@@ -496,8 +424,6 @@ export class TransactionService {
     ]
   }
 
-  /** An ACTIVE account in the settlement's currency that is not a card
-   * (paying a card is a bill payment, not a settle-up). */
   private async usableSettleAccount(
     tenantId: number,
     accountId: number,
@@ -522,11 +448,6 @@ export class TransactionService {
     return account
   }
 
-  /**
-   * Changes only a transaction's review status. A deleted transaction
-   * changes like a missing one: it is gone for the UI. Nothing else is
-   * written — no amount, account, or day — so the balance never moves.
-   */
   async changeStatus(
     tenantId: number,
     userId: number,
@@ -554,12 +475,6 @@ export class TransactionService {
     return updated
   }
 
-  /**
-   * Moves a card charge to another bill of the same card and pins it there,
-   * or re-points the bill the card side of a payment settles. Only a row on
-   * a card can move — a charge on its bill, or a payment — and only to an
-   * ACTIVE bill of its own card.
-   */
   async moveToStatement(
     tenantId: number,
     userId: number,
@@ -602,8 +517,6 @@ export class TransactionService {
     return moved
   }
 
-  /** Soft-deletes a transaction: its delta is reverted from the account in
-   * the same database transaction that marks the row DELETED. */
   async softDelete(
     tenantId: number,
     userId: number,
@@ -627,16 +540,6 @@ export class TransactionService {
     await this.repository.softDeleteWithBalance(tenantId, id, userId)
   }
 
-  /**
-   * Transfers money between two accounts: two transactions in one database
-   * transaction — an Expense on the source and an Income on the
-   * destination. Both accounts must be ACTIVE and share a currency.
-   *
-   * A transfer into a credit card pays a bill of that card: the one the
-   * body names, or the card's default (its oldest unpaid closed bill, else
-   * the open one). A payment with no category lands in the tenant's
-   * "Credit card payment" category, created the first time.
-   */
   async transfer(
     tenantId: number,
     userId: number,
@@ -697,8 +600,6 @@ export class TransactionService {
     return rows
   }
 
-  /** The category a transfer lands in: the one named, which must be
-   * usable, or — on a bill payment only — the card payment category. */
   private async transferCategoryId(
     tenantId: number,
     userId: number,
@@ -728,8 +629,6 @@ export class TransactionService {
     return categoryId
   }
 
-  /** The bill a payment into a card settles: the one named, which must be
-   * an ACTIVE bill of that card, or the card's default. */
   private async paymentStatementId(
     tenantId: number,
     userId: number,
@@ -756,11 +655,6 @@ export class TransactionService {
     return statement.id
   }
 
-  /**
-   * Rejects a row edit of one installment beyond what it may change on its
-   * own — its amount, category, note, and review status (a bank
-   * adjustment) — or once its bill is no longer Open: the bank billed it.
-   */
   private async assertInstallmentEdit(
     tenantId: number,
     row: TransactionRow,
@@ -792,8 +686,6 @@ export class TransactionService {
     }
   }
 
-  /** Rejects an account, category, or — when set — receiver the tenant
-   * cannot use, and answers the account. */
   private async assertReferencesUsable(
     tenantId: number,
     body: CreateTransactionBody | UpdateTransactionBody

@@ -3,10 +3,6 @@ import { cn } from 'cn'
 
 import type { Tone } from '@/lib/content.js'
 
-/**
- * A mono hairline pill. `tone` still names the room a tag belongs to, but
- * the sheet is ink-only, so every tone draws the same.
- */
 export function Tag({
   children,
   className,

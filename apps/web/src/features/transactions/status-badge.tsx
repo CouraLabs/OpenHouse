@@ -9,9 +9,6 @@ import {
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu'
 
-/** The review workflow's badge: Verify neutral, Checked green, Canceled
- * red. Clicking it opens the other statuses — picking one changes the row
- * straight from the grid, no form needed. */
 export function StatusBadge({
   status,
   onChange,

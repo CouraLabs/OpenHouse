@@ -8,7 +8,6 @@ import type {
 } from '@workspace/db'
 import { passwordResetCodes, users } from '@workspace/db'
 
-/** A code is open while it is unused and not yet expired at `now`. */
 function isOpen(now: Date) {
   return and(
     isNull(passwordResetCodes.usedAt),
@@ -19,15 +18,9 @@ function isOpen(now: Date) {
   )
 }
 
-/**
- * The password reset codes and the user rows a reset reads and writes. A
- * code names its user, so redeeming needs no tenant; issuing one for a
- * member reads the member through the owner's tenant, passed explicitly.
- */
 export class PasswordResetRepository {
   constructor(private readonly db: Database) {}
 
-  /** Reads one user of the tenant. */
   async findUserInTenant(
     tenantId: number,
     id: number
@@ -40,8 +33,6 @@ export class PasswordResetRepository {
     return row
   }
 
-  /** Reads the user an email belongs to — emails are unique across every
-   * tenant, so there is at most one. */
   async findUserByEmail(email: string): Promise<User | undefined> {
     const [row] = await this.db
       .select()
@@ -51,11 +42,6 @@ export class PasswordResetRepository {
     return row
   }
 
-  /**
-   * Expires every open code of one kind the user holds and stores the
-   * issued ones — their hashes only — as one batch: the old codes stop and
-   * the new ones start together.
-   */
   async replaceCodes(
     userId: number,
     kind: ResetCodeKind,
@@ -77,7 +63,6 @@ export class PasswordResetRepository {
     ])
   }
 
-  /** Reads the code a hash belongs to, whatever its state. */
   async findByHash(codeHash: string): Promise<PasswordResetCode | undefined> {
     const [row] = await this.db
       .select()
@@ -87,14 +72,6 @@ export class PasswordResetRepository {
     return row
   }
 
-  /**
-   * Redeems a code for a new password as one batch: the code is claimed
-   * (used) and the password set together — two redemptions racing lose one
-   * to the claim's guard, and a claim with no password set behind it is
-   * impossible. The claim's guard answers nothing when the code was used
-   * or expired meanwhile; the password's guard answers nothing when the
-   * user is gone; the caller tells them apart from the returned rows.
-   */
   async redeem(
     codeId: number,
     userId: number,
@@ -131,8 +108,6 @@ export class PasswordResetRepository {
     return { kind: 'claimed', user: user[0] }
   }
 
-  /** How many of the user's recovery codes are still open, and when the
-   * latest set was generated. */
   async recoveryStatus(
     userId: number,
     now: Date
@@ -155,8 +130,6 @@ export class PasswordResetRepository {
     return { remaining: open.value, generatedAt: latest.value }
   }
 
-  /** When each server-issued code the user was not yet told about was
-   * issued, newest first. */
   async unseenServerNotices(userId: number): Promise<Date[]> {
     const rows = await this.db
       .select({ createdAt: passwordResetCodes.createdAt })
@@ -173,7 +146,6 @@ export class PasswordResetRepository {
     return rows.map((row) => row.createdAt)
   }
 
-  /** Records that the user saw the notices of their server-issued codes. */
   async markServerNoticesSeen(userId: number, now: Date): Promise<void> {
     await this.db
       .update(passwordResetCodes)

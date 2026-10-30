@@ -10,7 +10,6 @@ import { cn } from 'cn'
 
 import { formatMoney } from '@/lib/format-money.js'
 
-/** The figures of a currency's cards, translated by the page. */
 export interface SummaryLabels {
   incomes: string
   expenses: string
@@ -18,7 +17,6 @@ export interface SummaryLabels {
   creditExpenses: string
 }
 
-/** One currency's two cards. */
 export function SummaryRow({
   group,
   locale,
@@ -81,7 +79,6 @@ export function SummaryRow({
   )
 }
 
-/** One figure of the flow card: an icon, the label, and the money. */
 function SummaryLine({
   icon,
   label,

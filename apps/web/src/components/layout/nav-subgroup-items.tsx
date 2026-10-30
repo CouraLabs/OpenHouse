@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import type { NavSubgroup } from './nav.js'
 import { NavButtonItem } from './nav-button-item.js'
 
-/** One sidebar subgroup: its label followed by its items, rendered inline in the group's menu. */
 export function NavSubgroupItems({ subgroup }: { subgroup: NavSubgroup }) {
   const { t } = useTranslation()
 

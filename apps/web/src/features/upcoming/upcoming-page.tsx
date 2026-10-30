@@ -7,11 +7,6 @@ import { ProjectedBalances } from './projected-balances.js'
 import { UpcomingItemRow } from './upcoming-item-row.js'
 import { useUpcoming } from './use-upcoming.js'
 
-/**
- * The Upcoming page: the projected balance of each account for the next
- * 30 days, and everything coming due in chronological order — card bills,
- * recurring rules, limits near their cap, goals behind pace.
- */
 export function UpcomingPage() {
   const { t } = useTranslation()
   const upcoming = useUpcoming(DEFAULT_UPCOMING_DAYS)

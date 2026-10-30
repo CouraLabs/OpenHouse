@@ -1,4 +1,3 @@
-/** Splits rows into consecutive chunks of at most `size`. */
 export function chunk<T>(items: readonly T[], size: number): T[][] {
   const chunks: T[][] = []
 

@@ -19,10 +19,8 @@ import {
   type TransactionRow,
 } from './transaction.repository.js'
 
-/** The most rows one search page reads — the paging envelope's ceiling. */
 const PAGE = 100
 
-/** What a reconciliation preview computes, before the wire shape. */
 export interface ReconcilePreviewResult {
   account: Account
   computedBalance: string
@@ -31,7 +29,6 @@ export interface ReconcilePreviewResult {
   verifyCount: number
 }
 
-/** What a committed reconciliation computed, before the wire shape. */
 export interface ReconcileOutcome {
   reconciledThrough: string
   balance: string
@@ -39,14 +36,6 @@ export interface ReconcileOutcome {
   checkedCount: number
 }
 
-/**
- * Reconciling an account against the bank: the user reads the bank's
- * balance on a day, the ledger answers its own end-of-day running balance
- * for that day, and the difference is closed by an adjustment transaction.
- * A committed reconciliation stamps `reconciledThrough`, which locks the
- * rows up to it behind a confirmation. The balance on the day is always
- * derived from the rows — never from the cached `accounts.balance`.
- */
 export class ReconciliationService {
   constructor(
     private readonly transactions: TransactionRepository,
@@ -55,8 +44,6 @@ export class ReconciliationService {
     private readonly balances: BalanceRepository
   ) {}
 
-  /** The ledger's balance on the day, the difference to the bank's, and
-   * the rows still waiting for a check. Writes nothing. */
   async preview(
     tenantId: number,
     accountId: number,
@@ -83,14 +70,6 @@ export class ReconciliationService {
     }
   }
 
-  /**
-   * Commits a reconciliation: optionally creates the adjustment for the
-   * difference (an Income when the bank holds more, an Expense when less —
-   * category "Balance adjustment", flagged `isAdjustment`, already
-   * Checked), optionally marks every Verify row up to the day Checked, then
-   * stamps `reconciledThrough`. A difference left open with no adjustment
-   * is a 409: the account would be marked matched when it is not.
-   */
   async reconcile(
     tenantId: number,
     userId: number,
@@ -144,8 +123,6 @@ export class ReconciliationService {
     }
   }
 
-  /** The adjustment row: dated on the reconciled day, moving the balance by
-   * the difference, kept out of the reports by its flag. */
   private async createAdjustment(
     tenantId: number,
     userId: number,
@@ -177,9 +154,6 @@ export class ReconciliationService {
     })
   }
 
-  /** Marks every Verify row of the account up to the day Checked, page by
-   * page; each row's own ledger write mirrors a transfer's other side.
-   * Answers how many rows moved. */
   private async markVerifyChecked(
     tenantId: number,
     userId: number,
@@ -189,8 +163,6 @@ export class ReconciliationService {
     let checked = 0
 
     for (;;) {
-      // Rows leave the Verify set as they are checked, so the next page
-      // is always the first.
       const { rows } = await this.transactions.search(
         tenantId,
         verifyUpTo(accountId, date, 0)
@@ -212,7 +184,6 @@ export class ReconciliationService {
 
       checked += moved
 
-      // A page that moved nothing would loop forever on the same rows.
       if (rows.length < PAGE || moved === 0) {
         return checked
       }
@@ -233,7 +204,6 @@ export class ReconciliationService {
   }
 }
 
-/** The search for an account's Verify rows through a day, oldest first. */
 function verifyUpTo(
   accountId: number,
   date: string,

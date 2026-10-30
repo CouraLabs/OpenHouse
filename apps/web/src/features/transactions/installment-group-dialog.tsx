@@ -13,16 +13,10 @@ import { InstallmentGroupBody } from './installment-group-body.js'
 import { useInstallmentGroup } from './use-transactions.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The menu of an installment purchase, opened from any of its rows: the
- * group is read fresh, so `editable` always reflects the bills as they are
- * now. The body mounts per opening, so it never keeps a stale step.
- */
 export function InstallmentGroupDialog({
   transaction,
   onClose,
 }: {
-  /** A row of the purchase, or nothing while the dialog is closed. */
   transaction: Transaction | null
   onClose: () => void
 }) {

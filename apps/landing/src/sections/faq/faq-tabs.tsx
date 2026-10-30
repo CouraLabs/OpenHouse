@@ -3,12 +3,6 @@ import { cn } from 'cn'
 
 import type { Question } from '@/lib/content.js'
 
-/**
- * The questions from `md` up: an index of tab rows left of the `split`
- * column rule, the selected one inverted, and its answer set as a panel
- * right of it — so both columns of the cell carry content. Arrows, Home and
- * End move through the index (roving tabindex).
- */
 export function FaqTabs({ items }: { items: Question[] }) {
   const [selected, setSelected] = useState(0)
   const tabs = useRef<(HTMLButtonElement | null)[]>([])

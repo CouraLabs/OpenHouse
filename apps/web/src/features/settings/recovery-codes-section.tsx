@@ -11,13 +11,6 @@ import { useTenantSettings } from '@/lib/settings.js'
 import { RecoveryCodesList } from './recovery-codes-list.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The owner's recovery codes, in the Security section: how many of the
- * current set are left, and generating a new set of 10 — shown once. An
- * owner has no one above them to issue a reset code, so these are how they
- * get back in after forgetting the password. Replacing a set that still has
- * codes asks first: the old ones stop working at once.
- */
 export function RecoveryCodesSection() {
   const { t } = useTranslation()
   const { timezone } = useTenantSettings()

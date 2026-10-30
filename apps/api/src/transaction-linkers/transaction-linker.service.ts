@@ -14,13 +14,6 @@ import {
   type TransactionLinkerSearch,
 } from './transaction-linker.repository.js'
 
-/**
- * The rules of transaction linkers: a linker must point at a category and —
- * when set — a receiver the tenant owns and has not deleted, a deleted
- * linker is a status change, and the audit trail records the user the
- * session acted as. The tenant and the user always arrive from the caller —
- * this service never reads a request.
- */
 export class TransactionLinkerService {
   constructor(
     private readonly repository: TransactionLinkerRepository,
@@ -28,7 +21,6 @@ export class TransactionLinkerService {
     private readonly receivers: ReceiverRepository
   ) {}
 
-  /** Creates a linker for the tenant, rejecting references it cannot use. */
   async create(
     tenantId: number,
     userId: number,
@@ -47,7 +39,6 @@ export class TransactionLinkerService {
     })
   }
 
-  /** Runs the tenant's paged search. */
   async search(
     tenantId: number,
     args: SearchTransactionLinkersArgs
@@ -55,7 +46,6 @@ export class TransactionLinkerService {
     return this.repository.search(tenantId, args)
   }
 
-  /** Reads one linker — deleted included; the caller decides what to show. */
   async find(tenantId: number, id: number): Promise<TransactionLinkerRow> {
     const row = await this.repository.findById(tenantId, id)
 
@@ -66,8 +56,6 @@ export class TransactionLinkerService {
     return row
   }
 
-  /** Updates a linker, rejecting references it cannot use. A deleted linker
-   * updates like a missing one: it is gone for the UI. */
   async update(
     tenantId: number,
     userId: number,
@@ -98,7 +86,6 @@ export class TransactionLinkerService {
     return updated
   }
 
-  /** Soft-deletes a linker. Deleting an already-deleted row is a no-op. */
   async softDelete(
     tenantId: number,
     userId: number,
@@ -108,8 +95,6 @@ export class TransactionLinkerService {
     await this.repository.softDelete(tenantId, id, userId)
   }
 
-  /** Rejects a category that is missing or no longer ACTIVE, and a receiver
-   * that was set but is missing or no longer ACTIVE. */
   private async assertReferencesUsable(
     tenantId: number,
     categoryId: number,

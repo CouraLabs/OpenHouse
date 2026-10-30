@@ -3,10 +3,6 @@ import { useInView } from '@/lib/use-in-view.js'
 const RADIUS = 42
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
-/**
- * A goal's progress as a thin ring with the percentage set in the mono
- * display face at its center. The arc draws itself once the ring scrolls into view.
- */
 export function GoalRing({ percent }: { percent: number }) {
   const [ref, inView] = useInView<HTMLDivElement>()
   const offset = CIRCUMFERENCE * (1 - (inView ? percent : 0) / 100)

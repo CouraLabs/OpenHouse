@@ -8,15 +8,10 @@ import type {
 
 import { api } from '@/lib/api.js'
 
-/** The key every notification query lives under. */
 export const NOTIFICATIONS_KEY = ['notifications'] as const
 
-/** How often the bell looks for new entries, in milliseconds. */
 const POLL_MS = 60_000
 
-/** The notification centre: the latest entries and the unread count the
- * bell shows. Polled, so a reminder the hourly job stored shows up without
- * a reload. */
 export function useNotifications() {
   return useQuery({
     queryKey: [...NOTIFICATIONS_KEY, 'list'],
@@ -26,7 +21,6 @@ export function useNotifications() {
   })
 }
 
-/** Marks every notification read. */
 export function useMarkAllRead() {
   const queryClient = useQueryClient()
 
@@ -37,7 +31,6 @@ export function useMarkAllRead() {
   })
 }
 
-/** Marks one notification read. */
 export function useMarkRead() {
   const queryClient = useQueryClient()
 
@@ -49,7 +42,6 @@ export function useMarkRead() {
   })
 }
 
-/** The signed-in user's reminder preferences. */
 export function useNotificationPreferences() {
   return useQuery({
     queryKey: [...NOTIFICATIONS_KEY, 'preferences'],
@@ -58,7 +50,6 @@ export function useNotificationPreferences() {
   })
 }
 
-/** Saves the reminder preferences. */
 export function useSaveNotificationPreferences() {
   const queryClient = useQueryClient()
 
@@ -73,7 +64,6 @@ export function useSaveNotificationPreferences() {
   })
 }
 
-/** Whether the server can push, and the key a subscription is made against. */
 export function usePushConfig() {
   return useQuery({
     queryKey: [...NOTIFICATIONS_KEY, 'push-config'],
@@ -83,7 +73,6 @@ export function usePushConfig() {
   })
 }
 
-/** The user's calendar feed, or none yet. */
 export function useCalendarFeed() {
   return useQuery({
     queryKey: ['calendar', 'feed'],
@@ -91,7 +80,6 @@ export function useCalendarFeed() {
   })
 }
 
-/** Creates the calendar feed, or replaces its secret so the old URL dies. */
 export function useRotateCalendarFeed() {
   const queryClient = useQueryClient()
 
@@ -101,7 +89,6 @@ export function useRotateCalendarFeed() {
   })
 }
 
-/** Deletes the calendar feed. */
 export function useRemoveCalendarFeed() {
   const queryClient = useQueryClient()
 

@@ -1,7 +1,3 @@
-/**
- * The calendar month a `YYYY-MM-DD` day falls in, as inclusive `YYYY-MM-DD`
- * ends. Pure string math on the calendar day, so no device zone shifts it.
- */
 export function monthWindow(day: string): { from: string; to: string } {
   const [year, month] = day.split('-').map(Number)
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()

@@ -2,10 +2,6 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/*
- * The Drafting Sheet (DESIGN.md, shared with the web app): black, white and
- * neutral gray ink in two peer themes. Ink is the only accent. No shadows: hairlines and one-step grounds.
- */
 @theme {
   --font-sans: 'Jost Variable', Jost, ui-sans-serif, system-ui, sans-serif;
   --font-display:
@@ -98,11 +94,6 @@
   }
 }
 
-/*
- * Scroll entry (components/reveal.tsx). Content is at rest by default; only
- * a visitor who has not asked for reduced motion gets the 12px rise, and
- * `--index` staggers siblings 80ms apart.
- */
 @media (prefers-reduced-motion: no-preference) {
   .reveal {
     opacity: 0;
@@ -118,7 +109,6 @@
     transform: none;
   }
 
-  /* A newly selected FAQ answer settles in from a 6px rise. */
   .faq-panel {
     animation: faq-panel-in 360ms var(--ease-out-expo);
   }
@@ -160,14 +150,12 @@
   }
 }
 
-/* The 24px graph-paper dot grid some sections lay under their content. */
 .line-grid {
   background-image: radial-gradient(var(--grid-dot) 1px, transparent 1.2px);
   background-size: 24px 24px;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
 }
 
-/* Primitives plot in by stroke-dashoffset on a normalised path length. */
 .plot-stroke {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
@@ -187,12 +175,6 @@
   }
 }
 
-/*
- * The frame (DESIGN.md "Layout"): one centred sheet with 1px side rails,
- * sections as cells ruled off it, 13px crosshairs at every intersection, and
- * one shared column position (`--split`). Rules that meet the frame run on
- * past the rails to the window edges; html clips the overflow.
- */
 :root {
   --pad: clamp(20px, 4.4vw, 64px);
   --split: clamp(280px, 31%, 410px);

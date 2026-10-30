@@ -17,14 +17,8 @@ import type {
 
 import { api } from '@/lib/api.js'
 
-/** The key every recurring-rule query and mutation lives under. */
 const RECURRING_KEY = ['recurring-transactions'] as const
 
-/**
- * The page of rules a search describes. The args are the query key — every
- * distinct page, sort and filter is its own cache entry, and
- * `keepPreviousData` keeps the previous page on screen while the next loads.
- */
 export function useRecurringSearch(args: SearchRecurringTransactionsArgs) {
   return useQuery({
     queryKey: [...RECURRING_KEY, 'search', args],
@@ -41,7 +35,6 @@ export function useRecurringSearch(args: SearchRecurringTransactionsArgs) {
   })
 }
 
-/** Saves a rule: creates when the body has no id, updates when it has. */
 export function useSaveRecurring() {
   const queryClient = useQueryClient()
 
@@ -64,7 +57,6 @@ export function useSaveRecurring() {
   })
 }
 
-/** Soft-deletes a rule: the API marks it DELETED. */
 export function useDeleteRecurring() {
   const queryClient = useQueryClient()
 
@@ -77,7 +69,6 @@ export function useDeleteRecurring() {
   })
 }
 
-/** The tenant's ACTIVE receivers, by name — what the form's dropdown offers. */
 export function useActiveReceivers() {
   return useQuery({
     queryKey: ['receivers', 'active'],
@@ -85,7 +76,6 @@ export function useActiveReceivers() {
   })
 }
 
-/** The tenant's ACTIVE categories, by name — what the form's dropdown offers. */
 export function useActiveCategories() {
   return useQuery({
     queryKey: ['categories', 'active'],
@@ -93,7 +83,6 @@ export function useActiveCategories() {
   })
 }
 
-/** The tenant's ACTIVE accounts, by name — what the form's dropdown offers. */
 export function useActiveAccounts() {
   return useQuery({
     queryKey: ['accounts', 'active'],

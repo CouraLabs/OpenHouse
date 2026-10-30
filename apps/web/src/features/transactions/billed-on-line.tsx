@@ -9,12 +9,6 @@ import {
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The live line under a card charge's day: which bill it lands on, computed
- * with the same `resolveStatement` the API assigns by — no round-trip. A
- * charge pinned to a bill by hand shows that bill instead; a card whose
- * days are unset asks for them. Renders nothing off a card.
- */
 export function BilledOnLine({
   account,
   transactionDt,
@@ -22,7 +16,6 @@ export function BilledOnLine({
 }: {
   account: AccountRef | undefined
   transactionDt: string | undefined
-  /** The due date of the bill a pinned charge stays on, or nothing. */
   pinnedDueDate: string | null
 }) {
   const { t } = useTranslation()

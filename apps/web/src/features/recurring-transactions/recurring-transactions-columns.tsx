@@ -6,18 +6,11 @@ import { useTranslation } from 'react-i18next'
 
 import { formatMoney } from '@/lib/format-money.js'
 
-/** What the actions column can do to a row, reported upward. */
 export interface RecurringRowActions {
   onEdit: (rule: RecurringTransaction) => void
   onDelete: (rule: RecurringTransaction) => void
 }
 
-/**
- * The columns the recurring grid shows: the receiver, the category, the
- * account, the amount, the schedule in words, and the row actions. The
- * caller owns what edit and delete do; the columns only route the events.
- * Called during the page's render, so the labels arrive translated.
- */
 export function buildRecurringColumns(
   t: (key: string, values?: Record<string, unknown>) => string,
   locale: string,
@@ -85,10 +78,6 @@ export function buildRecurringColumns(
   ]
 }
 
-/**
- * Reads a rule's schedule in the user's words: `Monthly on day 5`,
- * `Weekly on Monday`, `Yearly on December 25`.
- */
 export function readFrequency(
   t: (key: string, values?: Record<string, unknown>) => string,
   rule: Pick<
@@ -128,7 +117,6 @@ export function readFrequency(
   }
 }
 
-/** The actions cell: the edit and delete buttons, one per row. */
 function RecurringActionsCell({
   rule,
   actions,

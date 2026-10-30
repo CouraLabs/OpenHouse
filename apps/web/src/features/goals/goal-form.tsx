@@ -27,21 +27,10 @@ import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
 import { useActiveAccounts } from './use-goals.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The fields the goal form holds. The rules come straight from the shared
- * poco schema — the same check the API runs, whose messages are already the
- * UX messages — so the form never re-declares them.
- */
 const goalFormSchema = createGoalSchema
 
 type GoalFormValues = z.infer<typeof goalFormSchema>
 
-/**
- * The default values of a new goal: nothing chosen, nothing typed. Built
- * when the form opens, not at module load — the balance day is the
- * tenant's today when the user opens the form, however long the tab has
- * been alive.
- */
 const newGoal = (today: string): GoalFormValues => ({
   name: '',
   linkedAccountId: undefined as unknown as number,
@@ -51,27 +40,14 @@ const newGoal = (today: string): GoalFormValues => ({
   targetDt: undefined,
 })
 
-/** The props `GoalForm` takes. */
 interface GoalFormProps {
-  /** The goal being edited, or nothing while creating. */
   goal: Goal | null
-  /** What a confirmed save should do; the dialog asks before this runs. */
   onSubmit: (body: CreateGoalBody) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/**
- * The insert and edit form of the goals page: a name, a dropdown of the
- * tenant's Savings accounts in the main currency, the balance with the day
- * it was taken, and the target balance with its optional deadline. A goal
- * has no currency of its own — it is in the tenant's main currency, which
- * the amounts' labels name. It renders above the table; the page decides
- * when it is open and what a submit saves.
- */
 export function GoalForm({
   goal,
   onSubmit,
@@ -90,8 +66,6 @@ export function GoalForm({
     formState: { errors },
   } = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
-    // The page keys the form by the goal it edits, so switching rows
-    // remounts it with that row's values.
     defaultValues:
       goal === null
         ? newGoal(today)
@@ -111,9 +85,6 @@ export function GoalForm({
   const balance = watch('balance')
   const targetBalance = watch('targetBalance')
   const accounts = useActiveAccounts()
-  // A goal tracks a Savings account in the main currency — until exchange
-  // rates exist, progress is never compared across currencies, the same
-  // rule the API enforces. The dropdown offers only those.
   const allSavings = (accounts.data ?? []).filter(
     (account) => account.type === 'Savings'
   )
@@ -121,15 +92,10 @@ export function GoalForm({
     (account) => account.currency === mainCurrency
   )
   const otherCurrencySavings = allSavings.length - savings.length
-  // The trigger's label is rendered here, not derived by base-ui from
-  // `items`: a prefilled value set while the popup is closed would
-  // otherwise fall back to the placeholder.
   const selectedAccount = savings.find(
     (account) => account.id === linkedAccountId
   )
 
-  // The earliest day a target deadline may hold: the tenant's today, as a
-  // local-midnight date the picker compares against.
   const earliestTargetDt = parseDateOnly(today)
 
   return (
@@ -141,7 +107,7 @@ export function GoalForm({
       <p className="text-sm font-medium">
         {goal === null ? t('goals.new') : t('goals.edit-title')}
       </p>
-      {/* Two rows of at most four: identity, then the money and the dates. */}
+      {}
       <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
         <TextField
           type="text"
@@ -269,7 +235,6 @@ export function GoalForm({
             id="goal-target-dt"
             className="h-8"
             locale={formattingLocale()}
-            // A deadline cannot sit in the past: today and later only.
             disabledBefore={earliestTargetDt}
             value={parseDateOnly(targetDt)}
             onChange={(date) =>

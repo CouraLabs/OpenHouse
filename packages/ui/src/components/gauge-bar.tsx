@@ -1,30 +1,14 @@
 import { cn } from 'cn'
 
-/**
- * The strings and formatting the gauge cannot derive — every user-facing
- * label and number arrives from the caller, translated and localized.
- */
 export interface GaugeBarProps {
-  /** The current value, clamped into `0..max` for the fill. */
   value: number
-  /** The value the gauge fills toward; the scale's end. */
   max: number
-  /** Formats one number for display — the caller's money formatter. */
   format: (value: number) => string
-  /** The fill color for a progress percentage (0–100). Omit for the plain
-   * primary fill; a caller can make the color grow with the progress. */
   colorFor?: (pct: number) => string
-  /** Names the gauge for assistive technology, e.g. "progress toward target". */
   'aria-label'?: string
   className?: string
 }
 
-/**
- * A gauge: a horizontal bar that fills from 0 toward `max` as far as
- * `value` reaches, with `value / max` beside it. Label-agnostic — it renders
- * only what the caller passes and decides nothing about money or language.
- * A `max` of zero renders an empty bar rather than dividing by it.
- */
 export function GaugeBar({
   value,
   max,

@@ -16,17 +16,10 @@ import type {
 
 import { api } from '@/lib/api.js'
 
-/** The key every linker query and mutation lives under. */
 const LINKERS_KEY = ['transaction-linkers'] as const
 
-/** The key the active-category list lives under — what the form's dropdown reads. */
 const ACTIVE_CATEGORIES_KEY = ['categories', 'active'] as const
 
-/**
- * The page of linkers a search describes. The args are the query key —
- * every distinct page, sort and filter is its own cache entry, and
- * `keepPreviousData` keeps the previous page on screen while the next loads.
- */
 export function useLinkersSearch(args: SearchTransactionLinkersArgs) {
   return useQuery({
     queryKey: [...LINKERS_KEY, 'search', args],
@@ -40,7 +33,6 @@ export function useLinkersSearch(args: SearchTransactionLinkersArgs) {
   })
 }
 
-/** Saves a linker: creates when the body has no id, updates when it has. */
 export function useSaveLinker() {
   const queryClient = useQueryClient()
 
@@ -63,7 +55,6 @@ export function useSaveLinker() {
   })
 }
 
-/** Soft-deletes a linker: the API marks it DELETED. */
 export function useDeleteLinker() {
   const queryClient = useQueryClient()
 
@@ -76,7 +67,6 @@ export function useDeleteLinker() {
   })
 }
 
-/** The tenant's ACTIVE categories, by name — what the form's dropdown offers. */
 export function useActiveCategories() {
   return useQuery({
     queryKey: [...ACTIVE_CATEGORIES_KEY],
@@ -84,7 +74,6 @@ export function useActiveCategories() {
   })
 }
 
-/** The tenant's ACTIVE receivers, by name — what the form's dropdown offers. */
 export function useActiveReceivers() {
   return useQuery({
     queryKey: ['receivers', 'active'],

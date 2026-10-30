@@ -5,7 +5,6 @@ import {
   type ExportManifest,
 } from '@workspace/poco'
 
-/** What the manifest says about the export, besides its files. */
 export interface ExportContext {
   scope: DataExportScope
   tenantId: number
@@ -13,12 +12,6 @@ export interface ExportContext {
   exportedAt: Date
 }
 
-/**
- * Packs the entity files into the export ZIP: one pretty-printed JSON array
- * per entity, and a `manifest.json` stating the schema version, the instant
- * of the export, and every file with its row count. Pure — the repository
- * reads, this only lays out.
- */
 export function buildExportZip(
   files: Readonly<Record<string, readonly unknown[]>>,
   context: ExportContext

@@ -4,11 +4,6 @@ import { useTheme } from '@workspace/ui/components/theme-provider'
 
 import { useContent } from '@/lib/use-locale.js'
 
-/**
- * Flips between light and dark. It reads the resolved theme off `<html>`, so
- * the first press inverts whatever the system chose; after that the choice
- * sticks. Both glyphs stay mounted and the `dark` variant cross-fades them.
- */
 export function ThemeToggle() {
   const { navActions } = useContent()
   const { setTheme } = useTheme()

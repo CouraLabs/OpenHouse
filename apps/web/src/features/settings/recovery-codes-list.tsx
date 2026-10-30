@@ -3,16 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@workspace/ui/components/button'
 import { Check, Copy, Download, Printer } from 'lucide-react'
 
-/** The plain-text sheet the codes are downloaded and printed as. */
 function sheetOf(heading: string, note: string, codes: string[]): string {
   return [heading, note, '', ...codes, ''].join('\n')
 }
 
-/**
- * A fresh set of recovery codes, shown once: the codes in a grid, with
- * Copy, Download (a text file), and Print. Nothing here is stored — once
- * the section is left, only the codes' hashes remain on the server.
- */
 export function RecoveryCodesList({ codes }: { codes: string[] }) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
@@ -42,7 +36,6 @@ export function RecoveryCodesList({ codes }: { codes: string[] }) {
       return
     }
 
-    // Text only — never markup — so nothing in the sheet can run.
     const pre = sheetWindow.document.createElement('pre')
     pre.textContent = sheet
     sheetWindow.document.title = t('settings.recovery.sheet-heading')

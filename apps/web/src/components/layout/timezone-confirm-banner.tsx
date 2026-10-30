@@ -7,11 +7,6 @@ import { Globe } from 'lucide-react'
 import { useSession } from '@/lib/auth.js'
 import { browserTimeZone, useSaveSettings } from '@/lib/settings.js'
 
-/**
- * Asks the owner of a migrated tenant — still on the `UTC` placeholder — to
- * confirm the tenant's time zone, prefilled with the browser's. Saving
- * confirms it and the banner goes away; members never see it.
- */
 export function TimezoneConfirmBanner() {
   const { t } = useTranslation()
   const session = useSession()

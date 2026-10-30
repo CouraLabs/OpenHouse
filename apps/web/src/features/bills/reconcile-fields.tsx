@@ -14,13 +14,6 @@ import {
 import { ReconcileCandidates } from './reconcile-candidates.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The reconcile form: the total and the minimum payment printed on the
- * bank's bill, the difference against the bill's own total, and what may
- * explain it. Save keeps the figures; Reconcile — enabled once the
- * difference is zero — also stamps the bill and marks its rows Checked.
- * Mounts fresh with every opening, from the figures last saved.
- */
 export function ReconcileFields({
   bill,
   onClose,

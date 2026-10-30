@@ -24,7 +24,6 @@ import {
 import { ImportSampleTable } from './import-sample-table.js'
 import { ImportSelectField, type SelectChoice } from './import-select-field.js'
 
-/** The locale key suffix of each delimiter. */
 const DELIMITER_KEYS: Record<ImportDelimiter, string> = {
   auto: 'auto',
   ',': 'comma',
@@ -32,14 +31,6 @@ const DELIMITER_KEYS: Record<ImportDelimiter, string> = {
   '\t': 'tab',
 }
 
-/**
- * The CSV mapping step: which column is the date, the description, and the
- * amount (one signed column, or a debit and a credit one), the optional
- * category and pending columns, and how dates, decimals, signs, encoding, and
- * the delimiter read. The mapping is checked with the poco schema on submit
- * and saved for the account when the import commits. Changing the encoding
- * or the delimiter re-reads the file, so the headers and the sample follow.
- */
 export function ImportMappingStep({
   preview,
   isReading,

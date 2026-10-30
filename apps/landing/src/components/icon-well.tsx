@@ -3,10 +3,6 @@ import { cn } from 'cn'
 
 import type { Tone } from '@/lib/content.js'
 
-/**
- * An icon seated in a hairline ring, like the sheet's tools. `tone` names
- * the room; the sheet is ink-only, so every tone draws the same.
- */
 export function IconWell({
   icon: Glyph,
   className,

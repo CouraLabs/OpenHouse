@@ -19,16 +19,10 @@ import { buildBillsColumns } from './bills-columns.js'
 import { useActiveAccounts } from './use-bills.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The tenant's credit card bills, newest due first: one row per cycle a
- * charge landed on, with its totals and derived status. The card filter
- * starts from the `accountId` a card's Bills shortcut links with.
- */
 export function BillsPage() {
   const { t } = useTranslation()
   const { accountId } = useSearch({ from: '/_main/bills' })
 
-  // The table's state, held here so the search args derive from it.
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'dueDate', desc: true },
   ])
@@ -71,7 +65,6 @@ export function BillsPage() {
     [t]
   )
 
-  // A new sort or filter is a new first page.
   const resetToFirstPage = () => {
     setPagination((current) =>
       current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }

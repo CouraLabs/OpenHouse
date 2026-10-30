@@ -29,18 +29,10 @@ import { STATEMENTS_KEY } from '@/lib/statements.js'
 import { toast } from '@workspace/ui/components/toast'
 import i18next from 'i18next'
 
-/** The key every transaction query and mutation lives under. */
 const TRANSACTIONS_KEY = ['transactions'] as const
 
-/** The key the account list lives under — transfers change balances, so
- * mutations invalidate it too. */
 const ACCOUNTS_KEY = ['accounts'] as const
 
-/**
- * The pages of transactions a search describes, loaded lazily as the grid
- * scrolls. The args minus the paging are the query key; each page is its
- * own cache entry.
- */
 export function useTransactionsInfinite(args: SearchTransactionsArgs) {
   return useInfiniteQuery({
     queryKey: [...TRANSACTIONS_KEY, 'search', args],
@@ -52,10 +44,6 @@ export function useTransactionsInfinite(args: SearchTransactionsArgs) {
       }),
     initialPageParam: 0,
     getNextPageParam: (last, allPages) => {
-      // A page that answers nothing means the offset walked past rows that
-      // vanished while paging — asking again would answer nothing again,
-      // forever. Paging stops here; the next mutation's invalidation
-      // refetches from the first page.
       if (last.items.length === 0) {
         return undefined
       }
@@ -71,7 +59,6 @@ export function useTransactionsInfinite(args: SearchTransactionsArgs) {
   })
 }
 
-/** Totals the transactions a filter describes, grouped by currency. */
 export function useTransactionSummary(
   filter: SearchTransactionsArgs['filter']
 ) {
@@ -87,8 +74,6 @@ export function useTransactionSummary(
   })
 }
 
-/** Saves a transaction: creates when the body has no id, updates when it
- * has. A save moves the account's balance, so the accounts invalidate too. */
 export function useSaveTransaction() {
   const queryClient = useQueryClient()
 
@@ -112,9 +97,6 @@ export function useSaveTransaction() {
   })
 }
 
-/** Soft-deletes a transaction: the API reverts the account's balance. A row
- * on or before its account's `reconciledThrough` answers 409 until the call
- * confirms it. */
 export function useDeleteTransaction() {
   const queryClient = useQueryClient()
 
@@ -139,7 +121,6 @@ export function useDeleteTransaction() {
   })
 }
 
-/** Moves money between two accounts: the API creates the two sides. */
 export function useTransfer() {
   const queryClient = useQueryClient()
 
@@ -158,12 +139,6 @@ export function useTransfer() {
   })
 }
 
-/**
- * Changes a transaction's review status alone. Deliberately leaves the
- * accounts alone: a review-status change never moves money — the API
- * writes no amount, account, or day. A bill's totals do follow it (a
- * Canceled charge stops counting), so the bills invalidate.
- */
 export function useChangeTransactionStatus() {
   const queryClient = useQueryClient()
 
@@ -189,8 +164,6 @@ export function useChangeTransactionStatus() {
   })
 }
 
-/** The tenant's ACTIVE accounts, with type and currency — what the forms'
- * dropdowns and the transfer's currency check read. */
 export function useActiveAccounts() {
   return useQuery({
     queryKey: [...ACCOUNTS_KEY, 'active'],
@@ -198,7 +171,6 @@ export function useActiveAccounts() {
   })
 }
 
-/** The tenant's ACTIVE categories, by name — what the forms' dropdowns offer. */
 export function useActiveCategories() {
   return useQuery({
     queryKey: ['categories', 'active'],
@@ -206,7 +178,6 @@ export function useActiveCategories() {
   })
 }
 
-/** The tenant's ACTIVE receivers, by name — what the forms' dropdowns offer. */
 export function useActiveReceivers() {
   return useQuery({
     queryKey: ['receivers', 'active'],
@@ -214,8 +185,6 @@ export function useActiveReceivers() {
   })
 }
 
-/** One installment purchase: its installments, total, and editability.
- * Lives under the transactions key, so every mutation refreshes it. */
 export function useInstallmentGroup(groupId: string | null) {
   return useQuery({
     queryKey: [...TRANSACTIONS_KEY, 'installments', groupId],
@@ -227,12 +196,6 @@ export function useInstallmentGroup(groupId: string | null) {
   })
 }
 
-/**
- * The installment purchase writes: a group edit, a delete (`all` or the
- * `remaining` ones), a full refund, a collapse back into one row, and a
- * split of a single expense. Each moves the card's balance and its bills,
- * so all three keys invalidate.
- */
 export function useInstallmentActions() {
   const queryClient = useQueryClient()
   const onSuccess = () => {

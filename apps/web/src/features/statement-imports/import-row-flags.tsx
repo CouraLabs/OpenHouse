@@ -5,7 +5,6 @@ import { Badge } from '@workspace/ui/components/badge'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The badges under a preview row's description: why it is flagged. */
 export function ImportRowFlags({ row }: { row: ImportPreviewRow }) {
   const { t } = useTranslation()
 

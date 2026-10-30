@@ -4,10 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { AuthLayout } from '@/components/layout/auth-layout.js'
 import { SignUpForm } from './sign-up-form.js'
 
-/**
- * The page signing up from: brand and controls above, the sign-up form
- * centered, and the link back to sign-in beside it.
- */
 export function SignUpPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()

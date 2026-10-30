@@ -13,15 +13,10 @@ import { useMainCurrency } from '@/lib/settings.js'
 import type { RentVsBuyRow } from './simulate.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The props `RentVsBuyTable` takes. */
 interface RentVsBuyTableProps {
   rows: RentVsBuyRow[]
 }
 
-/**
- * The financing schedule, month by month, in a scrollable table — the
- * balance, the installment, and the property the equity sits in.
- */
 export function RentVsBuyTable({ rows }: RentVsBuyTableProps) {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()

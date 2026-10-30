@@ -14,7 +14,6 @@ import {
 import { ReminderDeliveryService } from './reminder-delivery.service.js'
 import { dueReminders, SEND_FROM_HOUR } from './reminder-rules.js'
 
-/** The four sources one tenant's evaluation reads, once each. */
 export interface ReminderSources {
   bills: BillSource
   recurring: RecurringSource
@@ -22,11 +21,6 @@ export interface ReminderSources {
   delivery: ReminderDeliveryService
 }
 
-/**
- * Reads the tenant's four sources once and delivers what each of its users
- * is due, on the tenant's calendar day. One failing user never stops the
- * others.
- */
 export async function runTenantReminders(
   sources: ReminderSources,
   tenantId: number,
@@ -66,14 +60,6 @@ export async function runTenantReminders(
   return sent
 }
 
-/**
- * The reminder evaluation. Each tenant is judged on its own calendar —
- * "today" is `todayIn(settings.timezone)` and a tenant is skipped until its
- * own morning (`SEND_FROM_HOUR`) — so a household at UTC−03:00 is judged by
- * its local day, not the server's. The evaluation is idempotent: the
- * delivery claims every reminder in the `notification_log` first, so a
- * restart, an overlapping run, or a second replica sends nothing twice.
- */
 export class ReminderRunService {
   constructor(
     private readonly preferences: NotificationPreferencesRepository,
@@ -82,9 +68,6 @@ export class ReminderRunService {
     private readonly clock: Clock
   ) {}
 
-  /** Evaluates every tenant now — or only `onlyTenantId`, which the specs
-   * use to keep a run off the other tenants of a shared database — and
-   * answers how many messages went out. */
   async run(onlyTenantId?: number): Promise<number> {
     const now = this.clock.now()
     const byTenant = new Map<number, Recipient[]>()

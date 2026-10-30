@@ -12,15 +12,6 @@ import { runRecurringForTenant } from '../recurring-transactions/recurring.jobs.
 import { runRemindersForTenant } from '../notifications/reminders.jobs.js'
 import { deleteTenantNow } from '../tenant-deletion/tenant-deletion.jobs.js'
 
-/**
- * The queue consumer: runs one tenant's job per message. Queues deliver at
- * least once, so every job is idempotent — a redelivered message redoes
- * nothing (the recurring materialization's unique index, the reminder
- * log's claim keys, a deletion that finds nothing left).
- *
- * A failed message retries with backoff (`max_retries` in wrangler.jsonc);
- * one failing tenant never stops the others in the batch.
- */
 export async function handleQueue(
   batch: MessageBatch<JobMessage>,
   env: AppEnv['Bindings']

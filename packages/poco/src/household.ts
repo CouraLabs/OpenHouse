@@ -6,14 +6,6 @@ import { dateOnlySchema } from './goals.js'
 import { formatCents, toCents } from './money.js'
 import type { SplitShare } from './splits.js'
 
-/**
- * The household routes' contract: who owes whom, the settle-up that clears
- * it, and the pure math behind both. Balances are derived on read from the
- * transactions and their splits — never stored, so they cannot drift.
- */
-
-/** How an expense with no split reads. The database spelling lives in
- * `@workspace/db` (`unsplitModes`) — keep the two in step. */
 export const unsplitModes = ['personal', 'household'] as const
 
 export const unsplitModeSchema = z.enum(unsplitModes, {
@@ -22,8 +14,6 @@ export const unsplitModeSchema = z.enum(unsplitModes, {
 
 export type UnsplitMode = (typeof unsplitModes)[number]
 
-/** Who an account belongs to. The database spelling lives in
- * `@workspace/db` (`accountOwnerships`) — keep the two in step. */
 export const accountOwnerships = ['personal', 'shared'] as const
 
 export const accountOwnershipSchema = z.enum(accountOwnerships, {
@@ -32,11 +22,6 @@ export const accountOwnershipSchema = z.enum(accountOwnerships, {
 
 export type AccountOwnership = (typeof accountOwnerships)[number]
 
-/**
- * One expense as the balance math sees it: who paid, in which currency, how
- * much, and how it is shared. An entry with no payer or no shares moves no
- * debt.
- */
 export type LedgerEntry = {
   payerUserId: number | null
   currency: Currency
@@ -44,21 +29,12 @@ export type LedgerEntry = {
   shares: readonly SplitShare[]
 }
 
-/** A member's balance in one currency: positive is owed to them, negative
- * is what they owe. */
 export type MemberBalance = {
   userId: number
   currency: Currency
   balance: string
 }
 
-/**
- * The balance of every member per currency: `paid by me for others − paid
- * by others for me`. The payer is credited the whole amount and everyone is
- * debited their share, so a payer's own share cancels and the balances of a
- * currency always add up to zero. Currencies never mix. Ordered by currency,
- * then member id.
- */
 export function memberBalances(
   entries: readonly LedgerEntry[]
 ): MemberBalance[] {
@@ -96,7 +72,6 @@ export function memberBalances(
     )
 }
 
-/** One payment that moves a debt from a member to another. */
 export type DebtTransfer = {
   currency: Currency
   fromUserId: number
@@ -104,13 +79,6 @@ export type DebtTransfer = {
   amount: string
 }
 
-/**
- * Reduces the debts to few transfers, per currency ("Ana pays Bruno R$
- * 120"). Opposite balances of equal size cancel in one transfer first; the
- * rest is matched largest debtor to largest creditor, so n members need at
- * most n − 1 transfers. Applying every transfer zeroes every balance.
- * Deterministic: ties break by member id.
- */
 export function simplifyDebts(
   balances: readonly MemberBalance[]
 ): DebtTransfer[] {
@@ -152,7 +120,6 @@ export function simplifyDebts(
       creditor.cents -= cents
     }
 
-    // A debtor and a creditor of the same size clear each other in one go.
     for (const debtor of owing) {
       const match = owed.find(
         (creditor) => creditor.cents > 0n && creditor.cents === debtor.cents
@@ -192,15 +159,12 @@ export function simplifyDebts(
   return transfers
 }
 
-/** A member of the household, as the pickers and the page list them. */
 export type HouseholdMember = {
   id: number
   name: string
-  /** False once an owner removed the member; their balance stays. */
   isActive: boolean
 }
 
-/** A member's balance in one currency, with the name joined. */
 export type HouseholdBalance = {
   userId: number
   userName: string
@@ -209,7 +173,6 @@ export type HouseholdBalance = {
   balance: string
 }
 
-/** A settle-up the page suggests: one payment that moves a debt. */
 export type SettleSuggestion = {
   currency: Currency
   fromUserId: number
@@ -219,7 +182,6 @@ export type SettleSuggestion = {
   amount: string
 }
 
-/** What the members bore in one currency: their shares of the expenses. */
 export type MemberSpending = {
   userId: number
   userName: string
@@ -227,7 +189,6 @@ export type MemberSpending = {
   total: string
 }
 
-/** What one category cost in one currency, split by who bore it. */
 export type CategorySpending = {
   categoryId: number
   categoryName: string
@@ -236,7 +197,6 @@ export type CategorySpending = {
   total: string
 }
 
-/** One recorded settle-up, as the history lists it. */
 export type SettlementEntry = {
   id: number
   transactionDt: string
@@ -249,8 +209,6 @@ export type SettlementEntry = {
   note: string | null
 }
 
-/** The args the overview takes: the window the spending covers. Balances
- * always cover everything. */
 export const householdOverviewSchema = z.object({
   transactionDtFrom: dateOnlySchema.optional(),
   transactionDtTo: dateOnlySchema.optional(),
@@ -258,7 +216,6 @@ export const householdOverviewSchema = z.object({
 
 export type HouseholdOverviewArgs = z.infer<typeof householdOverviewSchema>
 
-/** What the Household page reads. */
 export type HouseholdOverview = {
   members: HouseholdMember[]
   unsplitMode: UnsplitMode
@@ -269,21 +226,12 @@ export type HouseholdOverview = {
   settlements: SettlementEntry[]
 }
 
-/** What the member removal check answers: the balances the member still
- * holds, one line per currency — empty when the member is square. */
 export type MemberBalanceCheck = {
   userId: number
   userName: string
   lines: Array<{ currency: Currency; balance: string }>
 }
 
-/**
- * The body a settle-up accepts: `fromUserId` pays `toUserId`. With both
- * accounts it is a transfer between them (same currency); with only the
- * paying account — the receiver's is not one the payer can use — it is an
- * Expense on the paying account with the receiving member as receiver. Both
- * are flagged as settlements and stay out of income and expense reports.
- */
 export const settleUpSchema = z
   .object({
     fromUserId: z.number({ error: 'Pick who pays.' }).int().positive(),
@@ -321,11 +269,6 @@ export const settleUpSchema = z
 
 export type SettleUpBody = z.infer<typeof settleUpSchema>
 
-/**
- * The category a settle-up lands in when the body names none: fetched, or
- * created the first time a tenant needs it. Settlements stay out of every
- * report, so the category is informative only.
- */
 export const SETTLEMENT_CATEGORY = {
   name: 'Settlement',
   color: '#0F766E',

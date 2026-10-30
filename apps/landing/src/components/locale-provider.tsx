@@ -8,11 +8,6 @@ import {
 } from '@/lib/locale.js'
 import { LocaleContext } from '@/lib/use-locale.js'
 
-/**
- * Holds the page's locale: it opens in the stored pick or the browser's
- * language, and an explicit switch is remembered for the next visit. The
- * document's `lang`, title, and description follow it.
- */
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState(initialLocale)
   const content = CONTENT[locale]

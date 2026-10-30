@@ -4,8 +4,6 @@ import { RecurringSource } from '../common/upcoming/upcoming-sources.js'
 import { TransactionRepository } from '../transactions/transaction.repository.js'
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
 
-/** Answers the `RecurringSource` port: the tenant's active rules, and which
- * of them already generated their transaction for a day. */
 export class RecurringRuleSource extends RecurringSource {
   constructor(
     private readonly rules: RecurringTransactionRepository,

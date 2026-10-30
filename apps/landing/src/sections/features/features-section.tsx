@@ -11,11 +11,6 @@ import { LinkerVisual } from './linker-visual.js'
 import { ScheduleVisual } from './schedule-visual.js'
 import { TransactionsVisual } from './transactions-visual.js'
 
-/**
- * The asymmetrical bento of ledger features: transactions as the tall
- * anchor beside accounts and recurring rules, then rows that alternate
- * 2/4 and 4/2 of six columns. One column below `md`.
- */
 export function FeaturesSection() {
   const { features, featuresIntro, sampleLimits } = useContent()
   return (

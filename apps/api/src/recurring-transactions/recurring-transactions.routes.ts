@@ -22,25 +22,14 @@ import { parseJsonBody } from '../common/validation/parse.js'
 import { RECURRING_CSV_COLUMNS } from './recurring-transaction-csv.js'
 import type { RecurringTransactionService } from './recurring-transaction.service.js'
 
-/**
- * How many rows one page of the export reads — the same ceiling the CSV
- * exporter used.
- */
 const CSV_PAGE_SIZE = 500
 
-/**
- * The recurring rule routes. Everything here reads the tenant and the user
- * from the session, so a client can only ever see or act on its own tenant
- * — the request names no tenant anywhere. Every signed-in role manages
- * recurring rules.
- */
 export function recurringTransactionRoutes(deps: {
   recurring: RecurringTransactionService
   audit: AuditRecorder
 }): { router: App } {
   const router = new Hono<AppEnv>()
 
-  /** Creates a recurring rule for the tenant. */
   router.post('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, createRecurringTransactionSchema)
@@ -53,7 +42,6 @@ export function recurringTransactionRoutes(deps: {
     )
   })
 
-  /** Searches the tenant's rules, paged, sorted and filtered. */
   router.post('/search', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchRecurringTransactionsSchema)
@@ -62,12 +50,6 @@ export function recurringTransactionRoutes(deps: {
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
 
-  /**
-   * Streams the tenant's recurring transactions as a CSV: every row the
-   * search matches, unpaged, written in the locale of the body. The rows
-   * are read page by page while the response is written, so a large range
-   * never sits in memory. Every export is recorded in the audit log.
-   */
   router.post('/export', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, exportRecurringTransactionsSchema)
@@ -96,7 +78,6 @@ export function recurringTransactionRoutes(deps: {
     return csvDownload(chunks, 'recurring-transactions.csv')
   })
 
-  /** Reads one rule, deleted rows included. */
   router.get(
     '/:id',
     async (context) => {
@@ -113,7 +94,6 @@ export function recurringTransactionRoutes(deps: {
     }
   )
 
-  /** Updates a rule. */
   router.put('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, updateRecurringTransactionSchema)
@@ -125,7 +105,6 @@ export function recurringTransactionRoutes(deps: {
     )
   })
 
-  /** Soft-deletes a rule: its status becomes DELETED. */
   router.delete(
     '/:id',
     async (context) => {
@@ -144,10 +123,6 @@ export function recurringTransactionRoutes(deps: {
   return { router }
 }
 
-/**
- * Streams a CSV download: the chunks ride a `ReadableStream` of bytes, read
- * lazily one page at a time, with the headers the browser saves a file by.
- */
 function csvDownload(
   chunks: AsyncGenerator<string>,
   filename: string
@@ -177,8 +152,6 @@ function csvDownload(
   })
 }
 
-/** An integer path parameter, the way the `ParseIntPipe` read it: 400 when
- * the segment is not a number. */
 function intParam(context: import('hono').Context<AppEnv>, name: string): number {
   const value = Number.parseInt(context.req.param(name) ?? '', 10)
 
@@ -189,7 +162,6 @@ function intParam(context: import('hono').Context<AppEnv>, name: string): number
   return value
 }
 
-/** Maps a row onto the wire shape: dates cross HTTP as ISO strings. */
 function toWire(row: {
   id: number
   receiverId: number

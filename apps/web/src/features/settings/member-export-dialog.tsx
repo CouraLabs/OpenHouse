@@ -10,18 +10,11 @@ import {
 
 import { ExportJobPanel } from './export-job-panel.js'
 
-/** The props `MemberExportDialog` takes. */
 interface MemberExportDialogProps {
-  /** The member whose data is exported, or nothing while closed. */
   user: TenantUser | null
   onClose: () => void
 }
 
-/**
- * Exports one member's data (LGPD/GDPR portability): their profile and the
- * rows they created, as a ZIP delivered in the app. The panel is keyed by
- * the member so reopening starts a fresh run.
- */
 export function MemberExportDialog({ user, onClose }: MemberExportDialogProps) {
   const { t } = useTranslation()
   const name = user?.name ?? ''

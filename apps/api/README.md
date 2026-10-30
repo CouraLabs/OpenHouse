@@ -25,7 +25,7 @@ src/
     <concern>.ts            pure domain logic (no Hono, no db)
     *.spec.ts               Vitest specs next to the code
   jobs/               the cron/queue plumbing: list tenants, enqueue, run
-scripts/reset-code.mjs  the operator command (rule 6e) — never over HTTP
+scripts/reset-code.mjs  the operator command (docs/domain-invariants.md, password recovery) — never over HTTP
 test/                  e2e specs, run inside the Workers runtime
 ```
 

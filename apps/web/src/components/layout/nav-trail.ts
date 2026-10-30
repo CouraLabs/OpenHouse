@@ -1,16 +1,7 @@
 import type { NavGroup, NavItem } from './nav.js'
 
-/** One step of a navigation trail: an i18n key, and a route when the step is a link. */
 export type NavTrailStep = { key: string; to?: string }
 
-/**
- * The menu path to the item whose route is `pathname`: its group, subgroup or
- * collapsible parent, then the item itself. Group and subgroup steps carry no
- * route — they are labels in the menu, not pages. A detail page under an
- * item (`/bills/12`) takes the item's trail when no item links to it
- * exactly. Returns `undefined` when no menu item links to `pathname` or a
- * parent of it.
- */
 export function findNavTrail(
   groups: NavGroup[],
   pathname: string
@@ -27,7 +18,6 @@ export function findNavTrail(
   )
 }
 
-/** The trail to the first menu item `matches` accepts. */
 function findTrail(
   groups: NavGroup[],
   matches: (item: NavItem) => boolean

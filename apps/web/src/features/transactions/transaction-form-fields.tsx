@@ -45,40 +45,20 @@ import {
 } from './use-transactions.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The fields the transaction form holds. The rules come straight from the
- * shared poco schema — the same check the API runs, whose messages are
- * already the UX messages — so the form never re-declares them.
- */
 const transactionFormSchema = createTransactionSchema
 
-/** The form's values, before the schema's defaults apply. */
 export type TransactionFormInput = z.input<typeof transactionFormSchema>
 
-/** The props `TransactionFormFields` takes. */
 export interface TransactionFormFieldsProps {
-  /** The transaction being edited, or nothing while creating. */
   transaction: Transaction | null
-  /** The day a new transaction starts on — today, whatever month the grid
-   * shows. */
   defaultDt: string
-  /** Values a new transaction starts from instead — a refund prefilled
-   * from the purchase it refunds. */
   draft?: Partial<TransactionFormInput>
-  /** What a submit should do; the page decides where it saves. */
   onSubmit: (body: CreateTransactionBody) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/**
- * The fields of the transaction sheet. Rendered inside the sheet's content,
- * which unmounts on close, so every opening mounts it fresh with the values
- * of the transaction it edits — no reset effect to keep in step.
- */
 export function TransactionFormFields({
   transaction,
   defaultDt,
@@ -130,23 +110,13 @@ export function TransactionFormFields({
   const categoryId = watch('categoryId')
   const receiverId = watch('receiverId')
   const paidByUserId = watch('paidByUserId')
-  // Undefined is "untouched": a new expense is unsplit, an edit keeps the
-  // shares it has (the API scales them to a new amount). Once the user
-  // touches the editor the value is theirs; null clears it.
   const touchedSplit = watch('split')
   const members = useHouseholdMembers()
 
-  // A transfer side's type and account pair it with its sibling; the API
-  // rejects a change to either, so the form locks them.
   const isTransfer =
     transaction !== null && transaction.transferGroupId !== null
-  // One installment alone changes only its amount, category, note, and
-  // status; the rest is the purchase's, edited as a group.
   const isInstallment =
     transaction !== null && transaction.installmentGroupId !== null
-  // The form watches zod's input type, where `amountMode` is optional (it
-  // has a default); the split components need the parsed shape, so fill
-  // the defaults here.
   const watchedInstallments = watch('installments')
   const installments: InstallmentsBody = {
     count: watchedInstallments?.count ?? 1,
@@ -171,17 +141,12 @@ export function TransactionFormFields({
   const account = (accounts.data ?? []).find(
     (candidate) => candidate.id === accountId
   )
-  // A new card expense may split into installments, and previews the limit
-  // it leaves.
   const isShareable = type === 'Expense' && !isTransfer && !isInstallment
   const isCardPurchase =
     transaction === null &&
     type === 'Expense' &&
     account?.type === 'Credit Card'
 
-  // A new transaction starts in the tenant's default account. The accounts
-  // may still be loading when the sheet opens, so this follows the query
-  // until it answers or the user chooses one.
   useEffect(() => {
     if (transaction !== null || accountId !== undefined) {
       return
@@ -194,13 +159,8 @@ export function TransactionFormFields({
     }
   }, [transaction, accountId, accounts.data, setValue])
 
-  // Whether the user picked the category themselves. Until they do, a new
-  // transaction's category follows the description as it is typed; read
-  // only in event handlers, so it is a ref, not state.
   const categoryPicked = useRef(transaction !== null)
 
-  /** Re-infers the category of a new transaction from its description:
-   * the best fuzzy match against the tenant's categories, or none. */
   const inferFromName = (name: string) => {
     if (categoryPicked.current) {
       return
@@ -217,7 +177,6 @@ export function TransactionFormFields({
     <form
       onSubmit={handleSubmit(
         ({ installments: split, split: shares, ...values }) => {
-          // Only an expense is shared; a type switched away drops the split.
           const body = isShareable ? { ...values, split: shares } : values
 
           onSubmit(
@@ -236,7 +195,6 @@ export function TransactionFormFields({
         labelFor="transaction-name"
         placeholder={t('transactions.name-placeholder')}
         required
-        // readOnly, not disabled: a disabled input submits no value.
         readOnly={isInstallment}
         error={errors.name}
         {...register('name', {
@@ -326,9 +284,6 @@ export function TransactionFormFields({
         }
         error={errors.linkedAccountId?.message}
         options={(accounts.data ?? [])
-          // A transaction carries its account's currency: an edit may
-          // move it only to an account of the same currency, or the
-          // same digits would silently mean other money.
           .filter(
             (account) =>
               transaction === null || account.currency === transaction.currency
@@ -361,8 +316,6 @@ export function TransactionFormFields({
       <BilledOnLine
         account={account}
         transactionDt={transactionDt}
-        // A charge pinned to its bill stays there through a date edit, as
-        // long as it stays on the same card.
         pinnedDueDate={
           transaction?.statementPinned === true &&
           transaction.linkedAccountId === accountId
@@ -385,8 +338,6 @@ export function TransactionFormFields({
               : Number(value),
             { shouldValidate: true }
           )
-          // A category's default split ("Rent: 60/40") seeds a new expense
-          // the user has not shaped yet.
           const preset = (categories.data ?? []).find(
             (category) => String(category.id) === value
           )?.defaultSplit
@@ -462,7 +413,6 @@ export function TransactionFormFields({
         readOnly={isInstallment}
         error={errors.invoice}
         {...register('invoice', {
-          // An empty field is no invoice: the wire carries nothing, not ''.
           setValueAs: (value) => (value === '' ? undefined : value),
         })}
       />
@@ -519,8 +469,6 @@ export function TransactionFormFields({
   )
 }
 
-/** The values a new transaction starts with: today's day, the review
- * already checked, and nothing else picked for the user yet. */
 function newValues(defaultDt: string): TransactionFormInput {
   return {
     name: '',

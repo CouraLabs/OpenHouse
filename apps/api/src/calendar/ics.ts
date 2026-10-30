@@ -1,16 +1,12 @@
 import { shiftDay } from '@workspace/poco'
 
-/** One all-day event of the feed. */
 export interface IcsEvent {
-  /** A stable id, so a calendar updates an event instead of duplicating it. */
   uid: string
-  /** The day, `YYYY-MM-DD`. */
   date: string
   summary: string
   description?: string
 }
 
-/** Escapes a TEXT value (RFC 5545 section 3.3.11). */
 function escapeText(value: string): string {
   return value
     .replace(/\\/g, '\\\\')
@@ -19,8 +15,6 @@ function escapeText(value: string): string {
     .replace(/\r?\n/g, '\\n')
 }
 
-/** Folds a content line to 75 octets, continuation lines led by a space
- * (RFC 5545 section 3.1), never splitting a multi-byte character. */
 function fold(line: string): string[] {
   const lines: string[] = []
   let current = ''
@@ -28,7 +22,6 @@ function fold(line: string): string[] {
 
   for (const char of line) {
     const size = Buffer.byteLength(char)
-    // A continuation line spends one octet on its leading space.
     const limit = lines.length === 0 ? 75 : 74
 
     if (bytes + size > limit) {
@@ -46,12 +39,10 @@ function fold(line: string): string[] {
   return lines.map((text, index) => (index === 0 ? text : ` ${text}`))
 }
 
-/** `YYYY-MM-DD` as the `YYYYMMDD` of an iCalendar DATE. */
 function icsDate(day: string): string {
   return day.replaceAll('-', '')
 }
 
-/** An instant as an iCalendar UTC DATE-TIME. */
 function icsStamp(instant: Date): string {
   return instant
     .toISOString()
@@ -59,12 +50,6 @@ function icsStamp(instant: Date): string {
     .replace(/\.\d{3}/, '')
 }
 
-/**
- * Renders an iCalendar feed of all-day events. Pure: the clock is an
- * argument. An all-day event ends the day after it starts (`DTEND` is
- * exclusive), and lines are CRLF-terminated and folded, as calendar apps
- * require.
- */
 export function buildIcs(
   events: readonly IcsEvent[],
   now: Date,

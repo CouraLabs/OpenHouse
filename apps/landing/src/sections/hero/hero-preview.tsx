@@ -3,10 +3,6 @@ import { LimitBar } from '@/components/preview/limit-bar.js'
 import { WindowChrome } from '@/components/window-chrome.js'
 import { useContent } from '@/lib/use-locale.js'
 
-/**
- * A slice of the app in a window: the account balance and the sample ledger
- * on the left, a rail of two limits on the right (stacked below `md`).
- */
 export function HeroPreview() {
   const { hero, sampleLedger, sampleLimits } = useContent()
   return (

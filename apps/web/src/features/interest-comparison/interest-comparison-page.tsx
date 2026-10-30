@@ -9,19 +9,10 @@ import { InterestParams, type InterestUnit } from './interest-params.js'
 import { InterestSummary } from './interest-summary.js'
 import { InterestTable, type InterestRow } from './interest-table.js'
 
-/** How many periods a projection may span — the sheet the page ports
- * carried rows up to 300. */
 const MAX_PERIODS = 300
 
-/** The most points the chart draws: past that it samples the same curve. */
 const MAX_CHART_POINTS = 150
 
-/**
- * The simple-vs-compound interest projection, ported from the Mobills
- * spreadsheet: a present value, a net annual rate, and a span of periods —
- * the page holds it all in local state and recomputes on every keystroke;
- * nothing is saved anywhere.
- */
 export function InterestComparisonPage() {
   const { t } = useTranslation()
 
@@ -32,7 +23,6 @@ export function InterestComparisonPage() {
 
   const rows = useMemo<Array<InterestRow>>(() => {
     const pv = Number(presentValue) || 0
-    // The rate is quoted a year; a month period compounds a twelfth of it.
     const perPeriod =
       unit === 'year'
         ? (Number(rate) || 0) / 100

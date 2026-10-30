@@ -6,8 +6,6 @@ import {
   type UpcomingRule,
 } from '@workspace/poco'
 
-/** Shared builders of the reminder specs. */
-
 export function bill(
   overrides: Partial<CreditCardStatement> = {}
 ): CreditCardStatement {

@@ -9,13 +9,6 @@ import {
   type TenantUserRow,
 } from './tenant-user.repository.js'
 
-/**
- * The owner's user management: listing the tenant's users and removing or
- * restoring them. Removal is a deactivation — nothing a user created is
- * deleted, and their name stays on the history they left. A removed member
- * who asks for erasure is anonymized: their identity goes, their rows stay
- * for the household's books.
- */
 export class TenantUserService {
   constructor(
     private readonly users: TenantUserRepository,
@@ -27,11 +20,6 @@ export class TenantUserService {
     return this.users.list(tenantId)
   }
 
-  /**
-   * Removes a user: they are signed out and cannot sign in again until
-   * reactivated. An owner cannot remove themself, and a tenant always keeps
-   * one active owner.
-   */
   async deactivate(
     tenantId: number,
     actingUserId: number,
@@ -46,8 +34,6 @@ export class TenantUserService {
       throw new NotFoundError('User not found.')
     }
 
-    // The write carries the guard that keeps the tenant one active owner:
-    // removing the last active owner matches no rows, whatever raced it.
     const updated = await this.users.deactivate(tenantId, id)
 
     if (updated === undefined) {
@@ -59,7 +45,6 @@ export class TenantUserService {
     return updated
   }
 
-  /** Restores a removed user; they sign in again to get a session. */
   async reactivate(tenantId: number, id: number): Promise<TenantUserRow> {
     const target = await this.users.findById(tenantId, id)
     if (target?.anonymizedAt != null) {
@@ -74,13 +59,6 @@ export class TenantUserService {
     return updated
   }
 
-  /**
-   * Anonymizes a removed member at their request (LGPD/GDPR erasure): the
-   * name becomes "Former member", the email a random placeholder, the
-   * password hash is cleared. The rows they created stay. Only a removed
-   * member can be anonymized — an active one is still using the account —
-   * and anonymizing twice changes nothing.
-   */
   async anonymize(
     tenantId: number,
     actingUserId: number,

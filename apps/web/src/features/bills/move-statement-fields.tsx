@@ -16,8 +16,6 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { useMoveToStatement, useStatementSearch } from '@/lib/statements.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The move dialog's bill pick and buttons: the card's other bills, newest
- * first. Mounts fresh with every opening, so nothing starts picked. */
 export function MoveStatementFields({
   transaction,
   onClose,
@@ -34,7 +32,6 @@ export function MoveStatementFields({
     skip: 0,
     limit: 24,
   })
-  // A charge leaves its own bill; a payment, the bill it settles.
   const current = transaction.statementId ?? transaction.paymentStatementId
   const options = (bills.data?.items ?? [])
     .filter((bill) => bill.id !== current)
@@ -58,7 +55,7 @@ export function MoveStatementFields({
           }
         >
           <SelectTrigger id="move-statement" className="w-full">
-            {/* The label renders explicitly, never from the items alone. */}
+            {}
             <SelectValue>
               {selected === undefined
                 ? t('bills.move-placeholder')

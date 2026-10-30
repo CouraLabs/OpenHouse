@@ -20,23 +20,12 @@ import { TransactionRepository } from '../transactions/transaction.repository.js
 import { upcomingRoutes } from './upcoming.routes.js'
 import { UpcomingService } from './upcoming.service.js'
 
-/** The upcoming feature's wiring: the panel's route, mounted under
- * `/api/upcoming`, behind the service that assembles the four sources. */
 export interface UpcomingDeps {
   router: App
 }
 
-/**
- * Builds the upcoming feature's services from the request's dependencies —
- * the explicit composition the DI container once did. The four sources'
- * implementations come from the features that own them (card bills,
- * recurring rules, limits, goals); the service reads them only through the
- * ports.
- */
 export function upcomingDeps(
   db: Database,
-  /** Unused today — kept in the signature every deps builder shares, so a
-   * rule that needs a secret or a ttl plugs in without a rewrite. */
   _config: Config,
   clock: SystemClock
 ): UpcomingDeps {

@@ -20,10 +20,8 @@ import {
   type PreviewRequest,
 } from './use-statement-imports.js'
 
-/** The step of the flow on screen. */
 type Stage = 'upload' | 'mapping' | 'preview' | 'result'
 
-/** The 409 body a commit into a reconciled period answers until confirmed. */
 function reconciledConflictOf(error: unknown): ReconciledEditConflict | null {
   if (
     error instanceof ApiError &&
@@ -38,12 +36,6 @@ function reconciledConflictOf(error: unknown): ReconciledEditConflict | null {
   return null
 }
 
-/**
- * The import flow of one account: upload a file, map its columns (a CSV with
- * no saved mapping), review the preview, commit — and the result, where the
- * batch can be undone. It owns the file, the preview, and the result; each
- * step owns only what it edits.
- */
 export function ImportFlow({
   account,
   onClose,

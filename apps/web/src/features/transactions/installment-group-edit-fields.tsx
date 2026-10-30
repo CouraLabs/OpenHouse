@@ -11,12 +11,6 @@ import { PurchasePreview } from './purchase-preview.js'
 import { useInstallmentActions } from './use-transactions.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * Edits an installment purchase as a whole: its name always, and its
- * amount and count while no installment is billed (the API answers 409
- * otherwise, and the message shows here). Category, receiver, and note
- * travel unchanged from the group. Mounts fresh with every opening.
- */
 export function InstallmentGroupEditFields({
   group,
   onBack,

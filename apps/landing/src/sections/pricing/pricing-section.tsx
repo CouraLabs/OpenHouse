@@ -6,7 +6,6 @@ import { useContent } from '@/lib/use-locale.js'
 import { PlanCard } from './plan-card.js'
 import { SelfHostPlan } from './self-host-plan.js'
 
-/** The self-hosted plan as a wide card, then the three hosted plans in a row. */
 export function PricingSection() {
   const { hostedPlans, pricingIntro } = useContent()
   return (

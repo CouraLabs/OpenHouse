@@ -12,11 +12,6 @@ import {
   useNotifications,
 } from './use-notifications.js'
 
-/**
- * The bell's menu: the latest notifications with a mark-all-read action,
- * then the footer — Notification preferences, and the web push switch for
- * this browser.
- */
 export function NotificationCentre({
   onOpenPreferences,
 }: {

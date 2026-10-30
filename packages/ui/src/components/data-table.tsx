@@ -28,32 +28,20 @@ import {
   type DataTablePaginationLabels,
 } from '@workspace/ui/components/data-table-pagination'
 
-/**
- * The features the shared data table runs: sorting and pagination, both
- * driven by the caller (the server owns the data; the table only reports
- * intent). Statically outside the component, as the library prescribes.
- */
 export const dataTableFeatures = tableFeatures({
   rowSortingFeature,
   rowPaginationFeature,
 })
 
-/** A column definition of the shared data table. */
 export type DataTableColumn<TData extends RowData> = ColumnDef<
   typeof dataTableFeatures,
   TData,
   unknown
 >
 
-/**
- * The props of the shared data table. The state is owned by the caller —
- * sorting and paging are server concerns here, so the table renders what it
- * is told and reports the user's intent upward.
- */
 export interface DataTableProps<TData extends RowData> {
   columns: Array<DataTableColumn<TData>>
   data: TData[]
-  /** How many rows match the current query in all, across every page. */
   total: number
   sorting: SortingState
   onSortingChange: (sorting: SortingState) => void
@@ -61,17 +49,9 @@ export interface DataTableProps<TData extends RowData> {
   onPaginationChange: (pagination: PaginationState) => void
   isLoading?: boolean
   emptyMessage?: string
-  /** Slot above the table body: filter inputs and similar controls. */
-  /** The translated labels the pagination bar renders. */
   paginationLabels?: DataTablePaginationLabels
 }
 
-/**
- * The shared data table: sorting by column header, server-driven paging,
- * zebra rows that highlight on hover, and a layout that scrolls horizontally
- * when the screen is too small to fit the columns. The filter and insert
- * controls belong to the page's header line, not the table.
- */
 export function DataTable<TData extends RowData>({
   columns,
   data,
@@ -148,7 +128,6 @@ export function DataTable<TData extends RowData>({
   )
 }
 
-/** One header cell: sortable when the column says so. */
 function DataTableHead<TData extends RowData>({
   header,
 }: {
@@ -186,7 +165,6 @@ function DataTableHead<TData extends RowData>({
   )
 }
 
-/** The icon a sortable header carries, pointing the way it is sorted. */
 function SortIcon({ sorted }: { sorted: false | 'asc' | 'desc' }) {
   if (sorted === 'asc') {
     return <ArrowUp className="size-3.5" />

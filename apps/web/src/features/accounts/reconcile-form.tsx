@@ -16,13 +16,6 @@ import { ReconcilePreviewSummary } from './reconcile-preview-summary.js'
 import { useReconcile, useReconcilePreview } from './use-reconciliation.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The reconciliation form: the bank's balance on a day, what the ledger
- * computes for it, and how to close the difference — an adjustment
- * transaction (required while the books differ) and optionally marking every
- * Verify row Checked. Mounted only while the dialog is open, so each opening
- * starts from today with an empty balance.
- */
 export function ReconcileForm({
   account,
   onDone,
@@ -38,8 +31,6 @@ export function ReconcileForm({
   const [bankBalance, setBankBalance] = useState('')
   const [markChecked, setMarkChecked] = useState(false)
 
-  // A keystroke storm never becomes a request storm: the preview follows the
-  // balance once it has settled.
   const settledBalance = useDebouncedValue(bankBalance)
   const preview = useReconcilePreview(account.id, {
     date,
@@ -52,8 +43,6 @@ export function ReconcileForm({
       ? preview.data
       : undefined
   const differs = result !== undefined && !isZeroMoney(result.difference)
-  // The adjustment is the only way to close a difference, so it is created
-  // exactly while the books differ — derived, never mirrored into state.
   const createAdjustment = differs
 
   const submit = () =>

@@ -7,13 +7,6 @@ import { ApiError } from '@/lib/api.js'
 import { useSignIn } from '@/lib/auth.js'
 import { TextField } from '@workspace/ui/components/text-field'
 
-/**
- * The fields the sign-in form holds. The rules come from the shared poco
- * schema — the same check the API runs — with the UX messages the form adds
- * for the empty-field cases the shared rule accepts but a form should not.
- * `rememberMe` is required here: the form always sends it, while the shared
- * schema defaults it for direct API callers.
- */
 const signInFormSchema = signInSchema.extend({
   email: z.string().email('Enter a valid email.'),
   password: z.string().min(1, 'Enter your password.'),
@@ -22,16 +15,10 @@ const signInFormSchema = signInSchema.extend({
 
 type SignInFormValues = z.infer<typeof signInFormSchema>
 
-/** The props `SignInForm` takes: what to do when the credentials are good. */
 interface SignInFormProps {
   onSuccess: () => void
 }
 
-/**
- * The fields of the sign-in page: email, password, remember me, and the
- * submit button. The parent page owns navigation; the form owns the fields
- * and reports success upward.
- */
 export function SignInForm({ onSuccess }: SignInFormProps) {
   const signIn = useSignIn()
   const {

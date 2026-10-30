@@ -7,12 +7,9 @@ import { KeyRound } from 'lucide-react'
 import { useAccountSecurity } from '@/lib/account-security.js'
 import { useSession } from '@/lib/auth.js'
 
-/** Where a dismissal is remembered, per user, on this browser. */
 const dismissedKey = (userId: number) =>
   `openhouse:recovery-prompt-dismissed:${userId}`
 
-/** Reads a remembered dismissal; storage can be unavailable (private
- * modes), which reads as not dismissed. */
 function wasDismissed(userId: number | undefined): boolean {
   try {
     return (
@@ -24,12 +21,6 @@ function wasDismissed(userId: number | undefined): boolean {
   }
 }
 
-/**
- * Prompts an owner who has never generated recovery codes — a new tenant
- * right after sign-up, or one from before codes existed — to save some:
- * without them, a forgotten owner password needs the server command.
- * Dismissed once, it stays dismissed on this browser; members never see it.
- */
 export function RecoveryCodesPrompt() {
   const { t } = useTranslation()
   const session = useSession()
@@ -54,7 +45,6 @@ export function RecoveryCodesPrompt() {
         new Date().toISOString()
       )
     } catch {
-      // Not remembered across reloads; dismissed for this visit anyway.
     }
     setDismissed(true)
   }

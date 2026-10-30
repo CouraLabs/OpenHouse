@@ -62,53 +62,24 @@ import {
 } from './statement-totals.query.js'
 import { toStatement, type StatementTotalsRow } from './statement-view.js'
 
-/** What reconciling a bill answered: done, or the bill's own total when
- * the bank's does not match it. */
 export type ReconcileOutcome =
   | { kind: 'reconciled' }
   | { kind: 'mismatch'; total: string }
   | { kind: 'missing' }
 
-/** Where a write put a row: its bill, and whether that bill was already
- * closed — the answer the API turns into a `STATEMENT_CLOSED` warning. */
 export interface StatementPlacement {
   statementId: number | null
   statementPinned: boolean
   closed: boolean
 }
 
-/**
- * The bill placement of a write, planned before the write's batch is sent.
- *
- * A bill that already exists is referenced by its known id; one that must
- * be opened inside the batch is referenced through the subselect the
- * get-or-create insert feeds — `ON CONFLICT DO NOTHING` against the partial
- * unique index makes the claim atomic, and a concurrent creator's bill is
- * the one the subselect finds. The `closedAt` audit stamp rides the same
- * batch, guarded to fire once.
- */
 export interface PlacementPlan {
-  /** The bill the row lands on — a known id, or the in-batch subselect
-   * when the bill is opened inside the same batch, or null for no bill. */
   statementId: number | SQL | null
   statementPinned: boolean
-  /** Whether the bill the row lands on is already past its close. */
   closed: boolean
-  /** The statements the caller's batch must include before the row write
-   * that references `statementId` — the get-or-create insert, when one is
-   * needed, and the `closedAt` stamp last. */
   batch: LedgerBatchPlan
 }
 
-/**
- * The credit card bills, reached only through the tenant of the session.
- * Every method takes the tenant id explicitly.
- *
- * The transactions feature places every card row on its bill through
- * `planPlacement`/`planReplacement` before the ledger batch that writes the
- * row — the statements land in the same batch, so a bill and the charge on
- * it commit together.
- */
 export class CreditCardStatementRepository {
   constructor(
     private readonly db: Database,
@@ -116,12 +87,6 @@ export class CreditCardStatementRepository {
     private readonly clock: Clock
   ) {}
 
-  /**
-   * Plans where a new row lands: the bill its day resolves to, `offset`
-   * cycles later (installment `k` of a purchase lands on offset `k − 1`) —
-   * nothing off a card, on a card whose days are unset, or for the card
-   * side of a payment.
-   */
   async planPlacement(
     db: DbOrTx,
     tenantId: number,
@@ -154,10 +119,6 @@ export class CreditCardStatementRepository {
     return this.planGetOrCreate(db, tenantId, userId, key.linkedAccountId, window)
   }
 
-  /**
-   * Plans where an updated row lands: it keeps its bill, or resolves it
-   * again from the new key — see `assignmentDecision`.
-   */
   async planReplacement(
     db: DbOrTx,
     tenantId: number,
@@ -177,9 +138,6 @@ export class CreditCardStatementRepository {
     return this.planPlacement(db, tenantId, userId, after)
   }
 
-  /** Reads one ACTIVE bill of the tenant — the target of a manual move —
-   * and answers whether it is closed. The caller stamps `closedAt` in its
-   * own batch (`closedStamp`). */
   async findForMove(
     db: DbOrTx,
     tenantId: number,
@@ -216,7 +174,6 @@ export class CreditCardStatementRepository {
     }
   }
 
-  /** Reads one bill of the tenant, ACTIVE or not, without totals. */
   async findById(
     tenantId: number,
     id: number
@@ -234,11 +191,6 @@ export class CreditCardStatementRepository {
     return row
   }
 
-  /**
-   * Runs the paged bill search. Bills nothing landed on are left out — a
-   * cycle with no charge and no payment is no bill to show. A status filter runs in SQL
-   * against the tenant's today.
-   */
   async search(
     tenantId: number,
     today: string,
@@ -288,12 +240,6 @@ export class CreditCardStatementRepository {
     return { rows, total: counted.value }
   }
 
-  /**
-   * Reads the bills still asking for money — Open, Closed, PartiallyPaid or
-   * Overdue — due on or before `dueBy`, of ACTIVE cards, soonest due first.
-   * The carry-over is computed over every bill of each card, never just the
-   * ones returned. Bills nothing landed on are left out.
-   */
   async listPending(
     tenantId: number,
     today: string,
@@ -321,8 +267,6 @@ export class CreditCardStatementRepository {
       .orderBy(asc(run.dueDate), asc(run.id))
   }
 
-  /** Reads one bill of the tenant with its derived totals — the carry-over
-   * computed over the whole card. */
   async findTotals(
     tenantId: number,
     id: number,
@@ -358,8 +302,6 @@ export class CreditCardStatementRepository {
     return row
   }
 
-  /** Reads every bill of one card with its totals, in close order — the
-   * raw material of the card-delete check and the dashboard. */
   async listTotalsByAccount(
     tenantId: number,
     accountId: number
@@ -379,11 +321,6 @@ export class CreditCardStatementRepository {
       .orderBy(asc(run.closeDate))
   }
 
-  /**
-   * What a card still owes on its bills: how many closed bills are not paid
-   * in full, and the latest bill's amount due — which already carries every
-   * earlier remainder. The check a card deletion confirms first.
-   */
   async unpaidSummary(
     tenantId: number,
     accountId: number
@@ -403,12 +340,6 @@ export class CreditCardStatementRepository {
     }
   }
 
-  /**
-   * The bill a payment into a card settles when the transfer names none:
-   * poco's `defaultPaymentStatement` over the card's bills, else the bill
-   * today lands on, opened if need be. Nothing for a card whose days are
-   * unset.
-   */
   async defaultPaymentStatementId(
     tenantId: number,
     userId: number,
@@ -428,13 +359,6 @@ export class CreditCardStatementRepository {
     return this.getOrCreateCurrent(tenantId, userId, accountId)
   }
 
-  /**
-   * The bill a payment into a card settles when nothing named one and the
-   * card has no unpaid or Open bill yet: the one today lands on, opened if
-   * need be. Nothing for a card whose days are unset — it has no bills. An
-   * empty bill a failed payment leaves behind is hidden like any bill
-   * nothing landed on.
-   */
   private async getOrCreateCurrent(
     tenantId: number,
     userId: number,
@@ -461,8 +385,6 @@ export class CreditCardStatementRepository {
       return plan.statementId
     }
 
-    // The bill was opened inside the batch: the subselect that placed the
-    // row is re-run as a plain read now that it is committed.
     const [row] = await this.db
       .select({ id: creditCardStatements.id })
       .from(creditCardStatements)
@@ -478,8 +400,6 @@ export class CreditCardStatementRepository {
     return row?.id ?? null
   }
 
-  /** Writes the figures typed in from the bank's bill. Answers the row, or
-   * nothing when the bill is gone. */
   async updateBankFigures(
     tenantId: number,
     userId: number,
@@ -506,17 +426,6 @@ export class CreditCardStatementRepository {
     return row
   }
 
-  /**
-   * Reconciles a bill with the bank's: when the bank's total equals the
-   * bill's own, stamps `reconciledAt` (and keeps the bank total) and marks
-   * every Verify row on the bill Checked — the other side of a transfer
-   * with it, as any status change does — each recorded in the history. No
-   * money moves, so no account is touched. Every row's check flips through
-   * its own guarded update (an optimistic `update_dt` guard, so an edit
-   * racing the reconcile answers 409 instead of being overwritten), the
-   * histories ride the same statements, and the bill's own stamp is guarded
-   * on its update too.
-   */
   async reconcile(
     tenantId: number,
     userId: number,
@@ -615,21 +524,12 @@ export class CreditCardStatementRepository {
     return { kind: 'reconciled' as const }
   }
 
-  /** The tenant's "today", in its own zone — what decides whether a bill
-   * is still open. */
   async todayOf(tenantId: number): Promise<string> {
     const settings = await this.settings.findByTenant(tenantId)
 
     return todayIn(settings?.timezone ?? 'UTC', this.clock.now())
   }
 
-  // --- The card-cycle resync (see StatementCycleSyncService) ---
-
-  /**
-   * Reads the rows a cycle change may move: the card's ACTIVE unpinned
-   * charges on an Open bill or on none yet. The card side of a payment
-   * never moves.
-   */
   async resyncCandidates(
     db: DbOrTx,
     tenantId: number,
@@ -667,9 +567,6 @@ export class CreditCardStatementRepository {
       .orderBy(asc(transactions.id))
   }
 
-  /** The card's Open ACTIVE bills, and which of them a resync must keep:
-   * those holding pinned charges, or payments — a prepaid bill keeps the
-   * payment that settles it. */
   async findOpen(
     db: DbOrTx,
     tenantId: number,
@@ -731,14 +628,6 @@ export class CreditCardStatementRepository {
     }
   }
 
-  /**
-   * The statements one cycle resync needs, planned from its pre-reads.
-   * Each Open bill's window is rewritten under an optimistic guard; each
-   * moved row is re-placed under its own guard and recorded in the
-   * history; the bills nothing would stay on are soft-deleted guarded by a
-   * re-check that nothing landed on them since the read — the guard that
-   * replaces the row lock a purchase once held against the resync.
-   */
   async planResync(
     tenantId: number,
     userId: number,
@@ -790,8 +679,6 @@ export class CreditCardStatementRepository {
     const byId = new Map(candidates.map((row) => [row.id, row]))
 
     for (const group of plan.assignments) {
-      // The bill the group moves to, opened inside this batch if need be —
-      // the subselect resolves to whichever creator won, ours included.
       const placement = await this.planGetOrCreate(
         this.db,
         tenantId,
@@ -805,8 +692,6 @@ export class CreditCardStatementRepository {
       for (const row of group.transactionIds.flatMap(
         (id: number) => byId.get(id) ?? []
       )) {
-        // A bill the batch opens has no row on it yet: the move always
-        // applies. A known bill is skipped when the row already sits on it.
         if (
           typeof placement.statementId === 'number' &&
           row.statementId === placement.statementId
@@ -838,8 +723,6 @@ export class CreditCardStatementRepository {
     }
 
     for (const orphanId of plan.orphanIds) {
-      // The guard re-checks, inside the delete, that nothing landed on the
-      // bill since the read — a purchase racing the resync keeps its bill.
       batch.add(
         this.db
           .update(creditCardStatements)
@@ -858,14 +741,6 @@ export class CreditCardStatementRepository {
     return batch
   }
 
-  /**
-   * Finds the card's ACTIVE bill for a window's close, or plans creating it
-   * with the window's days snapshotted. `ON CONFLICT DO NOTHING` against
-   * the partial unique index makes the claim atomic: the winner's insert
-   * returns the row, and the loser's subselect reads the row the winner
-   * committed. No error is ever caught here — the recurring job catches
-   * unique violations around its whole batch.
-   */
   private async planGetOrCreate(
     db: DbOrTx,
     tenantId: number,
@@ -918,9 +793,6 @@ export class CreditCardStatementRepository {
               createdBy: userId,
               updateBy: userId,
             })
-            // No conflict target: DO NOTHING answers any uniqueness
-            // conflict, and the partial index's predicate cannot render
-            // where drizzle puts the `where` clause.
             .onConflictDoNothing()
         )
         .addNullable(
@@ -935,13 +807,10 @@ export class CreditCardStatementRepository {
     }
   }
 
-  /** A plan holding one nullable stamp: an open bill contributes none. */
   private stampPlan(statement: LedgerStatement | null): LedgerBatchPlan {
     return new LedgerBatchPlan().addNullable(statement)
   }
 
-  /** Stamps `closedAt` the first time a write finds a known bill past its
-   * close — an audit marker only; no statement runs while the bill is open. */
   private closedStampStatement(
     db: DbOrTx,
     tenantId: number,
@@ -964,8 +833,6 @@ export class CreditCardStatementRepository {
       )
   }
 
-  /** The same stamp for a bill referenced by its identifying window — the
-   * shape a get-or-create plans. */
   private closedStampSubselectStatement(
     db: DbOrTx,
     tenantId: number,
@@ -991,8 +858,6 @@ export class CreditCardStatementRepository {
       )
   }
 
-  /** The cycle of an account, or nothing when it is not a card or its days
-   * are unset. */
   private async cycleOf(
     db: DbOrTx,
     tenantId: number,
@@ -1015,8 +880,6 @@ export class CreditCardStatementRepository {
     return cardCycleOf(account)
   }
 
-  /** The joined select every totals read shares — the cents columns of the
-   * run CTE formatted into the two-decimal strings the wire carries. */
   private joinedFields(run: StatementRun) {
     return {
       id: run.id,
@@ -1043,13 +906,10 @@ export class CreditCardStatementRepository {
   }
 }
 
-/** A CTE column as a plain expression — the alias is the column's name in
- * the CTE's output, and formatting reads the value through it. */
 function col(value: SQL | SQL.Aliased): SQL {
   return sql`${value}`
 }
 
-/** The statuses of a bill that still asks for money. */
 const pendingStatuses: readonly StatementStatus[] = [
   'Open',
   'Closed',
@@ -1057,13 +917,10 @@ const pendingStatuses: readonly StatementStatus[] = [
   'Overdue',
 ]
 
-/** Whether anything landed on a bill: a charge, or a payment settling it. */
 function hasActivity(run: StatementRun) {
   return or(gt(run.transactionCount, 0), gt(run.paymentCount, 0))
 }
 
-/** Whether nothing ACTIVE sits on a bill — as a charge or a payment — the
- * guard the resync's soft delete re-checks inside the batch. */
 function notExistsCharge(tenantId: number, statementId: number): SQL {
   return sql`not exists (
     select 1 from ${transactions}

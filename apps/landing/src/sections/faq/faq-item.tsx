@@ -3,11 +3,6 @@ import { Minus, Plus } from '@phosphor-icons/react'
 
 import type { Question } from '@/lib/content.js'
 
-/**
- * One question as a ledger row: a mono index, the question, and a round
- * hairline tool marking state; the row lifts one ground step on hover and
- * opens to its answer under the question.
- */
 export function FaqItem({ item, index }: { item: Question; index: number }) {
   const [open, setOpen] = useState(false)
   const answerId = useId()

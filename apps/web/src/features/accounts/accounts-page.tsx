@@ -35,8 +35,6 @@ import {
 } from './use-accounts.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The 409 body deleting a card that still owes answers until it is
- * confirmed, or nothing for any other failure. */
 function deleteConflictOf(error: unknown): AccountDeleteConflict | null {
   if (
     error instanceof ApiError &&
@@ -51,26 +49,20 @@ function deleteConflictOf(error: unknown): AccountDeleteConflict | null {
   return null
 }
 
-/** The page the tenant's accounts are managed from: the form above the
- * table, the table below, and the delete confirmation in between. */
 export function AccountsPage() {
   const { t } = useTranslation()
 
-  // The table's state, held here so the search args derive from it.
   const [sorting, setSorting] = useState<SortingState>([])
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 20,
   })
 
-  // The form above the table, and what its buttons are about to do.
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
   const [deleting, setDeleting] = useState<Account | null>(null)
-  // The account the reconcile and the balance-history dialogs are open for.
   const [reconciling, setReconciling] = useState<Account | null>(null)
   const [viewingHistory, setViewingHistory] = useState<Account | null>(null)
-  // The filter the dialog applies; the args derive from it.
   const [filter, setFilter] = useState<FilterValues>({})
 
   const args = useMemo(
@@ -94,15 +86,11 @@ export function AccountsPage() {
   const save = useSaveAccount()
   const remove = useDeleteAccount()
 
-  // The errors the mutations answer with, read from the state the query
-  // client already holds — no mirror of it in local state.
   const saveError = save.isError
     ? save.error instanceof Error
       ? save.error.message
       : t('accounts.error')
     : undefined
-  // A card that still owes answers 409 with what it owes: that is a
-  // question for the user, not an error.
   const deleteConflict = deleteConflictOf(remove.error)
   const deleteError =
     remove.isError && deleteConflict === null
@@ -111,7 +99,6 @@ export function AccountsPage() {
         : t('accounts.error')
       : undefined
 
-  // A new sort is a new first page.
   const resetToFirstPage = () => {
     setPagination((current) =>
       current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }
@@ -126,8 +113,6 @@ export function AccountsPage() {
           setFormOpen(true)
         },
         onDelete: (account) => {
-          // Deleting any row cancels the edit in progress: the form would
-          // otherwise keep editing a row the grid no longer holds.
           setFormOpen(false)
           setEditing(null)
           save.reset()
@@ -139,8 +124,6 @@ export function AccountsPage() {
     [t, save.reset]
   )
 
-  // Saving needs no confirmation: the form's submit is the intent. A failure
-  // leaves the form open, holding the values, with the error shown.
   const submitSave = (body: CreateAccountBody) => {
     save.mutate(editing === null ? body : { ...body, id: editing.id }, {
       onSuccess: () => {
@@ -166,7 +149,6 @@ export function AccountsPage() {
     )
   }
 
-  // The page's actions, on the header line: the filter and the insert.
   const toolbar = (
     <>
       <ExportCsvButton path="/accounts/export" args={args} />

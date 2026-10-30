@@ -36,29 +36,18 @@ import {
 } from './use-recurring.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The fields the recurring form holds. The rules come straight from the
- * shared poco schema — the same check the API runs, whose messages are
- * already the UX messages — so the form never re-declares them.
- */
 const recurringFormSchema = createRecurringTransactionSchema
 
 type RecurringFormValues = z.infer<typeof recurringFormSchema>
 
-/** The props `RecurringForm` takes. */
 interface RecurringFormProps {
-  /** The rule being edited, or nothing while creating. */
   rule: RecurringTransaction | null
-  /** What a submit should do; the page decides where it saves. */
   onSubmit: (body: CreateRecurringTransactionBody) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/** The default values of a new rule: nothing chosen, nothing typed. */
 const NEW_RULE: RecurringFormValues = {
   receiverId: undefined as unknown as number,
   categoryId: undefined as unknown as number,
@@ -71,11 +60,6 @@ const NEW_RULE: RecurringFormValues = {
   defaultSplit: null,
 }
 
-/**
- * The insert and edit form of the recurring page: a receiver, a category,
- * an account, an amount, and the schedule — whose day and month fields
- * appear only for the frequencies that use them.
- */
 export function RecurringForm({
   rule,
   onSubmit,
@@ -92,8 +76,6 @@ export function RecurringForm({
     formState: { errors },
   } = useForm<RecurringFormValues>({
     resolver: zodResolver(recurringFormSchema),
-    // The page keys the form by the rule it edits, so switching rows
-    // remounts it with that row's values.
     defaultValues:
       rule === null
         ? NEW_RULE
@@ -126,8 +108,6 @@ export function RecurringForm({
   const categories = useActiveCategories()
   const accounts = useActiveAccounts()
 
-  // A rule's amount is in its account's currency: an edit may move it only
-  // to an account of the same currency, so the picker offers no other.
   const ruleCurrency =
     rule === null
       ? undefined
@@ -137,15 +117,11 @@ export function RecurringForm({
     (account) => ruleCurrency === undefined || account.currency === ruleCurrency
   )
 
-  // The triggers' labels are rendered explicitly: a prefilled value set
-  // while the popup is closed would otherwise fall back to the placeholder.
   const findLabel = <T extends { id: number; name: string }>(
     rows: T[] | undefined,
     id: number | null | undefined
   ) => rows?.find((row) => row.id === id)?.name
 
-  // A Daily rule has no day; a Weekly one reads a weekday (1–7); a Monthly
-  // one a day of the month (1–31); a Yearly one a day and a month.
   const dayOptions =
     frequency === 'Weekly'
       ? Array.from({ length: 7 }, (_, index) => index + 1)
@@ -310,7 +286,6 @@ export function RecurringForm({
               setValue('frequency', value as Frequency, {
                 shouldValidate: true,
               })
-              // A new schedule clears the day fields it does not use.
               setValue('frequencyDay', undefined)
               setValue('frequencyMonth', undefined)
             }}

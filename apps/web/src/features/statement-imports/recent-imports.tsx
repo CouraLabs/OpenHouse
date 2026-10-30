@@ -4,11 +4,6 @@ import { Button } from '@workspace/ui/components/button'
 import { useImportUndo, useRecentImports } from './use-statement-imports.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The account's imports from the last 24 hours that still hold rows, each
- * with its Undo button — the way back for an import the user left the dialog
- * on. Renders nothing while there is none.
- */
 export function RecentImports({ accountId }: { accountId: number }) {
   const { t } = useTranslation()
   const recent = useRecentImports(accountId)

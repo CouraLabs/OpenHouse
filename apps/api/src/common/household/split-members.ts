@@ -1,10 +1,6 @@
 import { BadRequestError } from '../errors.js'
 import type { SplitInput } from '@workspace/poco'
 
-/**
- * Rejects (400) a payer or a split that names someone outside the given
- * members. Pure of any lookup: the caller passes the ids it allows.
- */
 export function assertMembers(
   allowed: readonly number[],
   payerUserId: number | null | undefined,

@@ -13,11 +13,6 @@ import { PayBillFields } from './pay-bill-fields.js'
 import { useActiveAccounts } from './use-bills.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * Pays one bill from another account. The fields mount once the accounts
- * are in, so the form starts with the default account already picked —
- * only accounts of the card's currency that are not cards can pay.
- */
 export function PayBillDialog({
   bill,
   open,

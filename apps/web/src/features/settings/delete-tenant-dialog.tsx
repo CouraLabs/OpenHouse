@@ -15,17 +15,11 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { useSession } from '@/lib/auth.js'
 import { useScheduleTenantDeletion } from './use-tenant-deletion.js'
 
-/** The props `DeleteTenantDialog` takes. */
 interface DeleteTenantDialogProps {
   open: boolean
   onClose: () => void
 }
 
-/**
- * Schedules the deletion of the whole tenant. The owner must type the
- * tenant's name; nothing is removed until the 30-day grace period ends, and
- * the deletion can be canceled until then.
- */
 export function DeleteTenantDialog({ open, onClose }: DeleteTenantDialogProps) {
   const { t } = useTranslation()
   const session = useSession()

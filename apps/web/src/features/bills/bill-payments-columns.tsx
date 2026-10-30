@@ -6,11 +6,6 @@ import { CalendarSync } from 'lucide-react'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 
-/**
- * The columns of a bill's payments: the day paid, the amount, and the
- * action re-pointing the payment at another bill of the card. The paying
- * account is the transfer's other side; the grid shows both sides.
- */
 export function buildBillPaymentsColumns(
   t: (key: string) => string,
   locale: string,

@@ -18,10 +18,6 @@ import { CollapsibleNavItemView } from './collapsible-nav-item.js'
 import { NavButtonItem } from './nav-button-item.js'
 import { NavSubgroupItems } from './nav-subgroup-items.js'
 
-/**
- * One sidebar section: the group label — larger than the subgroup labels
- * beneath it, and the trigger that folds the section — and its items.
- */
 export function NavGroupContent({ group }: { group: NavGroup }) {
   const { t } = useTranslation()
 

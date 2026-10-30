@@ -9,11 +9,6 @@ import { CalendarClock } from 'lucide-react'
 import { formatMoney } from '@/lib/format-money.js'
 import type { ForecastSlice } from '@workspace/poco'
 
-/**
- * The next month's card: what the recurring rules expect to spend, per
- * currency — every active expense rule the projection can place in the
- * coming month, totaled the way the cron will one day materialize it.
- */
 export function NextMonthCard({
   title,
   slices,
@@ -23,7 +18,6 @@ export function NextMonthCard({
   title: string
   slices: ForecastSlice[]
   locale: string
-  /** The labels the card cannot derive, translated by the page. */
   labels: { expected: string; empty: string }
 }) {
   return (

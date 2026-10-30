@@ -4,23 +4,13 @@ import type {
   ReminderDetail,
 } from '@workspace/poco'
 
-/**
- * What a push message says. The service worker has no access to the app's
- * i18n bundle, so the copy lives here — English today, like the app's only
- * locale — and the worker stays free of the React app.
- */
-
-/** The title and body of the system notification. */
 export interface PushMessage {
   title: string
   body: string
 }
 
-/** The payload a message carries when it is empty or unreadable: still a
- * quiet nudge, never an error. */
 const FALLBACK: PushPayload = { v: 1, count: 1, url: '/upcoming' }
 
-/** Reads a push message's text into a payload, tolerating garbage. */
 export function parsePushPayload(text: string | undefined): PushPayload {
   if (text === undefined || text === '') {
     return FALLBACK
@@ -32,8 +22,6 @@ export function parsePushPayload(text: string | undefined): PushPayload {
     return {
       v: 1,
       count: typeof parsed.count === 'number' ? parsed.count : 1,
-      // Only an in-app path is ever opened: a payload cannot send the
-      // user to another site.
       url:
         typeof parsed.url === 'string' && parsed.url.startsWith('/')
           ? parsed.url
@@ -45,11 +33,6 @@ export function parsePushPayload(text: string | undefined): PushPayload {
   }
 }
 
-/**
- * The notification to show. Quiet by default: without `details` it says
- * only that reminders are waiting — no amounts, no names. A user who opted
- * in to details gets the reminders themselves.
- */
 export function pushMessage(payload: PushPayload): PushMessage {
   const title = 'OpenHouse'
 
@@ -69,7 +52,6 @@ export function pushMessage(payload: PushPayload): PushMessage {
   }
 }
 
-/** One line per reminder; a digest unfolds into its items. */
 function describe(body: NotificationBody): string[] {
   return body.kind === 'digest' ? body.items.map(line) : [line(body)]
 }

@@ -20,14 +20,6 @@ import {
   type RecurringTransactionSearch,
 } from './recurring-transaction.repository.js'
 
-/**
- * The rules of recurring rules: every reference must point at a row the
- * tenant owns and has not deleted, an edit keeps the rule in its account's
- * currency, a deleted rule is a status change, and
- * the audit trail records the user the session acted as. The tenant and
- * the user always arrive from the caller — this service never reads a
- * request.
- */
 export class RecurringTransactionService {
   constructor(
     private readonly repository: RecurringTransactionRepository,
@@ -37,7 +29,6 @@ export class RecurringTransactionService {
     private readonly members: HouseholdMembers
   ) {}
 
-  /** Creates a rule for the tenant, rejecting references it cannot use. */
   async create(
     tenantId: number,
     userId: number,
@@ -59,7 +50,6 @@ export class RecurringTransactionService {
     })
   }
 
-  /** Runs the tenant's paged search. */
   async search(
     tenantId: number,
     args: SearchRecurringTransactionsArgs
@@ -67,7 +57,6 @@ export class RecurringTransactionService {
     return this.repository.search(tenantId, args)
   }
 
-  /** Reads one rule — deleted included; the caller decides what to show. */
   async find(tenantId: number, id: number): Promise<RecurringTransactionRow> {
     const row = await this.repository.findById(tenantId, id)
 
@@ -78,8 +67,6 @@ export class RecurringTransactionService {
     return row
   }
 
-  /** Updates a rule, rejecting references it cannot use. A deleted rule
-   * updates like a missing one: it is gone for the UI. */
   async update(
     tenantId: number,
     userId: number,
@@ -95,10 +82,6 @@ export class RecurringTransactionService {
 
     const account = await this.assertReferencesUsable(tenantId, body)
 
-    // A rule's amount is in its account's currency: moving it to an account
-    // of another currency would make every future transaction it generates
-    // silently mean other money. Converting is out of scope — it would need
-    // an exchange rate stored on the rule.
     if (account.id !== row.linkedAccountId) {
       const previous = await this.accounts.findById(
         tenantId,
@@ -112,8 +95,6 @@ export class RecurringTransactionService {
       }
     }
 
-    // Left out, the stored shares stay — but they must still fit an edited
-    // amount or type.
     const payer = body.paidByUserId ?? row.paidByUserId
     const split =
       body.defaultSplit === undefined
@@ -149,7 +130,6 @@ export class RecurringTransactionService {
     return updated
   }
 
-  /** Soft-deletes a rule. Deleting an already-deleted row is a no-op. */
   async softDelete(
     tenantId: number,
     userId: number,
@@ -159,11 +139,6 @@ export class RecurringTransactionService {
     await this.repository.softDelete(tenantId, id, userId)
   }
 
-  /**
-   * Rejects a payer or shares the rule cannot carry: members must be active,
-   * only an expense on a personal account splits, and the shares must
-   * resolve against the rule's amount (exact amounts must add up to it).
-   */
   private async assertShares(
     tenantId: number,
     account: Account,
@@ -201,8 +176,6 @@ export class RecurringTransactionService {
     }
   }
 
-  /** Rejects a receiver, category, or account that is missing or no longer
-   * ACTIVE, and answers the account. */
   private async assertReferencesUsable(
     tenantId: number,
     body: CreateRecurringTransactionBody | UpdateRecurringTransactionBody

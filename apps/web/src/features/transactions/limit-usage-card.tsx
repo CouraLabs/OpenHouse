@@ -9,13 +9,6 @@ import { GaugeBar } from '@workspace/ui/components/gauge-bar'
 
 import { formatMoney } from '@/lib/format-money.js'
 
-/**
- * The limits card: one gauge per ACTIVE limit — what the period has spent
- * against what the limit allows, the API having done the totaling. The
- * fill runs green while the spending is small, warns as it nears the
- * limit, and turns red past it; the figure beside the gauge carries the
- * exact numbers, so the color never works alone.
- */
 export function LimitUsageCard({
   title,
   icon,
@@ -24,15 +17,12 @@ export function LimitUsageCard({
   labels,
 }: {
   title: string
-  /** The icon naming what the card shows, rendered beside the title. */
   icon: React.ReactNode
   usage: LimitUsage[]
   locale: string
-  /** The labels the card cannot derive, translated by the page. */
   labels: {
     empty: string
     aria: (limit: LimitUsage) => string
-    /** Names the expenses in other currencies the total left out. */
     excluded: (limit: LimitUsage) => string
   }
 }) {
@@ -78,11 +68,6 @@ export function LimitUsageCard({
   )
 }
 
-/**
- * The status of the spending, as the fill's color: green while there is
- * room, the warning amber from half the limit, the critical red past it —
- * the fixed status steps, reserved for state.
- */
 function colorFor(pct: number): string {
   if (pct >= 100) {
     return '#d03b3b'

@@ -1,64 +1,44 @@
 import { pmt, periodicRate } from '@/lib/finance.js'
 
-/** The amortization system the financing runs on. */
 export type AmortizationSystem = 'SAC' | 'PRICE'
 
-/** The scenario the simulation runs, everything already parsed to numbers. */
 export interface RentVsBuyInput {
   propertyValue: number
   downPayment: number
-  /** The mortgage's total effective rate, a fraction a year. */
   annualMortgageRate: number
-  /** How the property itself appreciates, a fraction a year. */
   propertyAppreciation: number
   termMonths: number
   system: AmortizationSystem
   monthlyRent: number
-  /** What the invested difference earns, a fraction a year. */
   annualReturn: number
-  /** How the rent itself grows, a fraction a year. */
   rentIncrease: number
 }
 
-/** One month of the schedule, every figure a positive magnitude. */
 export interface RentVsBuyRow {
   month: number
-  /** The outstanding balance before the month's payment. */
   balance: number
   payment: number
   amortization: number
   interest: number
   propertyValue: number
   rent: number
-  /** The month's cash difference: positive, renting came out cheaper. */
   surplus: number
-  /** The renter's balance: the down payment, grown, plus every surplus. */
   investment: number
 }
 
-/** The schedule plus the totals both paths end at. */
 export interface RentVsBuyResult {
   rows: RentVsBuyRow[]
   amortizationTotal: number
   interestTotal: number
   paidTotal: number
-  /** The property's value at the end of the term. */
   patrimony: number
   rentTotal: number
   surplusTotal: number
   investmentTotal: number
 }
 
-/** A balance this close to zero is paid off — float dust never counts. */
 const PAID_OFF = 0.005
 
-/**
- * The buy-vs-rent simulation, month by month, faithful to the Mobills
- * sheet: the buyer pays the down payment then each installment while the
- * balance lasts and the property appreciates; the renter pays the rent,
- * which grows, and invests the down payment plus whatever the installments
- * exceeded the rent by, at the investment's return.
- */
 export function simulateRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
   const term = Math.max(Math.round(input.termMonths), 1)
   const financing = Math.max(input.propertyValue - input.downPayment, 0)
@@ -66,7 +46,6 @@ export function simulateRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
   const monthlyAppreciation = periodicRate(input.propertyAppreciation, 'month')
   const monthlyReturn = periodicRate(input.annualReturn, 'month')
   const monthlyRentIncrease = periodicRate(input.rentIncrease, 'month')
-  // The Price installment is constant; SAC's amortization is.
   const pricePayment =
     financing > 0 ? pmt(monthlyMortgage, term, -financing) : 0
 

@@ -2,14 +2,6 @@ import { eq, inArray, isNotNull } from 'drizzle-orm'
 import type { Database } from '@workspace/db'
 import { recurringTransactions, tenantSettings, tenants } from '@workspace/db'
 
-/**
- * The tenant lists each cron schedule fans out over. The crons read across
- * tenants — the one sanctioned crossing of the tenant boundary — and only
- * ever list ids, so the reads stay confined to these three queries.
- */
-
-/** Every tenant that has settings — a tenant created without them has
- * nothing to evaluate. */
 export async function listAllTenants(db: Database): Promise<number[]> {
   const rows = await db
     .select({ tenantId: tenantSettings.tenantId })
@@ -18,8 +10,6 @@ export async function listAllTenants(db: Database): Promise<number[]> {
   return rows.map((row) => row.tenantId)
 }
 
-/** Every tenant with an ACTIVE recurring rule — what the recurring run
- * materializes, on each tenant's own calendar day. */
 export async function listTenantsWithActiveRules(
   db: Database
 ): Promise<number[]> {
@@ -31,8 +21,6 @@ export async function listTenantsWithActiveRules(
   return rows.map((row) => row.tenantId)
 }
 
-/** Every tenant whose scheduled deletion day has come — the day, in the
- * tenant's zone, the hourly job checks. */
 export async function listTenantsScheduledForDeletion(
   db: Database
 ): Promise<Array<{ tenantId: number; deletionDate: string }>> {
@@ -44,8 +32,6 @@ export async function listTenantsScheduledForDeletion(
   return rows as Array<{ tenantId: number; deletionDate: string }>
 }
 
-/** The time zones of several tenants, keyed by tenant id — what decides
- * each tenant's "today" (rule 6c). */
 export async function timezonesOf(
   db: Database,
   tenantIds: readonly number[]

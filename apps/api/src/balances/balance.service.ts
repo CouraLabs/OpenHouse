@@ -9,19 +9,9 @@ import {
 import { BadRequestError, NotFoundError } from '../common/errors.js'
 import { BalanceRepository } from './balance.repository.js'
 
-/**
- * The balance derivations that are not a single transaction row: the daily
- * end-of-day balance of an account, and the consistency check that keeps the
- * cached `accounts.balance` honest against the ledger.
- */
 export class BalanceService {
   constructor(private readonly balances: BalanceRepository) {}
 
-  /**
-   * One end-of-day balance per day of `[from, to]`: the balance before
-   * `from` (opening plus the earlier deltas) carried through each day's
-   * net movement. Days without movement repeat the previous balance.
-   */
   async history(
     tenantId: number,
     accountId: number,
@@ -47,8 +37,6 @@ export class BalanceService {
     ])
     const byDay = new Map(deltas.map((row) => [row.date, row.delta]))
 
-    // The opening balance is where the account starts: a day before the
-    // opening day has no movement either way, so it carries the opening.
     let balance = addMoney(account.openingBalance, before)
 
     return {
@@ -62,9 +50,6 @@ export class BalanceService {
     }
   }
 
-  /** Checks one tenant's accounts (on demand) and logs any drift. The
-   * nightly check over every tenant rides the queue as one
-   * `checkBalancesForTenant` job per tenant (`balances.jobs.ts`). */
   async check(tenantId: number): Promise<BalanceConsistency> {
     const { checked, drifts } = await this.balances.findDrifts(tenantId)
 
@@ -93,8 +78,6 @@ export class BalanceService {
   }
 }
 
-/** Every `YYYY-MM-DD` day from `from` to `to`, inclusive. Calendar days, so
- * UTC arithmetic never shifts them. */
 function daysBetween(from: string, to: string): string[] {
   const days: string[] = []
   const end = Date.parse(`${to}T00:00:00Z`)

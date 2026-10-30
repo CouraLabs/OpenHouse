@@ -5,11 +5,6 @@ import { Button } from '@workspace/ui/components/button'
 import { ImportStepActions } from './import-step-actions.js'
 import { useImportUndo } from './use-statement-imports.js'
 
-/**
- * The last step: what the commit did — "42 imported, 3 skipped as
- * duplicates" — and, while the batch has rows, the way to undo it. After an
- * undo the line says so instead.
- */
 export function ImportResultStep({
   account,
   result,

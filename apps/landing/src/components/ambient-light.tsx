@@ -1,8 +1,3 @@
-/**
- * The gray bloom: one faint radial light drifting behind the page on a 26s
- * loop, blurred 12px, and still for visitors who prefer reduced motion. Fixed,
- * so it never scrolls. The only gradient the sheet allows.
- */
 export function AmbientLight() {
   return (
     <div

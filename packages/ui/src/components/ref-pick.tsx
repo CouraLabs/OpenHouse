@@ -7,20 +7,11 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 
-/** What an option needs to show: its id and name — the shape of every
- * `…Ref` a picker list returns (accounts, categories, receivers). */
 export interface RefOption {
   id: number
   name: string
 }
 
-/**
- * One select over id/name references: label, trigger with an explicit
- * label (base-ui would show the placeholder for a value set while closed),
- * options. The caller passes the options already narrowed (same currency,
- * not a card, …) and every label translated; the red `*` shows unless the
- * field is optional.
- */
 export function RefPick({
   id,
   label,

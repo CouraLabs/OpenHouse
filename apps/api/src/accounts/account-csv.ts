@@ -2,7 +2,6 @@ import type { Account } from '@workspace/poco'
 
 import { day, money, type CsvColumn } from '../common/csv/csv.js'
 
-/** The columns of the accounts export, in file order. */
 export const ACCOUNT_CSV_COLUMNS: readonly CsvColumn<Account>[] = [
   { header: 'Name', cell: (row) => row.name },
   { header: 'Type', cell: (row) => row.type },

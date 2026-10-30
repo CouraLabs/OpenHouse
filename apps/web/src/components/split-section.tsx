@@ -13,28 +13,16 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useHouseholdMembers } from '@/lib/household.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The props `SplitSection` takes. */
 interface SplitSectionProps {
-  /** How the record is shared, or nothing while it is not split. */
   value: SplitInput | null
   onChange: (value: SplitInput | null) => void
-  /** The amount to preview the shares of; nothing for a default split that
-   * applies to any amount (a category's). */
   amount?: string
   currency: Currency
-  /** Who holds the remainder cents; the preview matches the API's. */
   payerUserId: number | null
-  /** Offer exact amounts — a split with no fixed amount cannot use them. */
   allowExact?: boolean
   idPrefix: string
 }
 
-/**
- * The split of a form: a checkbox that turns sharing on, and the editor
- * (equal, percentage, exact) with the shares previewed from the same poco
- * math the API runs. Shared by the transaction, category, and recurring-rule
- * forms, so it reads the members and the translations itself.
- */
 export function SplitSection({
   value,
   onChange,
@@ -46,8 +34,6 @@ export function SplitSection({
 }: SplitSectionProps) {
   const { t } = useTranslation()
   const members = useHouseholdMembers()
-  // A removed member cannot take a new share; one already in the split
-  // stays listed so the row still reads.
   const listed = (members.data ?? []).filter(
     (member) =>
       member.isActive ||
@@ -82,7 +68,6 @@ export function SplitSection({
           message = t(`split.error.${value.mode}`)
         }
       } catch {
-        // A value still being typed ("1.") has no cents yet.
       }
     } else if (value.mode === 'exact') {
       for (const entry of value.entries) {
@@ -93,7 +78,6 @@ export function SplitSection({
             currency
           )
         } catch {
-          // Incomplete number; nothing to show yet.
         }
       }
     }

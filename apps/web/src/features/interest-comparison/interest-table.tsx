@@ -11,7 +11,6 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** One period of the schedule: both capitals, both interest runs, the gap. */
 export interface InterestRow {
   period: number
   simpleCapital: number
@@ -21,15 +20,10 @@ export interface InterestRow {
   variation: number
 }
 
-/** The props `InterestTable` takes. */
 interface InterestTableProps {
   rows: InterestRow[]
 }
 
-/**
- * The full schedule, period by period, in a scrollable table — the chart
- * shows the shape, the table carries every value exactly.
- */
 export function InterestTable({ rows }: InterestTableProps) {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()

@@ -83,8 +83,6 @@ import {
 } from './use-transactions.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The month window an anchor date describes, as inclusive `YYYY-MM-DD`
- * ends — the date range every search, summary, and chip reads. */
 function monthRange(anchor: Date): { from: string; to: string } {
   const from = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
   const to = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
@@ -92,24 +90,15 @@ function monthRange(anchor: Date): { from: string; to: string } {
   return { from: formatDateOnly(from), to: formatDateOnly(to) }
 }
 
-/** Moves an anchor date one month, keeping the day of the month clamped. */
 function shiftMonth(anchor: Date, months: number): Date {
   return new Date(anchor.getFullYear(), anchor.getMonth() + months, 1)
 }
 
-/**
- * The page the tenant's transactions are managed from: the month
- * navigator, the summary cards, the applied-filter chips, and the
- * virtualized day-grouped grid, with the form in a sheet and the transfer
- * in a dialog.
- */
 export function TransactionsPage() {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
   const today = useTenantToday()
 
-  // The month the grid shows, defaulting to the current one. Every other
-  // piece of state derives its date range from this anchor.
   const [anchor, setAnchor] = useState(() => {
     const now = new Date()
 
@@ -117,37 +106,24 @@ export function TransactionsPage() {
   })
   const range = monthRange(anchor)
 
-  // The dialog's filters; the args derive from them.
   const [filter, setFilter] = useState<FilterValues>({})
 
-  // The form's sheet, the transfer's dialog, and what they are about to do.
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [transferOpen, setTransferOpen] = useState(false)
   const [deleting, setDeleting] = useState<Transaction | null>(null)
 
-  // The installment dialogs: a purchase's menu (opened from any of its
-  // rows) and the split of one single card charge.
   const [groupOf, setGroupOf] = useState<Transaction | null>(null)
   const [splitting, setSplitting] = useState<Transaction | null>(null)
 
-  // The rows the selection checkbox column holds.
   const [selection, setSelection] = useState<Set<number>>(new Set())
 
-  // Which body is on screen: the grid (the daily workhorse, so the default)
-  // or the summary and dashboard cards — one or the other, never both.
   const [view, setView] = useState<TransactionsView>('transactions')
 
-  // Which day card charges are read by: the purchase (accrual) or their
-  // bill's due date (cash). Part of every filter, so each mode caches apart.
   const [creditMode, setCreditMode] = useState<CreditMode>('accrual')
 
-  // A saved card charge that landed on an already-closed bill — the page
-  // asks whether to keep it there or move it to the open one.
   const [closedNotice, setClosedNotice] = useState<Transaction | null>(null)
 
-  // A change to a reconciled (locked) row waits here for the user's yes: the
-  // conflict the API answered, and the call to replay with `confirmReconciled`.
   const [lockedChange, setLockedChange] = useState<{
     conflict: ReconciledEditConflict
     retry: () => void
@@ -197,17 +173,12 @@ export function TransactionsPage() {
 
   const search = useTransactionsInfinite(args)
   const summary = useTransactionSummary(args.filter)
-  // One export mutation for both toolbars: the desktop button and the
-  // mobile overflow item share the pending and error states.
   const exportCsv = useExportCsv('/transactions/export', args)
   const save = useSaveTransaction()
   const remove = useDeleteTransaction()
   const transfer = useTransfer()
   const statusChange = useChangeTransactionStatus()
 
-  // The dashboard cards' data: the expenses split by category and by
-  // account, the previous month's totals, the goals and limits with their
-  // progress, and the recurring rules the next month projects.
   const categoryArgs = useMemo<
     SearchTransactionsArgs['filter'] & { dimension: 'category' }
   >(() => ({ ...args.filter, dimension: 'category' }), [args.filter])
@@ -244,15 +215,12 @@ export function TransactionsPage() {
     [recurringRules.data, anchor, accounts.data]
   )
 
-  // The loaded rows, flattened newest first — what the grid groups by day.
   const rows = useMemo(
     () => (search.data?.pages ?? []).flatMap((page) => page.items),
     [search.data]
   )
   const hasMore = search.hasNextPage
 
-  // The errors the mutations answer with, read from the state the query
-  // client already holds — no mirror of it in local state.
   const saveError = save.isError
     ? save.error instanceof Error
       ? save.error.message
@@ -279,8 +247,6 @@ export function TransactionsPage() {
     year: 'numeric',
   }).format(anchor)
 
-  // The applied filters, as removable chips: the month, then every dialog
-  // filter the user set. Clearing one resets nothing else.
   const chips = useMemo(() => {
     const list = [
       {
@@ -351,8 +317,6 @@ export function TransactionsPage() {
     return list
   }, [t, monthLabel, filter, categories.data, accounts.data, receivers.data])
 
-  // Saving needs no confirmation: the sheet's submit is the intent. A
-  // failure leaves the sheet open, holding the values, with the error shown.
   const submitSave = (
     body: CreateTransactionBody,
     confirmReconciled = false
@@ -376,7 +340,6 @@ export function TransactionsPage() {
           const conflict = reconciledConflictOf(error)
 
           if (conflict !== null) {
-            // A question, not an error: the form stays open with its values.
             save.reset()
             setLockedChange({
               conflict,
@@ -388,10 +351,6 @@ export function TransactionsPage() {
     )
   }
 
-  // A status change from the grid skips the form: only the review status
-  // travels, on the narrow PATCH route — no field the grid holds is resent,
-  // so a stale row can never overwrite what another save already changed.
-  // The ledger mirrors the status to the transfer's other side API-side.
   const changeStatus = (
     transaction: Transaction,
     status: TransactionStatus,
@@ -436,8 +395,6 @@ export function TransactionsPage() {
         onSuccess: () => {
           setDeleting(null)
           setLockedChange(null)
-          // A destructive row action clears the page's form state too: the
-          // sheet would otherwise keep editing a row the grid no longer holds.
           setFormOpen(false)
           setEditing(null)
           save.reset()
@@ -446,7 +403,6 @@ export function TransactionsPage() {
           const conflict = reconciledConflictOf(error)
 
           if (conflict !== null) {
-            // The delete dialog gives way to the reconciliation question.
             remove.reset()
             setDeleting(null)
             setLockedChange({
@@ -594,9 +550,7 @@ export function TransactionsPage() {
                 {t('transactions.transfer')}
               </Button>
             </div>
-            {/* The mobile overflow: the secondary controls the row cannot
-             * fit — the export and the transfer — collapse here so the
-             * toolbar never clips. */}
+            {}
             <div className="flex items-center gap-2 min-[1100px]:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -647,8 +601,7 @@ export function TransactionsPage() {
           </>
         }
       />
-      {/* The applied filters lead the page: the cards answer to them as
-       * much as the grid does. */}
+      {}
       <FilterChips chips={chips} />
       {view === 'metrics' ? (
         <>
@@ -791,16 +744,12 @@ export function TransactionsPage() {
               setFormOpen(true)
             },
             onDelete: (transaction) => {
-              // Deleting any row cancels the edit in progress: the sheet
-              // would otherwise keep editing a row the grid no longer holds.
               setFormOpen(false)
               setEditing(null)
               save.reset()
               setDeleting(transaction)
             },
             onInstallments: (transaction) => {
-              // The purchase's actions can delete rows: clear the form so the
-              // sheet never keeps editing one the grid no longer holds.
               setFormOpen(false)
               setEditing(null)
               save.reset()
@@ -825,8 +774,7 @@ export function TransactionsPage() {
       {deleteError ? (
         <p className="text-sm text-destructive">{deleteError}</p>
       ) : null}
-      {/* A status change from the grid runs with the form closed, so its
-       * error — otherwise the sheet's — shows here. */}
+      {}
       {!formOpen && (saveError ?? statusChangeError) ? (
         <p className="text-sm text-destructive">
           {saveError ?? statusChangeError}

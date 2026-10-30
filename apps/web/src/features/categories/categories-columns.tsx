@@ -4,18 +4,11 @@ import type { DataTableColumn } from '@workspace/ui/components/data-table'
 import { Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-/** What the actions column can do to a row, reported upward. */
 export interface CategoryRowActions {
   onEdit: (category: Category) => void
   onDelete: (category: Category) => void
 }
 
-/**
- * The columns the categories grid shows: the name, the color as a
- * swatch with its hex, and the row actions. The caller owns what edit and
- * delete do; the columns only route the events. Called during the page's
- * render, so the labels arrive translated.
- */
 export function buildCategoryColumns(
   t: (key: string) => string,
   actions: CategoryRowActions
@@ -53,7 +46,6 @@ export function buildCategoryColumns(
   ]
 }
 
-/** The actions cell: the edit and delete buttons, one per row. */
 function CategoryActionsCell({
   category,
   actions,

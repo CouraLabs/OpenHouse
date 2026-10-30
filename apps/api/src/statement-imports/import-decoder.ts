@@ -1,21 +1,12 @@
 import type { ImportEncoding } from '@workspace/poco'
 
-/** The encodings an import reads: the two Brazilian and US bank files use. */
 export type ResolvedEncoding = Exclude<ImportEncoding, 'auto'>
 
-/** A file's text and the encoding it was read as. */
 export interface DecodedText {
   text: string
   encoding: ResolvedEncoding
 }
 
-/**
- * Decodes the bytes of a bank file. A forced encoding is honored as is. Left
- * to `auto`, a UTF-8 BOM and then a UTF-8 validity check decide, and any
- * bytes that are not valid UTF-8 are read as Windows-1252 — what Brazilian
- * banks export, and a superset of ISO-8859-1 for every printable character.
- * A BOM never reaches the text.
- */
 export function decodeImportBytes(
   bytes: Uint8Array,
   encoding: ImportEncoding = 'auto'
@@ -48,14 +39,7 @@ export function decodeImportBytes(
   }
 }
 
-/**
- * Reads the encoding an OFX file declares in its header: `CHARSET:1252`,
- * `CHARSET:ISO-8859-1`, or `CHARSET:UTF-8` in the SGML header, or the
- * `encoding` of the XML prolog of OFX 2. `auto` when the file declares none
- * (`CHARSET:NONE` included) — the bytes decide then.
- */
 export function ofxEncodingHint(bytes: Uint8Array): ImportEncoding {
-  // The header is ASCII whatever the body is; Latin-1 reads every byte.
   const head = new TextDecoder('latin1').decode(bytes.subarray(0, 2048))
   const charset = /^\s*CHARSET\s*:\s*([^\r\n]*)/im.exec(head)?.[1]?.trim()
   const prolog = /<\?xml[^>]*encoding\s*=\s*["']([^"']+)["']/i.exec(head)?.[1]

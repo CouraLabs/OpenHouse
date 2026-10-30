@@ -20,31 +20,22 @@ import {
 import { convertRate, formatPercent, type RateUnit } from '@/lib/finance.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The period choices the original-rate select offers. */
 const UNITS: Array<{ value: RateUnit; labelKey: string }> = [
   { value: 'year', labelKey: 'rate-conversion.converter.unit-year' },
   { value: 'month', labelKey: 'rate-conversion.converter.unit-month' },
   { value: 'day', labelKey: 'rate-conversion.converter.unit-day' },
 ]
 
-/** The periods every rate converts to, always in this display order. */
 const TARGETS: Array<{ value: RateUnit; labelKey: string }> = [
   { value: 'year', labelKey: 'rate-conversion.converter.year' },
   { value: 'month', labelKey: 'rate-conversion.converter.month' },
   { value: 'day', labelKey: 'rate-conversion.converter.day' },
 ]
 
-/**
- * One rate in, all three periods out: the card holds the original period,
- * the rate, and the converted figures — compounding, never dividing.
- */
 export function RateConverter() {
   const { t } = useTranslation()
   const [unit, setUnit] = useState<RateUnit>('year')
   const [rate, setRate] = useState('10')
-  // The trigger's label is rendered here, not derived by base-ui from
-  // `items`: a prefilled value set while the popup was closed would
-  // otherwise fall back to the placeholder.
   const selectedUnit = UNITS.find((choice) => choice.value === unit)
 
   const converted = TARGETS.map((target) => ({

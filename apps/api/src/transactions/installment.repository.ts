@@ -32,67 +32,39 @@ import {
   type TransactionWrite,
 } from './transaction.repository.js'
 
-/**
- * The fields every installment of a purchase shares. `groupShares` is how
- * the whole purchase is split, defined once: each installment inherits it,
- * divided the same way as the amount.
- */
 export type PurchaseWrite = Omit<
   TransactionWrite,
   'amount' | 'installment' | 'splits'
 > & { groupShares?: SplitShare[] }
 
-/** What a group write answered: done, the group is gone, or a row the
- * rule needs Open was already billed. */
 export type GroupOutcome<T> =
   { kind: 'done'; value: T } | { kind: 'missing' } | { kind: 'billed' }
 
-/** The shared fields a group edit writes on every installment. */
 export interface GroupMeta {
   name: string
   note: string | null
   categoryId: number
   receiverId: number | null
-  /** A new payer for every installment; left out, the payer is kept. */
   paidByUserId?: number
 }
 
-/** A group edit's new split: `shares` is the whole purchase's split, or
- * null to clear it. */
 export interface GroupSplitChange {
   shares: SplitShare[] | null
 }
 
-/** A purchase's installments, in order, each with its bill's close. */
 interface ReadGroup {
   rows: Transaction[]
   states: InstallmentState[]
   allOpen: boolean
-  /** The tenant's today the states were read against. */
   today: string
 }
 
-/**
- * The installment purchases: N transactions sharing an
- * `installmentGroupId`, each on the next bill of its card. Every write goes
- * through the transaction ledger's shared paths — balances, history, and
- * bill placement exactly as a single row's — composed into one batch whose
- * per-row writes carry their optimistic guards, so an edit racing the group
- * answers 409 instead of tangling the books.
- *
- * Every installment applies its delta at purchase time: the bank holds the
- * whole purchase against the limit, so a 10× TV takes its full price off
- * the card balance on the day it is bought. Limits count it the same way:
- * each installment keeps the purchase day.
- */
 export class InstallmentRepository {
   constructor(
     private readonly db: Database,
     private readonly ledger: TransactionRepository
   ) {}
 
-  /** Reads a purchase's ACTIVE installments, in order, and whether every
-   * one is still on an Open bill. Nothing when none is left. */
   async findGroup(
     tenantId: number,
     groupId: string,
@@ -112,7 +84,6 @@ export class InstallmentRepository {
     }
   }
 
-  /** Writes a purchase as one installment per part, in one batch. */
   async create(
     tenantId: number,
     userId: number,
@@ -122,12 +93,6 @@ export class InstallmentRepository {
     return this.insertParts(tenantId, userId, purchase, parts)
   }
 
-  /**
-   * Edits a purchase as a whole: the shared fields on every installment;
-   * new amounts in place, or a new count by soft-deleting the group and
-   * recreating it under the same id — a money change only while every
-   * installment is Open.
-   */
   async updateGroup(
     tenantId: number,
     userId: number,
@@ -177,7 +142,6 @@ export class InstallmentRepository {
 
       await plan_.run(this.db)
     } else {
-      // All installments are divided together, so the group's cents add up.
       const amounts =
         plan === 'amounts' ? parts : group.rows.map((row) => row.amount)
       const divided =
@@ -197,7 +161,6 @@ export class InstallmentRepository {
           })
         )
 
-        // The shares follow the amount, and a new split replaces them.
         if (
           splitChange !== undefined ||
           plan === 'amounts' ||
@@ -224,11 +187,6 @@ export class InstallmentRepository {
     }
   }
 
-  /**
-   * Soft-deletes a purchase's installments: `all` — only while none is
-   * billed — or the `remaining` ones still on an Open bill (an early payoff
-   * or a cancellation); rows on closed bills stay. Answers how many went.
-   */
   async deleteGroup(
     tenantId: number,
     userId: number,
@@ -251,12 +209,6 @@ export class InstallmentRepository {
     return { kind: 'done', value: deleted.length }
   }
 
-  /**
-   * Refunds a purchase in full: deletes the installments still Open, and
-   * credits what was already billed as one Income on the card, dated
-   * today — so it lands on the open bill. Answers the refund row, or
-   * nothing when nothing was billed yet.
-   */
   async refundGroup(
     tenantId: number,
     userId: number,
@@ -323,11 +275,6 @@ export class InstallmentRepository {
     }
   }
 
-  /**
-   * Converts a single card expense into installments while its bill is
-   * Open: the row is soft-deleted and the purchase recreated in parts, in
-   * one batch. The caller checked the row may split.
-   */
   async convert(
     tenantId: number,
     userId: number,
@@ -379,11 +326,6 @@ export class InstallmentRepository {
     }
   }
 
-  /**
-   * Collapses a purchase back into one row — the sum of its installments,
-   * on the purchase day, so on the first installment's bill — only while
-   * every installment is Open.
-   */
   async collapse(
     tenantId: number,
     userId: number,
@@ -441,8 +383,6 @@ export class InstallmentRepository {
     }
   }
 
-  /** Inserts one installment per part under one group id — one batch, the
-   * parts' ledger groups appended in money order. */
   private async insertParts(
     tenantId: number,
     userId: number,
@@ -457,8 +397,6 @@ export class InstallmentRepository {
     return this.ledger.findInstallments(tenantId, groupId)
   }
 
-  /** The plan a purchase's parts make: every part's ledger insert group,
-   * the shares divided across the whole group so no member's cents drift. */
   private async planParts(
     tenantId: number,
     userId: number,
@@ -469,9 +407,6 @@ export class InstallmentRepository {
     const plan = new LedgerBatchPlan()
 
     const { groupShares, ...columns } = purchase
-    // Every installment inherits the purchase's split, divided across the
-    // whole group so no member's cents drift; each installment's shares add
-    // up to its own amount.
     const divided =
       groupShares === undefined
         ? undefined
@@ -491,12 +426,6 @@ export class InstallmentRepository {
     return plan
   }
 
-  /**
-   * Reads a purchase's ACTIVE installments in id order, each with its
-   * bill's close. Nothing when no installment is left. The rows the write
-   * touches are guarded optimistically — a row edited since the read fails
-   * the batch.
-   */
   private async readGroup(
     tenantId: number,
     groupId: string,
@@ -531,8 +460,6 @@ export class InstallmentRepository {
     }
   }
 
-  /** The split of the whole purchase: every member's shares summed over the
-   * given rows. Nothing for an unsplit purchase. */
   private async groupSharesOf(
     tenantId: number,
     rows: readonly Transaction[]
@@ -559,7 +486,6 @@ export class InstallmentRepository {
           .map(([userId, cents]) => ({ userId, share: formatCents(cents) }))
   }
 
-  /** Each row with the close of the bill it is on. */
   private async statesOf(
     db: DbOrTx,
     tenantId: number,
@@ -594,8 +520,6 @@ export class InstallmentRepository {
     }))
   }
 
-  /** Soft-deletes a read group's installments still on an Open bill and
-   * answers their ids. */
   private async deleteOpenRows(
     tenantId: number,
     userId: number,
@@ -621,11 +545,6 @@ export class InstallmentRepository {
     return deleted
   }
 
-  /**
-   * Rewrites one installment's shared fields and amount in place, moving
-   * the card's balance by the difference and recording the history. Its
-   * bill and pin stay.
-   */
   private planRewrite(
     tenantId: number,
     userId: number,
@@ -675,8 +594,6 @@ export class InstallmentRepository {
   }
 }
 
-/** The purchase fields of a stored installment (or single row), as the
- * next write of the purchase reuses them. */
 function purchaseOf(
   row: Transaction,
   groupShares?: SplitShare[]

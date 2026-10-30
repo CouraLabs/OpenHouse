@@ -12,18 +12,6 @@ import {
 } from './fetch.js'
 import { transactionTypeSchema, type TransactionType } from './transactions.js'
 
-/**
- * The recurring-transaction routes' contract: the bodies the write routes
- * accept, the args the search route accepts, and the rows they answer with.
- * The session of the caller names the tenant — no body or query ever does.
- */
-
-/**
- * The frequencies a recurring rule can repeat with. The database spelling
- * lives in `@workspace/db` (`frequencies`) — keep the two in step. A form
- * picking a frequency with nothing chosen gets the friendly message, not a
- * type error.
- */
 export const frequencies = ['Daily', 'Weekly', 'Monthly', 'Yearly'] as const
 
 export const frequencySchema = z.enum(frequencies, {
@@ -32,7 +20,6 @@ export const frequencySchema = z.enum(frequencies, {
 
 export type Frequency = (typeof frequencies)[number]
 
-/** The body creating a recurring rule accepts. */
 export const createRecurringTransactionSchema = z
   .object({
     receiverId: z
@@ -48,28 +35,21 @@ export const createRecurringTransactionSchema = z
       .int()
       .positive('Pick an account.'),
     amount: amountSchema,
-    /** Whether the rule generates an Income or an Expense transaction. */
     type: transactionTypeSchema,
     frequency: frequencySchema,
-    /** Weekly: weekday 1–7; Monthly/Yearly: day 1–31; Daily: nothing. */
     frequencyDay: z
       .number()
       .int()
       .min(1, 'The day must be 1 or more.')
       .max(31, 'The day must be 31 or less.')
       .nullish(),
-    /** Yearly only: month 1–12. */
     frequencyMonth: z
       .number()
       .int()
       .min(1, 'The month must be 1 or more.')
       .max(12, 'The month must be 12 or less.')
       .nullish(),
-    /** The member who pays the generated transactions; the creator when
-     * left out. */
     paidByUserId: z.number().int().positive().nullish(),
-    /** The shares copied onto each generated transaction; `null` for none.
-     * Exact amounts must add up to the rule's amount. */
     defaultSplit: splitInputSchema.nullish(),
   })
   .superRefine((rule, ctx) => {
@@ -138,14 +118,11 @@ export const createRecurringTransactionSchema = z
     }
   })
 
-/** The body updating a recurring rule accepts: the same fields, plus which
- * row. */
 export const updateRecurringTransactionSchema =
   createRecurringTransactionSchema.extend({
     id: z.number().int().positive(),
   })
 
-/** What a recurring search filters on. Without a status, only ACTIVE rows. */
 export const recurringTransactionFilterSchema = z.object({
   categoryId: z.number().int().positive().optional(),
   receiverId: z.number().int().positive().optional(),
@@ -154,12 +131,10 @@ export const recurringTransactionFilterSchema = z.object({
   status: entityStatusSchema.default('ACTIVE'),
 })
 
-/** The search route's body: the shared paging envelope with a rule filter. */
 export const searchRecurringTransactionsSchema = fetchArgsSchema.extend({
   filter: recurringTransactionFilterSchema.prefault({}),
 })
 
-/** The body `POST recurring-transactions/export` accepts: the search, plus the CSV locale. */
 export const exportRecurringTransactionsSchema =
   searchRecurringTransactionsSchema.extend(csvLocaleField)
 
@@ -176,12 +151,6 @@ export type ExportRecurringTransactionsArgs = z.infer<
   typeof exportRecurringTransactionsSchema
 >
 
-/**
- * What the recurring routes return: the wire shape, dates as ISO strings.
- * The receiver, category, and account names — and the account's currency,
- * which the amount is in — come joined on every read, so the UI never has
- * to resolve an id.
- */
 export type RecurringTransaction = {
   id: number
   receiverId: number
@@ -198,7 +167,6 @@ export type RecurringTransaction = {
   frequencyMonth: number | null
   paidByUserId: number | null
   paidByName: string | null
-  /** The shares each generated transaction is split with, or nothing. */
   defaultSplit: SplitInput | null
   status: EntityStatus
   createdDt: string

@@ -10,12 +10,6 @@ import {
 } from '@workspace/ui/components/radio-group'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * How a card purchase splits: how many installments (1–48; 1 is a single
- * charge), whether the amount typed is the total or each installment, and
- * — for an interest-bearing plan — the cash price it compares against. The
- * cash price is the form's alone; nothing stores it.
- */
 export function InstallmentFields({
   value,
   onChange,

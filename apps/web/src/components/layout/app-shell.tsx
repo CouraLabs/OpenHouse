@@ -10,11 +10,6 @@ import { TimezoneConfirmBanner } from '@/components/layout/timezone-confirm-bann
 import { SidebarInset, SidebarProvider } from '@workspace/ui/components/sidebar'
 import { Toaster } from '@workspace/ui/components/toast'
 
-/**
- * The signed-in application wrapper: sidebar on the left, header on top of
- * the inset, and the current page rendered as the only content. Deliberately
- * generic — the shell owns no page content.
- */
 export function AppShell({
   session,
   children,
@@ -31,9 +26,7 @@ export function AppShell({
         <ServerResetNotice />
         <TimezoneConfirmBanner />
         <RecoveryCodesPrompt />
-        {/* Pages scroll in here, not the document — the fixed-height shell
-            keeps full-height pages (transactions) actually full-height so
-            their virtualizers and sticky headers engage. */}
+        {}
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           {children}
         </main>

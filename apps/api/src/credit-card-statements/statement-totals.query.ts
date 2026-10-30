@@ -3,32 +3,6 @@ import type { DbOrTx } from '@workspace/db'
 import { creditCardStatements, transactions } from '@workspace/db'
 import type { StatementStatus } from '@workspace/poco'
 
-
-/**
- * The common table expressions every bill read derives from — totals are
- * never stored, so they never drift from the transactions they sum.
- *
- * `statement_net` aggregates each bill's ACTIVE, non-Canceled transactions:
- * - `charges`: its expenses, a transfer out of the card included;
- * - `credits`: its incomes — refunds; the card side of a payment lands on
- *   no bill by date, so it is never among them;
- * - `paid`: the payments that settle it — the card sides of transfers whose
- *   `paymentStatementId` names it, summed in a subquery of their own so
- *   they never multiply the charge rows.
- *
- * `statement_run` adds the carry-over: a bill's `previousBalance` is the
- * running sum of `total − paid` over the same card's earlier bills, in close
- * order — a positive remainder rolls forward, an overpayment rolls forward
- * as a credit. The window covers every bill of the card, never just the
- * page a search asks for, so paging cannot cut a carry-over short. Derived
- * on every read and never cached (rule 6f): a payment or a charge on an
- * earlier bill changes every later bill the moment it commits.
- * `nextDueDate` is the due date of the card's next bill — where this one's
- * remainder rolled.
- *
- * Every sum is cast to `numeric(16,2)`, so money reads back as a
- * two-decimal string and never crosses a float.
- */
 export function statementTotals(
   db: DbOrTx,
   tenantId: number,
@@ -37,7 +11,6 @@ export function statementTotals(
   const payments = db
     .select({
       statementId: transactions.paymentStatementId,
-      // Integer cents; the outer selects format them.
       paid: sql<number>`sum(${transactions.amount})`.as('paid'),
       count: sql<number>`count(*)`.as('payment_count'),
     })
@@ -71,8 +44,6 @@ export function statementTotals(
         paymentCount: sql<number>`coalesce(max(${payments.count}), 0)`.as(
           'payment_count'
         ),
-        // Integer cents, exact; the outer selects format the materialized
-        // columns into the two-decimal strings.
         charges:
           sql<number>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'Expense'), 0)`.as(
             'charges'
@@ -138,15 +109,8 @@ export function statementTotals(
   return { net, run }
 }
 
-/** The bills' derived fields, as the outer select reads them. */
 export type StatementRun = ReturnType<typeof statementTotals>['run']
 
-/**
- * The SQL twin of poco's `deriveStatementStatus`, for a search that
- * filters on status: the same precedence, with the tenant's today bound as
- * a parameter. The service still stamps every wire row through the pure
- * function; an e2e spec holds the two in step.
- */
 export function statusCondition(
   run: StatementRun,
   today: string,

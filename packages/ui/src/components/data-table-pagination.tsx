@@ -8,16 +8,10 @@ import {
   NativeSelectOption,
 } from '@workspace/ui/components/native-select'
 
-/** The page sizes the rows-per-page picker offers. */
 const PAGE_SIZES = [10, 20, 50]
 
-/**
- * The labels the pagination bar renders. The component stays i18n-free —
- * the caller translates; these are the English defaults.
- */
 export interface DataTablePaginationLabels {
   rowsPerPage: string
-  /** Formats the "Page X of Y" readout. */
   page: (pageIndex: number, pageCount: number) => string
   previous: string
   next: string
@@ -30,11 +24,6 @@ const DEFAULT_LABELS: DataTablePaginationLabels = {
   next: 'Next page',
 }
 
-/**
- * The pagination bar of the shared data table: which page, how many rows a
- * page holds, and the steps between them. Reads the table's (server-driven)
- * pagination state and reports changes through it.
- */
 export function DataTablePagination<TData extends RowData>({
   table,
   labels = DEFAULT_LABELS,
@@ -47,8 +36,6 @@ export function DataTablePagination<TData extends RowData>({
   const rowCount = table.getRowCount()
   const rowsOnPage = table.getRowModel().rows.length
 
-  // One page and there is nothing to page: the bar would read
-  // "Page 1 of 1" with dead arrows, so it stays out of the way.
   if (pageCount <= 1) {
     return null
   }

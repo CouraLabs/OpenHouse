@@ -21,40 +21,24 @@ import { TextField } from '@workspace/ui/components/text-field'
 
 import { useActiveCategories, useActiveReceivers } from './use-linkers.js'
 
-/**
- * The fields the linker form holds. The rules come straight from the
- * shared poco schema — the same check the API runs, whose messages are
- * already the UX messages — so the form never re-declares them.
- */
 const linkerFormSchema = createTransactionLinkerSchema
 
 type LinkerFormValues = z.infer<typeof linkerFormSchema>
 
-/** The props `LinkerForm` takes. */
 interface LinkerFormProps {
-  /** The linker being edited, or nothing while creating. */
   linker: TransactionLinker | null
-  /** What a submit should do; the page decides where it saves. */
   onSubmit: (body: CreateTransactionLinkerBody) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/** The default values of a new linker: nothing chosen, nothing typed. */
 const NEW_LINKER: LinkerFormValues = {
   description: '',
   categoryId: undefined as unknown as number,
   receiverId: undefined,
 }
 
-/**
- * The insert and edit form of the linkers page: a description, the
- * category the preset lands in, and an optional receiver. It renders above
- * the table; the page decides when it is open and what a submit saves.
- */
 export function LinkerForm({
   linker,
   onSubmit,
@@ -71,8 +55,6 @@ export function LinkerForm({
     formState: { errors },
   } = useForm<LinkerFormValues>({
     resolver: zodResolver(linkerFormSchema),
-    // The page keys the form by the linker it edits, so switching rows
-    // remounts it with that row's values.
     defaultValues:
       linker === null
         ? NEW_LINKER
@@ -88,8 +70,6 @@ export function LinkerForm({
   const categories = useActiveCategories()
   const receivers = useActiveReceivers()
 
-  // The triggers' labels are rendered explicitly: a prefilled value set
-  // while the popup is closed would otherwise fall back to the placeholder.
   const selectedCategory = (categories.data ?? []).find(
     (category) => category.id === categoryId
   )
@@ -155,8 +135,6 @@ export function LinkerForm({
           <Select
             value={receiverId}
             onValueChange={(rawValue) => {
-              // The Select's generic only admits strings; numbers work at
-              // runtime, so the value crosses with a cast at the boundary.
               const chosen = rawValue as unknown as string
 
               setValue(

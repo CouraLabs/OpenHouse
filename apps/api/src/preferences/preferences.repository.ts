@@ -2,19 +2,13 @@ import { and, eq } from 'drizzle-orm'
 import type { Database } from '@workspace/db'
 import { users } from '@workspace/db'
 
-/** The preference columns of a user row. */
 export interface PreferencesRow {
   startPage: string
 }
 
-/**
- * The preference columns of the user rows. Every method takes the tenant id
- * explicitly, alongside the user, so a write never crosses tenants.
- */
 export class PreferencesRepository {
   constructor(private readonly db: Database) {}
 
-  /** Saves a user's preferences. */
   async update(
     tenantId: number,
     userId: number,

@@ -16,13 +16,9 @@ import {
 } from './use-limits.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The page the tenant's limits are managed from: one usage card per
- * ACTIVE limit — what the period has spent against the cap — with the
- * create form and the delete confirmation above it. */
 export function LimitsPage() {
   const { t } = useTranslation()
 
-  // The form, and what its buttons are about to do.
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<LimitUsage | null>(null)
   const [deleting, setDeleting] = useState<LimitUsage | null>(null)
@@ -31,8 +27,6 @@ export function LimitsPage() {
   const save = useSaveLimit()
   const remove = useDeleteLimit()
 
-  // The errors the mutations answer with, read from the state the query
-  // client already holds — no mirror of it in local state.
   const saveError = save.isError
     ? save.error instanceof Error
       ? save.error.message
@@ -50,8 +44,6 @@ export function LimitsPage() {
       setFormOpen(true)
     },
     onDelete: (limit: LimitUsage) => {
-      // Deleting any card cancels the edit in progress: the form would
-      // otherwise keep editing a row the grid no longer holds.
       setFormOpen(false)
       setEditing(null)
       save.reset()
@@ -59,8 +51,6 @@ export function LimitsPage() {
     },
   }
 
-  // Saving needs no confirmation: the form's submit is the intent. A failure
-  // leaves the form open, holding the values, with the error shown.
   const submitSave = (body: CreateLimitBody) => {
     save.mutate(editing === null ? body : { ...body, id: editing.id }, {
       onSuccess: () => {
@@ -80,7 +70,6 @@ export function LimitsPage() {
     })
   }
 
-  // The page's action, on the header line: the insert.
   const toolbar = (
     <Button
       onClick={() => {

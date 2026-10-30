@@ -16,11 +16,6 @@ import { useMainCurrency } from '@/lib/settings.js'
 import { useMonthSummary } from '@/components/layout/use-month-summary.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The dashboard's month summary: this month's income, expenses, and net,
- * one block per currency the house moves, the main currency first — the
- * same summary the sidebar's foot carries, read at page size.
- */
 export function MonthSummaryCard() {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
@@ -52,9 +47,6 @@ export function MonthSummaryCard() {
   )
 }
 
-/** One currency's month: its incomes, expenses, and the net between them.
- * The green carries income and a positive net, the destructive red the
- * expenses and a negative one — the only two hues with meaning here. */
 function CurrencyGroup({ group }: { group: TransactionSummaryGroup }) {
   const { t } = useTranslation()
   const netNegative = group.net.startsWith('-')
@@ -89,7 +81,6 @@ function CurrencyGroup({ group }: { group: TransactionSummaryGroup }) {
   )
 }
 
-/** One figure of the month: an icon, the label, and the money. */
 function SummaryLine({
   icon,
   label,

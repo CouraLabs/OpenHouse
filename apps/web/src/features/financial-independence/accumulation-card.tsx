@@ -16,12 +16,6 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * Reaching a target: the monthly contribution that turns today's balance
- * into the target over the span, with the drags the sheet modeled —
- * inflation and the admin fee eating the return, a loading fee on the
- * contributions, and income tax on the gains.
- */
 export function AccumulationCard() {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
@@ -35,7 +29,6 @@ export function AccumulationCard() {
   const [years, setYears] = useState('40')
 
   const months = Math.max(Math.round(Number(years) || 0), 0) * 12
-  // The return net of the monthly drags, exactly as the sheet composed it.
   const monthlyRate = realRate(
     (Number(rate) || 0) / 100,
     ((Number(inflation) || 0) + (Number(adminFee) || 0)) / 100
@@ -45,9 +38,6 @@ export function AccumulationCard() {
   const pv = (Number(present) || 0) * (1 - loading)
   const fv = Number(target) || 0
 
-  // The sheet's contribution: the annuity payment grossed up by the
-  // loading fee, plus the income tax on the gains spread over the months —
-  // the tax share is part of what leaves the pocket monthly.
   const base = months > 0 ? -pmt(monthlyRate, months, -pv, fv) : 0
   const grossContribution = base * (1 + loading)
   const gains = Math.max(fv - grossContribution * months, 0)

@@ -32,33 +32,16 @@ import { calendarDeps } from './calendar/calendar.deps.js'
 import { statementImportsDeps } from './statement-imports/statement-imports.deps.js'
 import { dataExportsDeps } from './data-exports/data-exports.deps.js'
 
-/**
- * The composition root: the middleware order, the feature routers mounted
- * under `/api`, and the error handler every failure funnels through.
- *
- * The public auth routes mount before the authenticated group, so a session
- * is created without presenting one. Everything else rides the auth
- * middleware, which resolves the session from the access cookie onto
- * `c.var.session`; owner-only routes add `requireRole`.
- *
- * The same Worker serves the web app's static assets (`index.ts`), so the
- * browser talks to one origin and no CORS is involved.
- */
 export function createApp(env: AppEnv['Bindings']): {
   app: Hono<AppEnv>
   sessions: SessionResolver
 } {
   const app = new Hono<AppEnv>().basePath('/api')
 
-  // The security headers helmet once added, on every response.
   app.use(secureHeaders())
 
-  // The parsed environment, cached per isolate.
   const parsed = config(env)
 
-  // The request-scoped handle every feature's deps are built from: the
-  // database over the binding (cheap — no pool to manage). The general
-  // rate limit counts every route against the client's address.
   const db = createDatabase(env.DB as never)
 
   app.use(
@@ -70,12 +53,8 @@ export function createApp(env: AppEnv['Bindings']): {
 
       const started = Date.now()
 
-      // The handler's response lands on the context once `next` resolves.
       await next()
 
-      // One line per request, for Workers Logs: who (the session's tenant,
-      // once the auth middleware resolved), what, how long — so a slow
-      // tenant or route is visible before it hurts.
       const session = context.get('session') as { tenant?: { id: number } } | undefined
 
       console.log(
@@ -90,19 +69,13 @@ export function createApp(env: AppEnv['Bindings']): {
     })
   )
 
-  // The auth feature. Its public routes a session is created through mount
-  // first; the signed-in ones mount inside the authenticated group below.
   const clock = new SystemClock()
   const { publicRouter, protectedRouter, sessions } = authDeps(db, parsed, clock)
 
   app.route('/auth', publicRouter)
 
-  // The calendar feed's token route is public — the token in the URL is its
-  // only credential (rule 6g's credential exception).
   app.route('/calendar', calendarDeps(db, parsed, clock).publicRouter)
 
-  // Every other feature mounts inside the authenticated group, under the
-  // prefix its routes carried.
   const authenticated = new Hono<AppEnv>()
   authenticated.use(authMiddleware(sessions))
   authenticated.route('/auth', protectedRouter)
@@ -150,13 +123,10 @@ export function createApp(env: AppEnv['Bindings']): {
   authenticated.route('/imports', statementImportsDeps(deps.db, deps.config, clock).router)
   authenticated.route('/data-exports', dataExportsDeps(deps.db, deps.config, clock).router)
 
-  // The group, with every feature's signed-in routes, mounts under /api.
   app.route('/', authenticated)
 
-  // The health route a deployment's probe hits.
   app.get('/health', (context) => context.json({ status: 'ok' }))
 
-  // An unknown API route answers 404 the way the previous framework did.
   app.notFound((context) =>
     context.json(
       {
@@ -168,8 +138,6 @@ export function createApp(env: AppEnv['Bindings']): {
     )
   )
 
-  // Every failure funnels here: a ledger conflict to 409, the domain
-  // errors to their statuses, anything unexplained to 500.
   app.onError((error, context) => {
     if (error instanceof LedgerConflictError) {
       return renderError(context, error.message, 409)
@@ -197,9 +165,6 @@ export function createApp(env: AppEnv['Bindings']): {
   return { app, sessions }
 }
 
-/** Renders an error the way the exception filters did: a payload with a
- * message becomes `{ message, error, statusCode }`; a structured payload
- * rides as itself, which the web reads field by field. */
 function renderError(
   context: import('hono').Context<AppEnv>,
   payload: unknown,

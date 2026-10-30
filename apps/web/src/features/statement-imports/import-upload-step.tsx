@@ -14,19 +14,12 @@ import { Input } from '@workspace/ui/components/input'
 import { ImportStepActions } from './import-step-actions.js'
 import { RecentImports } from './recent-imports.js'
 
-/** Whether a file name ends in an extension an import reads. */
 function hasImportExtension(name: string): boolean {
   const lower = name.toLowerCase()
 
   return importFileExtensions.some((extension) => lower.endsWith(extension))
 }
 
-/**
- * The first step: pick the `.ofx`, `.qfx` or `.csv` file. The size and the
- * extension are checked here so a wrong pick fails before the upload; the
- * server checks them again. Below the picker, the account's recent imports
- * that can still be undone.
- */
 export function ImportUploadStep({
   account,
   isReading,
@@ -36,7 +29,6 @@ export function ImportUploadStep({
 }: {
   account: Account
   isReading: boolean
-  /** Why the last read failed, from the API. */
   error: string | undefined
   onSubmit: (file: File) => void
   onCancel: () => void

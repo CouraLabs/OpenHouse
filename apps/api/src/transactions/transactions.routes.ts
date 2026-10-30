@@ -31,20 +31,8 @@ import { TRANSACTION_CSV_COLUMNS } from './transaction-csv.js'
 import type { TransactionService } from './transaction.service.js'
 import { toWire } from './transaction-wire.js'
 
-/**
- * How many rows one page of the export reads — the same ceiling the CSV
- * exporter used.
- */
 const CSV_PAGE_SIZE = 500
 
-/**
- * The transaction routes. Everything here reads the tenant and the user
- * from the session, so a client can only ever see or act on its own tenant
- * — the request names no tenant anywhere. Every signed-in role manages
- * transactions. A ledger write that keeps colliding with concurrent writes
- * on the same accounts answers 409 (`LedgerConflictError`, which
- * `app.onError` maps), never 500.
- */
 export function transactionsRoutes(deps: {
   transactions: TransactionService
   installments: InstallmentService
@@ -53,7 +41,6 @@ export function transactionsRoutes(deps: {
 }): { router: App; reconciliationRouter: App } {
   const router = new Hono<AppEnv>()
 
-  /** Creates a transaction for the tenant, moving the account's balance. */
   router.post('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, createTransactionSchema)
@@ -66,7 +53,6 @@ export function transactionsRoutes(deps: {
     )
   })
 
-  /** Searches the tenant's transactions, paged, sorted and filtered. */
   router.post('/search', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchTransactionsSchema)
@@ -78,12 +64,6 @@ export function transactionsRoutes(deps: {
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
 
-  /**
-   * Streams the transactions the filter matches as a CSV, unpaged: the
-   * page's own search args, written in the locale of the body. The rows are
-   * read page by page while the response is written, so a large range
-   * never sits in memory. Every export is recorded in the audit log.
-   */
   router.post('/export', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, exportTransactionsSchema)
@@ -112,7 +92,6 @@ export function transactionsRoutes(deps: {
     return csvDownload(chunks, 'transactions.csv')
   })
 
-  /** Totals the tenant's transactions over a filter, grouped by currency. */
   router.post('/summary', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchTransactionsSchema)
@@ -124,8 +103,6 @@ export function transactionsRoutes(deps: {
     return context.json({ groups }, 201)
   })
 
-  /** Totals the tenant's expenses over a filter, grouped by category or by
-   * account, per currency — what the expense pies render. */
   router.post('/breakdown', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(
@@ -137,8 +114,6 @@ export function transactionsRoutes(deps: {
     return context.json({ groups }, 201)
   })
 
-  /** Moves money between two accounts: two transactions, one ledger
-   * batch. */
   router.post('/transfer', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, transferSchema)
@@ -151,8 +126,6 @@ export function transactionsRoutes(deps: {
     return context.json([from, to].map(toWire), 201)
   })
 
-  /** Records a settle-up between two members: a transfer between their
-   * accounts (or an expense to the member), flagged as a settlement. */
   router.post('/settle', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, settleUpSchema)
@@ -165,9 +138,6 @@ export function transactionsRoutes(deps: {
     return context.json(rows.map(toWire), 201)
   })
 
-  // --- The installment purchase routes ---
-
-  /** Reads one purchase: its installments, total, and editability. */
   router.get(
     '/installments/:groupId',
     async (context) => {
@@ -180,8 +150,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Edits a purchase as a whole: shared fields always, amount and count
-   * only while no installment is billed (409 otherwise). */
   router.put(
     '/installments/:groupId',
     async (context) => {
@@ -202,8 +170,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Deletes a purchase's installments: `scope=all` (409 once billed) or
-   * `scope=remaining` — those still on an Open bill. */
   router.delete(
     '/installments/:groupId',
     async (context) => {
@@ -222,8 +188,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Refunds a purchase in full: remaining installments deleted, what was
-   * billed credited on the open bill. */
   router.post(
     '/installments/:groupId/refund',
     async (context) => {
@@ -246,8 +210,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Collapses a purchase back into one row, while no installment is
-   * billed. */
   router.post(
     '/installments/:groupId/collapse',
     async (context) => {
@@ -267,8 +229,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Splits a single card expense into installments, while its bill is
-   * Open. */
   router.post(
     '/:id/installments',
     async (context) => {
@@ -290,9 +250,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  // --- The single-row reads and writes ---
-
-  /** Reads one transaction, deleted rows included. */
   router.get(
     '/:id',
     async (context) => {
@@ -304,8 +261,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Reads a transaction's history: one append-only entry per change,
-   * newest first. */
   router.get(
     '/:id/history',
     async (context) => {
@@ -319,7 +274,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Updates a transaction, moving both accounts' balances to match. */
   router.put('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, updateTransactionSchema)
@@ -331,8 +285,6 @@ export function transactionsRoutes(deps: {
     )
   })
 
-  /** Changes only a transaction's review status: no other field is written,
-   * and no balance moves. Both sides of a transfer flip together. */
   router.patch(
     '/:id/status',
     async (context) => {
@@ -350,9 +302,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Moves a card charge to another bill of the same card and pins it
-   * there. Answers the row with a `STATEMENT_CLOSED` warning when that bill
-   * is already closed. */
   router.patch(
     '/:id/statement',
     async (context) => {
@@ -372,8 +321,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Soft-deletes a transaction: the account's balance is reverted in the
-   * same ledger batch that marks the row DELETED. */
   router.delete(
     '/:id',
     async (context) => {
@@ -391,12 +338,8 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  // --- The reconciliation routes (the prefix the controller carried) ---
-
   const reconciliationRouter = new Hono<AppEnv>()
 
-  /** What the ledger computes on the day, the difference, and the rows
-   * still on Verify. Writes nothing. */
   reconciliationRouter.post(
     '/:accountId/preview',
     async (context) => {
@@ -425,7 +368,6 @@ export function transactionsRoutes(deps: {
     }
   )
 
-  /** Commits the reconciliation: adjustment, checks, and the lock. */
   reconciliationRouter.post(
     '/:accountId',
     async (context) => {
@@ -452,10 +394,6 @@ export function transactionsRoutes(deps: {
   return { router, reconciliationRouter }
 }
 
-/**
- * Streams a CSV download: the chunks ride a `ReadableStream` of bytes, read
- * lazily one page at a time, with the headers the browser saves a file by.
- */
 function csvDownload(chunks: AsyncGenerator<string>, filename: string): Response {
   const encoder = new TextEncoder()
 
@@ -482,8 +420,6 @@ function csvDownload(chunks: AsyncGenerator<string>, filename: string): Response
   })
 }
 
-/** An integer path parameter, the way the `ParseIntPipe` read it: 400 when
- * the segment is not a number. */
 function intParam(context: import('hono').Context<AppEnv>, name: string): number {
   const value = Number.parseInt(context.req.param(name) ?? '', 10)
 
@@ -494,8 +430,6 @@ function intParam(context: import('hono').Context<AppEnv>, name: string): number
   return value
 }
 
-/** A UUID path parameter, the way the `ParseUUIDPipe` read it: 400 when the
- * segment is not one. */
 function uuidParam(
   context: import('hono').Context<AppEnv>,
   name: string
@@ -510,7 +444,6 @@ function uuidParam(
   return parsed.data
 }
 
-/** Maps a history row onto the wire shape. */
 function toHistoryWire(row: {
   id: number
   transactionId: number
@@ -531,7 +464,6 @@ function toHistoryWire(row: {
   }
 }
 
-/** Maps a purchase onto the wire: its shared fields from installment 1. */
 function toGroupWire(view: {
   groupId: string
   rows: import('./transaction.repository.js').TransactionRow[]

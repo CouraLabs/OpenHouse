@@ -17,11 +17,6 @@ import { useSession } from '@/lib/auth.js'
 import { RequiredMark } from './required-mark.js'
 import { useSavePreferences } from './use-save-preferences.js'
 
-/**
- * The Preferences section every user sees: their own choices, such as the
- * page they open on after signing in. The rules are the poco schema the API
- * runs.
- */
 export function PreferencesForm() {
   const { t } = useTranslation()
   const session = useSession()
@@ -69,8 +64,7 @@ export function PreferencesForm() {
             }}
           >
             <SelectTrigger id="preferences-start-page" className="w-full">
-              {/* Rendered explicitly: base-ui does not derive the label of
-               * a value set while the popup was closed. */}
+              {}
               <SelectValue>{pageLabel(startPage)}</SelectValue>
             </SelectTrigger>
             <SelectContent>

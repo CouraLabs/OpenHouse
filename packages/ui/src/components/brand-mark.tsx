@@ -1,10 +1,5 @@
 import { cn } from 'cn'
 
-/**
- * The logo mark from `logos/openhouse-glyph.svg`: a stroked roof over a
- * square with one filled node dot at the ridge, in ink, inside a hairline
- * ring. Sized by the caller.
- */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <div

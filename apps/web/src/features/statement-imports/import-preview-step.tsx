@@ -32,16 +32,8 @@ import {
 } from './use-statement-imports.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** How many rows one page of the preview table holds. */
 const PAGE_SIZE = 50
 
-/**
- * The preview: every parsed row with its suggested category and receiver,
- * duplicate flags, the bill it lands on (a card), and an installment link.
- * The user unticks rows and edits categories and receivers in place; rows
- * with no suggestion take the category picked above the table. The edits
- * live here, so going back discards them.
- */
 export function ImportPreviewStep({
   account,
   preview,
@@ -57,13 +49,9 @@ export function ImportPreviewStep({
   preview: ImportPreview
   isCommitting: boolean
   isReading: boolean
-  /** Why the last commit failed, from the API. */
   error: string | undefined
-  /** The day through which the account is reconciled, when the commit asked
-   * for a confirmation. */
   reconciledThrough: string | null
   onCommit: (rows: ImportCommitRow[], confirmReconciled: boolean) => void
-  /** Goes back to the mapping step; only a CSV has one. */
   onRemap: (() => void) | undefined
   onBack: () => void
 }) {

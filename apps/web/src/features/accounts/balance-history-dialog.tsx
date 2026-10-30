@@ -10,16 +10,10 @@ import {
 
 import { BalanceHistoryBody } from './balance-history-body.js'
 
-/**
- * The dialog an account's balance history opens in: a daily end-of-day
- * balance for a range, the last 30 days by default. The body mounts only
- * while an account is set, so each opening starts from the default range.
- */
 export function BalanceHistoryDialog({
   account,
   onClose,
 }: {
-  /** The account whose history shows, or nothing while the dialog is closed. */
   account: Account | null
   onClose: () => void
 }) {

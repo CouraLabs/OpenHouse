@@ -14,50 +14,22 @@ import {
 
 import type { LogKey } from './notification-log.repository.js'
 
-/**
- * The first hour of the tenant's day (0-23) a reminder may be sent in: a
- * bill due Friday is not worth a buzz at 00:30 Thursday. Reminders that
- * became due overnight go out on the first run from this hour on.
- */
 export const SEND_FROM_HOUR = 8
 
-/** A reminder due now: its idempotency key and what it says. */
 export interface ReminderCandidate {
   key: Pick<LogKey, 'kind' | 'refId' | 'dueDate'>
   detail: ReminderDetail
 }
 
-/** What the rules evaluate, all of one tenant on its own calendar day. */
 export interface ReminderInput {
-  /** The tenant's today, `YYYY-MM-DD` — never the server's. */
   today: string
   preferences: NotificationPreferences
-  /** The tenant's pending bills (Open, Closed, PartiallyPaid, Overdue). */
   bills: readonly CreditCardStatement[]
   rules: readonly UpcomingRule[]
-  /** Rules whose transaction for today already exists. */
   generatedToday: ReadonlySet<number>
   limits: readonly UpcomingLimitInput[]
 }
 
-/**
- * The reminders due for one user on one tenant day, as a pure function of
- * the tenant's today and the user's preferences:
- *
- * - a Closed or PartiallyPaid bill from `billLeadDays` before its due date
- *   through the due date (an Open bill is only an estimate and waits for its
- *   close);
- * - an Overdue bill, once: the key is the bill and its due date, so the
- *   alert is never repeated, and a paid bill is no longer Overdue;
- * - a recurring expense (not a Daily one — a reminder every day is noise)
- *   from `recurringLeadDays` before it fires through the firing day;
- * - a limit at 80% or 100% of its cap in its current period — the highest
- *   enabled threshold reached, keyed by the period's first day so the next
- *   period alerts again.
- *
- * "Due" is a window, not a single day, so a run that was down on the exact
- * day still catches up; the log makes the repeats harmless.
- */
 export function dueReminders(input: ReminderInput): ReminderCandidate[] {
   return [
     ...billReminders(input),

@@ -17,20 +17,7 @@ import { SettingsRepository } from '../settings/settings.repository.js'
 import { TransactionRepository } from '../transactions/transaction.repository.js'
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
 
-/**
- * Materializes a tenant's due recurring rules into real transactions.
- * "Today" is the tenant's own: a rule is evaluated against the calendar
- * day of the tenant's time zone, never the server's. The run is
- * idempotent: a rule due on a day whose transaction already exists is
- * skipped, so a re-run never double-bills — and the partial unique index
- * in the schema makes that claim atomic even between replicas.
- *
- * Each run also looks a few days back: the queue's retry with backoff, or
- * a downtime, catches the missed days up on the next message.
- */
 export class RecurringRunService {
-  /** How many days back a run looks for days it missed — the downtime a
-   * redelivery or an outage covers. */
   private static readonly CATCH_UP_DAYS = 7
 
   constructor(
@@ -44,13 +31,6 @@ export class RecurringRunService {
     private readonly members: HouseholdMembers
   ) {}
 
-  /**
-   * Materializes every due rule of ONE tenant over the last `days` days of
-   * its calendar, oldest first, ending on the tenant's today — the day
-   * order keeps an outage's days landing in sequence. Rules do not
-   * generate before the day they were created. One failing rule never
-   * stops the others.
-   */
   async runForTenant(
     tenantId: number,
     days: number = RecurringRunService.CATCH_UP_DAYS
@@ -58,7 +38,6 @@ export class RecurringRunService {
     const now = this.clock.now()
     const rules = await this.rules.listActiveRules(tenantId)
     const timezones = await this.settings.timezonesOf([tenantId])
-    // A tenant always has its settings row; UTC only guards a gap.
     const timezone = timezones.get(tenantId) ?? 'UTC'
     const today = todayIn(timezone, now)
     const window = Array.from(
@@ -93,8 +72,6 @@ export class RecurringRunService {
     return created
   }
 
-  /** The member a rule's expenses are paid by. A removed member can no longer
-   * pay, so a rule still naming one is paid by the tenant's owner from then on. */
   private async payerOf(rule: RecurringTransaction): Promise<number | null> {
     if (rule.paidByUserId === null) {
       return null
@@ -114,10 +91,6 @@ export class RecurringRunService {
     return owner ?? rule.paidByUserId
   }
 
-  /** Creates one rule's transaction for one day, unless it already exists.
-   * A rule whose account, category, or receiver was deleted is skipped —
-   * loudly, every run, until the rule is fixed or deleted: writing money
-   * into a deleted account or category would silently corrupt the books. */
   private async materialize(
     rule: RecurringTransaction,
     day: string
@@ -136,13 +109,10 @@ export class RecurringRunService {
       return 0
     }
 
-    // The rule row carries no display names; the joined read answers them.
     const named = await this.rules.findById(rule.tenantId, rule.id)
 
     const paidByUserId = await this.payerOf(rule)
 
-    // The rule's default shares are copied onto the transaction it makes
-    // (an income, or an account that turned shared, carries none).
     const split = parseSplit(rule.defaultSplit)
     const shares =
       split === null || rule.type !== 'Expense'
@@ -153,8 +123,6 @@ export class RecurringRunService {
       rule.linkedAccountId
     )
 
-    // A default split that no longer resolves must not quietly become an
-    // unsplit expense: skip and say why, as for a deleted account.
     if (shares?.ok === false && account?.ownership !== 'shared') {
       console.error(
         `Recurring rule ${rule.id} of tenant ${rule.tenantId} has a default split that no longer resolves (${shares.message}); skipping until the rule is fixed.`
@@ -177,20 +145,14 @@ export class RecurringRunService {
       categoryId: rule.categoryId,
       receiverId: rule.receiverId,
       recurringId: rule.id,
-      // The rule carries its own type: a salary rule generates an Income,
-      // a bill rule an Expense.
       type: rule.type,
       reviewStatus: 'Verify',
       statusNote: null,
     })
 
-    // `undefined` means another replica won the insert race — the day is
-    // materialized all the same, just not by this process.
     return inserted === undefined ? 0 : 1
   }
 
-  /** Answers whether the rule's references are all still rows the tenant
-   * can use; logs the broken ones so they get noticed. */
   private async assertReferencesUsable(
     rule: RecurringTransaction
   ): Promise<boolean> {

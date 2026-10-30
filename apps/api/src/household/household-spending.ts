@@ -1,6 +1,5 @@
 import { addMoney, compareMoney, type Currency, type SplitShare } from '@workspace/poco'
 
-/** An expense as the spending report reads it. */
 export interface SpendingRow {
   payerUserId: number | null
   currency: Currency
@@ -8,18 +7,15 @@ export interface SpendingRow {
   categoryId: number
   categoryName: string
   categoryColor: string
-  /** How the expense is shared; empty for an unsplit one. */
   shares: readonly SplitShare[]
 }
 
-/** What each member bore, per currency. */
 export interface MemberTotal {
   userId: number
   currency: Currency
   total: string
 }
 
-/** What each category cost in full, per currency. */
 export interface CategoryTotal {
   categoryId: number
   categoryName: string
@@ -28,11 +24,6 @@ export interface CategoryTotal {
   total: string
 }
 
-/**
- * Totals the expenses per member and per category, per currency. A member
- * bears their share of a split expense; an unsplit expense is its payer's
- * own. A category counts the whole amount. Largest first.
- */
 export function totalSpending(rows: readonly SpendingRow[]): {
   byMember: MemberTotal[]
   byCategory: CategoryTotal[]

@@ -8,12 +8,6 @@ import { buildBillPaymentsColumns } from './bill-payments-columns.js'
 import { useBillTransactions } from './use-bills.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The payments that settle one bill — the card sides of transfers naming
- * it, whatever day they were paid — through the transaction search's
- * `paymentStatementId` filter. Owns its own sorting and paging, beside the
- * charges table of the page.
- */
 export function BillPaymentsTable({
   statementId,
   onMove,

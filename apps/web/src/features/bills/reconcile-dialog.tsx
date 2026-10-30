@@ -10,7 +10,6 @@ import {
 
 import { ReconcileFields } from './reconcile-fields.js'
 
-/** Reconciles one bill against the total printed on the bank's bill. */
 export function ReconcileDialog({
   bill,
   open,

@@ -11,11 +11,6 @@ import { Progress } from '@workspace/ui/components/progress'
 
 import type { TipGuide } from './tip-guides.js'
 
-/**
- * One tip guide as a card: its title and description, then every item —
- * a numbered tip with its body, or, when the item carries a percent, a
- * labeled progress bar showing that share of income.
- */
 export function TipGuideCard({ guide }: { guide: TipGuide }) {
   const { t } = useTranslation()
 

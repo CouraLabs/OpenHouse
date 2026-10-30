@@ -12,13 +12,8 @@ import {
 
 import { changeLocale, DEFAULT_LOCALE } from '@/lib/i18n.js'
 
-/** The locales the switcher offers; one ships today, more land as they are translated. */
 const LOCALES = [DEFAULT_LOCALE] as const
 
-/**
- * The language dropdown; changes apply live and persist across reloads.
- * Extracted from the app header so the auth pages offer the same control.
- */
 export function LocaleSwitcher() {
   const { t, i18n } = useTranslation()
 

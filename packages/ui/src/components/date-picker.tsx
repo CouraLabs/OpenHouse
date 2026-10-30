@@ -13,33 +13,22 @@ import {
 } from '@workspace/ui/components/popover'
 import { toDateFnsLocale } from '@workspace/ui/lib/date-fns-locale'
 
-/** The strings the picker cannot derive — every user-facing label arrives translated. */
 export interface DatePickerLabels {
   placeholder: string
   today: string
 }
 
 export interface DatePickerProps {
-  /** The selected date, local to the browser — `undefined` shows the placeholder. */
   value: Date | undefined
-  /** Called with the picked day, local midnight; persisting converts to UTC. */
   onChange: (date: Date) => void
-  /** The BCP-47 tag the trigger's label and the grid's language follow. */
   locale: string
   labels: DatePickerLabels
-  /** The earliest day the picker offers; earlier days are disabled. */
   disabledBefore?: Date
   id?: string
   disabled?: boolean
   className?: string
 }
 
-/**
- * A full-date picker: a popover wrapping the calendar with month and year
- * dropdowns (`captionLayout="dropdown"`) and a Today button. Label-agnostic —
- * it renders only what the caller passes; the date formatting follows the
- * locale the caller hands over.
- */
 export function DatePicker({
   value,
   onChange,

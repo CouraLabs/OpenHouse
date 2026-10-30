@@ -13,21 +13,12 @@ import { ResetAttemptLimiter } from './reset-attempt-limiter.js'
 import { TokenService } from './token.service.js'
 import { TokenSessionResolver } from './token-session.resolver.js'
 
-/** The auth feature's wiring: its routes — the public ones a session is
- * created through, and the signed-in ones — and the session resolver the
- * auth middleware calls. */
 export interface AuthDeps {
   publicRouter: App
   protectedRouter: App
   sessions: TokenSessionResolver
 }
 
-/**
- * Builds the auth feature's services from the request's dependencies — the
- * explicit composition the DI container once did. The services are cheap
- * objects, rebuilt per request from the same handles; only the limiters'
- * in-memory state is per-isolate, which is the damper it always was.
- */
 export function authDeps(
   db: Database,
   config: Config,

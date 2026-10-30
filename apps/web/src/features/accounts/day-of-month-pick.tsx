@@ -8,10 +8,8 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 
-/** The days of the month a close or due date can fall on. */
 const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, index) => index + 1)
 
-/** A labeled pick of a day of the month, 01–31, or none yet. */
 export function DayOfMonthPick({
   id,
   label,
@@ -40,8 +38,7 @@ export function DayOfMonthPick({
           size="sm"
           aria-invalid={error !== undefined}
         >
-          {/* The selected label renders explicitly — a value set while the
-              popup was closed is not derived from the items alone. */}
+          {}
           <SelectValue placeholder={placeholder}>
             {value != null ? String(value).padStart(2, '0') : undefined}
           </SelectValue>

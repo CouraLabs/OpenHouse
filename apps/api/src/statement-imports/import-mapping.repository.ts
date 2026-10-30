@@ -3,17 +3,9 @@ import type { Database } from '@workspace/db'
 import { importMappings } from '@workspace/db'
 import { importMappingSchema, type ImportMapping } from '@workspace/poco'
 
-/**
- * The CSV mapping saved per account, reached only through the tenant of the
- * session. One row per account: saving again replaces it. The JSON column is
- * parsed with the poco schema on every read, so a mapping written by an older
- * shape is ignored instead of crashing a preview.
- */
 export class ImportMappingRepository {
   constructor(private readonly db: Database) {}
 
-  /** The account's saved mapping, or nothing when none was saved or the
-   * stored one no longer fits the schema. */
   async find(
     tenantId: number,
     accountId: number
@@ -34,7 +26,6 @@ export class ImportMappingRepository {
     return parsed.success ? parsed.data : undefined
   }
 
-  /** Saves the account's mapping, replacing the one before. */
   async save(
     tenantId: number,
     userId: number,

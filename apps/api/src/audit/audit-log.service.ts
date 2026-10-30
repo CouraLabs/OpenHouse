@@ -5,7 +5,6 @@ import {
 import type { LedgerStatement } from '../common/ledger/ledger-batch.js'
 import { AuditLogRepository } from './audit-log.repository.js'
 
-/** Writes the audit log: the implementation behind the `AuditRecorder` port. */
 export class AuditLogService extends AuditRecorder {
   constructor(private readonly log: AuditLogRepository) {
     super()

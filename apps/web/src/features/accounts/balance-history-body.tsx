@@ -10,19 +10,14 @@ import { BalanceHistoryChart } from './balance-history-chart.js'
 import { useBalanceHistory } from './use-reconciliation.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The days the range opens on: the last 30, today included. */
 const DEFAULT_DAYS = 30
 
-/** Shifts a `YYYY-MM-DD` day by whole days; calendar arithmetic in UTC so a
- * zone never shifts the day. */
 function shiftDay(day: string, days: number): string {
   const at = Date.parse(`${day}T00:00:00Z`) + days * 86_400_000
 
   return new Date(at).toISOString().slice(0, 10)
 }
 
-/** The range pickers and the chart of one account's balance history. The
- * range defaults through the tenant's today, never the device's. */
 export function BalanceHistoryBody({ account }: { account: Account }) {
   const { t } = useTranslation()
   const today = useTenantToday()

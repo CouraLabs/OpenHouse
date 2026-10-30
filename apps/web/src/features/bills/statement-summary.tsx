@@ -6,14 +6,6 @@ import { useTranslation } from 'react-i18next'
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 
-/**
- * A bill's figures, in the order a bank bill reads them: what the earlier
- * bills left, this cycle's charges and credits, what was paid, and what is
- * due — every amount in the card's currency. Below them, what became of
- * the amount due: carried to the next bill (a remainder, or a credit when
- * overpaid — counted there, never again here), paid ahead (prepaid), and
- * the bank's minimum and reconciliation, when known.
- */
 export function StatementSummary({
   bill,
   locale,

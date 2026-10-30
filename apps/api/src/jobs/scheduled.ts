@@ -10,20 +10,10 @@ import {
 } from './tenants.js'
 import { logDatabaseSize } from './size-watch.js'
 
-/**
- * The cron trigger handler: given the cron expression that fired, lists the
- * tenants it touches and enqueues one message per tenant. The cron never
- * runs tenant logic itself — it only lists and enqueues, keeping each
- * invocation inside the CPU and subrequest limits, and a failing tenant's
- * job retries alone.
- */
-
-/** The queue producer binding, typed structurally. */
 interface QueueProducer {
   sendBatch(messages: Array<{ kind: string; tenantId: number }>): Promise<void>
 }
 
-/** The jobs each cron expression fans out. */
 async function tenantsForCron(
   db: Database,
   cron: string
@@ -48,7 +38,6 @@ async function tenantsForCron(
   }
 }
 
-/** Enqueues one message per tenant — `sendBatch` caps at 100, so chunk. */
 export async function handleScheduled(
   cron: string,
   env: AppEnv['Bindings']
@@ -56,9 +45,6 @@ export async function handleScheduled(
   const db = createDatabase(env.DB as never)
   const { kind, tenants } = await tenantsForCron(db, cron)
 
-  // The daily balances run is also the size watch: once a day, the row
-  // counts go to the logs (the byte ceiling is read with `wrangler d1
-  // info`; see docs/operations.md).
   if (kind === 'balances') {
     await logDatabaseSize(db)
   }
@@ -70,8 +56,6 @@ export async function handleScheduled(
   const queue = env.JOBS as QueueProducer | undefined
 
   if (queue === undefined) {
-    // A deployment without the queue binding: nothing fans out. (The
-    // binding is static in wrangler.jsonc; this guards a harness.)
     return
   }
 

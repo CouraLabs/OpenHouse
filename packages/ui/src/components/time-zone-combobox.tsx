@@ -13,25 +13,18 @@ import {
   ComboboxList,
 } from '@workspace/ui/components/combobox'
 
-/** One zone the picker offers: the IANA name and its offset-led label. */
 interface TimeZoneOption {
   value: string
   label: string
 }
 
-/** The zones of one region (`America`, `Europe`, …), in label order. */
 interface TimeZoneGroup {
   value: string
   items: TimeZoneOption[]
 }
 
-/** The grouped options, built once — ~400 formatters are not free. */
 let cachedGroups: TimeZoneGroup[] | undefined
 
-/**
- * The zone's current offset as `UTC−03:00`. `longOffset` answers `GMT-03:00`
- * (or a bare `GMT` at zero); the minus becomes a typographic one.
- */
 function offsetOf(timeZone: string, now: Date): string {
   const name =
     new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' })
@@ -42,7 +35,6 @@ function offsetOf(timeZone: string, now: Date): string {
   return `UTC${offset.replace('-', '−')}`
 }
 
-/** The IANA zones grouped by region, each labelled `(UTC−03:00) Sao Paulo`. */
 function timeZoneGroups(): TimeZoneGroup[] {
   if (cachedGroups !== undefined) {
     return cachedGroups
@@ -76,28 +68,17 @@ function timeZoneGroups(): TimeZoneGroup[] {
   return cachedGroups
 }
 
-/** The props `TimeZoneCombobox` takes. */
 export interface TimeZoneComboboxProps {
-  /** The chosen IANA zone, or nothing while unset. */
   value: string | undefined
-  /** Called with the picked IANA zone. */
   onValueChange: (value: string) => void
-  /** The search input's placeholder, translated by the caller. */
   placeholder: string
-  /** What the list says when the search matches nothing. */
   emptyLabel: string
   id?: string
   disabled?: boolean
-  /** Marks the input invalid while the form reports an error on the field. */
   invalid?: boolean
   className?: string
 }
 
-/**
- * A searchable picker of IANA time zones, grouped by region, each option led
- * by the zone's current UTC offset. Label-agnostic: the placeholder and the
- * empty message arrive translated; zone names are IANA identifiers.
- */
 export function TimeZoneCombobox({
   value,
   onValueChange,
@@ -121,7 +102,6 @@ export function TimeZoneCombobox({
       items={groups}
       value={selected}
       onValueChange={(next: TimeZoneOption | null) => {
-        // Clearing is not an option a time zone picker offers.
         if (next !== null) {
           onValueChange(next.value)
         }

@@ -11,18 +11,10 @@ import {
   type TransferFormFieldsProps,
 } from './transfer-form-fields.js'
 
-/** The props `TransferForm` takes. */
 interface TransferFormProps extends TransferFormFieldsProps {
-  /** Whether the dialog is open. */
   open: boolean
 }
 
-/**
- * The transfer dialog: money moving from one account to another, which the
- * API materializes as two transactions. Once one account is chosen, the
- * accounts of another currency disable — a transfer never crosses
- * currencies, and the API enforces it again.
- */
 export function TransferForm({
   open,
   onCancel,

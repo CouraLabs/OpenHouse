@@ -1,12 +1,10 @@
 import type { PushConfig } from '../config/env.js'
 
-/** The browser endpoint and keys a message is encrypted for. */
 export interface PushTarget {
   endpoint: string
   keys: { p256dh: string; auth: string }
 }
 
-/** A push service refusing a message, with the HTTP status it answered. */
 export class PushRejectedError extends Error {
   constructor(
     readonly statusCode: number,
@@ -17,21 +15,13 @@ export class PushRejectedError extends Error {
   }
 }
 
-/** Sends one encrypted message to one push endpoint. Abstract so a spec
- * hands the service a fake; the real one speaks the web push protocol. */
 export abstract class PushTransport {
-  /** Whether the server holds VAPID keys and can push at all. */
   abstract readonly enabled: boolean
 
-  /** The VAPID public key browsers subscribe against. */
   abstract readonly publicKey: string | null
 
-  /** Delivers a payload; rejects with `PushRejectedError` when the push
-   * service answers with an error status. */
   abstract send(target: PushTarget, payload: string): Promise<void>
 }
-
-// --- base64url, both ways, on the platform `atob`/`btoa` the Worker has ---
 
 function base64UrlDecode(value: string): Uint8Array<ArrayBuffer> {
   const base64 = value.replaceAll('-', '+').replaceAll('_', '/')
@@ -69,10 +59,6 @@ function concat(...parts: readonly Uint8Array<ArrayBuffer>[]): Uint8Array<ArrayB
   return joined
 }
 
-// --- VAPID: the ES256 JWT the Authorization header carries ---
-
-/** The VAPID private key: a base64url-encoded P-256 scalar, or a PKCS#8
- * DER the config already carries. */
 async function importPrivateKey(config: PushConfig): Promise<CryptoKey> {
   const raw = base64UrlDecode(config.privateKey)
 
@@ -83,7 +69,6 @@ async function importPrivateKey(config: PushConfig): Promise<CryptoKey> {
         kty: 'EC',
         crv: 'P-256',
         d: base64UrlEncode(raw),
-        // The point the scalar signs for: split out of the server key.
         x: base64UrlEncode(base64UrlDecode(config.publicKey).slice(1, 33)),
         y: base64UrlEncode(base64UrlDecode(config.publicKey).slice(33, 65)),
       },
@@ -93,7 +78,6 @@ async function importPrivateKey(config: PushConfig): Promise<CryptoKey> {
     )
   }
 
-  // Already a PKCS#8 DER: WebCrypto imports it as it stands.
   return crypto.subtle.importKey(
     'pkcs8',
     raw,
@@ -103,11 +87,6 @@ async function importPrivateKey(config: PushConfig): Promise<CryptoKey> {
   )
 }
 
-/**
- * The VAPID authorization the push service checks the request with:
- * `vapid t=<jwt>, k=<publicKey>`. The JWT is ES256 over the origin the
- * message goes to (`aud`), the expiry, and the contact `sub`.
- */
 export async function vapidAuthorization(
   config: PushConfig,
   endpoint: string
@@ -133,9 +112,6 @@ export async function vapidAuthorization(
   return `vapid t=${header}.${payload}.${base64UrlEncode(new Uint8Array(signature))}, k=${config.publicKey}`
 }
 
-// --- RFC 8291: the aes128gcm payload encryption ---
-
-/** HKDF-Expand(HKDF-Extract(salt, ikm), info, length). */
 async function hkdf(
   salt: Uint8Array<ArrayBuffer>,
   ikm: Uint8Array<ArrayBuffer>,
@@ -154,9 +130,6 @@ async function hkdf(
   return new Uint8Array(bits)
 }
 
-/** The record sequence number folded into the nonce (RFC 8291 section 5.2). */
-/** The record sequence number folded into the nonce: an 8-octet
- * big-endian value XORed into the nonce's tail (RFC 8291 section 5.2). */
 function nonceFor(
   nonce: Uint8Array<ArrayBuffer>,
   sequence: number
@@ -170,13 +143,6 @@ function nonceFor(
   return derived
 }
 
-/**
- * Encrypts one message for one subscription, RFC 8291 `aes128gcm`: an
- * ephemeral ECDH key on P-256 against the subscription's public key, the
- * HKDF chain for the content-encryption key and nonce, AES-128-GCM, and
- * the binary framing (16-byte salt, 4-byte record size, empty key id,
- * 4096-byte records). Self-contained, so a spec can round-trip it.
- */
 export async function encryptPayload(
   target: PushTarget,
   payload: string
@@ -190,9 +156,6 @@ export async function encryptPayload(
     false,
     []
   )
-  // The sender's key pair is ephemeral per message; its public point both
-  // rides the header as the key id and pairs with the subscription key in
-  // the HKDF info (RFC 8291 section 5).
   const ephemeral = await crypto.subtle.generateKey(
     { name: 'ECDH', namedCurve: 'P-256' },
     true,
@@ -253,7 +216,6 @@ export async function encryptPayload(
     const record = new Uint8Array(maxPlaintext)
 
     record.set(chunk)
-    // The padding delimiter: 0x02 marks the last record.
     record[chunk.length] = last ? 0x02 : 0x01
 
     const sequence = records.length
@@ -278,8 +240,6 @@ export async function encryptPayload(
   return concat(header, ...records)
 }
 
-/** The real transport, on WebCrypto: the JWT the push service checks the
- * request with, and the RFC 8291 encryption of the body. */
 export class WebPushTransport extends PushTransport {
   readonly enabled: boolean
   readonly publicKey: string | null

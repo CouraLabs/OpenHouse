@@ -7,7 +7,6 @@ import {
 import { NotFoundError } from '../common/errors.js'
 import { PreferencesRepository } from './preferences.repository.js'
 
-/** Saves the signed-in user's own preferences. */
 export class PreferencesService {
   constructor(private readonly preferences: PreferencesRepository) {}
 

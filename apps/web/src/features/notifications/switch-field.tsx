@@ -6,7 +6,6 @@ import {
 } from '@workspace/ui/components/field'
 import { Switch } from '@workspace/ui/components/switch'
 
-/** A labeled on/off switch with an optional line of help beneath. */
 export function SwitchField({
   id,
   label,

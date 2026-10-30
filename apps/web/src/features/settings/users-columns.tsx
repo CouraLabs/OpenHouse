@@ -5,7 +5,6 @@ import type { DataTableColumn } from '@workspace/ui/components/data-table'
 import { Download, KeyRound, RotateCcw, UserMinus, UserX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-/** What the actions column can do to a row, reported upward. */
 export interface UserRowActions {
   onRemove: (user: TenantUser) => void
   onReactivate: (user: TenantUser) => void
@@ -14,13 +13,6 @@ export interface UserRowActions {
   onAnonymize: (user: TenantUser) => void
 }
 
-/**
- * The columns the users table shows: name, email, role, status, the day
- * they joined, and the row actions. The acting owner's own row carries no
- * actions — an owner cannot remove themself, and recovers their own
- * password with recovery codes. Called during the page's render, so the
- * labels arrive translated.
- */
 export function buildUserColumns(
   t: (key: string) => string,
   format: { locale: string; timeZone: string },
@@ -81,9 +73,6 @@ export function buildUserColumns(
   ]
 }
 
-/** The actions cell: reset an active member's password or remove them;
- * reactivate a removed user. Owners get no reset — they hold recovery
- * codes, and the API refuses it. */
 function UserActionsCell({
   user,
   actions,

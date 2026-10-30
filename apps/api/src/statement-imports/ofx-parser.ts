@@ -1,34 +1,21 @@
 import { parseLocalizedAmount, toIsoDay } from '@workspace/poco'
 
-/** One `STMTTRN` of an OFX statement. */
 export interface OfxTransaction {
-  /** `TRNTYPE`: DEBIT, CREDIT, PAYMENT, … — empty when absent. */
   kind: string
-  /** The posted day, `YYYY-MM-DD`. */
   postedOn: string
-  /** `TRNAMT` as a signed money string: negative is money out. */
   amount: string
-  /** `FITID`, the bank's id for the row, or nothing when it has none. */
   fitId: string | null
-  /** `NAME`, else `MEMO`. */
   name: string
-  /** `MEMO` when it adds to a different `NAME`. */
   memo: string | null
 }
 
-/** An OFX file read into its rows. */
 export interface OfxStatement {
-  /** Whether it is a bank (`STMTRS`) or a credit card (`CCSTMTRS`)
-   * statement, or neither was declared. */
   kind: 'bank' | 'card' | 'unknown'
-  /** Every `CURDEF` the file declares, upper-cased. */
   currencies: string[]
   transactions: OfxTransaction[]
-  /** How many `STMTTRN` could not be read (no day or amount). */
   invalid: number
 }
 
-/** Raised for text that is not an OFX file at all. */
 export class OfxFormatError extends Error {
   constructor() {
     super('This file is not a valid OFX statement.')
@@ -38,17 +25,6 @@ export class OfxFormatError extends Error {
 
 const TAG = /<(\/?)([A-Za-z][A-Za-z0-9_.]*)\s*>([^<]*)/g
 
-/**
- * Reads OFX text, both the SGML of OFX 1.x (leaf tags without closing tags,
- * a plain-text header before `<OFX>`) and the XML of OFX 2.x. The reader is a
- * tolerant tokenizer over tags — it never builds a DOM, resolves entities
- * beyond the five predefined ones and numeric references, or evaluates
- * anything, so a hostile file can do no more than yield odd rows.
- *
- * Money out is negative in a bank statement and a charge is negative in a
- * credit card one (`CCSTMTRS`), payments and refunds positive — the same
- * sign rule, so the amount's sign alone says the direction.
- */
 export function parseOfx(text: string): OfxStatement {
   const start = text.search(/<OFX[\s>]/i)
 
@@ -130,8 +106,6 @@ export function parseOfx(text: string): OfxStatement {
   return statement
 }
 
-/** Reads the collected tags of one `STMTTRN`, or `null` when it lacks a
- * valid day or amount. A zero amount moves nothing and is dropped as well. */
 function readTransaction(
   fields: Record<string, string>
 ): OfxTransaction | null {
@@ -165,8 +139,6 @@ function readTransaction(
   }
 }
 
-/** `TRNAMT` uses a dot by the spec, but Brazilian exporters write a comma:
- * whichever separator comes last is the decimal one. */
 function parseOfxAmount(text: string): string | null {
   const decimal = text.lastIndexOf(',') > text.lastIndexOf('.') ? ',' : '.'
 
@@ -181,8 +153,6 @@ const ENTITIES: Record<string, string> = {
   apos: "'",
 }
 
-/** Decodes the five predefined entities and numeric references; any other
- * entity stays as written. */
 function decodeEntities(value: string): string {
   return value.replace(
     /&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,

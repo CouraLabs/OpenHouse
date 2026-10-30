@@ -10,15 +10,10 @@ import {
 
 import { ReconcileForm } from './reconcile-form.js'
 
-/**
- * The dialog an account is reconciled against the bank from. The form mounts
- * only while an account is set, so closing it discards what was typed.
- */
 export function ReconcileDialog({
   account,
   onClose,
 }: {
-  /** The account being reconciled, or nothing while the dialog is closed. */
   account: Account | null
   onClose: () => void
 }) {

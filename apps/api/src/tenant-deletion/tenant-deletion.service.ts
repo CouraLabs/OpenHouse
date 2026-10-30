@@ -15,12 +15,6 @@ import { runBatch } from '../common/ledger/ledger-batch.js'
 import { NotFoundError, BadRequestError, ConflictError } from '../common/errors.js'
 import { TenantDeletionRepository } from './tenant-deletion.repository.js'
 
-/**
- * Tenant deletion: the owner schedules it by typing the tenant's name, the
- * data is hard-deleted 30 days later by a daily job that reads each tenant's
- * own calendar day, and the owner can cancel until then. The one sanctioned
- * exception to soft delete.
- */
 export class TenantDeletionService {
 
   constructor(
@@ -31,7 +25,6 @@ export class TenantDeletionService {
     private readonly clock: Clock
   ) {}
 
-  /** Schedules the deletion 30 days ahead, in the tenant's calendar. */
   async schedule(
     tenantId: number,
     actorId: number,
@@ -65,7 +58,6 @@ export class TenantDeletionService {
     return { deletionDate }
   }
 
-  /** Cancels a scheduled deletion; the data stays. */
   async cancel(tenantId: number, actorId: number): Promise<void> {
     const tenant = await this.tenants.find(tenantId)
     if (tenant?.deletionDate == null) {

@@ -6,10 +6,6 @@ import { useContent } from '@/lib/use-locale.js'
 import { PerkList } from './perk-list.js'
 import { PlanPrice } from './plan-price.js'
 
-/**
- * One hosted plan. The featured plan earns a tag and the solid button; the
- * rest take the outline, so the page keeps a single dark accent per row.
- */
 export function PlanCard({ plan }: { plan: Plan }) {
   const { featuredBadge } = useContent()
 

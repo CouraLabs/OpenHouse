@@ -16,12 +16,6 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The CDI example the sheet walked: a CDI-linked investment pays a share
- * of the DI rate — the DI rate becomes a daily rate, the share comes off
- * it, and the result compounds back into an effective annual rate the
- * savings projection runs on.
- */
 export function CdiExample() {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
@@ -30,9 +24,6 @@ export function CdiExample() {
   const [deposit, setDeposit] = useState('10000.00')
   const [years, setYears] = useState('10')
 
-  // The DI annual rate as a daily business rate, then the product's share
-  // of it, then that share compounded over 252 days — the effective annual
-  // rate the deposit grows by.
   const dailyRate = (1 + (Number(diRate) || 0) / 100) ** (1 / 252) - 1
   const dailyNet = dailyRate * ((Number(share) || 0) / 100)
   const effectiveAnnual = (1 + dailyNet) ** 252 - 1
@@ -113,7 +104,6 @@ export function CdiExample() {
   )
 }
 
-/** One converted figure: the label above the value. */
 function ResultTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5 rounded-md border p-3">

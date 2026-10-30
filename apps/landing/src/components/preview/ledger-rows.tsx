@@ -1,10 +1,5 @@
 import type { LedgerRow } from '@/lib/content.js'
 
-/**
- * A sample ledger grouped by day, as the transactions page lays it out: a
- * monospace day label, then each row's description, category, and signed
- * amount. Income reads by its sign; the sheet has no hue.
- */
 export function LedgerRows({
   days,
 }: {

@@ -16,28 +16,19 @@ import type {
 import { api } from '@/lib/api.js'
 import { STATEMENTS_KEY } from '@/lib/statements.js'
 
-/** Reading a 5 MB file and writing 5,000 rows in one transaction take far
- * longer than an ordinary request: these calls wait up to two minutes. */
 const IMPORT_TIMEOUT_MS = 120_000
 
-/** The key the recent-batches list lives under. */
 const IMPORTS_KEY = ['statement-imports'] as const
 
-/** What a preview asks for: the file and how to read it. */
 export interface PreviewRequest {
   accountId: number
   file: File
-  /** The CSV mapping to read the file with; without one, the account's
-   * saved mapping applies. */
   mapping?: ImportMapping
-  /** Reads the CSV bytes as this encoding while it has no mapping yet. */
   encoding?: ImportEncoding
   delimiter?: ImportDelimiter
-  /** Ignores the saved mapping and answers the mapping step instead. */
   remap?: boolean
 }
 
-/** Uploads a file and answers its preview. Nothing is written. */
 export function useImportPreview() {
   return useMutation({
     mutationFn: ({
@@ -78,8 +69,6 @@ export function useImportPreview() {
   })
 }
 
-/** Commits the picked rows. It moves balances and writes transactions, so
- * the accounts, transactions, and bills refresh. */
 export function useImportCommit() {
   const queryClient = useQueryClient()
 
@@ -94,8 +83,6 @@ export function useImportCommit() {
   })
 }
 
-/** Undoes a whole batch: its rows are soft-deleted and their balance
- * reverted. */
 export function useImportUndo() {
   const queryClient = useQueryClient()
 
@@ -109,7 +96,6 @@ export function useImportUndo() {
   })
 }
 
-/** The account's imports from the last 24 hours that can still be undone. */
 export function useRecentImports(accountId: number) {
   return useQuery({
     queryKey: [...IMPORTS_KEY, 'recent', accountId],
@@ -118,7 +104,6 @@ export function useRecentImports(accountId: number) {
   })
 }
 
-/** Refreshes everything an import or its undo changes. */
 function refreshLedger(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: IMPORTS_KEY })
   void queryClient.invalidateQueries({ queryKey: ['accounts'] })
@@ -126,7 +111,6 @@ function refreshLedger(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: STATEMENTS_KEY })
 }
 
-/** The tenant's ACTIVE categories, by name — what the preview's pickers offer. */
 export function useActiveCategories() {
   return useQuery({
     queryKey: ['categories', 'active'],
@@ -134,7 +118,6 @@ export function useActiveCategories() {
   })
 }
 
-/** The tenant's ACTIVE receivers, by name — what the preview's pickers offer. */
 export function useActiveReceivers() {
   return useQuery({
     queryKey: ['receivers', 'active'],
@@ -142,7 +125,6 @@ export function useActiveReceivers() {
   })
 }
 
-/** One account of the tenant, for the page the import opens on. */
 export function useImportAccount(accountId: number) {
   return useQuery({
     queryKey: ['accounts', accountId],

@@ -10,22 +10,12 @@ import { FieldDescription } from '@workspace/ui/components/field'
 import { TextField } from '@workspace/ui/components/text-field'
 import { ChevronRight } from 'lucide-react'
 
-/** The props `AccountAdvancedFields` takes. */
 interface AccountAdvancedFieldsProps {
-  /** The spread as typed, to warn about while the user types. */
   spreadPct: string | undefined
-  /** The registration of the spread input — the form owns its state. */
   spreadPctInput: Omit<ComponentProps<typeof TextField>, 'type' | 'labelFor'>
   error?: { message?: string }
 }
 
-/**
- * The account form's Advanced group, closed until asked for: the spread the
- * bank or card adds when it converts a foreign amount. Most accounts never
- * convert, so it defaults to 0 and stays out of the way. A spread above
- * `SPREAD_WARNING_PCT` is almost always a typo — the group warns, never
- * refuses. Open from the start when the account already carries a spread.
- */
 export function AccountAdvancedFields({
   spreadPct,
   spreadPctInput,
@@ -34,8 +24,6 @@ export function AccountAdvancedFields({
   const { t } = useTranslation()
   const spread = Number(spreadPct)
   const isHigh = Number.isFinite(spread) && spread > SPREAD_WARNING_PCT
-  // Decided once, from the value the form opened with: typing a spread must
-  // not flip the group's initial state under the user.
   const [initiallyOpen] = useState(spread > 0)
 
   return (

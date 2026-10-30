@@ -5,12 +5,6 @@ import { PageHeader } from '@/components/page-header.js'
 import { AccumulationCard } from './accumulation-card.js'
 import { WithdrawalCard } from './withdrawal-card.js'
 
-/**
- * The financial-independence calculators, ported from the Mobills
- * spreadsheet: the monthly contribution that reaches a target, and the
- * monthly withdrawal an accumulated balance supports. Everything lives in
- * local state — nothing is saved anywhere.
- */
 export function FinancialIndependencePage() {
   const { t } = useTranslation()
 

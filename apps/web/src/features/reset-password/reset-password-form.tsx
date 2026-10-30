@@ -9,19 +9,11 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { ApiError } from '@/lib/api.js'
 import { useResetPassword } from '@/lib/auth.js'
 
-/** The props `ResetPasswordForm` takes. */
 interface ResetPasswordFormProps {
-  /** The code a reset link carried, prefilled; nothing when typed by hand. */
   initialCode?: string
-  /** What to do once the new password is set and the user signed in. */
   onSuccess: () => void
 }
 
-/**
- * The fields of the reset page: the code, the new password, and its
- * confirmation. The rules are the poco schema the API runs, plus the
- * confirmation only the form needs and the messages for empty fields.
- */
 export function ResetPasswordForm({
   initialCode = '',
   onSuccess,
@@ -61,8 +53,6 @@ export function ResetPasswordForm({
       })
       onSuccess()
     } catch (error) {
-      // A wrong, expired, or used code — or one blocked after too many
-      // failures — is the code field's error.
       setError('code', {
         message:
           error instanceof ApiError ? error.message : t('settings.error'),

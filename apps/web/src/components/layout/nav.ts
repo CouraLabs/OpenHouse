@@ -18,38 +18,30 @@ import {
   Wallet,
 } from 'lucide-react'
 
-/**
- * A navigation entry the sidebar renders as a link.
- */
 export type NavItem = {
   key: string
   to: string
   icon?: LucideIcon
 }
 
-/** A navigation entry that expands to reveal nested links. */
 export type CollapsibleNavItem = NavItem & { children: NavItem[] }
 
-/** A labeled subsection inside a navigation group. */
 export type NavSubgroup = {
   key: string
   items: NavItem[]
 }
 
-/** A navigation group: a labeled list of items and subgroups. */
 export type NavGroup = {
   key: string
   items: Array<NavItem | CollapsibleNavItem | NavSubgroup>
 }
 
-/** The home page entry, standing alone above every group. */
 export const DASHBOARD_ITEM: NavItem = {
   key: 'nav.dashboard',
   to: '/',
   icon: LayoutDashboard,
 }
 
-/** The financial records a signed-in user manages, ordered by use: daily activity first, then setup, planning, and tips. */
 export const FINANCIAL_GROUP: NavGroup = {
   key: 'nav.financial',
   items: [

@@ -12,15 +12,6 @@ import { SettingsNav } from './settings-nav.js'
 import { sectionsFor, type SettingsSection } from './settings-sections.js'
 import { UsersSection } from './users-section.js'
 
-/**
- * The Settings page, laid out as an account page: the sections the role
- * may open in a side navigation, the selected one beside it. An owner sees
- * General (time zone, main currency), Users, Data (export and
- * tenant deletion), Preferences, and Security
- * (password and recovery codes); a member sees Preferences and Security
- * (password only). Each section has its own URL,
- * `/settings/<section>`; `/settings` opens the first one the role may see.
- */
 export function SettingsPage() {
   const { t } = useTranslation()
   const session = useSession()
@@ -50,7 +41,7 @@ export function SettingsPage() {
           {active === 'security' ? (
             <div className="flex flex-col gap-6">
               <ChangePasswordForm />
-              {/* Members recover through their owner's reset code. */}
+              {}
               {role === 'owner' ? <RecoveryCodesSection /> : null}
             </div>
           ) : null}

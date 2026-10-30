@@ -12,19 +12,11 @@ import { GoalRepository } from './goal.repository.js'
 import { GoalService } from './goal.service.js'
 import { GoalProgressSource } from './goal-progress.source.js'
 
-/** The goals feature's wiring: its routes, mounted under `/api/goals`, and
- * the `GoalSource` port the upcoming list reads progress through. */
 export interface GoalDeps {
   router: App
-  /** The `GoalSource` port: every ACTIVE goal with its account's balance. */
   progressSource: GoalProgressSource
 }
 
-/**
- * Builds the goals feature's services from the request's dependencies —
- * the explicit composition the DI container once did. The export's audit
- * lines ride the `AuditRecorder` port the audit feature implements.
- */
 export function goalDeps(
   db: Database,
   _config: Config,

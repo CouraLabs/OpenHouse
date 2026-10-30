@@ -31,7 +31,6 @@ import {
   type TransactionRow,
 } from './transaction.repository.js'
 
-/** A purchase as the group routes answer it, before the wire mapping. */
 export interface InstallmentGroupView {
   groupId: string
   rows: TransactionRow[]
@@ -39,14 +38,6 @@ export interface InstallmentGroupView {
   editable: boolean
 }
 
-/**
- * The rules of installment purchases ("parcelado em Nx"): only a credit
- * card expense splits, on a card whose days are set, into 2–48
- * installments, installment `k` on the purchase's first bill plus `k − 1`
- * cycles. Money changes — a new amount or count, deleting or collapsing the
- * whole purchase — need every installment still on an Open bill; the
- * shared fields (name, note, category, receiver) change on every one.
- */
 export class InstallmentService {
   constructor(
     private readonly repository: InstallmentRepository,
@@ -58,11 +49,6 @@ export class InstallmentService {
     private readonly members: HouseholdMembers
   ) {}
 
-  /**
-   * Creates a purchase split into installments — the caller validated the
-   * references and answers the first installment, as a create answers its
-   * row.
-   */
   async create(
     tenantId: number,
     userId: number,
@@ -79,7 +65,6 @@ export class InstallmentService {
       installments.count,
       installments.amountMode
     )
-    // The split is defined once, on the purchase as a whole.
     const groupShares =
       split == null
         ? undefined
@@ -94,7 +79,6 @@ export class InstallmentService {
     return rows[0]
   }
 
-  /** Reads one purchase with its total and whether it is still editable. */
   async find(tenantId: number, groupId: string): Promise<InstallmentGroupView> {
     const today = await this.statements.todayOf(tenantId)
     const group = await this.repository.findGroup(tenantId, groupId, today)
@@ -111,7 +95,6 @@ export class InstallmentService {
     }
   }
 
-  /** Edits a purchase as a whole; 409 on a money change once billed. */
   async update(
     tenantId: number,
     userId: number,
@@ -175,8 +158,6 @@ export class InstallmentService {
     return this.find(tenantId, groupId)
   }
 
-  /** Deletes a purchase's installments: all (409 once billed), or the
-   * remaining ones still Open. */
   async delete(
     tenantId: number,
     userId: number,
@@ -195,8 +176,6 @@ export class InstallmentService {
     )
   }
 
-  /** Refunds a purchase in full: the remaining installments deleted, what
-   * was billed credited on the open bill. */
   async refund(
     tenantId: number,
     userId: number,
@@ -215,11 +194,6 @@ export class InstallmentService {
     )
   }
 
-  /**
-   * Splits a single card expense into installments while its bill is
-   * Open. A recurring rule's row never splits: the rule would generate
-   * its day again.
-   */
   async convert(
     tenantId: number,
     userId: number,
@@ -268,8 +242,6 @@ export class InstallmentService {
     return this.find(tenantId, rows[0].installmentGroupId as string)
   }
 
-  /** Collapses a purchase back into one row while every installment is
-   * Open. */
   async collapse(
     tenantId: number,
     userId: number,
@@ -286,7 +258,6 @@ export class InstallmentService {
     )
   }
 
-  /** Rejects a category or — when set — receiver the tenant cannot use. */
   private async assertReferencesUsable(
     tenantId: number,
     body: Pick<CreateTransactionBody, 'categoryId' | 'receiverId'>
@@ -307,8 +278,6 @@ export class InstallmentService {
   }
 }
 
-/** Resolves a split of a purchase's total, answering 400 when it does not
- * fit. */
 function sharesOf(
   total: string,
   split: NonNullable<CreateTransactionBody['split']>,
@@ -323,8 +292,6 @@ function sharesOf(
   return resolved.shares
 }
 
-/** Only a credit card expense splits, and only on a card whose bills
- * exist — its close and due days set. */
 function assertSplittable(account: Account, type: string): void {
   if (account.type !== 'Credit Card' || type !== 'Expense') {
     throw new ConflictError(
@@ -339,7 +306,6 @@ function assertSplittable(account: Account, type: string): void {
   }
 }
 
-/** Answers a group write's value, or throws its failure as HTTP. */
 function unwrap<T>(outcome: GroupOutcome<T>, groupId: string): T {
   switch (outcome.kind) {
     case 'done':

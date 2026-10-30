@@ -25,22 +25,18 @@ import type {
   TransactionRowActions,
 } from './transaction-grid.js'
 
-/** How the row's money reads: signed, in the row's own currency. */
 function signedAmount(transaction: Transaction, locale: string): string {
   const isIncome = transaction.type === 'Income'
 
   return `${isIncome ? '+' : '\u2212'}${formatMoney(transaction.amount, locale, transaction.currency)}`
 }
 
-/** The color the signed amount carries: the ledger's two directions. */
 function amountTone(transaction: Transaction): string {
   return transaction.type === 'Income'
     ? 'text-primary'
     : 'text-destructive'
 }
 
-/** Whether the row can be split into installments: a card charge on a
- * bill, not part of a purchase or a transfer. */
 function canSplitOf(transaction: Transaction): boolean {
   return (
     transaction.installmentGroupId === null &&
@@ -50,9 +46,6 @@ function canSplitOf(transaction: Transaction): boolean {
   )
 }
 
-/** The secondary row actions as an overflow menu: the installment
- * purchase's menu, the split, and the delete (which still asks for
- * confirmation in the page's dialog) — one button instead of three. */
 function RowActionsMenu({
   transaction,
   actions,
@@ -106,8 +99,6 @@ function RowActionsMenu({
   )
 }
 
-/** One transaction's row: when, category with the account it moved
- * through, description, amount, status, actions. */
 export function TransactionRow({
   transaction,
   locale,
@@ -179,8 +170,7 @@ export function TransactionRow({
         >
           {signedAmount(transaction, locale)}
         </span>
-        {/* The account's balance after this row in date order — computed on
-         * read, so a backdated entry never leaves a stale figure behind. */}
+        {}
         <span
           className="text-xs text-muted-foreground tabular-nums"
           title={t('transactions.running-balance')}
@@ -222,9 +212,6 @@ export function TransactionRow({
   )
 }
 
-/** One transaction as a mobile card row: the name and the amount lead,
- * the category, account, status, and the row's menu follow. The day
- * header above the group carries the date, so the card repeats nothing. */
 export function TransactionCardRow({
   transaction,
   locale,

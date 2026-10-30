@@ -1,11 +1,3 @@
-/**
- * The local-day conversions between the `YYYY-MM-DD` wire shape the goal
- * routes carry and the `Date` the picker works with. Both directions pin to
- * the browser's local day, so a date never shifts across a timezone.
- */
-
-/** Parses a `YYYY-MM-DD` wire date into a local-day `Date`, or nothing when
- * the value is absent or malformed. */
 export function parseDateOnly(
   value: string | null | undefined
 ): Date | undefined {
@@ -25,8 +17,6 @@ export function parseDateOnly(
     : new Date(year, month - 1, day)
 }
 
-/** Formats a `Date` as the `YYYY-MM-DD` wire shape, pinned to the day the
- * browser holds it in. */
 export function formatDateOnly(date: Date): string {
   const year = String(date.getFullYear())
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -35,8 +25,6 @@ export function formatDateOnly(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-/** Formats a `YYYY-MM-DD` wire day for display in a locale — "Dec 5" by
- * default — on the local day, so it never shifts across a timezone. */
 export function formatDayLabel(
   value: string,
   locale: string,

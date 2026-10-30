@@ -18,21 +18,14 @@ import { parseJsonBody } from '../common/validation/parse.js'
 import { GOAL_CSV_COLUMNS } from './goal-csv.js'
 import type { GoalService } from './goal.service.js'
 
-/** How many rows one page of an export reads. */
 const CSV_PAGE_SIZE = 500
 
-/**
- * The goal routes. Everything here reads the tenant and the user from the
- * session, so a client can only ever see or act on its own tenant — the
- * request names no tenant anywhere. Every signed-in role manages goals.
- */
 export function goalRoutes(deps: {
   goals: GoalService
   audit: AuditRecorder
 }): App {
   const router: App = new Hono<AppEnv>()
 
-  /** Creates a goal for the tenant. */
   router.post('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, createGoalSchema)
@@ -43,7 +36,6 @@ export function goalRoutes(deps: {
     )
   })
 
-  /** Searches the tenant's goals, paged, sorted and filtered. */
   router.post('/search', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchGoalsSchema)
@@ -53,10 +45,6 @@ export function goalRoutes(deps: {
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
 
-  /** Streams the tenant's goals as a CSV: every row the search matches,
-   * unpaged, written in the locale of the body. The rows are read page by
-   * page while the response is written, so a large range never sits in
-   * memory, and the export lands in the audit log. */
   router.post('/export', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, exportGoalsSchema)
@@ -85,7 +73,6 @@ export function goalRoutes(deps: {
     return csvResponse(chunks, 'goals')
   })
 
-  /** Reads one goal, deleted rows included. */
   router.get('/:id', async (context) => {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
@@ -93,7 +80,6 @@ export function goalRoutes(deps: {
     return context.json(toWire(await deps.goals.find(session.tenant.id, id)))
   })
 
-  /** Updates a goal. */
   router.put('/', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, updateGoalSchema)
@@ -103,7 +89,6 @@ export function goalRoutes(deps: {
     )
   })
 
-  /** Soft-deletes a goal: its status becomes DELETED. */
   router.delete('/:id', async (context) => {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
@@ -116,8 +101,6 @@ export function goalRoutes(deps: {
   return router
 }
 
-/** Streams the CSV chunks as the download the old exporter answered:
- * `text/csv; charset=utf-8`, offered as a file, read page by page. */
 function csvResponse(chunks: AsyncGenerator<string>, entity: string): Response {
   const encoder = new TextEncoder()
   const body = new ReadableStream<Uint8Array>({
@@ -140,8 +123,6 @@ function csvResponse(chunks: AsyncGenerator<string>, entity: string): Response {
   })
 }
 
-/** Maps a row onto the wire shape: dates cross HTTP as ISO strings. The
- * `date` columns carry no time or zone, so they cross as `YYYY-MM-DD`. */
 function toWire(row: {
   id: number
   name: string

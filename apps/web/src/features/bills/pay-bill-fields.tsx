@@ -20,22 +20,12 @@ import { useTenantToday } from '@/lib/settings.js'
 import { useActiveCategories, usePayBill } from './use-bills.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The payment form of one bill: a transfer into its card that names the
- * bill it settles, so a payment made inside the next period still settles
- * this one. Prefilled from the bill — the tenant's default account when it
- * can pay (same currency, not a card), the amount due, and the due date
- * while it is still ahead, else today — every field editable. The category
- * may stay empty: the API files the payment under "Credit card payment".
- * Mounts fresh with every opening.
- */
 export function PayBillFields({
   bill,
   accounts,
   onClose,
 }: {
   bill: CreditCardStatement
-  /** The accounts that can pay the bill: same currency, not a card. */
   accounts: AccountRef[]
   onClose: () => void
 }) {

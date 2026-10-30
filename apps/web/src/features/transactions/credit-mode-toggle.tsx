@@ -6,11 +6,6 @@ import {
   ToggleGroupItem,
 } from '@workspace/ui/components/toggle-group'
 
-/**
- * Which day the month reads card charges by: the purchase day (accrual,
- * the default) or the due date of the bill they land on (cash — when the
- * money leaves the paying account). Exactly one side is always pressed.
- */
 export function CreditModeToggle({
   value,
   onChange,

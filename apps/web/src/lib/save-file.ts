@@ -1,6 +1,5 @@
 import type { ApiFile } from './api.js'
 
-/** Hands a downloaded file to the browser's save flow. */
 export function saveFile({ blob, filename }: ApiFile): void {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

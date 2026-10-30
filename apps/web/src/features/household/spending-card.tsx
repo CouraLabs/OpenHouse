@@ -5,7 +5,6 @@ import {
   CardTitle,
 } from '@workspace/ui/components/card'
 
-/** One line of a spending list: a label and its formatted total. */
 export interface SpendingLine {
   key: string
   label: string
@@ -13,14 +12,12 @@ export interface SpendingLine {
   color?: string
 }
 
-/** The props `SpendingCard` takes. */
 interface SpendingCardProps {
   title: string
   empty: string
   lines: SpendingLine[]
 }
 
-/** A titled list of spending totals — per member or per category. */
 export function SpendingCard({ title, empty, lines }: SpendingCardProps) {
   return (
     <Card>

@@ -11,33 +11,18 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { SplitSection } from '@/components/split-section.js'
 import { useMainCurrency } from '@/lib/settings.js'
 
-/**
- * The fields the category form holds. The rules come straight from the
- * shared poco schema — the same check the API runs, whose messages are
- * already the UX messages — so the form never re-declares them.
- */
 const categoryFormSchema = createCategorySchema
 
 type CategoryFormValues = z.infer<typeof categoryFormSchema>
 
-/** The props `CategoryForm` takes. */
 interface CategoryFormProps {
-  /** The category being edited, or nothing while creating. */
   category: Category | null
-  /** What a confirmed save should do; the dialog asks before this runs. */
   onSubmit: (body: CreateCategoryBody) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/**
- * The insert and edit form of the categories page: a name, a color, and the
- * buttons. It renders above the table; the page decides when it is open and
- * what a submit saves.
- */
 export function CategoryForm({
   category,
   onSubmit,
@@ -55,8 +40,6 @@ export function CategoryForm({
     formState: { errors },
   } = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
-    // The page keys the form by the category it edits, so switching rows
-    // remounts it with that row's values.
     defaultValues:
       category === null
         ? { name: '', color: '#1D4ED8', defaultSplit: null }
@@ -99,8 +82,7 @@ export function CategoryForm({
           required
         />
       </div>
-      {/* "Rent: 60/40" — new expenses of the category start with it. A
-          default has no fixed amount, so exact amounts are not offered. */}
+      {}
       <SplitSection
         idPrefix="category-split"
         value={defaultSplit}

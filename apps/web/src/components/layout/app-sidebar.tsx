@@ -11,11 +11,6 @@ import { NavButtonItem } from './nav-button-item.js'
 import { NavGroupContent } from './nav-group-content.js'
 import { DASHBOARD_ITEM, FINANCIAL_GROUP } from './nav.js'
 
-/**
- * The signed-in application sidebar: the brand, the dashboard link above the
- * grouped navigation, and this month's income and expenses at its foot.
- * Renders inside `SidebarProvider`; owns no page content.
- */
 export function AppSidebar({ tenantName }: { tenantName: string }) {
   return (
     <Sidebar variant="inset">

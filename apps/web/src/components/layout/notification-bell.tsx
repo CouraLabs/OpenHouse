@@ -12,14 +12,8 @@ import { NotificationCentre } from '@/features/notifications/notification-centre
 import { NotificationPreferencesDialog } from '@/features/notifications/notification-preferences-dialog.js'
 import { useNotifications } from '@/features/notifications/use-notifications.js'
 
-/** The count the badge stops at, as in "9+". */
 const BADGE_MAX = 9
 
-/**
- * The bell in the header: an unread count badge, and the notification
- * centre in a popover whose footer holds "Notification preferences" and
- * the web push switch. Preferences open in a dialog of their own.
- */
 export function NotificationBell() {
   const { t } = useTranslation()
   const notifications = useNotifications()

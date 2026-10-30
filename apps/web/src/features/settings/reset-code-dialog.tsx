@@ -15,19 +15,11 @@ import { CodeShare } from './code-share.js'
 import { resetLinkFor, useIssueResetCode } from './use-reset-codes.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The props `ResetCodeDialog` takes. */
 interface ResetCodeDialogProps {
-  /** The member whose password is being reset, or nothing while closed. */
   user: TenantUser | null
   onClose: () => void
 }
 
-/**
- * Resets a member's password without email: the owner confirms, the API
- * issues a one-time code valid for 30 minutes, and the dialog shows it —
- * once — with its link, to share however the owner likes. The member's
- * current password keeps working until the code is used.
- */
 export function ResetCodeDialog({ user, onClose }: ResetCodeDialogProps) {
   const { t } = useTranslation()
   const { timezone } = useTenantSettings()

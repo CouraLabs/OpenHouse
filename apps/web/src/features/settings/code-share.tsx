@@ -3,21 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@workspace/ui/components/button'
 import { Check, Copy, Share2 } from 'lucide-react'
 
-/** The props `CodeShare` takes. */
 interface CodeShareProps {
   code: string
-  /** The link that carries the code to the page that redeems it. */
   link: string
-  /** The labels that name what is being shared, translated by the caller. */
   labels: { code: string; link: string; shareTitle: string }
 }
 
-/**
- * A one-time code, ready to hand over: the code and the link that carries
- * it, with Copy and — where the browser has one — the native Share sheet.
- * Nothing is emailed; the owner shares it however they like. Invites and
- * password reset codes both pass through here.
- */
 export function CodeShare({ code, link, labels }: CodeShareProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
@@ -32,7 +23,6 @@ export function CodeShare({ code, link, labels }: CodeShareProps) {
     try {
       await navigator.share({ title: labels.shareTitle, url: link })
     } catch {
-      // Dismissing the share sheet rejects; there is nothing to report.
     }
   }
 

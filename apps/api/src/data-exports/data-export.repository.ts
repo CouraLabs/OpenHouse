@@ -20,18 +20,12 @@ import {
   users,
 } from '@workspace/db'
 
-/** A table every tenant owns rows of, authored by a user. */
 type TenantTable = SQLiteTable & {
   id: AnySQLiteColumn
   tenantId: AnySQLiteColumn
   createdBy: AnySQLiteColumn
 }
 
-/**
- * The tenant entities an export carries, keyed by the file they land in.
- * Invite codes and password reset codes are left out on purpose: they are
- * credentials, not data. The order is the file order of the ZIP.
- */
 const ENTITY_TABLES: Readonly<Record<string, TenantTable>> = {
   accounts,
   categories,
@@ -47,8 +41,6 @@ const ENTITY_TABLES: Readonly<Record<string, TenantTable>> = {
   'import-mappings': importMappings,
 }
 
-/** The user columns an export may carry: never the password hash or the
- * refresh-token hash. */
 const USER_COLUMNS = {
   id: users.id,
   name: users.name,
@@ -63,15 +55,9 @@ const USER_COLUMNS = {
 
 type Row = Record<string, unknown>
 
-/**
- * Reads everything the full export packs. Each method takes the tenant
- * explicitly; the user rows are selected column by column so no secret can
- * leave with them.
- */
 export class DataExportRepository {
   constructor(private readonly db: Database) {}
 
-  /** Every file of a tenant export, keyed by file name (without `.json`). */
   async readTenant(tenantId: number): Promise<Record<string, Row[]>> {
     const files: Record<string, Row[]> = {
       tenant: await this.db
@@ -101,7 +87,6 @@ export class DataExportRepository {
     return files
   }
 
-  /** Whether the user belongs to the tenant. */
   async hasUser(tenantId: number, userId: number): Promise<boolean> {
     const rows = await this.db
       .select({ id: users.id })
@@ -111,8 +96,6 @@ export class DataExportRepository {
     return rows.length > 0
   }
 
-  /** The tenant's settings time zone — the one the export's file name
-   * dates itself in. `UTC` when the settings row is missing. */
   async timezoneOf(tenantId: number): Promise<string> {
     const [row] = await this.db
       .select({ timezone: tenantSettings.timezone })
@@ -122,8 +105,6 @@ export class DataExportRepository {
     return row?.timezone ?? 'UTC'
   }
 
-  /** A member's profile and every row they created, keyed like a tenant
-   * export. `undefined` when the user is not in the tenant. */
   async readMember(
     tenantId: number,
     userId: number

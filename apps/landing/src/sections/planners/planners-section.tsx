@@ -4,7 +4,6 @@ import { useContent } from '@/lib/use-locale.js'
 
 import { PlannerRow } from './planner-row.js'
 
-/** The calculators and guides as a ruled list, read like a table of contents. */
 export function PlannersSection() {
   const { planners, plannersIntro } = useContent()
   return (

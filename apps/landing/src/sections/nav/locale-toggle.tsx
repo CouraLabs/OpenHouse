@@ -1,11 +1,6 @@
 import { LOCALE_SHORT } from '@/lib/locale.js'
 import { useLocale } from '@/lib/use-locale.js'
 
-/**
- * Flips between English and Portuguese, sized and bordered like the theme
- * toggle beside it. It shows the active language; the accessible name, in
- * the other language, says what a press does.
- */
 export function LocaleToggle() {
   const { locale, content, setLocale } = useLocale()
 

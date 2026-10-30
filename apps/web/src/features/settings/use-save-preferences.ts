@@ -8,8 +8,6 @@ import type {
 import { api } from '@/lib/api.js'
 import { SESSION_QUERY_KEY } from '@/lib/query.js'
 
-/** Saves the signed-in user's own preferences and folds them into the
- * session user that carries them. */
 export function useSavePreferences() {
   const queryClient = useQueryClient()
 

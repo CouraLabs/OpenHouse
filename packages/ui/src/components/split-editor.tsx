@@ -2,53 +2,34 @@ import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { Input } from '@workspace/ui/components/input'
 
-/** How an expense is shared between members. */
 export type SplitEditorMode = 'equal' | 'percentage' | 'exact'
 
-/** One member taking part in the split; `value` is the percent or amount
- * typed (nothing for an equal split). */
 export interface SplitEditorEntry {
   userId: number
   value?: string
 }
 
-/** The words the editor shows, translated by the caller. */
 export interface SplitEditorLabels {
-  /** Names the mode switch for assistive tech. */
   mode: string
   modes: Record<SplitEditorMode, string>
-  /** Names the value input of a member, e.g. "Bruno's share". */
   valueOf: (name: string) => string
   percentPlaceholder: string
   amountPlaceholder: string
 }
 
-/** The props `SplitEditor` takes. */
 export interface SplitEditorProps {
-  /** Who the expense can be shared with. */
   members: Array<{ id: number; name: string }>
   mode: SplitEditorMode
-  /** The members taking part, in any order. */
   entries: SplitEditorEntry[]
   onModeChange: (mode: SplitEditorMode) => void
   onEntriesChange: (entries: SplitEditorEntry[]) => void
-  /** The resolved share of each member, already formatted for display. */
   preview?: Record<number, string>
-  /** Why the split does not fit yet (percentages off 100, amounts off the
-   * total), or nothing. */
   message?: string
   labels: SplitEditorLabels
-  /** The modes offered; all three when left out. */
   modes?: SplitEditorMode[]
   idPrefix?: string
 }
 
-/**
- * Splits an expense between members: a mode switch (equal, percentage,
- * exact), a checkbox per member, and a value input per chosen member for the
- * non-equal modes. The caller owns the state and the math, and passes the
- * resolved `preview` strings; every word arrives through `labels`.
- */
 export function SplitEditor({
   members,
   mode,

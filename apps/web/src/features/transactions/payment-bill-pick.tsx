@@ -13,13 +13,6 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { useStatementSearch } from '@/lib/statements.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The bill a transfer into a card pays. Nothing picked shows the card's
- * default — its oldest unpaid closed bill, else the open one — which is the
- * same `defaultPaymentStatement` the API settles when the body names none,
- * so the form never has to write the default into its values. A card with
- * no bill yet shows "Current bill": the API opens the one today lands on.
- */
 export function PaymentBillPick({
   cardId,
   value,
@@ -59,7 +52,7 @@ export function PaymentBillPick({
         }}
       >
         <SelectTrigger id="transfer-bill" className="w-full">
-          {/* The label renders explicitly, never from the items alone. */}
+          {}
           <SelectValue>
             {shown === undefined
               ? t('transactions.transfer-bill-current')

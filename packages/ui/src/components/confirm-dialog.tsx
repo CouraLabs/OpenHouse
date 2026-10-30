@@ -9,31 +9,19 @@ import {
   AlertDialogTitle,
 } from '@workspace/ui/components/alert-dialog'
 
-/** The props the confirm dialog takes. */
 interface ConfirmDialogProps {
   open: boolean
   title: string
   description: string
-  /** The label the confirm button carries. */
   confirmLabel: string
-  /** The label the confirm button carries while a request runs. */
   pendingLabel: string
-  /** The label the cancel button carries. */
   cancelLabel: string
-  /** The pending state, which disables the buttons while a request runs. */
   isPending: boolean
-  /** Whether the action is destructive, which the confirm button shows. */
   destructive?: boolean
   onCancel: () => void
   onConfirm: () => void
 }
 
-/**
- * The dialog an action the user must confirm passes through: the caller
- * owns what the action is, what the buttons say, and what happens on
- * confirm — this only asks. A destructive confirm renders in the danger
- * color.
- */
 export function ConfirmDialog({
   open,
   title,

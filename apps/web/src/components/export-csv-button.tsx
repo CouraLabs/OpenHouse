@@ -11,29 +11,18 @@ import { csvLocaleOf } from '@/lib/csv-locale.js'
 import { saveFile } from '@/lib/save-file.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** What the export mutation exposes to whichever control renders it. */
 export interface ExportCsv {
   isPending: boolean
   isError: boolean
   trigger: () => void
 }
 
-/** The props `ExportCsvButton` takes. */
 interface ExportCsvButtonProps {
-  /** The entity's export route, e.g. `/receivers/export`. */
   path: string
-  /** The page's current search args — filters and sort; paging is ignored
-   * by the API. */
   args: object
-  /** A mutation the page already holds, so a second control (e.g. a
-   * mobile overflow menu item) shares its state and error. */
   csv?: ExportCsv
 }
 
-/** The export mutation every list page's toolbar carries: downloads the
- * rows the page's current filters match as a CSV, streamed by the API in
- * the interface's locale (pt-BR: `;`, decimal comma, DD/MM/YYYY; otherwise
- * `,`, `.`, ISO). */
 export function useExportCsv(path: string, args: object): ExportCsv {
   const exportCsv = useMutation({
     mutationFn: () =>
@@ -55,10 +44,6 @@ export function useExportCsv(path: string, args: object): ExportCsv {
   }
 }
 
-/**
- * The toolbar button: downloads the page's rows as a CSV. The pending
- * state names itself and an error is announced under the button.
- */
 export function ExportCsvButton({ path, args, csv }: ExportCsvButtonProps) {
   const localCsv = useExportCsv(path, args)
   const state = csv ?? localCsv
@@ -79,8 +64,6 @@ export function ExportCsvButton({ path, args, csv }: ExportCsvButtonProps) {
   )
 }
 
-/** The same export as an overflow-menu item, sharing the page's mutation
- * state so the pending and error states match the button's. */
 export function ExportCsvMenuItem({
   path,
   args,

@@ -1,19 +1,10 @@
 import type { ImportDelimiter } from '@workspace/poco'
 
-/** The records of a CSV file and the delimiter they were split with. */
 export interface ParsedCsv {
   records: string[][]
   delimiter: Exclude<ImportDelimiter, 'auto'>
 }
 
-/**
- * Reads CSV text (RFC 4180 with the usual bank-export looseness): quoted
- * fields may hold the delimiter, doubled quotes, and line breaks; `\r\n`,
- * `\n`, and `\r` all end a record; blank records are dropped. A delimiter of
- * `auto` is the most frequent of `,` `;` and a tab outside quotes in the
- * first non-blank record. Plain text in, plain strings out — nothing in the
- * file is ever evaluated.
- */
 export function parseCsv(
   text: string,
   delimiter: ImportDelimiter = 'auto'
@@ -81,8 +72,6 @@ export function parseCsv(
   return { records, delimiter: resolved }
 }
 
-/** The delimiter that splits the first non-blank record into most fields,
- * counted outside quotes; a comma on a tie. */
 function detectDelimiter(text: string): Exclude<ImportDelimiter, 'auto'> {
   const counts = { ',': 0, ';': 0, '\t': 0 }
   let quoted = false

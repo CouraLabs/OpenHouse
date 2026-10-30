@@ -10,10 +10,6 @@ import type {
 import { ApiError, api } from './api.js'
 import { SESSION_QUERY_KEY } from './query.js'
 
-/**
- * The session the current cookies resolve to, or `null` when they resolve to
- * none — a 401 from `/auth/me` is an answer, not a failure.
- */
 export function useSession() {
   return useQuery<SessionResponse | null>({
     queryKey: SESSION_QUERY_KEY,
@@ -28,17 +24,12 @@ export function useSession() {
         throw error
       }
     },
-    // The cookie does not expire because the tab is open; the server says
-    // when the session is gone. A network failure still retries: on a page
-    // reload with a momentarily unavailable API, a permanent blank screen is
-    // the alternative.
     staleTime: 60_000,
     retry: 3,
     retryOnMount: true,
   })
 }
 
-/** Starts a session with existing credentials. */
 export function useSignIn() {
   const queryClient = useQueryClient()
 
@@ -54,7 +45,6 @@ export function useSignIn() {
   })
 }
 
-/** Starts a session by creating a tenant or joining one with a code. */
 export function useSignUp() {
   const queryClient = useQueryClient()
 
@@ -70,7 +60,6 @@ export function useSignUp() {
   })
 }
 
-/** Exchanges the refresh cookie for a fresh pair and updates the session. */
 export function useRefresh() {
   const queryClient = useQueryClient()
 
@@ -82,10 +71,6 @@ export function useRefresh() {
   })
 }
 
-/**
- * Changes the signed-in user's password. The API signs out every other
- * session and answers this one's fresh session, which replaces the cache.
- */
 export function useChangePassword() {
   const queryClient = useQueryClient()
 
@@ -101,10 +86,6 @@ export function useChangePassword() {
   })
 }
 
-/**
- * Redeems a reset code for a new password. The API signs out every other
- * session of the user and answers a fresh one for this browser.
- */
 export function useResetPassword() {
   const queryClient = useQueryClient()
 
@@ -120,7 +101,6 @@ export function useResetPassword() {
   })
 }
 
-/** Ends the session server-side and drops it client-side. */
 export function useSignOut() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()

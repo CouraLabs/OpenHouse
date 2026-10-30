@@ -11,14 +11,8 @@ import { SettlementsCard } from './settlements-card.js'
 import { SpendingCard } from './spending-card.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** No window: spending covers everything the household recorded. */
 const ALL_TIME = {}
 
-/**
- * The Household page: what each member and category bore, the balances
- * between members with the settle-up suggestions, and the history of
- * settlements.
- */
 export function HouseholdPage() {
   const { t } = useTranslation()
   const overview = useHouseholdOverview(ALL_TIME)

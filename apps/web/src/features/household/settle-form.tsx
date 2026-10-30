@@ -16,17 +16,11 @@ import { useActiveAccounts } from '@/features/transactions/use-transactions.js'
 import { StringPick } from '@/features/transactions/string-pick.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The props `SettleForm` takes. */
 interface SettleFormProps {
   suggestion: SettleSuggestion
   onClose: () => void
 }
 
-/**
- * The body of the settle-up dialog: the payer's account, and optionally the
- * receiver's. A credit card cannot carry a settlement (the API answers 409),
- * so the card accounts are not offered.
- */
 export function SettleForm({ suggestion, onClose }: SettleFormProps) {
   const { t } = useTranslation()
   const today = useTenantToday()

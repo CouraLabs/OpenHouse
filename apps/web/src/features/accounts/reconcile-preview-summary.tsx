@@ -6,11 +6,6 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * What the ledger computed against what the bank shows: the running balance
- * on the day, the bank's balance, the difference, and the Verify rows still
- * waiting for a check. Display only — the form decides what to do about it.
- */
 export function ReconcilePreviewSummary({
   preview,
 }: {

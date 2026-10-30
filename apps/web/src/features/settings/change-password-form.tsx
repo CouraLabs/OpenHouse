@@ -9,10 +9,6 @@ import { TextField } from '@workspace/ui/components/text-field'
 import { ApiError } from '@/lib/api.js'
 import { useChangePassword } from '@/lib/auth.js'
 
-/**
- * The fields the change-password form holds: the poco schema the API runs,
- * plus the confirmation only the form needs.
- */
 const changePasswordFormSchema = changePasswordSchema
   .safeExtend({ confirmPassword: z.string() })
   .refine((values) => values.confirmPassword === values.newPassword, {
@@ -22,10 +18,6 @@ const changePasswordFormSchema = changePasswordSchema
 
 type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>
 
-/**
- * The Security section every user sees: current, new, and confirmed
- * password. Saving signs out every other session; this one stays.
- */
 export function ChangePasswordForm() {
   const { t } = useTranslation()
   const change = useChangePassword()
@@ -52,8 +44,6 @@ export function ChangePasswordForm() {
       })
       reset()
     } catch (error) {
-      // A wrong current password is the field's error; anything else —
-      // the rate limit, a network failure — shows under the form.
       if (error instanceof ApiError && error.status === 400) {
         setError('currentPassword', { message: error.message })
       }

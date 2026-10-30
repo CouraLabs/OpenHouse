@@ -10,17 +10,10 @@ import {
 } from '@/lib/push.js'
 import { usePushConfig } from './use-notifications.js'
 
-/** The key the browser's own subscription state lives under. */
 const SUBSCRIPTION_KEY = ['push', 'subscription'] as const
 
-/** Why subscribing did not finish. */
 export class PushDeniedError extends Error {}
 
-/**
- * This browser's web push state and the two actions that change it.
- * `enable` is the only thing that opens the browser's permission prompt, so
- * it must be called from a click.
- */
 export function usePushSubscription() {
   const queryClient = useQueryClient()
   const config = usePushConfig()
@@ -68,15 +61,11 @@ export function usePushSubscription() {
   })
 
   return {
-    /** The browser can do push at all. */
     supported,
-    /** The server holds VAPID keys. */
     serverEnabled: config.data?.enabled === true,
-    /** The browser's permission, `denied` when it has no notifications. */
     permission:
       typeof Notification === 'undefined' ? 'denied' : Notification.permission,
     subscribed: subscription.data != null,
-    /** iOS asks for the app on the Home Screen before it allows push. */
     needsInstall: needsHomeScreenInstall(),
     enable,
     disable,

@@ -18,24 +18,13 @@ import {
   type LimitSearch,
 } from './limit.repository.js'
 
-/** A limit row denominated: the tenant's main currency, which every limit
- * is in, filled in for the wire. */
 export type LimitView = LimitRow & { currency: Currency }
 
-/** A limit with what its period has spent, and how many expenses in other
- * currencies were left out of that total. */
 export type LimitUsageView = LimitView & {
   spent: string
   excludedCount: number
 }
 
-/**
- * The rules of limits: a limit must point at a category the tenant owns and
- * has not deleted, it is denominated in the tenant's main currency — limits
- * store no currency of their own — a deleted limit is a status change, and
- * the audit trail records the user the session acted as. The tenant and the
- * user always arrive from the caller — this service never reads a request.
- */
 export class LimitService {
   constructor(
     private readonly repository: LimitRepository,
@@ -45,7 +34,6 @@ export class LimitService {
     private readonly clock: Clock
   ) {}
 
-  /** Creates a limit for the tenant, rejecting a category it cannot use. */
   async create(
     tenantId: number,
     userId: number,
@@ -61,7 +49,6 @@ export class LimitService {
     return { ...row, currency: mainCurrency }
   }
 
-  /** Runs the tenant's paged search. */
   async search(
     tenantId: number,
     args: SearchLimitsArgs
@@ -78,16 +65,6 @@ export class LimitService {
     }
   }
 
-  /**
-   * Reads every ACTIVE limit with what the tenant has already spent against
-   * it — the sum of the expense transactions in its category, from accounts
-   * in the main currency, over the period the limit covers, on the tenant's
-   * calendar day: its own day for a Daily limit, the Monday-based week, the
-   * calendar month, the calendar year. Expenses from accounts in another
-   * currency are not converted yet; they are counted in `excludedCount`
-   * instead. One totals query per period type answers every limit of that
-   * type.
-   */
   async usage(tenantId: number): Promise<LimitUsageView[]> {
     const rows = await this.repository.listActive(tenantId)
 
@@ -95,21 +72,16 @@ export class LimitService {
       return []
     }
 
-    // The periods run on the tenant's calendar, not the server's.
     const settings = await this.settings.findByTenant(tenantId)
     if (settings === undefined) {
       throw new NotFoundError('Settings not found.')
     }
     const today = todayIn(settings.timezone, this.clock.now())
 
-    // One window per period type the tenant actually limits with — never
-    // more queries than the four periods.
     const windows = new Map(
       rows.map((row) => [row.type, periodWindow(row.type, today)])
     )
 
-    // Keyed by `<period>:<categoryId>`: what the period spent in the main
-    // currency, and how many expenses in other currencies it left out.
     const spent = new Map<string, string>()
     const excluded = new Map<string, number>()
 
@@ -139,7 +111,6 @@ export class LimitService {
     }))
   }
 
-  /** Reads one limit — deleted included; the caller decides what to show. */
   async find(tenantId: number, id: number): Promise<LimitView> {
     const [row, mainCurrency] = await Promise.all([
       this.repository.findById(tenantId, id),
@@ -153,8 +124,6 @@ export class LimitService {
     return { ...row, currency: mainCurrency }
   }
 
-  /** Updates a limit, rejecting a category it cannot use. A deleted limit
-   * updates like a missing one: it is gone for the UI. */
   async update(
     tenantId: number,
     userId: number,
@@ -181,7 +150,6 @@ export class LimitService {
     return { ...updated, currency: row.currency }
   }
 
-  /** Soft-deletes a limit. Deleting an already-deleted row is a no-op. */
   async softDelete(
     tenantId: number,
     userId: number,
@@ -191,7 +159,6 @@ export class LimitService {
     await this.repository.softDelete(tenantId, id, userId)
   }
 
-  /** The tenant's main currency — what every limit is denominated in. */
   private async mainCurrencyOf(tenantId: number): Promise<Currency> {
     const settings = await this.settings.findByTenant(tenantId)
 
@@ -202,7 +169,6 @@ export class LimitService {
     return settings.mainCurrency
   }
 
-  /** Rejects a category that is missing or no longer ACTIVE. */
   private async assertCategoryUsable(
     tenantId: number,
     categoryId: number

@@ -1,11 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from 'cn'
 
-/**
- * A call to action as a link: `solid` is the ink pill, `outline` the ghost
- * pill outlined by an inset hairline that inverts on hover. A trailing arrow
- * turns -45deg on hover, pointing up and out.
- */
 export function ButtonLink({
   href,
   children,
@@ -18,7 +13,6 @@ export function ButtonLink({
   children: ReactNode
   variant?: 'solid' | 'outline'
   newTab?: boolean
-  /** Rendered after the label. */
   icon?: ReactNode
   className?: string
 }) {

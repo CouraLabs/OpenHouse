@@ -12,20 +12,8 @@ import { useSignUp } from '@/lib/auth.js'
 import { browserCurrency, browserTimeZone } from '@/lib/settings.js'
 import { TextField } from '@workspace/ui/components/text-field'
 
-/**
- * How the new member arrives: joining an existing household with an invite
- * code, or starting a new one. The choice is explicit — the form shows one
- * field at a time, so nobody faces two ambiguous optional fields.
- */
 type HouseholdChoice = 'join' | 'create'
 
-/**
- * The fields the sign-up form holds. The exclusivity rule — exactly one of
- * household name or invite code — comes from the shared poco schema the API
- * also runs; the form only adds its UX messages for the empty cases and maps
- * the form's two always-present strings onto the shared schema's optional
- * fields.
- */
 function buildSignUpSchema(t: TFunction) {
   return z
     .object({
@@ -45,9 +33,6 @@ function buildSignUpSchema(t: TFunction) {
         .max(72),
     })
     .superRefine((values, ctx) => {
-      // The shared rule, called rather than copied: it runs the same
-      // predicate the API validates with. The form holds both fields as
-      // plain strings, so the empty one is masked to `undefined` first.
       const hasName = values.tenantName.trim() !== ''
       const hasCode = values.tenantCode.trim() !== ''
       if (
@@ -67,18 +52,11 @@ function buildSignUpSchema(t: TFunction) {
 
 type SignUpFormValues = z.infer<ReturnType<typeof buildSignUpSchema>>
 
-/** The props `SignUpForm` takes: what to do when the account exists, and
- * the invite code an invite link carried, if any. */
 interface SignUpFormProps {
   onSuccess: () => void
   defaultTenantCode?: string
 }
 
-/**
- * The fields of the sign-up page: a choice between joining a household with
- * an invite code and starting a new one, the field the choice asks for, then
- * name, email, and password.
- */
 export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
   const { t } = useTranslation()
   const signUp = useSignUp()
@@ -100,8 +78,6 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
     defaultValues: { tenantName: '', tenantCode: defaultTenantCode ?? '' },
   })
 
-  // Switching the choice clears the field it hides, so the exclusivity rule
-  // never trips on a value the member can no longer see.
   const switchChoice = (next: HouseholdChoice) => {
     setChoice(next)
     if (next === 'join') {
@@ -113,8 +89,6 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
   }
 
   const onSubmit = handleSubmit(async (values) => {
-    // The form holds both fields as strings; the API expects exactly one, so
-    // the empty one is left out.
     const body =
       values.tenantCode.trim() !== ''
         ? {
@@ -128,8 +102,6 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
             name: values.name,
             email: values.email,
             password: values.password,
-            // A new household's settings start on this browser's zone and
-            // locale currency; the owner can change both later.
             timezone: browserTimeZone(),
             currency: browserCurrency(),
           }
@@ -155,7 +127,6 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
   })
 
   const choiceItem = (value: HouseholdChoice, label: string) => (
-    // biome-ignore lint/a11y/useSemanticElements: a segmented control of buttons with radio state, keyboard-navigated as buttons
     <button
       key={value}
       type="button"

@@ -10,11 +10,6 @@ import { SidebarCopyright } from './sidebar-copyright.js'
 import { useMonthSummary } from './use-month-summary.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The sidebar's foot: this month's income and expenses across the household's
- * accounts, one tagged group per currency, the main currency first, then
- * the copyright line.
- */
 export function MonthSummaryFooter() {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()

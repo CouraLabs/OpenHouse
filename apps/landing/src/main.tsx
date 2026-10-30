@@ -16,9 +16,6 @@ if (!rootElement) {
   throw new Error('Missing #root element in index.html')
 }
 
-// The theme follows the system and the language the browser until the
-// visitor picks one with the nav toggles; one icon weight for the whole page, so no glyph reads heavier than
-// its neighbor.
 createRoot(rootElement).render(
   <StrictMode>
     <ThemeProvider>

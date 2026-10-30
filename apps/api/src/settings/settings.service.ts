@@ -8,7 +8,6 @@ import type {
 import { ConflictError, NotFoundError } from '../common/errors.js'
 import { SettingsRepository } from './settings.repository.js'
 
-/** Maps a settings row onto the wire shape the session and routes carry. */
 export function toWireSettings(row: TenantSettingsRow): TenantSettings {
   return {
     timezone: row.timezone,
@@ -18,11 +17,6 @@ export function toWireSettings(row: TenantSettingsRow): TenantSettings {
   }
 }
 
-/**
- * Reads and saves the tenant's global settings. Every tenant has its row
- * from sign-up (or the migration), so a missing row is a 404, never a
- * silent default.
- */
 export class SettingsService {
   constructor(private readonly settings: SettingsRepository) {}
 
@@ -35,12 +29,6 @@ export class SettingsService {
     return toWireSettings(row)
   }
 
-  /**
-   * Saves the settings. Limits and goals are denominated in the main
-   * currency, so changing it re-denominates them without converting any
-   * amount: unless the body confirms it, a change that would touch any of
-   * them answers 409 with their counts, for the owner to confirm.
-   */
   async update(
     tenantId: number,
     userId: number,

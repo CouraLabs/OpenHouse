@@ -19,28 +19,13 @@ import { TransactionRepository } from './transaction.repository.js'
 import { TransactionService } from './transaction.service.js'
 import { transactionsRoutes } from './transactions.routes.js'
 
-/**
- * The transactions feature's wiring: the ledger's routes (creates, edits,
- * transfers, settle-ups, installs, deletes, the CSV export), the
- * reconciliation routes, and the services behind them.
- */
 export interface TransactionsDeps {
-  /** Mounted at `/transactions`. */
   router: App
-  /** Mounted at `/reconciliation` — the prefix its routes carried. */
   reconciliationRouter: App
 }
 
-/**
- * Builds the transactions feature's services from the request's
- * dependencies — the explicit composition the DI module once did. The
- * services and repositories are cheap objects, rebuilt per request from the
- * same handles.
- */
 export function transactionsDeps(
   db: Database,
-  /** Unused today — kept in the signature every deps builder shares, so a
-   * rule that needs a secret or a ttl plugs in without a rewrite. */
   _config: Config,
   clock: SystemClock
 ): TransactionsDeps {
@@ -51,8 +36,6 @@ export function transactionsDeps(
   const accounts = new AccountRepository(db)
   const categories = new CategoryRepository(db)
   const receivers = new ReceiverRepository(db)
-  // The household repository is the implementation of the `HouseholdMembers`
-  // port the split and settle-up rules validate through.
   const members = new HouseholdRepository(db)
   const installments = new InstallmentService(
     new InstallmentRepository(db, ledger),

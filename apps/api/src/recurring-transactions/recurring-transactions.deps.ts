@@ -13,23 +13,12 @@ import { RecurringTransactionRepository } from './recurring-transaction.reposito
 import { RecurringTransactionService } from './recurring-transaction.service.js'
 import { recurringTransactionRoutes } from './recurring-transactions.routes.js'
 
-/** The recurring transactions feature's wiring: the rule routes, mounted
- * under `/api/recurring-transactions`, behind the rule service. */
 export interface RecurringTransactionsDeps {
   router: App
 }
 
-/**
- * Builds the recurring transactions feature's services from the request's
- * dependencies — the explicit composition the DI container once did. The
- * services and repositories are cheap objects, rebuilt per request from
- * the same handles. The materialization job does not ride the request: the
- * queue consumer builds it through `runRecurringForTenant`.
- */
 export function recurringTransactionsDeps(
   db: Database,
-  /** Unused today — kept in the signature every deps builder shares, so a
-   * rule that needs a secret or a ttl plugs in without a rewrite. */
   _config: Config,
   _clock: SystemClock
 ): RecurringTransactionsDeps {
@@ -38,8 +27,6 @@ export function recurringTransactionsDeps(
     new ReceiverRepository(db),
     new CategoryRepository(db),
     new AccountRepository(db),
-    // The household repository is the implementation of the
-    // `HouseholdMembers` port the split rules validate through.
     new HouseholdRepository(db)
   )
 

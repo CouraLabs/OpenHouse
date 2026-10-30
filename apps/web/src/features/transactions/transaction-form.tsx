@@ -11,18 +11,10 @@ import {
   type TransactionFormFieldsProps,
 } from './transaction-form-fields.js'
 
-/** The props `TransactionForm` takes. */
 interface TransactionFormProps extends TransactionFormFieldsProps {
-  /** Whether the sheet is open. */
   open: boolean
 }
 
-/**
- * The insert and edit form of the transactions page, in a side sheet: the
- * cards and the grid would be pushed far down by an inline form on this
- * page, and the sheet keeps the month context visible. The account's
- * balance moves with the save — the form never edits `balanceOnDt`.
- */
 export function TransactionForm({
   open,
   onCancel,

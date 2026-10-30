@@ -14,24 +14,16 @@ import { NotFoundError } from '../common/errors.js'
 import { totalSpending } from './household-spending.js'
 import { HouseholdRepository } from './household.repository.js'
 
-/**
- * The household reports: who owes whom, what each member and category
- * cost, and the settle-ups so far. Everything is derived from the
- * transactions on read. The tenant always arrives from the caller.
- */
 export class HouseholdService {
   constructor(
     private readonly repository: HouseholdRepository,
     private readonly settings: SettingsRepository
   ) {}
 
-  /** Lists the household's members, removed ones included. */
   listMembers(tenantId: number): Promise<HouseholdMember[]> {
     return this.repository.listMembers(tenantId)
   }
 
-  /** Everything the Household page shows. Balances always cover all time;
-   * the spending covers the window of `args`. */
   async overview(
     tenantId: number,
     args: HouseholdOverviewArgs
@@ -94,12 +86,6 @@ export class HouseholdService {
     }
   }
 
-  /**
-   * What a member still holds in balances, per currency — the check that
-   * warns before removing someone who owes (or is owed) money. It never
-   * blocks the removal: a removed member's balance stays visible and
-   * settleable.
-   */
   async balanceCheck(
     tenantId: number,
     userId: number

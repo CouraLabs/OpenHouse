@@ -22,17 +22,6 @@ import { SettingsRepository } from '../settings/settings.repository.js'
 import type { JwtTtls } from '../config/env.js'
 import { hashToken, TokenService } from './token.service.js'
 
-/**
- * A hash no password matches, compared against when the email is unknown so
- * a sign-in costs one bcrypt round either way — the response time does not
- * reveal which emails have an account.
- */
-/**
- * The hash no password matches, compared against when the email is unknown
- * so the response cannot be timed to learn which emails exist. Computed on
- * first use — module init is too early for the runtime's crypto in a
- * Worker isolate.
- */
 let noUserHash: string | undefined
 
 function noUserHashOf(): string {
@@ -41,10 +30,6 @@ function noUserHashOf(): string {
   return noUserHash
 }
 
-/**
- * The piece of a user the API shares with the web app: never the password
- * hash, never the refresh token hash.
- */
 export interface PublicUser {
   id: number
   tenantId: number
@@ -56,7 +41,6 @@ export interface PublicUser {
   updatedAt: Date
 }
 
-/** What the tenant the session acts on looks like to the web app. */
 export interface PublicTenant {
   id: number
   name: string
@@ -66,13 +50,6 @@ export interface PublicTenant {
   updatedAt: Date
 }
 
-/**
- * Establishes and maintains sessions: creating tenants with their owner,
- * joining through a code, checking credentials, rotating refresh tokens.
- *
- * Every tenant context comes from the database row of the user the session
- * belongs to — no route ever accepts a tenant id from a client.
- */
 export class AuthService {
   constructor(
     private readonly db: Database,
@@ -81,12 +58,6 @@ export class AuthService {
     private readonly ttls: JwtTtls
   ) {}
 
-  /**
-   * Creates the tenant with its first user, who owns it, and its settings.
-   * All three rows exist or none does: a sign-up that fails halfway leaves
-   * no orphan tenant. The browser sends its time zone and currency; a
-   * client that sends no zone gets `UTC`, left unconfirmed.
-   */
   async signUpWithTenant(body: {
     tenantName: string
     name: string
@@ -97,10 +68,6 @@ export class AuthService {
   }): Promise<SessionResponse> {
     const passwordHash = await bcrypt.hash(body.password, 10)
 
-    // One batch: the tenant, its owner, and its settings exist together or
-    // not at all. The tenant's unique name is the id the later statements
-    // resolve — the plan's subselect form, where a RETURNING result cannot
-    // feed the next statement of the same batch.
     const tenantName = body.tenantName
     const tenantIdByName = sql`(select id from tenants where name = ${tenantName})`
     const stamp = new Date()
@@ -149,18 +116,12 @@ export class AuthService {
     }
 
     if (tenant === undefined || user === undefined || settings === undefined) {
-      // The batch is atomic; reaching this would mean it was not.
       throw new Error('The sign-up batch did not complete.')
     }
 
     return this.sessionResponse(user, tenant, settings)
   }
 
-  /**
-   * Creates a user in the tenant a valid invite code names. The code is
-   * marked used in the same transaction that inserts the user, so it can
-   * never be redeemed twice.
-   */
   async signUpWithCode(body: {
     tenantCode: string
     name: string
@@ -210,7 +171,6 @@ export class AuthService {
       ])) as [TenantCode[], User[]]
 
       if (claimed.length === 0) {
-        // Another request redeemed it between the check above and here.
         throw new ConflictError('This tenant code was already used.')
       }
 
@@ -222,15 +182,6 @@ export class AuthService {
     return this.sessionFor(user)
   }
 
-  /**
-   * Checks the credentials and starts a session. The message is the same
-   * whether the email is unknown or the password is wrong, so the endpoint
-   * cannot be used to discover which emails have signed up.
-   *
-   * An email is unique across every tenant (`users_email_key` on
-   * `lower(email)`), so the lookup finds at most one row — the tenant the
-   * session acts on is that user's, never whichever row came first.
-   */
   async signIn(body: {
     email: string
     password: string
@@ -251,13 +202,6 @@ export class AuthService {
     return this.sessionFor(user)
   }
 
-  /**
-   * Extends the session: verifies the presented refresh token, checks it
-   * against the hash on the user row, and issues the next pair.
-   *
-   * A token that verifies but does not match the stored hash was rotated out
-   * — reuse of a stolen one — and revokes the session outright.
-   */
   async refresh(
     userId: number,
     presentedToken: string
@@ -272,8 +216,6 @@ export class AuthService {
       user.refreshTokenHash === null ||
       user.refreshTokenHash !== (await hashToken(presentedToken))
     ) {
-      // The presented token is not the one this session was issued with.
-      // Revoke everything this user could still have in flight.
       await this.db
         .update(users)
         .set({ refreshTokenHash: null })
@@ -285,18 +227,12 @@ export class AuthService {
     return this.sessionFor(user)
   }
 
-  /** The session response of a request the guard already resolved. */
   async current(session: Session): Promise<SessionResponse> {
     const settings = await this.settings.findByTenant(session.tenant.id)
 
     return this.sessionResponse(session.user, session.tenant, settings)
   }
 
-  /**
-   * Changes the signed-in user's password. The current password must
-   * match; the stored refresh hash is cleared, which signs out every other
-   * session — the caller then issues a fresh pair for this one.
-   */
   async changePassword(
     userId: number,
     body: { currentPassword: string; newPassword: string }
@@ -327,7 +263,6 @@ export class AuthService {
     return this.sessionFor(updated)
   }
 
-  /** Ends the session server-side: the next refresh token stops working. */
   async signOut(userId: number): Promise<void> {
     await this.db
       .update(users)
@@ -335,11 +270,6 @@ export class AuthService {
       .where(eq(users.id, userId))
   }
 
-  /**
-   * Issues the token pair of a session and stores the refresh token's hash on
-   * the user row. Everything a sign-in, sign-up, or refresh ends with goes
-   * through here.
-   */
   async establishSession(
     user: PublicUser | { id: number; role: UserRole },
     rememberMe: boolean
@@ -372,8 +302,6 @@ export class AuthService {
     }
   }
 
-  /** Reads the tenant and settings of a user and shapes their session — a
-   * user a password reset just signed back in, for one. */
   async sessionFor(user: User): Promise<SessionResponse> {
     const [[tenant], settings] = await Promise.all([
       this.db.query.tenants.findMany({
@@ -386,8 +314,6 @@ export class AuthService {
     return this.sessionResponse(user, tenant, settings)
   }
 
-  /** Shapes a user, their tenant, and its settings for the response,
-   * dropping secrets. */
   private sessionResponse(
     user: PublicUser | Omit<User, 'password' | 'refreshTokenHash'>,
     tenant: Tenant | undefined,
@@ -431,12 +357,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Maps the unique-constraint violations of a sign-up to the response the
-   * web app can act on. Saying an email is taken reveals it is registered —
-   * the accepted trade-off for a household app; the sign-up throttle limits
-   * enumeration.
-   */
   private conflictFor(error: unknown): Error {
     if (isUniqueViolation(error, 'users', ['email'])) {
       return new ConflictError('This email already has an account.')
@@ -449,14 +369,9 @@ export class AuthService {
   }
 }
 
-/** The one spelling an email is stored and looked up in. The poco schemas
- * already normalize a body; this keeps every write and read agreeing even
- * for a caller that skipped them. */
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
 }
 
-/** The sign-up conflicts map through the message-based SQLite detection in
- * `common/db-errors.ts`. */
 import { isUniqueViolation } from '../common/db-errors.js'
 import { runBatch } from '../common/ledger/ledger-batch.js'

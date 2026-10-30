@@ -29,23 +29,18 @@ import {
   useSaveReceiver,
 } from './use-receivers.js'
 
-/** The page the tenant's receivers are managed from: the form above the
- * table, the table below, and the delete confirmation in between. */
 export function ReceiversPage() {
   const { t } = useTranslation()
 
-  // The table's state, held here so the search args derive from it.
   const [sorting, setSorting] = useState<SortingState>([])
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 20,
   })
 
-  // The form above the table, and what its buttons are about to do.
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Receiver | null>(null)
   const [deleting, setDeleting] = useState<Receiver | null>(null)
-  // The filter the dialog applies; the args derive from it.
   const [filter, setFilter] = useState<FilterValues>({})
 
   const args = useMemo(
@@ -70,8 +65,6 @@ export function ReceiversPage() {
   const save = useSaveReceiver()
   const remove = useDeleteReceiver()
 
-  // The errors the mutations answer with, read from the state the query
-  // client already holds — no mirror of it in local state.
   const saveError = save.isError
     ? save.error instanceof Error
       ? save.error.message
@@ -83,7 +76,6 @@ export function ReceiversPage() {
       : t('receivers.error')
     : undefined
 
-  // A new sort is a new first page.
   const resetToFirstPage = () => {
     setPagination((current) =>
       current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }
@@ -98,8 +90,6 @@ export function ReceiversPage() {
           setFormOpen(true)
         },
         onDelete: (receiver) => {
-          // Deleting any row cancels the edit in progress: the form would
-          // otherwise keep editing a row the grid no longer holds.
           setFormOpen(false)
           setEditing(null)
           save.reset()
@@ -109,8 +99,6 @@ export function ReceiversPage() {
     [t, save.reset]
   )
 
-  // Saving needs no confirmation: the form's submit is the intent. A failure
-  // leaves the form open, holding the values, with the error shown.
   const submitSave = (body: CreateReceiverBody) => {
     save.mutate(editing === null ? body : { ...body, id: editing.id }, {
       onSuccess: () => {
@@ -130,7 +118,6 @@ export function ReceiversPage() {
     })
   }
 
-  // The page's actions, on the header line: the filter and the insert.
   const toolbar = (
     <>
       <ExportCsvButton path="/receivers/export" args={args} />

@@ -15,31 +15,18 @@ import { useMainCurrency } from '@/lib/settings.js'
 import type { RentVsBuyRow } from './simulate.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The series colors, the validated categorical palette's first two slots —
- * the property takes blue, the rented-and-invested balance takes orange,
- * in a fixed order.
- */
 const PROPERTY_COLOR = '#2a78d6'
 const INVESTMENT_COLOR = '#eb6834'
 
-/** The props `RentVsBuyChart` takes. */
 interface RentVsBuyChartProps {
   rows: RentVsBuyRow[]
-  /** Every nth row the chart keeps — the curves sample past 150 points. */
   sampleStep: number
 }
 
-/**
- * The two patrimonies side by side, month by month: what the property is
- * worth against what the renter's invested balance has grown to.
- */
 export function RentVsBuyChart({ rows, sampleStep }: RentVsBuyChartProps) {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
 
-  // The sample keeps the first row and always the last, so the curves end
-  // at the month the summary quotes.
   const sampled =
     sampleStep <= 1
       ? rows

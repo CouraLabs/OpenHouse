@@ -5,28 +5,19 @@ import type { SearchReceiversArgs } from '@workspace/poco'
 
 import { buildPagedQuery, likePattern } from '../common/search/fetch.helper.js'
 
-/** What a search answers with: the page's rows and how many match in all. */
 export interface ReceiverSearch {
   rows: Receiver[]
   total: number
 }
 
-/** The fields a create or update writes, beyond the audit stamps. */
 export interface ReceiverWrite {
   name: string
   type: Receiver['type']
 }
 
-/**
- * The receiver rows, reached only through the tenant of the session. Every
- * method takes the tenant id explicitly — the repository never decides who
- * is asking. A receiver carries its display name itself; there is nothing
- * to join on.
- */
 export class ReceiverRepository {
   constructor(private readonly db: Database) {}
 
-  /** Inserts a receiver, stamping the audit trail with the acting user. */
   async insert(
     tenantId: number,
     userId: number,
@@ -46,11 +37,6 @@ export class ReceiverRepository {
     return row
   }
 
-  /**
-   * Answers the tenant's ACTIVE person receiver with this name
-   * (case-insensitive), creating it the first time — the receiver a
-   * settle-up recorded as an expense pays.
-   */
   async getOrCreatePerson(
     tenantId: number,
     userId: number,
@@ -72,7 +58,6 @@ export class ReceiverRepository {
     return existing ?? (await this.insert(tenantId, userId, { name, type: 'Person' }))
   }
 
-  /** Runs the paged search a `FetchArgs` describes, over the tenant's rows. */
   async search(
     tenantId: number,
     args: SearchReceiversArgs
@@ -89,8 +74,6 @@ export class ReceiverRepository {
         .select()
         .from(receivers)
         .where(query.where)
-        // The id is the tie-breaker: rows the sort clauses leave equal keep
-        // one order, so a page never shuffles its neighbors.
         .orderBy(...query.orderBy, asc(receivers.id))
         .limit(query.limit)
         .offset(query.offset),
@@ -100,7 +83,6 @@ export class ReceiverRepository {
     return { rows, total: counted.value }
   }
 
-  /** Reads one receiver of the tenant — deleted rows included. */
   async findById(tenantId: number, id: number): Promise<Receiver | undefined> {
     const [row] = await this.db
       .select()
@@ -110,8 +92,6 @@ export class ReceiverRepository {
     return row
   }
 
-  /** Updates a receiver's fields and audit trail. The written columns are
-   * named one by one: the id is GENERATED ALWAYS and must never be in a SET. */
   async update(
     tenantId: number,
     id: number,
@@ -133,7 +113,6 @@ export class ReceiverRepository {
     return row
   }
 
-  /** Soft-deletes a receiver: a status change, stamped like any update. */
   async softDelete(
     tenantId: number,
     id: number,
@@ -148,7 +127,6 @@ export class ReceiverRepository {
     return row
   }
 
-  /** Lists the tenant's ACTIVE receivers by name, for pickers. */
   async listActive(tenantId: number): Promise<Receiver[]> {
     return this.db
       .select()
@@ -159,7 +137,6 @@ export class ReceiverRepository {
       .orderBy(asc(receivers.name))
   }
 
-  /** Translates the wire filter into SQL, always inside the tenant. */
   private filterToSql(tenantId: number, args: SearchReceiversArgs) {
     const conditions = [eq(receivers.tenantId, tenantId)]
 

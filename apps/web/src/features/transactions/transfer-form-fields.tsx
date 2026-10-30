@@ -24,38 +24,19 @@ import { PaymentBillPick } from './payment-bill-pick.js'
 import { useActiveCategories } from './use-transactions.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/**
- * The fields the transfer form holds. The rules come straight from the
- * shared poco schema — the same check the API runs, whose messages are
- * already the UX messages — so the form never re-declares them.
- */
 const transferFormSchema = transferSchema
 
 export type TransferFormValues = z.infer<typeof transferFormSchema>
 
-/** The props `TransferFormFields` takes. */
 export interface TransferFormFieldsProps {
-  /** The tenant's ACTIVE accounts, with the currency each holds. */
   accounts: AccountRef[]
-  /** The day the transfer starts on — the month the grid shows. */
   defaultDt: string
-  /** What a submit should do; the page decides where it saves. */
   onSubmit: (body: TransferFormValues) => void
   onCancel: () => void
-  /** The error the API rejected the last save with, if it did. */
   error?: string
-  /** Whether a save request is in flight, which locks the buttons. */
   isSaving?: boolean
 }
 
-/**
- * The fields of the transfer dialog. Rendered inside the dialog's content,
- * which unmounts on close, so every opening starts from fresh values.
- *
- * A transfer into a credit card is a bill payment: the Bill picker shows,
- * and the category may stay empty — the API files it under "Credit card
- * payment". Any other transfer needs a category.
- */
 export function TransferFormFields({
   accounts,
   defaultDt,
@@ -87,7 +68,6 @@ export function TransferFormFields({
   const to = accounts.find((account) => account.id === toId)
   const paysCard = to?.type === 'Credit Card'
   const chosenCurrency: Currency | undefined = from?.currency ?? to?.currency
-  // The destination excludes the source; both sides share the currency.
   const destinationOptions = accounts.filter(
     (account) =>
       account.id !== fromId &&
@@ -255,7 +235,6 @@ export function TransferFormFields({
   )
 }
 
-/** The values a new transfer starts with: the month the grid shows. */
 function newValues(defaultDt: string): TransferFormValues {
   return {
     fromAccountId: undefined as unknown as number,

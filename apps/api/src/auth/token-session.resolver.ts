@@ -4,14 +4,6 @@ import type { Session } from '../common/session/session.js'
 import { SessionResolver } from '../common/session/session-resolver.js'
 import { TokenService } from './token.service.js'
 
-/**
- * Resolves an access token by verifying its JWT and loading the user and
- * their tenant from the database.
- *
- * The database read on every request is what keeps the tenant context
- * authoritative — the token never carries tenant data, so a user moved
- * between tenants or deactivated never keeps acting on a stale tenant.
- */
 export class TokenSessionResolver extends SessionResolver {
   constructor(
     private readonly tokens: TokenService,

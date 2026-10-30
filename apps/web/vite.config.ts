@@ -6,6 +6,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // The app lives under /app on its domain: the Worker's zone route sends
+  // openhouse.couralabs.dev/app* here, while the landing stays at the root.
+  base: '/app/',
   plugins: [
     react(),
     tailwindcss(),
@@ -28,8 +31,8 @@ export default defineConfig({
         short_name: 'OpenHouse',
         description: 'OpenHouse — the tenant command center.',
         lang: 'en-US',
-        start_url: '/',
-        scope: '/',
+        start_url: '/app/',
+        scope: '/app/',
         display: 'standalone',
         background_color: '#0a0a0a',
         theme_color: '#0a0a0a',

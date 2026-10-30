@@ -15,10 +15,8 @@ import type {
 
 import { api } from '@/lib/api.js'
 
-/** The key every household query lives under. */
 export const HOUSEHOLD_KEY = ['household'] as const
 
-/** The household's members, removed ones included. */
 export function useHouseholdMembers() {
   return useQuery({
     queryKey: [...HOUSEHOLD_KEY, 'members'],
@@ -27,7 +25,6 @@ export function useHouseholdMembers() {
   })
 }
 
-/** The balances, suggestions, spending, and settlements of the page. */
 export function useHouseholdOverview(args: HouseholdOverviewArgs) {
   return useQuery({
     queryKey: [...HOUSEHOLD_KEY, 'overview', args],
@@ -41,7 +38,6 @@ export function useHouseholdOverview(args: HouseholdOverviewArgs) {
   })
 }
 
-/** Reads what a member still holds, so a removal can warn first. */
 export function useMemberBalanceCheck() {
   return useMutation({
     mutationFn: (id: number) =>
@@ -49,7 +45,6 @@ export function useMemberBalanceCheck() {
   })
 }
 
-/** Records a settle-up: a transfer between the members' accounts. */
 export function useSettleUp() {
   const queryClient = useQueryClient()
 

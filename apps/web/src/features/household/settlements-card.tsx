@@ -10,7 +10,6 @@ import {
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The history of recorded settle-ups, newest first. */
 export function SettlementsCard({
   settlements,
 }: {

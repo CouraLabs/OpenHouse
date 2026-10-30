@@ -7,12 +7,6 @@ import { PageHeader } from '@/components/page-header.js'
 import { ImportFlow } from './import-flow.js'
 import { useImportAccount } from './use-statement-imports.js'
 
-/**
- * The statement import of one account, reached from the account's Import
- * action: the page holds the account, the flow holds everything else. The
- * flow mounts keyed by the account, so opening another account's import
- * starts clean.
- */
 export function ImportPage() {
   const { t } = useTranslation()
   const { accountId } = useParams({ from: '/_main/accounts/$accountId/import' })

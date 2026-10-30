@@ -6,16 +6,10 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** Whether a line sums a whole currency rather than naming one account. */
 function isCurrencyLine(line: ProjectedBalance): boolean {
   return line.accountId === null
 }
 
-/**
- * The projected balance of each account and, above them, each currency's
- * total — currencies are never mixed. The first day a balance goes negative
- * is called out: "Checking goes negative on Nov 10 (−R$ 230)".
- */
 export function ProjectedBalances({
   balances,
   from,

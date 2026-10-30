@@ -9,19 +9,11 @@ import { useTranslation } from 'react-i18next'
 import { parseDateOnly } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 
-/** What the actions column can do to a row, reported upward. */
 export interface GoalRowActions {
   onEdit: (goal: Goal) => void
   onDelete: (goal: Goal) => void
 }
 
-/** The columns the goals grid shows: the name, the linked account's
- * name (joined on by the API — never a bare `linkedAccountId`) with a
- * mismatch badge when the account is no longer in the main currency the
- * goal is denominated in, the gauge
- * from the balance toward the target, the deadline, and the row actions.
- * The caller owns what edit and delete do; the columns only route the
- * events. Called during the page's render, so the labels arrive translated. */
 export function buildGoalColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
   locale: string,
@@ -70,8 +62,6 @@ export function buildGoalColumns(
             format={(amount) =>
               formatMoney(String(amount), locale, goal.currency)
             }
-            // The greener the fuller: the fill starts with no color near 0
-            // and reaches full green at the target.
             colorFor={(pct) => `rgba(34, 197, 94, ${(pct / 100).toFixed(2)})`}
             aria-label={t('goals.progress-aria', { name: goal.name })}
           />
@@ -101,7 +91,6 @@ export function buildGoalColumns(
   ]
 }
 
-/** The actions cell: the edit and delete buttons, one per row. */
 function GoalActionsCell({
   goal,
   actions,

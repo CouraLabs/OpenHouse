@@ -3,7 +3,6 @@ import { Wordmark } from '@/components/wordmark.js'
 import { Tick } from '@/components/tick.js'
 import { useContent } from '@/lib/use-locale.js'
 
-/** Wordmark and tagline, the footer links, and the copyright line. */
 export function SiteFooter() {
   const { footer } = useContent()
   return (

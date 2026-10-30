@@ -28,15 +28,8 @@ import {
 import { buildUserColumns } from './users-columns.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The table never sorts; the API answers oldest first. */
 const NO_SORTING: SortingState = []
 
-/**
- * The owner's Users section: the tenant's users with reset password,
- * remove, and reactivate, the Add user dialog that issues an invite, and
- * the invitations still pending. Removing confirms first; nothing a removed
- * user created is lost.
- */
 export function UsersSection() {
   const { t } = useTranslation()
   const session = useSession()
@@ -67,7 +60,6 @@ export function UsersSection() {
         {
           onRemove: (user) => {
             setActive.reset()
-            // Removal is never blocked, but a balance is worth a warning.
             balanceCheck.mutate(user.id)
             setRemoving(user)
           },
@@ -82,17 +74,16 @@ export function UsersSection() {
         }
       ),
     [
-      t, 
-      timezone, 
-      session.data?.user.id, 
-      setActive.reset, 
-      setActive.mutate, 
-      balanceCheck.mutate, 
+      t,
+      timezone,
+      session.data?.user.id,
+      setActive.reset,
+      setActive.mutate,
+      balanceCheck.mutate,
       anonymize.reset
     ]
   )
 
-  // The list is small and whole; the table pages it client-side.
   const allUsers = users.data ?? []
   const page = allUsers.slice(
     pagination.pageIndex * pagination.pageSize,

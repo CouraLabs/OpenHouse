@@ -3,19 +3,13 @@ import type { InviteCode } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { Ban } from 'lucide-react'
 
-/** The props `PendingInvites` takes. */
 interface PendingInvitesProps {
   invites: InviteCode[]
-  /** Formats when a code expires, in the tenant's zone. */
   formatExpiry: (expiresAt: string) => string
   onRevoke: (invite: InviteCode) => void
   isRevoking: boolean
 }
 
-/**
- * The invitations still open — unused and unexpired — with when each one
- * expires and a revoke action. Revoking expires the code at once.
- */
 export function PendingInvites({
   invites,
   formatExpiry,

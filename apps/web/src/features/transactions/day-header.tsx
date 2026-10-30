@@ -2,8 +2,6 @@ import { formatMoney } from '@/lib/format-money.js'
 import type { DayGroup } from './group-by-day.js'
 import type { TransactionGridLabels } from './transaction-grid.js'
 
-/** One day's header: the date, and the day's Incomes / Expenses / Net per
- * currency — one block per currency the day carries. */
 export function DayHeader({
   group,
   locale,

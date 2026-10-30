@@ -6,11 +6,6 @@ import { requireRole } from '../common/session/auth.middleware.js'
 import { parseJsonBody } from '../common/validation/parse.js'
 import type { SettingsService } from './settings.service.js'
 
-/**
- * The tenant's global settings. Every signed-in user reads them — members
- * need the time zone and main currency for correct defaults — and only an
- * owner changes them.
- */
 export function settingsRoutes(deps: { settings: SettingsService }): App {
   const router: App = new Hono<AppEnv>()
 

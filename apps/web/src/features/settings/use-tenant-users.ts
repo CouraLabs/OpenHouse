@@ -3,10 +3,8 @@ import type { TenantUser } from '@workspace/poco'
 
 import { api } from '@/lib/api.js'
 
-/** The key every tenant-user query and mutation lives under. */
 const TENANT_USERS_KEY = ['tenant-users'] as const
 
-/** The tenant's users, removed ones included — owner only. */
 export function useTenantUsers() {
   return useQuery({
     queryKey: TENANT_USERS_KEY,
@@ -14,7 +12,6 @@ export function useTenantUsers() {
   })
 }
 
-/** Removes a user (`deactivate`) or restores one (`reactivate`). */
 export function useSetUserActive() {
   const queryClient = useQueryClient()
 
@@ -30,7 +27,6 @@ export function useSetUserActive() {
   })
 }
 
-/** Anonymizes a removed member: name, email, and password go, rows stay. */
 export function useAnonymizeUser() {
   const queryClient = useQueryClient()
 

@@ -3,11 +3,6 @@ import type { ImportPreview } from '@workspace/poco'
 
 import type { ResolvedRow } from './import-rows.js'
 
-/**
- * The line above the preview table: how many rows will import, how many
- * were left out as already imported or bill payments, and — when the file
- * had lines that could not be read — which ones.
- */
 export function ImportPreviewSummary({
   preview,
   rows,

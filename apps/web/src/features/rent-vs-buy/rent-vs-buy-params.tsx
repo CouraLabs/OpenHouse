@@ -20,13 +20,11 @@ import {
 import type { AmortizationSystem } from './simulate.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-/** The amortization systems the sheet compared. */
 const SYSTEMS: Array<{ value: AmortizationSystem; labelKey: string }> = [
   { value: 'SAC', labelKey: 'rent-vs-buy.params.system-sac' },
   { value: 'PRICE', labelKey: 'rent-vs-buy.params.system-price' },
 ]
 
-/** The props `RentVsBuyParams` takes: every value the page owns. */
 interface RentVsBuyParamsProps {
   propertyValue: string
   downPayment: string
@@ -48,11 +46,6 @@ interface RentVsBuyParamsProps {
   onRentIncreaseChange: (value: string) => void
 }
 
-/**
- * The scenario's inputs: the property and its financing on one row, the
- * rent and the returns on the next. Every rate is quoted a year, the term
- * in months — the same shapes the sheet's green quadrant held.
- */
 export function RentVsBuyParams({
   propertyValue,
   downPayment,
@@ -74,9 +67,6 @@ export function RentVsBuyParams({
   onRentIncreaseChange,
 }: RentVsBuyParamsProps) {
   const { t } = useTranslation()
-  // The trigger's label is rendered here, not derived by base-ui from
-  // `items`: a prefilled value set while the popup was closed would
-  // otherwise fall back to the placeholder.
   const selectedSystem = SYSTEMS.find((choice) => choice.value === system)
 
   return (

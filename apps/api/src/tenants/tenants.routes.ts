@@ -14,19 +14,12 @@ import type { InviteCodeService } from './invite-code.service.js'
 import type { TenantUserRow } from './tenant-user.repository.js'
 import type { TenantUserService } from './tenant-user.service.js'
 
-/**
- * The tenant-scoped routes, all owner-only: invite codes and the tenant's
- * users. Everything here reads the tenant from the session, so an owner can
- * only ever see or act on their own tenant — the client names no tenant
- * anywhere.
- */
 export function tenantsRoutes(deps: {
   inviteCodes: InviteCodeService
   tenantUsers: TenantUserService
 }): App {
   const router: App = new Hono<AppEnv>()
 
-  /** Generates the code the next users of the tenant sign up with. */
   router.post(
     '/invite-codes',
     requireRole(['owner']),
@@ -46,7 +39,6 @@ export function tenantsRoutes(deps: {
     }
   )
 
-  /** Lists the codes the tenant has issued, newest first. */
   router.get('/invite-codes', requireRole(['owner']), async (context) => {
     const session = context.get('session')
     const rows = await deps.inviteCodes.list(session.tenant.id)
@@ -54,7 +46,6 @@ export function tenantsRoutes(deps: {
     return context.json(rows.map(toWireInviteCode))
   })
 
-  /** Revokes an open code: it expires now. */
   router.delete(
     '/invite-codes/:id',
     requireRole(['owner']),
@@ -68,7 +59,6 @@ export function tenantsRoutes(deps: {
     }
   )
 
-  /** Lists the tenant's users, removed ones included. */
   router.get('/users', requireRole(['owner']), async (context) => {
     const session = context.get('session')
     const rows = await deps.tenantUsers.list(session.tenant.id)
@@ -76,7 +66,6 @@ export function tenantsRoutes(deps: {
     return context.json(rows.map(toWireUser))
   })
 
-  /** Removes a user: inactive and signed out, their history intact. */
   router.post(
     '/users/:id/deactivate',
     requireRole(['owner']),
@@ -94,8 +83,6 @@ export function tenantsRoutes(deps: {
     }
   )
 
-  /** Anonymizes a removed member: name, email, and password hash go, the
-   * rows they created stay. */
   router.post(
     '/users/:id/anonymize',
     requireRole(['owner']),
@@ -113,7 +100,6 @@ export function tenantsRoutes(deps: {
     }
   )
 
-  /** Restores a removed user. */
   router.post(
     '/users/:id/reactivate',
     requireRole(['owner']),
@@ -130,7 +116,6 @@ export function tenantsRoutes(deps: {
   return router
 }
 
-/** Maps a code row onto its wire shape. */
 function toWireInviteCode(row: TenantCode): InviteCode {
   return {
     id: row.id,
@@ -141,7 +126,6 @@ function toWireInviteCode(row: TenantCode): InviteCode {
   }
 }
 
-/** Maps a user row onto its wire shape. */
 function toWireUser(row: TenantUserRow): TenantUser {
   return {
     id: row.id,

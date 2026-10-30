@@ -1,4 +1,3 @@
-/** A plan's price in the mono display face with the note under it. */
 export function PlanPrice({ price, note }: { price: string; note: string }) {
   return (
     <div className="flex flex-col">

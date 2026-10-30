@@ -4,26 +4,14 @@ import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { Input } from '@workspace/ui/components/input'
 
 interface NumberFieldProps {
-  /** The label above the input. */
   label: string
   labelFor: string
-  /** The current value, as a plain numeric string like `"10"`; empty while
-   * unset. A decimal point may carry fractions — `"0.8"` — and a comma the
-   * user typed normalizes to a dot. */
   value: string | undefined
-  /** What typing does: hands back the sanitized numeric string. */
   onValueChange: (value: string) => void
   error?: { message?: string }
   required?: boolean
 }
 
-/**
- * One numeric field of a form: label, input, error. Like `MoneyField` the
- * parent form owns the state — the value is a plain string the caller
- * parses, so a rate, a count, or a period flows through untouched. Only
- * digits, one decimal separator (a comma normalizes to a dot), and nothing
- * else survive typing.
- */
 export function NumberField({
   label,
   labelFor,
@@ -57,7 +45,6 @@ export function NumberField({
   )
 }
 
-/** Keeps the digits, the first dot, and turns a comma into a dot. */
 function normalizeNumber(raw: string): string {
   const cleaned = raw.replace(/,/g, '.').replace(/[^0-9.]/g, '')
   const firstDot = cleaned.indexOf('.')

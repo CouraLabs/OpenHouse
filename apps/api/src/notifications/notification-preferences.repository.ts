@@ -6,14 +6,12 @@ import {
   type NotificationPreferences,
 } from '@workspace/poco'
 
-/** A user the reminders can reach, with the preferences that apply. */
 export interface Recipient {
   tenantId: number
   userId: number
   preferences: NotificationPreferences
 }
 
-/** The preference columns a row carries, as the wire shape. */
 function toPreferences(
   row: typeof notificationPreferences.$inferSelect
 ): NotificationPreferences {
@@ -29,14 +27,9 @@ function toPreferences(
   }
 }
 
-/**
- * The per-user reminder preferences. A user who never saved any has no row
- * and gets poco's defaults, so nothing needs seeding at sign-up.
- */
 export class NotificationPreferencesRepository {
   constructor(private readonly db: Database) {}
 
-  /** Reads a user's preferences, the defaults when none were saved. */
   async find(
     tenantId: number,
     userId: number
@@ -56,7 +49,6 @@ export class NotificationPreferencesRepository {
       : toPreferences(row)
   }
 
-  /** Saves a user's preferences, creating the row the first time. */
   async save(
     tenantId: number,
     userId: number,
@@ -74,8 +66,6 @@ export class NotificationPreferencesRepository {
     return toPreferences(row)
   }
 
-  /** Lists every active, non-anonymized user with their preferences — who
-   * the hourly reminder run evaluates. */
   async listRecipients(): Promise<Recipient[]> {
     const rows = await this.db
       .select({
@@ -101,8 +91,6 @@ export class NotificationPreferencesRepository {
     }))
   }
 
-  /** Lists the active, non-anonymized users of one tenant with their
-   * preferences — who the per-tenant reminder job evaluates. */
   async listRecipientsOfTenant(tenantId: number): Promise<Recipient[]> {
     const rows = await this.db
       .select({

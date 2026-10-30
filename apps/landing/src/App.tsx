@@ -9,10 +9,6 @@ import { OpenSourceSection } from '@/sections/open-source/open-source-section.js
 import { PlannersSection } from '@/sections/planners/planners-section.js'
 import { PricingSection } from '@/sections/pricing/pricing-section.js'
 
-/**
- * The landing page: the gray bloom under the sticky
- * nav, then the sections in reading order.
- */
 export function App() {
   return (
     <>

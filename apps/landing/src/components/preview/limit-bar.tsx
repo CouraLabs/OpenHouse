@@ -1,9 +1,5 @@
 import { useInView } from '@/lib/use-in-view.js'
 
-/**
- * A category limit as a hairline-thin bar: the label and spent-of-cap above,
- * the fill scaled in from the left once it scrolls into view.
- */
 export function LimitBar({
   label,
   spent,

@@ -9,11 +9,6 @@ import { InstallmentFields } from './installment-fields.js'
 import { PurchasePreview } from './purchase-preview.js'
 import { useInstallmentActions } from './use-transactions.js'
 
-/**
- * Splits one card expense into installments: the count and whether its
- * amount is the total or each installment, previewed with the same split
- * the API writes. Mounts fresh with every opening.
- */
 export function SplitInstallmentsFields({
   transaction,
   onClose,

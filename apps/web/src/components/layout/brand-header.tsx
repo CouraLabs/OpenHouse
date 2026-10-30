@@ -5,7 +5,6 @@ import { SidebarHeader } from '@workspace/ui/components/sidebar'
 
 import { BrandName } from './brand-name.js'
 
-/** The brand block, linking home: logo mark, app name, tenant name. */
 export function BrandHeader({ tenantName }: { tenantName: string }) {
   return (
     <SidebarHeader>

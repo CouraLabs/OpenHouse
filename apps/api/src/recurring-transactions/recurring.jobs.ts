@@ -12,17 +12,6 @@ import { TransactionRepository } from '../transactions/transaction.repository.js
 import { RecurringTransactionRepository } from './recurring-transaction.repository.js'
 import { RecurringRunService } from './recurring-run.service.js'
 
-/**
- * The recurring materialization for one tenant — the queue job the cron
- * fans out to (one `recurring` message per tenant). It materializes every
- * due rule of the tenant over the last 7 days of the tenant's own
- * calendar, ending on its today, and answers how many rows it created.
- *
- * Idempotent: a day already materialized inserts nothing (the pre-check
- * skips it, and the partial unique index on
- * `(tenant_id, recurring_id, transaction_dt)` makes a lost race answer
- * `undefined`), so a redelivered message redoes nothing.
- */
 export async function runRecurringForTenant(
   db: Database,
   clock: SystemClock,
@@ -38,8 +27,6 @@ export async function runRecurringForTenant(
     new ReceiverRepository(db),
     settings,
     clock,
-    // The household repository is the implementation of the
-    // `HouseholdMembers` port the payer fallback resolves through.
     new HouseholdRepository(db)
   )
 

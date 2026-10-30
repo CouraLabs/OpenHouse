@@ -5,20 +5,13 @@ import { IconWell } from '@/components/icon-well.js'
 import { Reveal } from '@/components/reveal.js'
 import type { Feature } from '@/lib/content.js'
 
-/** The props `FeatureCard` takes. */
 interface FeatureCardProps {
   feature: Feature
-  /** The card's illustration — a small, true-to-the-app slice. */
   children?: ReactNode
-  /** Grid spans; the bento decides each card's footprint. */
   className?: string
   index?: number
 }
 
-/**
- * One bento card: the icon well and title on top, the body, then the
- * illustration right under it. Lifts by a hair on hover.
- */
 export function FeatureCard({
   feature,
   children,
