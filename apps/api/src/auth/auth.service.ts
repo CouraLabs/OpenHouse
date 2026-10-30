@@ -30,6 +30,7 @@ import type { TierGate } from '../common/tiers/tier-gate.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import type { JwtTtls } from '../config/env.js'
 import { hashToken, TokenService } from './token.service.js'
+import { UserSessionRepository } from './user-session.repository.js'
 
 let noUserHash: string | undefined
 
@@ -67,7 +68,8 @@ export class AuthService {
     private readonly ttls: JwtTtls,
     private readonly requireVerifiedEmail: boolean,
     private readonly newTenantTier: TierLevel,
-    private readonly tiers: TierGate
+    private readonly tiers: TierGate,
+    private readonly userSessions: UserSessionRepository
   ) {}
 
   async signUpWithTenant(body: {
@@ -240,17 +242,16 @@ export class AuthService {
       where: { id: userId },
       limit: 1,
     })
-    if (
-      user === undefined ||
-      !user.isActive ||
-      user.refreshTokenHash === null ||
-      user.refreshTokenHash !== (await hashToken(presentedToken))
-    ) {
-      await this.db
-        .update(users)
-        .set({ refreshTokenHash: null })
-        .where(eq(users.id, userId))
+    if (user === undefined || !user.isActive) {
+      throw new UnauthorizedError('Session expired or invalid.')
+    }
 
+    const presentedHash = await hashToken(presentedToken)
+    const known =
+      (await this.userSessions.find(userId, presentedHash, new Date())) !==
+        undefined || user.refreshTokenHash === presentedHash
+
+    if (!known) {
       throw new UnauthorizedError('Session expired or invalid.')
     }
 
@@ -290,45 +291,79 @@ export class AuthService {
       .where(eq(users.id, userId))
       .returning()
 
+    await this.userSessions.closeAll(userId)
+
     return this.sessionFor(updated)
   }
 
-  async signOut(userId: number): Promise<void> {
-    await this.db
-      .update(users)
-      .set({ refreshTokenHash: null })
-      .where(eq(users.id, userId))
+  async signOut(
+    userId: number,
+    presentedToken: string | undefined
+  ): Promise<void> {
+    if (presentedToken === undefined || presentedToken === '') {
+      return
+    }
+
+    const presentedHash = await hashToken(presentedToken)
+
+    await this.userSessions.close(userId, presentedHash)
+    await this.userSessions.claimLegacy(userId, presentedHash)
   }
 
   async establishSession(
-    user: PublicUser | { id: number; role: UserRole },
-    rememberMe: boolean
+    session: SessionResponse,
+    rememberMe: boolean,
+    previousToken?: string
   ): Promise<{
     accessToken: string
     refreshToken: string
     accessMaxAgeS: number
     refreshMaxAgeS: number
   }> {
-    const accessToken = await this.tokens.signAccessToken(user.id)
+    const userId = session.user.id
+    const accessToken = await this.tokens.signAccessToken(userId)
     const { token: refreshToken } = await this.tokens.signRefreshToken(
-      user.id,
+      userId,
       rememberMe
     )
-    await this.db
-      .update(users)
-      .set({
-        refreshTokenHash: await hashToken(refreshToken),
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, user.id))
+    const refreshMaxAgeS = rememberMe
+      ? this.ttls.rememberRefreshTtlS
+      : this.ttls.refreshTtlS
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + refreshMaxAgeS * 1000)
+    const tokenHash = await hashToken(refreshToken)
+
+    if (previousToken === undefined) {
+      await this.userSessions.open(
+        userId,
+        tokenHash,
+        expiresAt,
+        tierPlan(session.tenant.tier).multipleSessions
+      )
+    } else {
+      const previousHash = await hashToken(previousToken)
+      const rotated = await this.userSessions.rotate(
+        userId,
+        previousHash,
+        tokenHash,
+        expiresAt,
+        now
+      )
+
+      if (!rotated) {
+        if (!(await this.userSessions.claimLegacy(userId, previousHash))) {
+          throw new UnauthorizedError('Session expired or invalid.')
+        }
+
+        await this.userSessions.open(userId, tokenHash, expiresAt, true)
+      }
+    }
 
     return {
       accessToken,
       refreshToken,
       accessMaxAgeS: this.ttls.accessTtlS,
-      refreshMaxAgeS: rememberMe
-        ? this.ttls.rememberRefreshTtlS
-        : this.ttls.refreshTtlS,
+      refreshMaxAgeS,
     }
   }
 

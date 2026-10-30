@@ -22,6 +22,7 @@ import { SignInAttemptRepository } from './sign-in-attempt.repository.js'
 import { SignInGuard } from './sign-in-guard.js'
 import { TokenService } from './token.service.js'
 import { TokenSessionResolver } from './token-session.resolver.js'
+import { UserSessionRepository } from './user-session.repository.js'
 
 export interface AuthDeps {
   publicRouter: App
@@ -44,7 +45,8 @@ export function authDeps(
     config.ttls,
     config.features.emailVerification,
     config.environment === 'development' ? DEVELOPER_TIER : FREE_TIER,
-    tierGateFor(db, clock)
+    tierGateFor(db, clock),
+    new UserSessionRepository(db)
   )
   const passwordResets = new PasswordResetService(
     new PasswordResetRepository(db),

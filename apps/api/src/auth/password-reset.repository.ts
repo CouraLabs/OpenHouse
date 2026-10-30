@@ -6,7 +6,7 @@ import type {
   ResetCodeKind,
   User,
 } from '@workspace/db'
-import { passwordResetCodes, users } from '@workspace/db'
+import { passwordResetCodes, userSessions, users } from '@workspace/db'
 
 function isOpen(now: Date) {
   return and(
@@ -93,9 +93,10 @@ export class PasswordResetRepository {
         .set({ password: passwordHash, refreshTokenHash: null, updatedAt: now })
         .where(and(eq(users.id, userId), eq(users.isActive, true)))
         .returning(),
+      this.db.delete(userSessions).where(eq(userSessions.userId, userId)),
     ])
 
-    const [claimed, user] = results as [PasswordResetCode[], User[]]
+    const [claimed, user] = results as unknown as [PasswordResetCode[], User[]]
 
     if (user.length === 0) {
       return { kind: 'userGone' }

@@ -55,9 +55,14 @@ export function authRoutes(deps: {
   async function establish(
     context: import('hono').Context<AppEnv>,
     session: SessionResponse,
-    rememberMe: boolean
+    rememberMe: boolean,
+    previousToken?: string
   ): Promise<SessionResponse> {
-    const issued = await deps.auth.establishSession(session.user, rememberMe)
+    const issued = await deps.auth.establishSession(
+      session,
+      rememberMe,
+      previousToken
+    )
     const options = baseCookieOptions(context.req.raw.url)
 
     setCookie(context, ACCESS_COOKIE, issued.accessToken, {
@@ -185,7 +190,9 @@ export function authRoutes(deps: {
       presented
     )
 
-    return context.json(await establish(context, refreshed, claims.rem))
+    return context.json(
+      await establish(context, refreshed, claims.rem, presented)
+    )
   })
 
   publicRouter.post('/password/reset', async (context) => {
@@ -201,7 +208,7 @@ export function authRoutes(deps: {
 
   protectedRouter.post('/sign-out', async (context) => {
     const session = context.get('session')
-    await deps.auth.signOut(session.user.id)
+    await deps.auth.signOut(session.user.id, getCookie(context, REFRESH_COOKIE))
 
     deleteCookie(context, ACCESS_COOKIE, { path: '/' })
     deleteCookie(context, REFRESH_COOKIE, { path: '/' })

@@ -33,6 +33,12 @@ describe('tier plans', () => {
     })
   })
 
+  it('allows several signed-in devices on Developer, Pro and Max only', () => {
+    expect(
+      [-1, 0, 1, 2, 3].map((level) => tierPlan(level).multipleSessions)
+    ).toEqual([true, false, false, true, true])
+  })
+
   it('falls back to Free for an unknown level', () => {
     expect(tierPlan(42).name).toBe('Free')
   })

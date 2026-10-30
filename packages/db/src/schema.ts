@@ -111,6 +111,24 @@ export const users = sqliteTable(
   ]
 )
 
+export const userSessions = sqliteTable(
+  'user_sessions',
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: dt('expires_at').notNull(),
+    createdAt: dt('created_at').notNull().default(NOW),
+    lastUsedAt: dt('last_used_at').notNull().default(NOW),
+  },
+  (table) => [
+    uniqueIndex('user_sessions_token_hash_key').on(table.tokenHash),
+    index('user_sessions_user_id_idx').on(table.userId),
+  ]
+)
+
 export const signInAttempts = sqliteTable('sign_in_attempts', {
   key: text().primaryKey(),
   lastAttemptAt: dt('last_attempt_at').notNull(),
@@ -199,6 +217,7 @@ export type Tenant = typeof tenants.$inferSelect
 export type NewTenant = typeof tenants.$inferInsert
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
+export type UserSession = typeof userSessions.$inferSelect
 export type TenantCode = typeof tenantCodes.$inferSelect
 export type NewTenantCode = typeof tenantCodes.$inferInsert
 export type TenantSettingsRow = typeof tenantSettings.$inferSelect
@@ -227,9 +246,7 @@ export const limits = sqliteTable(
     amount: money().notNull(),
     type: text().$type<LimitType>().notNull(),
   },
-  (table) => [
-    index('limits_tenant_id_idx').on(table.tenantId),
-  ]
+  (table) => [index('limits_tenant_id_idx').on(table.tenantId)]
 )
 
 export type Limit = typeof limits.$inferSelect
@@ -260,9 +277,7 @@ export const accounts = sqliteTable(
       .default(sql`current_date`),
     reconciledThrough: day('reconciled_through'),
     currency: text().$type<Currency>().notNull(),
-    spreadPct: money('spread_pct')
-      .notNull()
-      .default('0.00'),
+    spreadPct: money('spread_pct').notNull().default('0.00'),
     limit: money(),
     closeDay: integer('close_day'),
     dueDay: integer('due_day'),
@@ -286,8 +301,14 @@ export const accounts = sqliteTable(
       sql`${table.spreadPct} >= 0 and ${table.spreadPct} <= 10000`
     ),
     check('accounts_name_length', sql`length(${table.name}) <= 255`),
-    check('accounts_agency_length', sql`${table.agency} is null or length(${table.agency}) <= 255`),
-    check('accounts_number_length', sql`${table.number} is null or length(${table.number}) <= 34`),
+    check(
+      'accounts_agency_length',
+      sql`${table.agency} is null or length(${table.agency}) <= 255`
+    ),
+    check(
+      'accounts_number_length',
+      sql`${table.number} is null or length(${table.number}) <= 34`
+    ),
   ]
 )
 
@@ -437,9 +458,7 @@ export const recurringTransactions = sqliteTable(
     paidByUserId: integer('paid_by_user_id').references(() => users.id),
     defaultSplit: json('default_split').$type<Record<string, unknown>>(),
   },
-  (table) => [
-    index('recurring_transactions_tenant_id_idx').on(table.tenantId),
-  ]
+  (table) => [index('recurring_transactions_tenant_id_idx').on(table.tenantId)]
 )
 
 export type RecurringTransaction = typeof recurringTransactions.$inferSelect
@@ -583,10 +602,7 @@ export const transactionSplits = sqliteTable(
     uniqueIndex('transaction_splits_member_key')
       .on(table.transactionId, table.userId)
       .where(sql`status = 'ACTIVE'`),
-    check(
-      'transaction_splits_share_positive',
-      sql`${table.share} > 0`
-    ),
+    check('transaction_splits_share_positive', sql`${table.share} > 0`),
   ]
 )
 
@@ -665,9 +681,7 @@ export const auditLog = sqliteTable(
     details: json().$type<Record<string, unknown>>().notNull().default({}),
     createdDt: dt('created_dt').notNull().default(NOW),
   },
-  (table) => [
-    index('audit_log_tenant_id_idx').on(table.tenantId, table.id),
-  ]
+  (table) => [index('audit_log_tenant_id_idx').on(table.tenantId, table.id)]
 )
 
 export type AuditLogRow = typeof auditLog.$inferSelect

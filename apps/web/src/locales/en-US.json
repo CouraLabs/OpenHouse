@@ -1235,6 +1235,7 @@
       "feature-history": "Last {{count}} months of transactions",
       "feature-history-unlimited": "Unlimited transaction history",
       "feature-messaging": "Telegram and WhatsApp integration",
+      "feature-sessions": "Signed in on several devices at once",
       "feature-ai": "AI integration",
       "feature-assistant": "Household Assistant"
     }

@@ -230,6 +230,27 @@ function agentOf(app: TestApp, cookieJar: { value: string }): Agent {
   }
 }
 
+/** Signs an existing user in from a fresh browser and answers its agent. */
+export async function signIn(
+  app: TestApp,
+  email: string,
+  password = 'password-a'
+): Promise<Agent> {
+  const agent = agentOf(app, { value: '' })
+  const response = await agent.post('/api/auth/sign-in', {
+    email,
+    password,
+    turnstileToken: turnstileToken('login'),
+  })
+  if (response.status !== 200) {
+    throw new Error(
+      `sign-in failed: ${response.status} ${JSON.stringify(response.body)}`
+    )
+  }
+
+  return agent
+}
+
 /** Signs up a new tenant with its owner, confirms the email, and answers
  * the signed-in agent. */
 export async function signUp(

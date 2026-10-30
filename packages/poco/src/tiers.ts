@@ -38,6 +38,7 @@ export interface TierPlan {
   messagingIntegration: boolean
   ai: AiAccess
   householdAssistant: boolean
+  multipleSessions: boolean
 }
 
 const FREE_ITEMS = 2
@@ -61,6 +62,7 @@ export const TIER_PLANS: Record<TierLevel, TierPlan> = {
     messagingIntegration: true,
     ai: 'full',
     householdAssistant: true,
+    multipleSessions: true,
   },
   0: {
     level: 0,
@@ -76,6 +78,7 @@ export const TIER_PLANS: Record<TierLevel, TierPlan> = {
     messagingIntegration: false,
     ai: 'none',
     householdAssistant: false,
+    multipleSessions: false,
   },
   1: {
     level: 1,
@@ -91,6 +94,7 @@ export const TIER_PLANS: Record<TierLevel, TierPlan> = {
     messagingIntegration: false,
     ai: 'none',
     householdAssistant: false,
+    multipleSessions: false,
   },
   2: {
     level: 2,
@@ -106,6 +110,7 @@ export const TIER_PLANS: Record<TierLevel, TierPlan> = {
     messagingIntegration: true,
     ai: 'limited',
     householdAssistant: false,
+    multipleSessions: true,
   },
   3: {
     level: 3,
@@ -121,6 +126,7 @@ export const TIER_PLANS: Record<TierLevel, TierPlan> = {
     messagingIntegration: true,
     ai: 'limited',
     householdAssistant: true,
+    multipleSessions: true,
   },
 }
 

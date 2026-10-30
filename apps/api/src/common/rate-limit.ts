@@ -20,7 +20,11 @@ export async function limitRequest(
 ): Promise<void> {
   const binding = env[bindingNames[namespace]] as RateLimitBinding | undefined
 
-  if (binding === undefined || clientAddress === '') {
+  if (
+    env.ENVIRONMENT === 'development' ||
+    binding === undefined ||
+    clientAddress === ''
+  ) {
     return
   }
 

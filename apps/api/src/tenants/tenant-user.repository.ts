@@ -1,12 +1,16 @@
 import { and, asc, eq, gt, isNull, or } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import type { Database, User } from '@workspace/db'
-import { runBatch, type LedgerStatement } from '../common/ledger/ledger-batch.js'
+import {
+  runBatch,
+  type LedgerStatement,
+} from '../common/ledger/ledger-batch.js'
 import {
   calendarFeeds,
   notifications,
   passwordResetCodes,
   pushSubscriptions,
+  userSessions,
   users,
 } from '@workspace/db'
 
@@ -70,6 +74,10 @@ export class TenantUserRepository {
       )
       .returning(PUBLIC_COLUMNS)
 
+    if (row !== undefined) {
+      await this.db.delete(userSessions).where(eq(userSessions.userId, id))
+    }
+
     return row
   }
 
@@ -83,6 +91,10 @@ export class TenantUserRepository {
       .set({ isActive, refreshTokenHash: null, updatedAt: new Date() })
       .where(and(eq(users.tenantId, tenantId), eq(users.id, id)))
       .returning(PUBLIC_COLUMNS)
+
+    if (row !== undefined) {
+      await this.db.delete(userSessions).where(eq(userSessions.userId, id))
+    }
 
     return row
   }
@@ -113,6 +125,7 @@ export class TenantUserRepository {
     }
 
     await runBatch(this.db, [
+      this.db.delete(userSessions).where(eq(userSessions.userId, id)),
       this.db.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, id)),
       this.db.delete(calendarFeeds).where(eq(calendarFeeds.userId, id)),
       this.db.delete(notifications).where(eq(notifications.userId, id)),

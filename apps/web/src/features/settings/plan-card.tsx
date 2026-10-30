@@ -49,6 +49,10 @@ export function PlanCard({ plan, current }: PlanCardProps) {
       label: t('settings.plan.feature-messaging'),
       included: plan.messagingIntegration,
     },
+    {
+      label: t('settings.plan.feature-sessions'),
+      included: plan.multipleSessions,
+    },
     { label: t('settings.plan.feature-ai'), included: plan.ai !== 'none' },
     {
       label: t('settings.plan.feature-assistant'),

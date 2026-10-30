@@ -402,6 +402,10 @@ export const ptBR: Content = {
         { label: '1 importação de extrato e 1 exportação por mês' },
         { label: 'Todos os planejadores e guias' },
         { label: 'Membros da casa', included: false },
+        {
+          label: 'Conectado em vários aparelhos ao mesmo tempo',
+          included: false,
+        },
       ],
       cta: { label: 'Comece grátis', href: SIGN_UP_URL },
     },
@@ -416,6 +420,10 @@ export const ptBR: Content = {
         { label: 'Todo o histórico de transações' },
         { label: '5 importações de extrato e 5 exportações por mês' },
         { label: 'Todos os planejadores e guias' },
+        {
+          label: 'Conectado em vários aparelhos ao mesmo tempo',
+          included: false,
+        },
       ],
       cta: { label: 'Entre no acesso antecipado', href: SIGN_UP_URL },
       featured: true,
@@ -427,6 +435,7 @@ export const ptBR: Content = {
       priceNote: 'por mês, mais R$ 2 por membro extra',
       perks: [
         { label: 'Tudo do Plus' },
+        { label: 'Conectado em vários aparelhos ao mesmo tempo' },
         { label: 'Avisos no Telegram e no WhatsApp (em breve)' },
         { label: 'Recursos de IA com limite de uso (em breve)' },
         { label: 'Assistente da casa', included: false },

@@ -398,6 +398,7 @@ export const enUS: Content = {
         { label: '1 statement import and 1 export a month' },
         { label: 'Every planner and guide' },
         { label: 'Household members', included: false },
+        { label: 'Signed in on several devices at once', included: false },
       ],
       cta: { label: 'Start free', href: SIGN_UP_URL },
     },
@@ -415,6 +416,7 @@ export const enUS: Content = {
         { label: 'Your full transaction history' },
         { label: '5 statement imports and 5 exports a month' },
         { label: 'Every planner and guide' },
+        { label: 'Signed in on several devices at once', included: false },
       ],
       cta: { label: 'Join early access', href: SIGN_UP_URL },
       featured: true,
@@ -426,6 +428,7 @@ export const enUS: Content = {
       priceNote: 'per month, plus R$2 per extra member',
       perks: [
         { label: 'Everything in Plus' },
+        { label: 'Signed in on several devices at once' },
         { label: 'Telegram and WhatsApp updates (coming soon)' },
         { label: 'AI features with a usage limit (coming soon)' },
         { label: 'Household assistant', included: false },

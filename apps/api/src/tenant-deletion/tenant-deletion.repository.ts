@@ -1,6 +1,9 @@
-import { eq, isNotNull } from 'drizzle-orm'
+import { eq, inArray, isNotNull } from 'drizzle-orm'
 import type { Database } from '@workspace/db'
-import { runBatch, type LedgerStatement } from '../common/ledger/ledger-batch.js'
+import {
+  runBatch,
+  type LedgerStatement,
+} from '../common/ledger/ledger-batch.js'
 import {
   accounts,
   calendarFeeds,
@@ -23,6 +26,7 @@ import {
   transactionLinkers,
   transactionSplits,
   transactions,
+  userSessions,
   users,
 } from '@workspace/db'
 
@@ -40,10 +44,7 @@ export class TenantDeletionRepository {
     return row
   }
 
-  setDeletionDateStatement(
-    tenantId: number,
-    deletionDate: string | null
-  ) {
+  setDeletionDateStatement(tenantId: number, deletionDate: string | null) {
     return this.db
       .update(tenants)
       .set({ deletionDate, updatedAt: new Date() })
@@ -111,6 +112,17 @@ export class TenantDeletionRepository {
       this.db
         .delete(tenantSettings)
         .where(eq(tenantSettings.tenantId, tenantId)),
+      this.db
+        .delete(userSessions)
+        .where(
+          inArray(
+            userSessions.userId,
+            this.db
+              .select({ id: users.id })
+              .from(users)
+              .where(eq(users.tenantId, tenantId))
+          )
+        ),
       this.db.delete(users).where(eq(users.tenantId, tenantId)),
       this.db.delete(tenants).where(eq(tenants.id, tenantId)),
     ]
