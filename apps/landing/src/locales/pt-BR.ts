@@ -44,9 +44,9 @@ export const ptBR: Content = {
   },
 
   hero: {
-    headline: 'Saiba quanto a casa deve antes da fatura chegar.',
+    headline: 'Saiba o que vence antes da conta chegar.',
     tagline:
-      'O OpenHouse junta todas as contas e cartões da casa em um livro-caixa que todo mundo pode ver. Ele lança o aluguel e as assinaturas sozinho, soma a fatura do cartão enquanto você gasta e avisa alguns dias antes de cada vencimento.',
+      'O OpenHouse reúne as contas bancárias e os cartões da casa em um só lugar, e todo mundo que mora nela vê os mesmos números. O aluguel e as assinaturas entram sozinhos todo mês, a fatura do cartão vai somando enquanto você gasta e você recebe um aviso alguns dias antes de cada vencimento.',
     primary: { label: 'Comece grátis', href: SIGN_UP_URL },
     secondary: { label: 'Hospede você mesmo', href: GITHUB_URL },
     stack: 'Plano grátis, sem cartão de crédito. O código é aberto no GitHub.',

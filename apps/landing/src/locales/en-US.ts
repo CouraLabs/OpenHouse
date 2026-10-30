@@ -44,9 +44,9 @@ export const enUS: Content = {
   },
 
   hero: {
-    headline: 'Know what the house owes before the bill arrives.',
+    headline: 'Know what’s due before the bill shows up.',
     tagline:
-      'OpenHouse puts every account and credit card your household uses in one ledger that everyone at home can see. It records the rent and subscriptions for you, adds up each card bill as you spend, and reminds you a few days before anything is due.',
+      'OpenHouse keeps every bank account and credit card in your home in one place, and everyone who lives there sees the same numbers. Rent and subscriptions are logged each month without anyone typing them, card bills add up as you spend, and you get a reminder a few days before each due date.',
     primary: { label: 'Start free', href: SIGN_UP_URL },
     secondary: { label: 'Host it yourself', href: GITHUB_URL },
     stack: 'Free plan, no credit card. The code is open on GitHub.',

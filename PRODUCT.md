@@ -8,104 +8,163 @@ web
 
 ## Users
 
-Every member of a household, on equal footing. They all sign in to the same
-books (one tenant per household, members join with an invite code): the app
-is the shared ledger, and everyone reads and writes it. There is no
-single-admin mental model in the product; roles exist only where the data
-model requires them (e.g. only the owner may delete the whole tenant).
+Anyone who runs a home, alone or with other people. A person living alone
+uses Cantin as their own home's organizer; a couple, a family or a shared
+flat signs in to the same home and runs it together. One tenant is one home.
+Members join with an invite code and are on equal footing: everyone reads
+and writes the same data. Roles exist only where the data model needs them
+(only the owner may delete the whole home). Shared features stay out of the
+way for a home of one.
 
-## Product Purpose
+## Product purpose
 
-OpenHouse is an open-source household app. It keeps what the house runs on in
-one shared place — today the money (accounts, transactions, limits, goals in
-one shared ledger); next, the rest of home life. Everyone in the house signs
-in to the same home. Success is a household that trusts OpenHouse enough to
-stop keeping side-spreadsheets and group-chat reminders.
+Cantin is an open-source home management app. It keeps what a home runs on
+in one place: the money, the pantry, the chores, the pets, the upkeep of the
+house and the people who live in it. Today the money part is live. The rest
+arrives as modules of the same home, with the same sign-in and the same
+members.
+
+Cantin should also look ahead for the home: warn that the detergent is
+running low or the pet food expires soon, remind about the power bill, and
+suggest chores for the weekend. Storing the data comes first, and the
+reminders are built on top of it.
+
+Success is a home that trusts Cantin enough to drop its side spreadsheets,
+fridge notes and group-chat reminders.
+
+## Modules
+
+Six modules, each a section of the app with its own features. Until a module
+ships, the product presents it as planned, never as live.
+
+1. Finance (live). Accounts and cards, transactions, bills to pay, upcoming
+   balances, recurring rules, category limits as the budget, goals,
+   expense splits between members, and statement imports. Still missing:
+   a monthly report.
+2. Pantry. Food on hand, expiry dates, the shopping list, consumption
+   history, and recipe ideas from what is already in the house. Recipe ideas
+   are an AI feature and follow the plan's AI setting. Pet food is tracked
+   here like any other stock item.
+3. Tasks. Daily and weekly chores, a cleaning schedule, an assignee per
+   task, recurring tasks, and reminders. Who is responsible for what lives
+   here and nowhere else.
+4. Pets. A profile per pet, vaccines and vet visits, medication, grooming,
+   feeding routine, and vet history.
+5. Home Care. Preventive maintenance, product warranties, equipment
+   upkeep, service history, and the home's documents. Documents need file
+   storage, which the app does not have yet.
+6. Household. Members, a shared calendar, announcements for everyone, and
+   events. The calendar starts from the existing ICS feed of bills and
+   recurring items.
+
+Some things are not modules because every module uses them:
+
+- The home screen. It greets the user, counts what needs attention
+  (shopping items, bills to pay, pending tasks, pet reminders) and lists
+  today's items from every module. Each module feeds it through a port, the
+  way bills and recurring rules feed Upcoming today.
+- Reminders. One notification engine (push today, Telegram and WhatsApp on
+  plans with messaging) that every module schedules into.
+
+Earlier announced modules fold into these six: Meals into Pantry, Todos into
+Tasks, Calendar into Household. Health, Mail, and Laundry and storage are
+parked.
 
 ## Positioning
 
-- **The shared home for the whole house, money first.** The mechanism a
-  neighbor cannot copy: one tenant per household, every member on equal
-  footing, and each domain of home life as a module of the same shared home —
-  not a bundle of single-user apps.
-- **Announced modules beyond money** (user-confirmed direction; sequencing
-  undecided): pantry, food/meal management, laundry and storage, pets,
-  health, todos, calendar, email connection, and Telegram/WhatsApp
-  integrations. Until each ships, the product presents them as announced
-  arrivals — never as live features.
-- **Open source and self-hostable for free**, with an optional hosted service
-  on the maintainer's servers. Confirmed tier plan (names still fluid):
-  Free (self-host), "Initial" with limits, Premium (5× Initial's limits),
-  Premium with AI enabled (10× the limits plus AI features).
-- **Multi-currency households are a real use case, not an edge case**: USD,
-  BRL, and EUR accounts and cards side by side in one house.
-- Neighbors (YNAB, Monarch, Firefly III) are either single-user-oriented,
-  closed, or admin-heavy; OpenHouse's claim is the shared-books model that
-  any member can run, self-hosted.
+- A home management app, not a chore app, a shopping list or a finance
+  tracker. Each of those exists alone; Cantin is the one place for the
+  whole home.
+- Three principles: everything about the home in one app; the app reminds
+  you of due dates, bills, tasks and needs instead of waiting to be asked;
+  everyone who lives in the home can take part.
+- Open source and free to self-host, with an optional hosted service. The
+  hosted plans are poco's `TIER_PLANS`: they sell limits, more members,
+  messaging and AI, never core features.
+- Multi-currency homes are a real use case: USD, BRL and EUR accounts and
+  cards side by side.
 
-## Operating Context
+## Operating context
 
-- Households, not individuals: one tenant, many human members, invite codes
-  for joining.
-- Planners (interest, FI, rent-vs-buy, rate conversion, tips) work without
-  any account — they are public utility surfaces.
-- Data lifecycle: deletion is a status change everywhere except whole-tenant
-  deletion, which the owner schedules, waits 30 days (cancelable), then a
-  daily-per-zone job hard-deletes in one transaction. See `docs/data-export.md`.
-- Export ZIPs and in-memory export jobs are single-process; scaling the API
-  to multiple replicas requires shared storage (same for the throttler cache).
-- The web app is an installable PWA; the landing page is static with no API.
+- One tenant per home, any number of members (the plan caps it), invite
+  codes for joining.
+- Planners (interest, financial independence, rent vs buy, rate
+  conversion, tips) work without an account.
+- Deletion is a status change everywhere except deleting the whole home:
+  the owner schedules it, it waits 30 days (cancelable), then a job
+  hard-deletes it in one batch. See `docs/data-export.md`.
+- Runs on Cloudflare: one Worker serves the API and the web app, data in
+  D1, background work on a Queue and cron triggers. Exports are built in
+  memory.
+- The web app is an installable PWA. The landing page is static and has no
+  API.
 
-## Capabilities and Constraints
+## Capabilities and constraints
 
-- Ledger: transactions grouped by day with daily totals and month filtering;
-  account/card balances stay correct through transfers.
-- Accounts and cards with balances, closing dates, due dates; USD/BRL/EUR.
-- Recurring rules on schedule; limits per category per day/week/month/year
-  with usage; goals tied to a savings account with a fill gauge.
-- Presets ("transaction linkers") and receivers (person, service, merchant,
+- Finance: transactions grouped by day with daily totals and month
+  filtering; balances stay correct through transfers; card bills are
+  derived on read; recurring rules post on schedule; limits per category
+  per day, week, month or year; goals tied to a savings account.
+- Presets (transaction linkers) and receivers (person, service, merchant,
   charity) fill fields while typing.
-- Full-screen feature areas already present: accounts, transactions, bills,
-  upcoming, recurring, limits, goals, categories, receivers, linkers,
-  statement imports, notifications, household, settings, plus the planners.
-- Auth: sign-in, sign-up, reset password, recovery codes; JWT sessions in
-  cookies. Stack: NestJS + Drizzle + PostgreSQL (API), React + Vite +
-  TanStack Router/Query/Table + react-hook-form + i18next (web), shadcn/ui
-  on base-ui + Tailwind (UI), npm workspaces + Turborepo (monorepo).
-- Localization exists (i18next, `en-US` locale file, locale switcher) — new
-  user-facing copy goes through `locales/en-US.json`.
+- Auth: sign-in, sign-up, password reset with one-time codes, recovery
+  codes; JWT sessions in cookies.
+- Stack: Hono on Cloudflare Workers, Drizzle on D1 (API); React, Vite,
+  TanStack Router, Query and Table, react-hook-form, i18next (web); shadcn/ui
+  on base-ui with Tailwind (UI); npm workspaces and Turborepo.
+- Every user-facing string goes through the locale files: the web app has
+  `en-US`, the landing page has `en-US` and `pt-BR`.
 
-## Brand Commitments
+## Brand commitments
 
-- Name: **OpenHouse**.
-- Tagline: **"Every coin in the house, in its place."**
-- Voice: plain, warm, and concrete (README tone — short declarative lines,
-  "the house", "the books").
+- Name: Cantin, written in lowercase in the logo ("cantin."). It comes from
+  "meu cantin", the informal, affectionate Brazilian way of saying "meu
+  cantinho": my own little place, where the routine happens and where people
+  live with the ones they love. The app is the digital version of that
+  place, where each person looks after their cantin.
+- Before money goes into identity, domain or store listings, the name's
+  trademark and app store availability must be checked.
+- Tagline (pt-BR): "Tudo do seu cantin, em um só lugar." In English:
+  "Everything about your home, in one place." The English line is
+  provisional; "cantin" does not translate, so the name stays as is in
+  every locale.
+- Brand line: "Seu cantinho, do seu jeito." Sign-off for campaigns: "Seu
+  mundo começa em casa."
+- Other approved slogans for marketing: "Cuide do seu cantin. Viva
+  melhor.", "Seu lar no seu ritmo.", "Porque todo cantin merece cuidado.",
+  "A vida acontece no seu cantin.", "Mais cuidado, menos preocupação."
+- Personality: welcoming, contemporary, Brazilian, human.
+- Voice: plain, warm and concrete. Short sentences that name the actual
+  thing ("a conta de luz", "o leite"), never feature jargon. Portuguese is
+  the brand's home language; English copy keeps the same warmth without
+  forcing Brazilian slang on English readers.
+- Infrastructure identifiers (Worker, D1 and queue names, cookie names,
+  `OPENHOUSE_*` variables) keep the old name until a planned migration
+  changes them; renaming them blindly signs everyone out or deploys a new
+  Worker.
 
-## Evidence on Hand
+## Evidence on hand
 
-- A full working monorepo (API, web app, landing page, DB package) with the
-  feature set above already implemented.
-- `docs/data-export.md` documents the export and deletion lifecycle.
-- No testimonials, customer logos, benchmarks, or pricing pages exist —
-  future work must not fabricate any of these.
+- A working monorepo (API, web app, landing page, shared packages) with the
+  Finance module implemented.
+- `docs/data-export.md` documents export and deletion.
+- No testimonials, customer logos, benchmarks or user counts exist. Do not
+  invent any.
 
-## Product Principles
+## Product principles
 
-1. **The books belong to the house.** Every surface assumes several people
-   looking at the same data, not one owner with viewers.
-2. **Balances never lie.** Correctness of account balances through any
-   operation (transfers included) outranks convenience features.
-3. **Self-hosting is first-class.** Free self-host parity is a product
-   promise; hosted tiers sell limits and AI, not core features.
-4. **Money has context.** Currencies, closing dates, due dates, and
-   category limits reflect how real households actually run.
-5. **Planners earn trust.** The no-account tools behave like the ledger
-   tools: honest math, no dark patterns.
+1. The home belongs to everyone in it. Every surface assumes several people
+   may look at the same data, and still works for one.
+2. Balances never lie. Correct balances through every operation, transfers
+   included, outrank convenience.
+3. Remind, don't just record. A module is done when it tells the home what
+   needs attention, not when it stores the data.
+4. Self-hosting is first class. Free self-host parity is a promise.
+5. Planned is not live. The landing page and the app never present a
+   planned module as available.
 
-## Accessibility & Inclusion
+## Accessibility and inclusion
 
-- Light and dark themes are first-class (no-flash theme boot, per-scheme
+- Light and dark themes are first class (no-flash theme boot, per-scheme
   theme-color meta).
-- Localization is wired end-to-end (i18next); English copy lives in
-  `locales/en-US.json` and locale switching is a UI affordance.
+- Localization is wired end to end with i18next and a locale switcher.
