@@ -25,6 +25,7 @@ npm run db:generate    # drizzle migration from packages/db schema
 npm run db:migrate     # apply migrations to the local D1
 npm run reset-code     # operator password-reset code, never over HTTP
 npm run set-tier       # operator: move a tenant to a plan (-1..3), never over HTTP
+npm run test:e2e       # playwright: the web app against the local dev servers (packages/e2e)
 ```
 
 ## PROJECT STRUCTURE
@@ -49,6 +50,7 @@ apps/
     lib/                  # api, auth, query, router, i18n, settings hooks, format-money, …
     locales/              # <locale>.json — every user-facing label
   landing/                # public marketing page (Vite + React, no API, port 5174); words only via useContent() from locales/<locale>.ts
+  e2e/                    # playwright regression suite for apps/web (npm run test:e2e); tests/owner/*.spec.ts per page
 packages/
   poco/                   # shared contracts: zod request schemas + wire DTO types, one file per feature
   db/                     # Drizzle schema and relations — the only schema owner
