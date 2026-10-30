@@ -77,6 +77,7 @@ packages/
 - **Money is a string end to end:** integer cents in SQLite via the `money` type, decimal strings on the wire, `format-money.ts` and `MoneyField` on the web — never a float.
 - **Card bills are derived:** totals, carry-over and status are computed on read; payments name their bill via `paymentStatementId`; assignment is poco's `resolveStatement`.
 - **Tenant deletion is the only hard delete** (30-day scheduled job, one `db.batch`); otherwise only credential rows (push subscriptions, calendar feeds) are ever removed. `audit_log` is append-only. Exports are built in memory, never stored.
+- **Switches follow `ENVIRONMENT`:** production (the default) reads `OPENHOUSE_ENABLE_EMAIL_VERIFICATION` / `OPENHOUSE_ENABLE_CAPTCHA_CHECK` and hardens Hono (HSTS, CSRF origin check, no error detail); development (`npm run dev`) turns both checks off.
 - **Password recovery never needs email:** one-time reset codes, stored as SHA-256 only, redeeming signs every session out, failures answer one generic 400.
 
 ## PROJECT RULES

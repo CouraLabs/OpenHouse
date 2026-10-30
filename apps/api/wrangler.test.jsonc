@@ -36,6 +36,13 @@
     }
   ],
   "vars": {
+    "ENVIRONMENT": "production",
+    "OPENHOUSE_ENABLE_EMAIL_VERIFICATION": "true",
+    "OPENHOUSE_ENABLE_CAPTCHA_CHECK": "true",
+    "TURNSTILE_SECRET": "test-turnstile-secret",
+    "TURNSTILE_SITE_KEY": "test-turnstile-site-key",
+    "TURNSTILE_HOSTNAMES": "localhost",
+    "APP_URL": "http://localhost/app",
     "JWT_SECRET": "test-secret",
     "JWT_ACCESS_TTL_S": "900",
     "JWT_REFRESH_TTL_S": "86400",

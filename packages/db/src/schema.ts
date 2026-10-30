@@ -90,6 +90,11 @@ export const users = sqliteTable(
   ]
 )
 
+export const signInAttempts = sqliteTable('sign_in_attempts', {
+  key: text().primaryKey(),
+  lastAttemptAt: dt('last_attempt_at').notNull(),
+})
+
 export const tenantCodes = sqliteTable('tenant_codes', {
   id: integer().primaryKey({ autoIncrement: true }),
   tenantId: integer('tenant_id')

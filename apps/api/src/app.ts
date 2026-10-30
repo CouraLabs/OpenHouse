@@ -1,4 +1,7 @@
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
+import { csrf } from 'hono/csrf'
+import { requestId } from 'hono/request-id'
 import { secureHeaders } from 'hono/secure-headers'
 import { createMiddleware } from 'hono/factory'
 
@@ -38,9 +41,24 @@ export function createApp(env: AppEnv['Bindings']): {
 } {
   const app = new Hono<AppEnv>().basePath('/api')
 
-  app.use(secureHeaders())
-
   const parsed = config(env)
+  const production = parsed.environment === 'production'
+
+  app.use(requestId())
+  app.use(
+    secureHeaders(
+      production
+        ? {
+            strictTransportSecurity: 'max-age=31536000; includeSubDomains',
+            crossOriginResourcePolicy: 'same-origin',
+          }
+        : { strictTransportSecurity: false }
+    )
+  )
+
+  if (production) {
+    app.use(csrf({ origin: new URL(parsed.mail.appUrl).origin }))
+  }
 
   const db = createDatabase(env.DB as never)
 
@@ -59,6 +77,7 @@ export function createApp(env: AppEnv['Bindings']): {
 
       console.log(
         JSON.stringify({
+          requestId: context.get('requestId'),
           method: context.req.method,
           route: context.req.path,
           status: context.res.status,
@@ -139,6 +158,10 @@ export function createApp(env: AppEnv['Bindings']): {
   )
 
   app.onError((error, context) => {
+    if (error instanceof HTTPException) {
+      return error.getResponse()
+    }
+
     if (error instanceof LedgerConflictError) {
       return renderError(context, error.message, 409)
     }
@@ -148,8 +171,14 @@ export function createApp(env: AppEnv['Bindings']): {
     }
 
     console.error(
-      `Unhandled error on ${context.req.method} ${context.req.path}:`,
-      error
+      JSON.stringify({
+        kind: 'unhandled',
+        requestId: context.get('requestId'),
+        method: context.req.method,
+        route: context.req.path,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
     )
 
     return context.json(
@@ -157,6 +186,13 @@ export function createApp(env: AppEnv['Bindings']): {
         message: 'Something went wrong on our side.',
         error: 'Internal Server Error',
         statusCode: 500,
+        requestId: context.get('requestId'),
+        ...(production
+          ? {}
+          : {
+              detail: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+            }),
       },
       500
     )

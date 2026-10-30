@@ -1,5 +1,6 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { isSignUpAccepted } from '@workspace/poco'
 
 import { AuthLayout } from '@/components/layout/auth-layout.js'
 import { SignUpForm } from './sign-up-form.js'
@@ -14,8 +15,13 @@ export function SignUpPage() {
       <div className="flex w-full max-w-sm flex-col gap-6">
         <SignUpForm
           defaultTenantCode={code}
-          onSuccess={(email) =>
-            void navigate({ to: '/verify-email', state: { email } })
+          onSuccess={(response) =>
+            void (isSignUpAccepted(response)
+              ? navigate({
+                  to: '/verify-email',
+                  state: { email: response.email },
+                })
+              : navigate({ to: '/' }))
           }
         />
         <p className="text-sm text-muted-foreground">

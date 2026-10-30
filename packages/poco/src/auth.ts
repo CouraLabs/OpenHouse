@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { currencySchema } from './currencies.js'
+import type { SessionResponse } from './session.js'
 import { timeZoneSchema } from './settings.js'
 
 const password = z.string().min(8).max(72)
@@ -24,7 +25,7 @@ export const signUpSchema = z
     password,
     timezone: timeZoneSchema.optional(),
     currency: currencySchema.optional(),
-    turnstileToken: turnstileTokenSchema,
+    turnstileToken: turnstileTokenSchema.optional(),
   })
   .refine(hasExactlyOneTenantField, {
     message: 'Send exactly one of tenantName or tenantCode.',
@@ -34,6 +35,7 @@ export const signInSchema = z.object({
   email,
   password,
   rememberMe: z.boolean().optional().default(false),
+  turnstileToken: turnstileTokenSchema.optional(),
 })
 
 export const changePasswordSchema = z
@@ -52,10 +54,34 @@ export const verifyEmailSchema = z.object({
 
 export const resendVerificationSchema = z.object({
   email,
-  turnstileToken: turnstileTokenSchema,
+  turnstileToken: turnstileTokenSchema.optional(),
 })
 
 export const EMAIL_UNVERIFIED = 'email_unverified'
+
+export const CAPTCHA_REQUIRED = 'captcha_required'
+
+export const CAPTCHA_FAILED = 'captcha_failed'
+
+export interface CaptchaError {
+  message: string
+  error: 'Forbidden'
+  statusCode: 403
+  code: typeof CAPTCHA_REQUIRED | typeof CAPTCHA_FAILED
+}
+
+export interface AuthConfig {
+  captcha: { siteKey: string } | null
+  emailVerification: boolean
+}
+
+export type SignUpResponse = SessionResponse | SignUpAccepted
+
+export function isSignUpAccepted(
+  response: SignUpResponse
+): response is SignUpAccepted {
+  return 'verificationRequired' in response
+}
 
 export interface SignUpAccepted {
   verificationRequired: true

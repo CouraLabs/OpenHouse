@@ -1,7 +1,9 @@
 import { z } from 'zod'
+import { turnstileTokenSchema } from './auth.js'
 
 export const createInviteCodeSchema = z.object({
   expiresInDays: z.number().int().positive().max(365).optional(),
+  turnstileToken: turnstileTokenSchema.optional(),
 })
 
 export type CreateInviteCodeBody = z.infer<typeof createInviteCodeSchema>

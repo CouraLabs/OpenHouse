@@ -6,10 +6,11 @@ import type {
   ResetPasswordBody,
   SessionResponse,
   SignInBody,
-  SignUpAccepted,
   SignUpBody,
+  SignUpResponse,
   VerifyEmailBody,
 } from '@workspace/poco'
+import { isSignUpAccepted } from '@workspace/poco'
 import { ApiError, api } from './api.js'
 import { SESSION_QUERY_KEY } from './query.js'
 
@@ -49,12 +50,19 @@ export function useSignIn() {
 }
 
 export function useSignUp() {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationFn: (input: SignUpBody) =>
-      api<SignUpAccepted>('/auth/sign-up', {
+      api<SignUpResponse>('/auth/sign-up', {
         method: 'POST',
         body: JSON.stringify(input),
       }),
+    onSuccess: (response) => {
+      if (!isSignUpAccepted(response)) {
+        queryClient.setQueryData(SESSION_QUERY_KEY, response)
+      }
+    },
   })
 }
 

@@ -17,6 +17,7 @@ import {
   signUp,
   startApp,
   uniqueEmail,
+  turnstileToken,
 } from './support.js'
 
 /** A signed-out browser whose requests carry the cookies the answers set —
@@ -29,6 +30,7 @@ function freshBrowser(app: TestApp): Agent {
       new Request(`http://localhost${path}`, {
         ...init,
         headers: new Headers({
+          origin: 'http://localhost',
           ...(init.headers ?? {}),
           ...(jar.value === '' ? {} : { cookie: jar.value }),
         }),
@@ -99,6 +101,7 @@ async function signInStatus(
   const response = await freshBrowser(app).post('/api/auth/sign-in', {
     email,
     password,
+    turnstileToken: turnstileToken('login'),
   })
 
   return response.status
@@ -267,6 +270,7 @@ describe('password recovery without email (e2e, #11)', () => {
     const signedIn = await relogged.post('/api/auth/sign-in', {
       email,
       password: 'password-r1',
+      turnstileToken: turnstileToken('login'),
     })
 
     expect(signedIn.status).toBe(200)

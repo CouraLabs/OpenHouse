@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@workspace/ui/components/button'
 import {
@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 
+import { CaptchaField } from '@/components/captcha-field.js'
+import { useAuthConfig } from '@/lib/auth-config.js'
 import { CodeShare } from './code-share.js'
 import { inviteLinkFor, useCreateInviteCode } from './use-invite-codes.js'
 
@@ -34,11 +36,40 @@ export function AddUserDialog({ open, onClose }: AddUserDialogProps) {
   const { t } = useTranslation()
   const create = useCreateInviteCode()
   const [expiry, setExpiry] = useState<ExpiryChoice>('7')
+  const siteKey = useAuthConfig().data?.captcha?.siteKey
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileReset, setTurnstileReset] = useState(0)
+  const [captchaMissing, setCaptchaMissing] = useState(false)
+  const onTurnstileToken = useCallback((token: string | null) => {
+    setTurnstileToken(token)
+    if (token !== null) {
+      setCaptchaMissing(false)
+    }
+  }, [])
 
   const close = () => {
     create.reset()
     setExpiry('7')
+    setCaptchaMissing(false)
+    setTurnstileToken(null)
     onClose()
+  }
+
+  const generate = () => {
+    if (siteKey !== undefined && turnstileToken === null) {
+      setCaptchaMissing(true)
+      return
+    }
+
+    create.mutate(
+      {
+        expiresInDays: expiry === 'never' ? undefined : Number(expiry),
+        turnstileToken: turnstileToken ?? undefined,
+      },
+      {
+        onError: () => setTurnstileReset((count) => count + 1),
+      }
+    )
   }
 
   const expiryLabel = (choice: ExpiryChoice) =>
@@ -101,6 +132,19 @@ export function AddUserDialog({ open, onClose }: AddUserDialogProps) {
             }}
           />
         )}
+        {create.data === undefined && siteKey !== undefined && open ? (
+          <CaptchaField
+            siteKey={siteKey}
+            action="invite"
+            onToken={onTurnstileToken}
+            resetKey={turnstileReset}
+            error={
+              captchaMissing
+                ? t('settings.invite.bot-check-required')
+                : undefined
+            }
+          />
+        ) : null}
         {create.isError ? (
           <p className="text-sm text-destructive">
             {create.error instanceof Error
@@ -114,15 +158,7 @@ export function AddUserDialog({ open, onClose }: AddUserDialogProps) {
               <Button variant="outline" onClick={close}>
                 {t('settings.cancel')}
               </Button>
-              <Button
-                disabled={create.isPending}
-                onClick={() =>
-                  create.mutate({
-                    expiresInDays:
-                      expiry === 'never' ? undefined : Number(expiry),
-                  })
-                }
-              >
+              <Button disabled={create.isPending} onClick={generate}>
                 {create.isPending
                   ? t('settings.invite.generating')
                   : t('settings.invite.generate')}

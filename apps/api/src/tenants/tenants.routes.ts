@@ -8,6 +8,8 @@ import type {
 import { createInviteCodeSchema } from '@workspace/poco'
 
 import type { App, AppEnv } from '../common/context.js'
+import { clientAddressOf } from '../common/rate-limit.js'
+import type { TurnstileVerifier } from '../common/turnstile/turnstile-verifier.js'
 import { requireRole } from '../common/session/auth.middleware.js'
 import { parseJsonBody } from '../common/validation/parse.js'
 import type { InviteCodeService } from './invite-code.service.js'
@@ -17,6 +19,7 @@ import type { TenantUserService } from './tenant-user.service.js'
 export function tenantsRoutes(deps: {
   inviteCodes: InviteCodeService
   tenantUsers: TenantUserService
+  turnstile: TurnstileVerifier
 }): App {
   const router: App = new Hono<AppEnv>()
 
@@ -28,6 +31,12 @@ export function tenantsRoutes(deps: {
       const body: CreateInviteCodeBody = await parseJsonBody(
         context,
         createInviteCodeSchema
+      )
+
+      await deps.turnstile.verify(
+        body.turnstileToken,
+        'invite',
+        clientAddressOf(context.req.raw)
       )
 
       const created = await deps.inviteCodes.create(

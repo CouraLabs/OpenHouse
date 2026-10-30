@@ -12,7 +12,11 @@ import {
 import { requireRole } from '../common/session/auth.middleware.js'
 import { parseJsonBody } from '../common/validation/parse.js'
 import type { TurnstileVerifier } from '../common/turnstile/turnstile-verifier.js'
-import type { SessionResponse, SignUpAccepted } from '@workspace/poco'
+import type {
+  AuthConfig,
+  SessionResponse,
+  SignUpAccepted,
+} from '@workspace/poco'
 import {
   changePasswordSchema,
   issueResetCodeSchema,
@@ -26,6 +30,7 @@ import type { AuthService } from './auth.service.js'
 import type { EmailVerificationService } from './email-verification.service.js'
 import type { PasswordChangeLimiter } from './password-change-limiter.js'
 import type { PasswordResetService } from './password-reset.service.js'
+import type { SignInGuard } from './sign-in-guard.js'
 import type { TokenService } from './token.service.js'
 
 export function authRoutes(deps: {
@@ -35,6 +40,8 @@ export function authRoutes(deps: {
   passwordResets: PasswordResetService
   verification: EmailVerificationService
   turnstile: TurnstileVerifier
+  signInGuard: SignInGuard
+  authConfig: AuthConfig
 }): { publicRouter: App; protectedRouter: App } {
   const publicRouter = new Hono<AppEnv>()
   const protectedRouter = new Hono<AppEnv>()
@@ -95,6 +102,13 @@ export function authRoutes(deps: {
             password: body.password,
           })
 
+    if (!deps.authConfig.emailVerification) {
+      return context.json(
+        await establish(context, await deps.auth.sessionFor(created), false),
+        201
+      )
+    }
+
     await deps.verification.issue(created)
 
     return context.json(
@@ -105,6 +119,8 @@ export function authRoutes(deps: {
       201
     )
   })
+
+  publicRouter.get('/config', (context) => context.json(deps.authConfig))
 
   publicRouter.post('/email/verify', async (context) => {
     await limitCredentials(context)
@@ -136,6 +152,12 @@ export function authRoutes(deps: {
   publicRouter.post('/sign-in', async (context) => {
     await limitCredentials(context)
     const body = await parseJsonBody(context, signInSchema)
+
+    await deps.signInGuard.check({
+      email: body.email,
+      clientAddress: clientAddressOf(context.req.raw),
+      turnstileToken: body.turnstileToken,
+    })
 
     const session = await deps.auth.signIn({
       email: body.email,

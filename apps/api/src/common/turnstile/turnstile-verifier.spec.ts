@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { ForbiddenError } from '../errors.js'
 import { TurnstileVerifier } from './turnstile-verifier.js'
 
-const config = { secret: 'secret', hostnames: ['openhouse.couralabs.dev'] }
+const config = {
+  secret: 'secret',
+  hostnames: ['openhouse.couralabs.dev'],
+  siteKey: 'site-key',
+}
 
 function answering(body: unknown, status = 200): typeof fetch {
   return async () =>
@@ -82,6 +86,27 @@ describe('TurnstileVerifier', () => {
     await expect(
       verifier.verify('token', 'signup', '1.2.3.4')
     ).rejects.toBeInstanceOf(ForbiddenError)
+  })
+
+  it('asks for the bot check when no token came', async () => {
+    const verifier = new TurnstileVerifier(config, async () => {
+      throw new Error('must not be called')
+    })
+
+    await expect(
+      verifier.verify(undefined, 'signup', '1.2.3.4')
+    ).rejects.toMatchObject({ payload: { code: 'captcha_required' } })
+  })
+
+  it('tags a failed check as captcha_failed', async () => {
+    const verifier = new TurnstileVerifier(
+      config,
+      answering({ success: false })
+    )
+
+    await expect(
+      verifier.verify('token', 'signup', '1.2.3.4')
+    ).rejects.toMatchObject({ payload: { code: 'captcha_failed' } })
   })
 
   it('skips the check when no secret is configured', async () => {

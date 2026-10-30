@@ -38,10 +38,14 @@ A `credit_card_statements` row is one cycle of one card: `periodStart` inclusive
 
 An owner schedules it by typing the tenant name; 30 days later (the tenant's own calendar day) an hourly job removes the tenant and everything it owns, children first, `import_mappings` and the append-only `transaction_history` included — one `db.batch([...])` of `DELETE … WHERE tenant_id = ?` statements (in chunks per table when a tenant is big; the `tenants` row goes last, so a crashed run resumes on the next hour). Nothing else ever removes business rows.
 
-The sanctioned exception is credentials that carry no history: a `push_subscriptions` row is deleted when its browser unsubscribes or the push service answers 404/410, and a `calendar_feeds` row when its token is regenerated or revoked. No transaction, settlement, or notification row is ever removed this way. `audit_log` is append-only, has no foreign key to `tenants`, and keeps the `tenant.deleted` line.
+The sanctioned exceptions are credentials and throttle state that carry no history: `sign_in_attempts` (one row per hashed IP or email, the last sign-in attempt, read to ask for a bot check on a retry within 5 seconds) is pruned by the daily job after 24 hours. Likewise a `push_subscriptions` row is deleted when its browser unsubscribes or the push service answers 404/410, and a `calendar_feeds` row when its token is regenerated or revoked. No transaction, settlement, or notification row is ever removed this way. `audit_log` is append-only, has no foreign key to `tenants`, and keeps the `tenant.deleted` line.
 
 Full exports (`data-exports/`) and CSV exports are owner-facing and audited; the ZIP is built in memory per request and returned as a download — nothing is stored, so there is no `EXPORT_DIR`, no expiry, and no one-download bookkeeping (see `data-export.md`).
 
 ## Password recovery never needs email
 
 A one-time reset code — issued by an owner for a member, generated in advance as an owner's recovery codes, or printed by the operator command `npm run reset-code` (`apps/api/scripts/reset-code.mjs`, never over HTTP) — sets a new password through `POST auth/password/reset`. Only the SHA-256 of the normalized code is stored; the plaintext is shown once. Redeeming clears the refresh hash (every session signs out); wrong, expired, and used codes answer one generic 400.
+
+## Bot checks and email confirmation are switches
+
+`ENVIRONMENT` is `development` or `production` (unset means production). In production, `OPENHOUSE_ENABLE_EMAIL_VERIFICATION` and `OPENHOUSE_ENABLE_CAPTCHA_CHECK` turn on the confirmation link sent at sign-up and the Turnstile check (sign-up, a sign-in retried within 5 seconds, confirmation resends, invite codes). In development both are off whatever they say. The web learns the effective switches from `GET auth/config` and renders the widget only when the API enforces it. Accounts created while confirmation is off keep `email_verified_at` empty: turning it on later asks them to confirm at their next sign-in.

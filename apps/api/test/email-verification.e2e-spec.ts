@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   mailTo,
   startApp,
-  TURNSTILE_TOKEN,
+  turnstileToken,
   uniqueEmail,
   verificationTokenFor,
   type TestApp,
@@ -40,7 +40,7 @@ async function signUpUnconfirmed(app: TestApp, email = uniqueEmail()) {
     name: 'Ana',
     email,
     password: 'password-a',
-    turnstileToken: TURNSTILE_TOKEN,
+    turnstileToken: turnstileToken('signup'),
   })
 
   return { created, email }
@@ -76,6 +76,7 @@ describe('email verification (e2e)', () => {
     const refused = await post(app, '/api/auth/sign-in', {
       email,
       password: 'password-a',
+      turnstileToken: turnstileToken('login'),
     })
     expect(refused.status).toBe(403)
     expect(refused.body.code).toBe('email_unverified')
@@ -83,6 +84,7 @@ describe('email verification (e2e)', () => {
     const wrongPassword = await post(app, '/api/auth/sign-in', {
       email,
       password: 'password-x',
+      turnstileToken: turnstileToken('login'),
     })
     expect(wrongPassword.status).toBe(401)
   })
@@ -103,6 +105,7 @@ describe('email verification (e2e)', () => {
     const signedIn = await post(app, '/api/auth/sign-in', {
       email,
       password: 'password-a',
+      turnstileToken: turnstileToken('login'),
     })
     expect(signedIn.status).toBe(200)
   })
@@ -126,7 +129,7 @@ describe('email verification (e2e)', () => {
 
     const response = await post(app, '/api/auth/email/resend', {
       email,
-      turnstileToken: TURNSTILE_TOKEN,
+      turnstileToken: turnstileToken('verify-resend'),
     })
 
     expect(response.status).toBe(202)
@@ -140,7 +143,7 @@ describe('email verification (e2e)', () => {
 
     const tooSoon = await post(app, '/api/auth/email/resend', {
       email,
-      turnstileToken: TURNSTILE_TOKEN,
+      turnstileToken: turnstileToken('verify-resend'),
     })
     expect(tooSoon.status).toBe(202)
     expect(mailTo(email)).toHaveLength(1)
@@ -149,7 +152,7 @@ describe('email verification (e2e)', () => {
       await rewindLastSend(email, 61_000)
       await post(app, '/api/auth/email/resend', {
         email,
-        turnstileToken: TURNSTILE_TOKEN,
+        turnstileToken: turnstileToken('verify-resend'),
       })
       expect(mailTo(email)).toHaveLength(send)
     }
@@ -157,7 +160,7 @@ describe('email verification (e2e)', () => {
     await rewindLastSend(email, 61_000)
     await post(app, '/api/auth/email/resend', {
       email,
-      turnstileToken: TURNSTILE_TOKEN,
+      turnstileToken: turnstileToken('verify-resend'),
     })
     expect(mailTo(email)).toHaveLength(5)
 
@@ -180,13 +183,13 @@ describe('email verification (e2e)', () => {
 
     await post(app, '/api/auth/email/resend', {
       email,
-      turnstileToken: TURNSTILE_TOKEN,
+      turnstileToken: turnstileToken('verify-resend'),
     })
 
     expect(mailTo(email)).toHaveLength(1)
   })
 
-  it('requires the bot-check token on sign-up', async () => {
+  it('asks for the bot check when sign-up carries no token', async () => {
     const { app } = startApp()
 
     const response = await post(app, '/api/auth/sign-up', {
@@ -196,6 +199,7 @@ describe('email verification (e2e)', () => {
       password: 'password-a',
     })
 
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(403)
+    expect(response.body.code).toBe('captcha_required')
   })
 })

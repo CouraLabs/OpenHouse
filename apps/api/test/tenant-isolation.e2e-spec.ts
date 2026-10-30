@@ -77,7 +77,10 @@ describe('tenant isolation (e2e)', () => {
     const app = startApp().app
 
     for (const [route] of SEARCHES) {
-      const response = await app.request(route, { method: 'POST' })
+      const response = await app.request(route, {
+        method: 'POST',
+        headers: { origin: 'http://localhost' },
+      })
       expect(response.status, route).toBe(401)
     }
   })

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { createApp } from '../src/app.js'
+import { resetConfigCache } from '../src/config/env.js'
 import type { Hono } from 'hono'
 import type { AppEnv } from '../src/common/context.js'
 import { createExecutionContext } from 'cloudflare:test'
@@ -45,7 +46,10 @@ export interface Agent {
 /** Boots the whole app the Worker serves — what a request sees. The
  * bindings are read once into a plain copy, and every request dispatches
  * with the same copy — the shape the Worker's own fetch hands the app. */
-export function startApp(): { app: TestApp; bindings: AppEnv['Bindings'] } {
+export function startApp(overrides: Partial<AppEnv['Bindings']> = {}): {
+  app: TestApp
+  bindings: AppEnv['Bindings']
+} {
   const source = env as unknown as Record<string, unknown>
   const bindings = {
     DB: source.DB,
@@ -53,10 +57,20 @@ export function startApp(): { app: TestApp; bindings: AppEnv['Bindings'] } {
     RATE_LIMIT: source.RATE_LIMIT,
     RATE_LIMIT_CREDENTIALS: source.RATE_LIMIT_CREDENTIALS,
     RATE_LIMIT_EMAIL: source.RATE_LIMIT_EMAIL,
+    ENVIRONMENT: source.ENVIRONMENT,
+    OPENHOUSE_ENABLE_EMAIL_VERIFICATION:
+      source.OPENHOUSE_ENABLE_EMAIL_VERIFICATION,
+    OPENHOUSE_ENABLE_CAPTCHA_CHECK: source.OPENHOUSE_ENABLE_CAPTCHA_CHECK,
+    TURNSTILE_SECRET: source.TURNSTILE_SECRET,
+    TURNSTILE_SITE_KEY: source.TURNSTILE_SITE_KEY,
+    TURNSTILE_HOSTNAMES: source.TURNSTILE_HOSTNAMES,
+    APP_URL: source.APP_URL,
     EMAIL: { send: async (message: SentMail) => void outbox.push(message) },
     JWT_SECRET: source.JWT_SECRET,
+    ...overrides,
   } as unknown as AppEnv['Bindings']
 
+  resetConfigCache()
   const app = createApp(bindings).app as TestApp
   app.bindings = bindings
 
@@ -110,8 +124,10 @@ export async function confirmEmail(
   return confirmed
 }
 
-/** The bot-check token the specs send; no secret is configured in tests. */
-export const TURNSTILE_TOKEN = 'test-turnstile-token'
+/** A solved bot check for one action (the setup file answers siteverify). */
+export function turnstileToken(action: string): string {
+  return `pass:${action}`
+}
 
 /** A fresh email no other run used. */
 export function uniqueEmail(): string {
@@ -134,6 +150,7 @@ function agentOf(app: TestApp, cookieJar: { value: string }): Agent {
         ...init,
         headers: new Headers({
           ...(init.headers ?? {}),
+          origin: 'http://localhost',
           ...(cookieJar.value === '' ? {} : { cookie: cookieJar.value }),
         }),
         redirect: 'manual',
@@ -218,7 +235,7 @@ export async function signUp(
     name: 'Ana',
     email,
     password,
-    turnstileToken: TURNSTILE_TOKEN,
+    turnstileToken: turnstileToken('signup'),
   })
   if (created.status !== 201) {
     throw new Error(
@@ -289,6 +306,7 @@ export async function joinAsMember(
 ): Promise<{ agent: Agent; id: number; email: string }> {
   const invite = await owner.post('/api/tenants/invite-codes', {
     expiresInDays: 7,
+    turnstileToken: turnstileToken('invite'),
   })
   if (invite.status !== 201) {
     throw new Error(
@@ -303,7 +321,7 @@ export async function joinAsMember(
     name: 'Bia',
     email,
     password: 'password-m',
-    turnstileToken: TURNSTILE_TOKEN,
+    turnstileToken: turnstileToken('signup'),
   })
   if (joined.status !== 201) {
     throw new Error(

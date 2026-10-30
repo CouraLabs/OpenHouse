@@ -9,6 +9,8 @@ import {
   listTenantsWithActiveRules,
 } from './tenants.js'
 import { logDatabaseSize } from './size-watch.js'
+import { SignInAttemptRepository } from '../auth/sign-in-attempt.repository.js'
+import { SIGN_IN_ATTEMPT_RETENTION_MS } from '../auth/sign-in-captcha-policy.js'
 
 interface QueueProducer {
   sendBatch(messages: Array<{ kind: string; tenantId: number }>): Promise<void>
@@ -47,6 +49,9 @@ export async function handleScheduled(
 
   if (kind === 'balances') {
     await logDatabaseSize(db)
+    await new SignInAttemptRepository(db).deleteOlderThan(
+      new Date(Date.now() - SIGN_IN_ATTEMPT_RETENTION_MS)
+    )
   }
 
   if (tenants.length === 0) {

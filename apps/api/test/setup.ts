@@ -27,3 +27,27 @@ const migrations: D1Migration[] = Object.entries(files)
   }))
 
 await applyD1Migrations(env.DB, migrations)
+
+/**
+ * Turnstile's siteverify, answered in-process: a token `pass:<action>` is a
+ * solved check minted for that action on localhost; anything else failed.
+ * Every other request goes out untouched.
+ */
+const realFetch = globalThis.fetch
+globalThis.fetch = async (input, init) => {
+  const url = input instanceof Request ? input.url : String(input)
+
+  if (url !== 'https://challenges.cloudflare.com/turnstile/v0/siteverify') {
+    return realFetch(input, init)
+  }
+
+  const token =
+    new URLSearchParams(String(init?.body ?? '')).get('response') ?? ''
+  const [verdict, action] = token.split(':')
+
+  return Response.json(
+    verdict === 'pass'
+      ? { success: true, action, hostname: 'localhost' }
+      : { success: false, 'error-codes': ['invalid-input-response'] }
+  )
+}

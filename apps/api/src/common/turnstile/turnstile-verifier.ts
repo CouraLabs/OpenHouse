@@ -1,3 +1,8 @@
+import {
+  CAPTCHA_FAILED,
+  CAPTCHA_REQUIRED,
+  type CaptchaError,
+} from '@workspace/poco'
 import type { TurnstileConfig } from '../../config/env.js'
 import { ForbiddenError } from '../errors.js'
 
@@ -16,12 +21,27 @@ export class TurnstileVerifier {
     private readonly fetcher: typeof fetch = (input, init) => fetch(input, init)
   ) {}
 
-  async verify(token: string, action: string, remoteIp: string): Promise<void> {
+  get enabled(): boolean {
+    return this.config !== undefined
+  }
+
+  async verify(
+    token: string | undefined,
+    action: string,
+    remoteIp: string
+  ): Promise<void> {
     if (this.config === undefined) {
       return
     }
 
-    if (token.length === 0 || token.length > 2048) {
+    if (token === undefined || token.length === 0) {
+      throw captchaError(
+        CAPTCHA_REQUIRED,
+        'Complete the bot check to continue.'
+      )
+    }
+
+    if (token.length > 2048) {
       throw rejected()
     }
 
@@ -65,6 +85,18 @@ export class TurnstileVerifier {
   }
 }
 
+function captchaError(
+  code: CaptchaError['code'],
+  message: string
+): ForbiddenError {
+  return new ForbiddenError({
+    message,
+    error: 'Forbidden',
+    statusCode: 403,
+    code,
+  } satisfies CaptchaError)
+}
+
 function rejected(): ForbiddenError {
-  return new ForbiddenError('The bot check failed. Try again.')
+  return captchaError(CAPTCHA_FAILED, 'The bot check failed. Try again.')
 }

@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+const flag = z
+  .enum(['true', 'false', '1', '0'])
+  .transform((value) => value === 'true' || value === '1')
+
 const positiveInt = z.coerce
   .number()
   .int()
@@ -15,6 +19,9 @@ export interface Env {
   EMAIL?: unknown
   ASSETS: unknown
 
+  ENVIRONMENT?: string
+  OPENHOUSE_ENABLE_EMAIL_VERIFICATION?: string
+  OPENHOUSE_ENABLE_CAPTCHA_CHECK?: string
   JWT_SECRET?: string
   JWT_ACCESS_TTL_S?: string
   JWT_REFRESH_TTL_S?: string
@@ -24,6 +31,7 @@ export interface Env {
   PUSH_VAPID_SUBJECT?: string
   TURNSTILE_SECRET?: string
   TURNSTILE_HOSTNAMES?: string
+  TURNSTILE_SITE_KEY?: string
   EMAIL_FROM?: string
   EMAIL_FROM_NAME?: string
   APP_URL?: string
@@ -35,9 +43,17 @@ export interface JwtTtls {
   rememberRefreshTtlS: number
 }
 
+export type Environment = 'development' | 'production'
+
 export interface TurnstileConfig {
   secret: string
   hostnames: string[]
+  siteKey: string
+}
+
+export interface Features {
+  emailVerification: boolean
+  captcha: boolean
 }
 
 export interface MailConfig {
@@ -51,8 +67,13 @@ export interface PushConfig {
   subject: string
 }
 
+const DEVELOPMENT_JWT_SECRET = 'development-only-secret'
+
 const varsSchema = z.object({
-  JWT_SECRET: z.string().min(1).default('development-only-secret'),
+  ENVIRONMENT: z.enum(['development', 'production']).default('production'),
+  OPENHOUSE_ENABLE_EMAIL_VERIFICATION: flag.default(true),
+  OPENHOUSE_ENABLE_CAPTCHA_CHECK: flag.default(true),
+  JWT_SECRET: z.string().min(1).default(DEVELOPMENT_JWT_SECRET),
   JWT_ACCESS_TTL_S: positiveInt.default(900),
   JWT_REFRESH_TTL_S: positiveInt.default(86_400),
   JWT_REMEMBER_REFRESH_TTL_S: positiveInt.default(2_592_000),
@@ -61,6 +82,7 @@ const varsSchema = z.object({
   PUSH_VAPID_SUBJECT: z.string().default('mailto:admin@openhouse.invalid'),
   TURNSTILE_SECRET: z.string().min(1).optional(),
   TURNSTILE_HOSTNAMES: z.string().default(''),
+  TURNSTILE_SITE_KEY: z.string().min(1).optional(),
   EMAIL_FROM: z.string().email().default('no-reply@couralabs.dev'),
   EMAIL_FROM_NAME: z.string().min(1).default('OpenHouse'),
   APP_URL: z
@@ -71,6 +93,8 @@ const varsSchema = z.object({
 })
 
 export interface Config {
+  environment: Environment
+  features: Features
   jwtSecret: string
   ttls: JwtTtls
   push: PushConfig | undefined
@@ -96,17 +120,34 @@ export function config(env: Env): Config {
     )
   }
 
+  const production = vars.ENVIRONMENT === 'production'
+  const features: Features = {
+    emailVerification: production && vars.OPENHOUSE_ENABLE_EMAIL_VERIFICATION,
+    captcha: production && vars.OPENHOUSE_ENABLE_CAPTCHA_CHECK,
+  }
+
+  if (production && vars.JWT_SECRET === DEVELOPMENT_JWT_SECRET) {
+    throw new Error('JWT_SECRET must be set in production.')
+  }
+
   const turnstileHostnames = vars.TURNSTILE_HOSTNAMES.split(',')
     .map((hostname) => hostname.trim())
     .filter((hostname) => hostname !== '')
 
-  if (vars.TURNSTILE_SECRET !== undefined && turnstileHostnames.length === 0) {
+  if (
+    features.captcha &&
+    (vars.TURNSTILE_SECRET === undefined ||
+      vars.TURNSTILE_SITE_KEY === undefined ||
+      turnstileHostnames.length === 0)
+  ) {
     throw new Error(
-      'TURNSTILE_HOSTNAMES must list the frontend hostnames when TURNSTILE_SECRET is set.'
+      'OPENHOUSE_ENABLE_CAPTCHA_CHECK needs TURNSTILE_SECRET, TURNSTILE_SITE_KEY and TURNSTILE_HOSTNAMES.'
     )
   }
 
   cached = {
+    environment: vars.ENVIRONMENT,
+    features,
     jwtSecret: vars.JWT_SECRET,
     ttls: {
       accessTtlS: vars.JWT_ACCESS_TTL_S,
@@ -123,8 +164,14 @@ export function config(env: Env): Config {
           }
         : undefined,
     turnstile:
-      vars.TURNSTILE_SECRET !== undefined
-        ? { secret: vars.TURNSTILE_SECRET, hostnames: turnstileHostnames }
+      features.captcha &&
+      vars.TURNSTILE_SECRET !== undefined &&
+      vars.TURNSTILE_SITE_KEY !== undefined
+        ? {
+            secret: vars.TURNSTILE_SECRET,
+            hostnames: turnstileHostnames,
+            siteKey: vars.TURNSTILE_SITE_KEY,
+          }
         : undefined,
     mail: {
       from: { email: vars.EMAIL_FROM, name: vars.EMAIL_FROM_NAME },

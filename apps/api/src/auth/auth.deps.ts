@@ -16,6 +16,8 @@ import { PasswordChangeLimiter } from './password-change-limiter.js'
 import { PasswordResetRepository } from './password-reset.repository.js'
 import { PasswordResetService } from './password-reset.service.js'
 import { ResetAttemptLimiter } from './reset-attempt-limiter.js'
+import { SignInAttemptRepository } from './sign-in-attempt.repository.js'
+import { SignInGuard } from './sign-in-guard.js'
 import { TokenService } from './token.service.js'
 import { TokenSessionResolver } from './token-session.resolver.js'
 
@@ -33,7 +35,13 @@ export function authDeps(
 ): AuthDeps {
   const tokens = new TokenService(config.jwtSecret, config.ttls)
   const settings = new SettingsRepository(db)
-  const auth = new AuthService(db, tokens, settings, config.ttls)
+  const auth = new AuthService(
+    db,
+    tokens,
+    settings,
+    config.ttls,
+    config.features.emailVerification
+  )
   const passwordResets = new PasswordResetService(
     new PasswordResetRepository(db),
     new ResetAttemptLimiter(clock),
@@ -50,6 +58,11 @@ export function authDeps(
     config.mail.appUrl
   )
   const turnstile = new TurnstileVerifier(config.turnstile)
+  const signInGuard = new SignInGuard(
+    new SignInAttemptRepository(db),
+    turnstile,
+    clock
+  )
 
   const { publicRouter, protectedRouter } = authRoutes({
     auth,
@@ -58,6 +71,14 @@ export function authDeps(
     passwordResets,
     verification,
     turnstile,
+    signInGuard,
+    authConfig: {
+      captcha:
+        config.turnstile === undefined
+          ? null
+          : { siteKey: config.turnstile.siteKey },
+      emailVerification: config.features.emailVerification,
+    },
   })
 
   return {

@@ -8,7 +8,7 @@ import {
   joinAsMember,
   signUp,
   startApp,
-  TURNSTILE_TOKEN,
+  turnstileToken,
   uniqueEmail,
 } from './support.js'
 import type { TestApp } from './support.js'
@@ -29,6 +29,7 @@ function freshBrowser(app: TestApp): Agent {
       new Request(`http://localhost${path}`, {
         ...init,
         headers: new Headers({
+          origin: 'http://localhost',
           ...(init.headers ?? {}),
           ...(jar.value === '' ? {} : { cookie: jar.value }),
         }),
@@ -100,7 +101,7 @@ describe('tenant settings (e2e, #15)', () => {
       password: 'password-a',
       timezone: 'America/Sao_Paulo',
       currency: 'BRL',
-      turnstileToken: TURNSTILE_TOKEN,
+      turnstileToken: turnstileToken('signup'),
     })
     expect(created.status).toBe(201)
 
@@ -126,7 +127,7 @@ describe('tenant settings (e2e, #15)', () => {
       email: uniqueEmail(),
       password: 'password-a',
       timezone: 'Mars/Olympus_Mons',
-      turnstileToken: TURNSTILE_TOKEN,
+      turnstileToken: turnstileToken('signup'),
     })
 
     expect(response.status).toBe(400)
@@ -223,6 +224,7 @@ describe('users management (e2e, #15)', () => {
     const memberSignIn = await freshBrowser(app).post('/api/auth/sign-in', {
       email: member.email,
       password: 'password-m',
+      turnstileToken: turnstileToken('login'),
     })
     expect(memberSignIn.status).toBe(401)
     const listed = await owner.get('/api/tenants/users')
@@ -236,6 +238,7 @@ describe('users management (e2e, #15)', () => {
     const backIn = await freshBrowser(app).post('/api/auth/sign-in', {
       email: member.email,
       password: 'password-m',
+      turnstileToken: turnstileToken('login'),
     })
     expect(backIn.status).toBe(200)
   })
@@ -269,6 +272,7 @@ describe('users management (e2e, #15)', () => {
     const { app } = startApp()
     const owner = await signUp(app)
     const invite = await owner.post('/api/tenants/invite-codes', {
+      turnstileToken: turnstileToken('invite'),
       expiresInDays: 1,
     })
     expect(invite.status).toBe(201)
@@ -283,7 +287,7 @@ describe('users management (e2e, #15)', () => {
       name: 'Bia',
       email: uniqueEmail(),
       password: 'password-m',
-      turnstileToken: TURNSTILE_TOKEN,
+      turnstileToken: turnstileToken('signup'),
     })
     expect(redeemed.status).toBe(409)
   })
@@ -323,6 +327,7 @@ describe('change password (e2e, #15)', () => {
     const signedIn = await elsewhere.post('/api/auth/sign-in', {
       email,
       password: 'password-a',
+      turnstileToken: turnstileToken('login'),
     })
     expect(signedIn.status).toBe(200)
 
@@ -341,6 +346,7 @@ describe('change password (e2e, #15)', () => {
     const newPassword = await freshBrowser(app).post('/api/auth/sign-in', {
       email,
       password: 'password-new',
+      turnstileToken: turnstileToken('login'),
     })
     expect(newPassword.status).toBe(200)
   })

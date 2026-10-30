@@ -2,6 +2,11 @@
 # `.dev.vars` next to this file. In production, set them with
 # `wrangler secret put JWT_SECRET` etc. — never a file.
 
+# development or production. `npm run dev` already passes development,
+# which turns email verification and the captcha check off. Unset means
+# production; the deployed Worker carries it as a secret.
+# ENVIRONMENT=development
+
 # The HMAC secret the session JWTs are signed with. Generate one with
 # `openssl rand -base64 48` and keep it stable — changing it signs every
 # user out.
@@ -16,3 +21,7 @@ JWT_SECRET=
 # URL-safe base64).
 PUSH_VAPID_PUBLIC_KEY=
 PUSH_VAPID_PRIVATE_KEY=
+
+# The Turnstile secret, only read in production with
+# OPENHOUSE_ENABLE_CAPTCHA_CHECK=true.
+# TURNSTILE_SECRET=

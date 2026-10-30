@@ -61,7 +61,8 @@ export class AuthService {
     private readonly db: Database,
     private readonly tokens: TokenService,
     private readonly settings: SettingsRepository,
-    private readonly ttls: JwtTtls
+    private readonly ttls: JwtTtls,
+    private readonly requireVerifiedEmail: boolean
   ) {}
 
   async signUpWithTenant(body: {
@@ -209,7 +210,7 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password.')
     }
 
-    if (user.emailVerifiedAt === null) {
+    if (this.requireVerifiedEmail && user.emailVerifiedAt === null) {
       throw new ForbiddenError({
         message: 'Confirm your email before signing in.',
         error: 'Forbidden',

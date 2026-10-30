@@ -88,8 +88,15 @@
     "EMAIL_FROM": "no-reply@couralabs.dev",
     "EMAIL_FROM_NAME": "OpenHouse",
     "APP_URL": "https://openhouse.couralabs.dev/app",
-    // The sign-up bot check accepts tokens minted on these hostnames only;
-    // the TURNSTILE_SECRET secret turns the check on (unset: no check).
-    "TURNSTILE_HOSTNAMES": "openhouse.couralabs.dev"
+    // Feature switches, read only when ENVIRONMENT is production (a secret
+    // on the deployed Worker; `npm run dev` passes development, which turns
+    // both off). ENVIRONMENT left unset means production.
+    "OPENHOUSE_ENABLE_EMAIL_VERIFICATION": "false",
+    "OPENHOUSE_ENABLE_CAPTCHA_CHECK": "true",
+    // The Turnstile bot check (sign-up, rapid sign-ins, resends, invites)
+    // accepts tokens minted on these hostnames only; TURNSTILE_SECRET is a
+    // secret.
+    "TURNSTILE_HOSTNAMES": "openhouse.couralabs.dev",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFr8E1AVU5Xzv0Ax"
   }
 }

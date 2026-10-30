@@ -1110,7 +1110,8 @@
       "pending-empty": "No invitations are waiting.",
       "expires": "Expires {{date}}",
       "never-expires": "Never expires",
-      "revoke": "Revoke"
+      "revoke": "Revoke",
+      "bot-check-required": "Complete the check above to generate an invite."
     },
     "security": {
       "title": "Change password",
@@ -1203,7 +1204,8 @@
   },
   "sign-in": {
     "forgot": "Forgot your password?",
-    "forgot-hint": "Ask the owner of your household for a reset code."
+    "forgot-hint": "Ask the owner of your household for a reset code.",
+    "bot-check-required": "Too many tries in a row. Complete the check below, then sign in again."
   },
   "sign-up": {
     "choice-label": "How are you joining?",

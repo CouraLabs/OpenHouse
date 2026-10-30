@@ -4,6 +4,7 @@ import { AuditLogService } from '../audit/audit-log.service.js'
 import { AuditLogRepository } from '../audit/audit-log.repository.js'
 import { SystemClock } from '../common/clock/clock.js'
 import type { App } from '../common/context.js'
+import { TurnstileVerifier } from '../common/turnstile/turnstile-verifier.js'
 import type { Config } from '../config/env.js'
 import { InviteCodeService } from './invite-code.service.js'
 import { TenantUserRepository } from './tenant-user.repository.js'
@@ -16,7 +17,7 @@ export interface TenantsDeps {
 
 export function tenantsDeps(
   db: Database,
-  _config: Config,
+  config: Config,
   clock: SystemClock
 ): TenantsDeps {
   return {
@@ -27,6 +28,7 @@ export function tenantsDeps(
         new AuditLogService(new AuditLogRepository(db)),
         clock
       ),
+      turnstile: new TurnstileVerifier(config.turnstile),
     }),
   }
 }

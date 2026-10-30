@@ -4,15 +4,16 @@ import { useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { hasExactlyOneTenantField } from '@workspace/poco'
+import { hasExactlyOneTenantField, type SignUpResponse } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import { cn } from 'cn'
 import { ApiError } from '@/lib/api.js'
 import { useSignUp } from '@/lib/auth.js'
 import { browserCurrency, browserTimeZone } from '@/lib/settings.js'
 import { TextField } from '@workspace/ui/components/text-field'
-import { TurnstileWidget } from '@workspace/ui/components/turnstile-widget'
-import { TURNSTILE_SITE_KEY } from '@/lib/turnstile.js'
+import { CaptchaField } from '@/components/captcha-field.js'
+import { useAuthConfig } from '@/lib/auth-config.js'
+import { isCaptchaError } from '@/lib/captcha-error.js'
 
 type HouseholdChoice = 'join' | 'create'
 
@@ -52,7 +53,7 @@ function buildSignUpSchema(t: TFunction) {
 type SignUpFormValues = z.infer<ReturnType<typeof buildSignUpSchema>>
 
 interface SignUpFormProps {
-  onSuccess: (email: string) => void
+  onSuccess: (response: SignUpResponse) => void
   defaultTenantCode?: string
 }
 
@@ -65,9 +66,11 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
       : 'create'
   )
   const schema = useMemo(() => buildSignUpSchema(t), [t])
+  const siteKey = useAuthConfig().data?.captcha?.siteKey
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [turnstileReset, setTurnstileReset] = useState(0)
   const [botCheckMissing, setBotCheckMissing] = useState(false)
+  const [captchaFailure, setCaptchaFailure] = useState<string>()
   const onTurnstileToken = useCallback((token: string | null) => {
     setTurnstileToken(token)
     if (token !== null) {
@@ -97,7 +100,8 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
   }
 
   const onSubmit = handleSubmit(async (values) => {
-    if (turnstileToken === null) {
+    setCaptchaFailure(undefined)
+    if (siteKey !== undefined && turnstileToken === null) {
       setBotCheckMissing(true)
       return
     }
@@ -109,7 +113,7 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
             name: values.name,
             email: values.email,
             password: values.password,
-            turnstileToken,
+            turnstileToken: turnstileToken ?? undefined,
           }
         : {
             tenantName: values.tenantName.trim(),
@@ -118,14 +122,17 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
             password: values.password,
             timezone: browserTimeZone(),
             currency: browserCurrency(),
-            turnstileToken,
+            turnstileToken: turnstileToken ?? undefined,
           }
 
     try {
-      const accepted = await signUp.mutateAsync(body)
-      onSuccess(accepted.email)
+      onSuccess(await signUp.mutateAsync(body))
     } catch (error) {
       setTurnstileReset((count) => count + 1)
+      if (isCaptchaError(error)) {
+        setCaptchaFailure((error as Error).message)
+        return
+      }
 
       if (error instanceof ApiError) {
         const codeFieldIssue = error.issues?.find((issue) =>
@@ -222,20 +229,17 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
         error={errors.password}
         {...register('password')}
       />
-      <div className="flex flex-col gap-1.5">
-        <TurnstileWidget
-          siteKey={TURNSTILE_SITE_KEY}
+      {siteKey !== undefined && (
+        <CaptchaField
+          siteKey={siteKey}
           action="signup"
           onToken={onTurnstileToken}
           resetKey={turnstileReset}
-          className="min-h-[65px]"
+          error={
+            botCheckMissing ? t('sign-up.bot-check-required') : captchaFailure
+          }
         />
-        {botCheckMissing && (
-          <p role="alert" className="text-sm text-destructive">
-            {t('sign-up.bot-check-required')}
-          </p>
-        )}
-      </div>
+      )}
       <Button type="submit" disabled={isSubmitting || signUp.isPending}>
         {isSubmitting || signUp.isPending
           ? t('sign-up.submitting')

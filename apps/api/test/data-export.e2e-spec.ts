@@ -39,6 +39,7 @@ import {
   joinAsMember,
   signUp,
   startApp,
+  turnstileToken,
 } from './support.js'
 
 describe('data export and tenant deletion (e2e, #10)', () => {
@@ -141,6 +142,7 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     expect(linker.status).toBe(201)
 
     const invite = await owner.post('/api/tenants/invite-codes', {
+      turnstileToken: turnstileToken('invite'),
       expiresInDays: 7,
     })
 
