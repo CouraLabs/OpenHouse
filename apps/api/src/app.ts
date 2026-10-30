@@ -34,6 +34,31 @@ import { notificationsDeps } from './notifications/notifications.deps.js'
 import { calendarDeps } from './calendar/calendar.deps.js'
 import { statementImportsDeps } from './statement-imports/statement-imports.deps.js'
 import { dataExportsDeps } from './data-exports/data-exports.deps.js'
+import { tiersDeps } from './tiers/tiers.deps.js'
+import {
+  meterUsage,
+  requireCapacity,
+  requireUserSeat,
+} from './common/tiers/tier-gate.middleware.js'
+import type { TierResource } from '@workspace/poco'
+
+const TIER_RESOURCE_PATHS: ReadonlyArray<readonly [string, TierResource]> = [
+  ['/accounts', 'accounts'],
+  ['/categories', 'categories'],
+  ['/receivers', 'receivers'],
+  ['/transaction-linkers', 'transactionLinkers'],
+  ['/limits', 'limits'],
+  ['/goals', 'goals'],
+  ['/recurring-transactions', 'recurringTransactions'],
+]
+
+const EXPORT_PATHS = [
+  '/data-exports',
+  ...TIER_RESOURCE_PATHS.filter(([path]) => path !== '/transaction-linkers').map(
+    ([path]) => `${path}/export`
+  ),
+  '/transactions/export',
+]
 
 export function createApp(env: AppEnv['Bindings']): {
   app: Hono<AppEnv>
@@ -100,6 +125,18 @@ export function createApp(env: AppEnv['Bindings']): {
   authenticated.route('/auth', protectedRouter)
 
   const deps = { db, config: parsed, clock }
+
+  const tiers = tiersDeps(deps.db, deps.config, clock)
+  authenticated.route('/tiers', tiers.router)
+
+  for (const [path, resource] of TIER_RESOURCE_PATHS) {
+    authenticated.post(path, requireCapacity(tiers.gate, resource))
+  }
+  for (const path of EXPORT_PATHS) {
+    authenticated.post(path, meterUsage(tiers.gate, 'export'))
+  }
+  authenticated.post('/imports/commit', meterUsage(tiers.gate, 'import'))
+  authenticated.post('/tenants/invite-codes', requireUserSeat(tiers.gate))
 
   authenticated.route('/tenants', tenantsDeps(deps.db, deps.config, clock).router)
   authenticated.route('/settings', settingsDeps(deps.db, deps.config, clock).router)

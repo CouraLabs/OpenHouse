@@ -24,6 +24,7 @@ npm run test           # vitest: unit specs + apps/api/test e2e specs, all in wo
 npm run db:generate    # drizzle migration from packages/db schema
 npm run db:migrate     # apply migrations to the local D1
 npm run reset-code     # operator password-reset code, never over HTTP
+npm run set-tier       # operator: move a tenant to a plan (-1..3), never over HTTP
 ```
 
 ## PROJECT STRUCTURE
@@ -78,6 +79,7 @@ packages/
 - **Card bills are derived:** totals, carry-over and status are computed on read; payments name their bill via `paymentStatementId`; assignment is poco's `resolveStatement`.
 - **Tenant deletion is the only hard delete** (30-day scheduled job, one `db.batch`); otherwise only credential rows (push subscriptions, calendar feeds) are ever removed. `audit_log` is append-only. Exports are built in memory, never stored.
 - **Switches follow `ENVIRONMENT`:** production (the default) reads `OPENHOUSE_ENABLE_EMAIL_VERIFICATION` / `OPENHOUSE_ENABLE_CAPTCHA_CHECK` and hardens Hono (HSTS, CSRF origin check, no error detail); development (`npm run dev`) turns both checks off.
+- **Plans are tenant tiers:** the catalog is poco's `TIER_PLANS`; caps are enforced in `app.ts` through the `TierGate` port; Free hides (never deletes) transactions older than 3 months; tiers change only via `npm run set-tier`.
 - **Password recovery never needs email:** one-time reset codes, stored as SHA-256 only, redeeming signs every session out, failures answer one generic 400.
 
 ## PROJECT RULES

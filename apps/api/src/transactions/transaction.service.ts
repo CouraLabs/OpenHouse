@@ -3,8 +3,11 @@ import {
   CARD_PAYMENT_CATEGORY,
   inheritShares,
   resolveSplit,
+  FREE_TIER,
   SETTLEMENT_CATEGORY,
+  TIER_LIMIT,
   toCents,
+  type TierLimitError,
   type SettleUpBody,
   type SplitInput,
   type SplitShare,
@@ -22,7 +25,13 @@ import type {
 } from '@workspace/poco'
 
 import { AccountRepository } from '../accounts/account.repository.js'
-import { BadRequestError, ConflictError, NotFoundError } from '../common/errors.js'
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from '../common/errors.js'
+import type { TierGate } from '../common/tiers/tier-gate.js'
 import { HouseholdMembers } from '../common/household/household-members.js'
 import { assertMembers } from './split-members.js'
 import { CategoryRepository } from '../categories/category.repository.js'
@@ -49,8 +58,7 @@ function assertDateOpen(
   }
 
   const conflict: ReconciledEditConflict = {
-    message:
-      'This day was reconciled with the bank. Confirm to change it.',
+    message: 'This day was reconciled with the bank. Confirm to change it.',
     reconciledThrough: account.reconciledThrough,
   }
 
@@ -63,9 +71,7 @@ function assertSplittable(account: Account, type: string): void {
   }
 
   if (account.ownership === 'shared') {
-    throw new ConflictError(
-      'Expenses from a shared account create no debts.'
-    )
+    throw new ConflictError('Expenses from a shared account create no debts.')
   }
 }
 
@@ -91,14 +97,49 @@ export class TransactionService {
     private readonly receivers: ReceiverRepository,
     private readonly statements: CreditCardStatementRepository,
     private readonly installments: InstallmentService,
-    private readonly members: HouseholdMembers
+    private readonly members: HouseholdMembers,
+    private readonly tiers: TierGate
   ) {}
+
+  private async assertInWindow(tenantId: number, day: string): Promise<void> {
+    const start = await this.tiers.transactionWindowStart(tenantId)
+
+    if (start !== null && day < start) {
+      throw new ForbiddenError({
+        message: `Your plan keeps transactions from ${start} on. Upgrade your plan to record older ones.`,
+        error: 'Forbidden',
+        statusCode: 403,
+        code: TIER_LIMIT,
+        limit: 'transaction_window',
+        tier: FREE_TIER,
+      } satisfies TierLimitError)
+    }
+  }
+
+  private async inWindow<Filter extends TransactionFilter>(
+    tenantId: number,
+    filter: Filter
+  ): Promise<Filter> {
+    const start = await this.tiers.transactionWindowStart(tenantId)
+
+    if (
+      start === null ||
+      (filter.transactionDtFrom !== undefined &&
+        filter.transactionDtFrom >= start)
+    ) {
+      return filter
+    }
+
+    return { ...filter, transactionDtFrom: start }
+  }
 
   async create(
     tenantId: number,
     userId: number,
     body: CreateTransactionBody
   ): Promise<TransactionRow> {
+    await this.assertInWindow(tenantId, body.transactionDt)
+
     const account = await this.assertReferencesUsable(tenantId, body)
 
     assertDateOpen(account, body.transactionDt, body.confirmReconciled)
@@ -145,9 +186,7 @@ export class TransactionService {
 
     return this.repository.insertWithBalance(tenantId, userId, {
       ...write,
-      ...(split == null
-        ? {}
-        : { splits: sharesOf(body.amount, split, payer) }),
+      ...(split == null ? {} : { splits: sharesOf(body.amount, split, payer) }),
     })
   }
 
@@ -171,21 +210,30 @@ export class TransactionService {
     tenantId: number,
     args: SearchTransactionsArgs
   ): Promise<TransactionSearch> {
-    return this.repository.search(tenantId, args)
+    return this.repository.search(tenantId, {
+      ...args,
+      filter: await this.inWindow(tenantId, args.filter),
+    })
   }
 
   async summary(tenantId: number, filter: TransactionFilter) {
-    return this.repository.summary(tenantId, filter)
+    return this.repository.summary(
+      tenantId,
+      await this.inWindow(tenantId, filter)
+    )
   }
 
   async breakdown(tenantId: number, args: TransactionBreakdownArgs) {
-    return this.repository.breakdown(tenantId, args.dimension, args)
+    const filter = await this.inWindow(tenantId, args)
+
+    return this.repository.breakdown(tenantId, args.dimension, filter)
   }
 
   async find(tenantId: number, id: number): Promise<TransactionRow> {
     const row = await this.repository.findById(tenantId, id)
+    const start = await this.tiers.transactionWindowStart(tenantId)
 
-    if (row === undefined) {
+    if (row === undefined || (start !== null && row.transactionDt < start)) {
       throw new NotFoundError(`No transaction with id ${id}.`)
     }
 
@@ -249,6 +297,8 @@ export class TransactionService {
       await this.assertInstallmentEdit(tenantId, row, body)
     }
 
+    await this.assertInWindow(tenantId, body.transactionDt)
+
     const account = await this.assertReferencesUsable(tenantId, body)
 
     await this.assertPayerAndSplit(tenantId, body.paidByUserId, body.split)
@@ -309,9 +359,7 @@ export class TransactionService {
 
     if (split !== undefined) {
       if (row.transferGroupId !== null) {
-        throw new ConflictError(
-          'Transfers and bill payments cannot be split.'
-        )
+        throw new ConflictError('Transfers and bill payments cannot be split.')
       }
 
       if (row.installmentGroupId !== null) {
@@ -350,6 +398,8 @@ export class TransactionService {
     userId: number,
     body: SettleUpBody
   ): Promise<TransactionRow[]> {
+    await this.assertInWindow(tenantId, body.transactionDt)
+
     const memberIds = await this.members.allMemberIds(tenantId)
 
     if (
@@ -533,7 +583,7 @@ export class TransactionService {
 
     if (row.installmentGroupId !== null) {
       throw new ConflictError(
-        "Delete an installment purchase as a whole, or its remaining installments."
+        'Delete an installment purchase as a whole, or its remaining installments.'
       )
     }
 
@@ -560,6 +610,8 @@ export class TransactionService {
     if (from.id === to.id) {
       throw new ConflictError('Pick two different accounts.')
     }
+
+    await this.assertInWindow(tenantId, body.transactionDt)
 
     if (from.currency !== to.currency) {
       throw new ConflictError(

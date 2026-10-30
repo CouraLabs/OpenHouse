@@ -2,6 +2,7 @@ import {
   check,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -49,9 +50,29 @@ export const tenants = sqliteTable('tenants', {
   name: text().notNull().unique(),
   expiresIn: dt('expires_in'),
   deletionDate: day('deletion_date'),
+  tier: integer().notNull().default(0),
   createdAt: dt('created_at').notNull().default(NOW),
   updatedAt: dt('updated_at').notNull().default(NOW),
 })
+
+export const tenantUsageKinds = ['export', 'import'] as const
+
+export type TenantUsageKind = (typeof tenantUsageKinds)[number]
+
+export const tenantUsage = sqliteTable(
+  'tenant_usage',
+  {
+    tenantId: integer('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    kind: text().$type<TenantUsageKind>().notNull(),
+    period: text().notNull(),
+    count: integer().notNull().default(0),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.kind, table.period] }),
+  ]
+)
 
 export const userRoles = ['owner', 'user'] as const
 

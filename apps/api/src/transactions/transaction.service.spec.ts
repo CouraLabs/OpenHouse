@@ -22,6 +22,7 @@ import {
 } from './transaction.repository.js'
 import type { CreditCardStatementRepository } from '../credit-card-statements/credit-card-statement.repository.js'
 import type { InstallmentService } from './installment.service.js'
+import type { TierGate } from '../common/tiers/tier-gate.js'
 import { TransactionService } from './transaction.service.js'
 
 /** The account the account repository finds — ACTIVE Checking unless overridden. */
@@ -195,6 +196,10 @@ const members = () => ({
   nameOf: vi.fn(async (_tenant: number, id: number) => `Member ${id}`),
 })
 
+const unlimitedTiers = {
+  transactionWindowStart: async () => null,
+} as unknown as TierGate
+
 const service = (
   repo = repository(),
   accs = accounts(),
@@ -210,7 +215,8 @@ const service = (
     rcv as unknown as ReceiverRepository,
     bills as unknown as CreditCardStatementRepository,
     {} as InstallmentService,
-    household as unknown as HouseholdMembers
+    household as unknown as HouseholdMembers,
+    unlimitedTiers
   )
 
 const createBody = {

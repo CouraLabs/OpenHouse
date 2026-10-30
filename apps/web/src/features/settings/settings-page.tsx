@@ -6,6 +6,7 @@ import { useSession } from '@/lib/auth.js'
 import { ChangePasswordForm } from './change-password-form.js'
 import { DataSection } from './data-section.js'
 import { GeneralSettingsForm } from './general-settings-form.js'
+import { PlanSection } from './plan-section.js'
 import { PreferencesForm } from './preferences-form.js'
 import { RecoveryCodesSection } from './recovery-codes-section.js'
 import { SettingsNav } from './settings-nav.js'
@@ -35,6 +36,7 @@ export function SettingsPage() {
         </aside>
         <section className="min-w-0 flex-1">
           {active === 'general' ? <GeneralSettingsForm /> : null}
+          {active === 'plan' ? <PlanSection /> : null}
           {active === 'users' ? <UsersSection /> : null}
           {active === 'data' ? <DataSection /> : null}
           {active === 'preferences' ? <PreferencesForm /> : null}

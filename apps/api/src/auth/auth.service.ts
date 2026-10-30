@@ -19,11 +19,14 @@ import type {
 import { tenants, tenantCodes, tenantSettings, users } from '@workspace/db'
 import {
   EMAIL_UNVERIFIED,
+  tierPlan,
   toStartPage,
+  type TierLevel,
   type EmailUnverifiedError,
   type SessionResponse,
 } from '@workspace/poco'
 import type { Session } from '../common/session/session.js'
+import type { TierGate } from '../common/tiers/tier-gate.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import type { JwtTtls } from '../config/env.js'
 import { hashToken, TokenService } from './token.service.js'
@@ -62,7 +65,9 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly settings: SettingsRepository,
     private readonly ttls: JwtTtls,
-    private readonly requireVerifiedEmail: boolean
+    private readonly requireVerifiedEmail: boolean,
+    private readonly newTenantTier: TierLevel,
+    private readonly tiers: TierGate
   ) {}
 
   async signUpWithTenant(body: {
@@ -85,7 +90,10 @@ export class AuthService {
 
     try {
       const results = await runBatch(this.db, [
-        this.db.insert(tenants).values({ name: tenantName }).returning(),
+        this.db
+          .insert(tenants)
+          .values({ name: tenantName, tier: this.newTenantTier })
+          .returning(),
         this.db
           .insert(users)
           .values({
@@ -151,6 +159,8 @@ export class AuthService {
     if (code.expiresAt !== null && code.expiresAt < now) {
       throw new ConflictError('This tenant code has expired.')
     }
+
+    await this.tiers.assertCanAddUser(code.tenantId)
 
     const stamp = new Date()
 
@@ -363,6 +373,7 @@ export class AuthService {
       tenant: {
         id: tenant.id,
         name: tenant.name,
+        tier: tierPlan(tenant.tier).level,
         expiresIn: tenant.expiresIn?.toISOString() ?? null,
         deletionDate: tenant.deletionDate,
         createdAt: tenant.createdAt.toISOString(),

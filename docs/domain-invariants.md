@@ -49,3 +49,11 @@ A one-time reset code — issued by an owner for a member, generated in advance 
 ## Bot checks and email confirmation are switches
 
 `ENVIRONMENT` is `development` or `production` (unset means production). In production, `OPENHOUSE_ENABLE_EMAIL_VERIFICATION` and `OPENHOUSE_ENABLE_CAPTCHA_CHECK` turn on the confirmation link sent at sign-up and the Turnstile check (sign-up, a sign-in retried within 5 seconds, confirmation resends, invite codes). In development both are off whatever they say. The web learns the effective switches from `GET auth/config` and renders the widget only when the API enforces it. Accounts created while confirmation is off keep `email_verified_at` empty: turning it on later asks them to confirm at their next sign-in.
+
+## Plans are tiers on the tenant
+
+`tenants.tier` is the plan: -1 Developer (no limits; new tenants get it in development), 0 Free (new tenants in production, and every tenant that existed before tiers), 1 Plus, 2 Pro, 3 Max. The catalog — prices in BRL, caps, entitlements — lives once in poco (`TIER_PLANS`) and is read by the API and the web. There is no billing: a tier changes only through the operator command `npm run set-tier`, never over HTTP.
+
+The API enforces the caps at the composition root: creating an account, category, receiver, transaction linker, limit, goal or recurring transaction counts that resource's active rows (system categories excluded); invite codes and invite redemptions count active users; full and CSV exports and import commits count against `tenant_usage`, one row per tenant, kind and tenant-month. A refusal is a 403 `tier_limit` naming the limit.
+
+Free keeps a three-month transaction window (the tenant's current month and the two before). Older transactions are never deleted: they are hidden from lists, search, summaries and lookups, and cannot be created or edited; balances, bills and goals still count them, and moving to a paid tier shows them again. Messaging, AI and the Household Assistant are entitlement flags on the plan until those features exist.

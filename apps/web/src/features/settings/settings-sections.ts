@@ -2,6 +2,7 @@ import type { SessionUser } from '@workspace/poco'
 
 export const settingsSections = [
   'general',
+  'plan',
   'users',
   'data',
   'preferences',

@@ -18,6 +18,7 @@ import { ReconciliationService } from './reconciliation.service.js'
 import { TransactionRepository } from './transaction.repository.js'
 import { TransactionService } from './transaction.service.js'
 import { transactionsRoutes } from './transactions.routes.js'
+import { tierGateFor } from '../tiers/tiers.deps.js'
 
 export interface TransactionsDeps {
   router: App
@@ -53,7 +54,8 @@ export function transactionsDeps(
     receivers,
     statements,
     installments,
-    members
+    members,
+    tierGateFor(db, clock)
   )
   const reconciliation = new ReconciliationService(
     ledger,

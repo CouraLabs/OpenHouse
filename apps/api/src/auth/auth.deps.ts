@@ -8,6 +8,8 @@ import {
 } from '../common/mail/binding-mailer.js'
 import { TurnstileVerifier } from '../common/turnstile/turnstile-verifier.js'
 import type { Config } from '../config/env.js'
+import { DEVELOPER_TIER, FREE_TIER } from '@workspace/poco'
+import { tierGateFor } from '../tiers/tiers.deps.js'
 import { SettingsRepository } from '../settings/settings.repository.js'
 import { AuthService } from './auth.service.js'
 import { EmailVerificationService } from './email-verification.service.js'
@@ -40,7 +42,9 @@ export function authDeps(
     tokens,
     settings,
     config.ttls,
-    config.features.emailVerification
+    config.features.emailVerification,
+    config.environment === 'development' ? DEVELOPER_TIER : FREE_TIER,
+    tierGateFor(db, clock)
   )
   const passwordResets = new PasswordResetService(
     new PasswordResetRepository(db),

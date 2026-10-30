@@ -878,7 +878,9 @@
     "transfer-bill": "Bill",
     "transfer-bill-current": "Current bill",
     "card-payment-category": "Credit card payment",
-    "pick-category": "Pick a category."
+    "pick-category": "Pick a category.",
+    "window-notice": "Your plan shows transactions from {{date}} on. Older ones are kept, not deleted.",
+    "window-plan-link": "See plans"
   },
   "interest-comparison": {
     "title": "Simple vs Compound Interest",
@@ -1032,7 +1034,8 @@
       "users": "Users",
       "data": "Data",
       "preferences": "Preferences",
-      "security": "Security"
+      "security": "Security",
+      "plan": "Plan"
     },
     "general": {
       "title": "General",
@@ -1187,6 +1190,39 @@
       "delete-type-name": "Type \"{{name}}\" to confirm",
       "delete-confirm": "Schedule deletion",
       "deleting": "Scheduling…"
+    },
+    "plan": {
+      "title": "{{name}} plan",
+      "description": "What your household can store and do on its current plan, and how much of it is in use this month.",
+      "loading": "Loading your plan…",
+      "window": "Transactions before {{date}} are kept but hidden on this plan. Upgrading shows them again.",
+      "usage-users": "Users",
+      "usage-exports": "Exports this month",
+      "usage-imports": "Imports this month",
+      "unlimited": "Unlimited",
+      "resource": {
+        "accounts": "Accounts",
+        "categories": "Categories",
+        "receivers": "Receivers",
+        "transactionLinkers": "Transaction linkers",
+        "limits": "Limits",
+        "goals": "Goals",
+        "recurringTransactions": "Recurring transactions"
+      },
+      "compare": "Plans",
+      "change-hint": "Plans are changed by the OpenHouse team for now. Get in touch to upgrade.",
+      "current": "Current",
+      "price": "{{price}} / month",
+      "extra-user": "+{{price}} per extra user",
+      "feature-users_one": "{{value}} user",
+      "feature-users_other": "{{value}} users",
+      "feature-items": "{{value}} of each item (accounts, categories, goals…)",
+      "feature-exports": "Exports a month: {{exports}} · imports: {{imports}}",
+      "feature-history": "Last {{count}} months of transactions",
+      "feature-history-unlimited": "Unlimited transaction history",
+      "feature-messaging": "Telegram and WhatsApp integration",
+      "feature-ai": "AI integration",
+      "feature-assistant": "Household Assistant"
     }
   },
   "security": {

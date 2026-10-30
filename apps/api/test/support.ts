@@ -129,6 +129,16 @@ export function turnstileToken(action: string): string {
   return `pass:${action}`
 }
 
+/** Moves a tenant to a plan, as `npm run set-tier` does. Specs sign up on
+ * the unlimited developer tier unless they ask for another. */
+export async function setTier(tenantId: number, tier: number): Promise<void> {
+  await (env as unknown as { DB: D1Database }).DB.prepare(
+    'UPDATE tenants SET tier = ? WHERE id = ?'
+  )
+    .bind(tier, tenantId)
+    .run()
+}
+
 /** A fresh email no other run used. */
 export function uniqueEmail(): string {
   return `user-${randomUUID()}@example.com`
@@ -225,7 +235,8 @@ function agentOf(app: TestApp, cookieJar: { value: string }): Agent {
 export async function signUp(
   app: TestApp,
   email = uniqueEmail(),
-  password = 'password-a'
+  password = 'password-a',
+  tier = -1
 ): Promise<Agent> {
   const jar = { value: '' }
   const agent = agentOf(app, jar)
@@ -243,7 +254,8 @@ export async function signUp(
     )
   }
 
-  await confirmEmail(agent, email)
+  const confirmed = await confirmEmail(agent, email)
+  await setTier(confirmed.body.tenant.id, tier)
 
   return agent
 }

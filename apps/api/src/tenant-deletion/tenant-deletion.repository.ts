@@ -18,6 +18,7 @@ import {
   tenantCodes,
   tenantSettings,
   tenants,
+  tenantUsage,
   transactionHistory,
   transactionLinkers,
   transactionSplits,
@@ -106,6 +107,7 @@ export class TenantDeletionRepository {
       this.db.delete(receivers).where(eq(receivers.tenantId, tenantId)),
       this.db.delete(categories).where(eq(categories.tenantId, tenantId)),
       this.db.delete(tenantCodes).where(eq(tenantCodes.tenantId, tenantId)),
+      this.db.delete(tenantUsage).where(eq(tenantUsage.tenantId, tenantId)),
       this.db
         .delete(tenantSettings)
         .where(eq(tenantSettings.tenantId, tenantId)),

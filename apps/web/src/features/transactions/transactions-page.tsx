@@ -44,6 +44,7 @@ import { ClosedBillDialog } from './closed-bill-dialog.js'
 import { CreditModeToggle } from './credit-mode-toggle.js'
 import { CurrentBillCard } from './current-bill-card.js'
 import { ExpensePieCard } from './expense-pie-card.js'
+import { TransactionWindowNotice } from './transaction-window-notice.js'
 import { FilterChips } from './filter-chips.js'
 import { InstallmentGroupDialog } from './installment-group-dialog.js'
 import { forecastNextMonthExpenses } from '@workspace/poco'
@@ -468,7 +469,11 @@ export function TransactionsPage() {
               onNext={() => setAnchor((current) => shiftMonth(current, 1))}
             />
             <div className="hidden min-[1100px]:flex">
-              <ExportCsvButton path="/transactions/export" args={args} csv={exportCsv} />
+              <ExportCsvButton
+                path="/transactions/export"
+                args={args}
+                csv={exportCsv}
+              />
             </div>
             <FilterDialog
               fields={[
@@ -602,6 +607,7 @@ export function TransactionsPage() {
         }
       />
       {}
+      <TransactionWindowNotice />
       <FilterChips chips={chips} />
       {view === 'metrics' ? (
         <>

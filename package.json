@@ -12,7 +12,8 @@
     "test": "turbo run test",
     "db:generate": "npm run db:generate --workspace=@workspace/db",
     "db:migrate": "npm run db:migrate:local --workspace=api",
-    "reset-code": "npm run reset-code --workspace=api --"
+    "reset-code": "npm run reset-code --workspace=api --",
+    "set-tier": "npm run set-tier --workspace=api --"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

@@ -17,7 +17,8 @@
     "db:generate": "npm run db:generate --workspace=@workspace/db",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
-    "reset-code": "node scripts/reset-code.mjs"
+    "reset-code": "node scripts/reset-code.mjs",
+    "set-tier": "node scripts/set-tier.mjs"
   },
   "dependencies": {
     "@workspace/db": "*",
