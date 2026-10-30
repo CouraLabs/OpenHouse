@@ -1,4 +1,4 @@
-# Deploys both Workers on pushes to master and on demand: checks first,
+# Deploys both Workers on demand only (Actions → deploy → Run workflow): checks first,
 # then builds every app (the app Worker serves apps/web/dist as its assets,
 # the landing Worker apps/landing/dist), applies the D1 migrations to the
 # remote database BEFORE shipping the new bundle — the expand/contract order
@@ -11,8 +11,9 @@
 name: deploy
 
 on:
-  push:
-    branches: [master]
+  # Deploys are manual for now (`npm run build && npm run deploy` from a
+  # machine signed in with wrangler); re-add `push: branches: [master]` once
+  # the repository has the Cloudflare secrets.
   workflow_dispatch:
 
 concurrency:
