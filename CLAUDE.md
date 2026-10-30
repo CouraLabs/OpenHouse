@@ -74,15 +74,17 @@ packages/
 
 ### Domain invariants (full text: `docs/domain-invariants.md`)
 
-- **Tenant entities:** spread `tenantEntityColumns()`, soft delete only, tenant comes from the session (never the body), repository takes tenant id first, writes stamp `createdBy`/`updateBy`, display fields are joined. Exceptions: `tenant_settings` (typed columns, one row per tenant) and user-scoped rows (notifications, push subscriptions, calendar feeds).
-- **Time is the tenant's:** "today" is `todayIn(settings.timezone)` / `useTenantToday()`; use the injected `Clock`, never `new Date()` for day logic.
-- **Currency lives on the account:** `accounts.currency` is immutable; money that moves inherits it; limits and goals use the tenant's main currency; nothing is converted yet.
-- **Money is a string end to end:** integer cents in SQLite via the `money` type, decimal strings on the wire, `format-money.ts` and `MoneyField` on the web — never a float.
-- **Card bills are derived:** totals, carry-over and status are computed on read; payments name their bill via `paymentStatementId`; assignment is poco's `resolveStatement`.
-- **Tenant deletion is the only hard delete** (30-day scheduled job, one `db.batch`); otherwise only credential rows (push subscriptions, calendar feeds) are ever removed. `audit_log` is append-only. Exports are built in memory, never stored.
-- **Switches follow `ENVIRONMENT`:** production (the default) reads `OPENHOUSE_ENABLE_EMAIL_VERIFICATION` / `OPENHOUSE_ENABLE_CAPTCHA_CHECK` and hardens Hono (HSTS, CSRF origin check, no error detail); development (`npm run dev`) turns both checks off.
-- **Plans are tenant tiers:** the catalog is poco's `TIER_PLANS`; caps are enforced in `app.ts` through the `TierGate` port; Free hides (never deletes) transactions older than 3 months; tiers change only via `npm run set-tier`.
-- **Password recovery never needs email:** one-time reset codes, stored as SHA-256 only, redeeming signs every session out, failures answer one generic 400.
+- **Tenant entities:** spread `tenantEntityColumns()`, soft delete, tenant from the session (never the body), repository takes tenant id first, writes stamp `createdBy`/`updateBy`, display fields joined. Tables outside the recipe are listed in the doc.
+- **Time:** "today" is `todayIn(settings.timezone)` / `useTenantToday()`; day logic uses the injected `Clock`; `new Date()` only for instant stamps.
+- **Currency:** `accounts.currency` is immutable and inherited by money that moves; limits and goals use the main currency; nothing is converted.
+- **Money:** integer cents in SQLite (`money` type), decimal strings on the wire, bigint cents for arithmetic, `format-money.ts` + `MoneyField` on the web; `Number()` only for charts and ratios.
+- **Transactions:** transfers pair two legs by `transferGroupId`; a card payment is the transfer's Income leg with `paymentStatementId`; installments ≤ 48; every write adds a `transaction_history` row.
+- **Household splits:** shares > 0 summing to the amount, via poco's `resolveSplit`; rounding cents go to the payer.
+- **Card bills are derived:** totals, carry-over and status computed on read; assignment is poco's `resolveStatement`.
+- **Deletion:** soft everywhere, except tenant deletion (30-day job, one `db.batch`), member anonymization, and credential/throttle rows. `audit_log` and `transaction_history` are append-only. Exports are built in memory.
+- **Switches follow `ENVIRONMENT`:** production (default) reads `OPENHOUSE_ENABLE_EMAIL_VERIFICATION` / `OPENHOUSE_ENABLE_CAPTCHA_CHECK` and hardens Hono (HSTS, CSRF origin check, no error detail); development turns both checks off.
+- **Plans are tenant tiers:** poco's `TIER_PLANS`; caps enforced in `app.ts` via `TierGate`; Free hides (never deletes) transactions older than 3 months; tiers change only via `npm run set-tier`.
+- **Password recovery never needs email:** one-time codes stored as SHA-256, redeeming signs every session out, failures answer one generic 400.
 
 ## PROJECT RULES
 
