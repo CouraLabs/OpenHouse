@@ -10,6 +10,7 @@
     "format": "turbo run format",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:e2e": "npm run test:e2e --workspace=@workspace/e2e",
     "db:generate": "npm run db:generate --workspace=@workspace/db",
     "db:migrate": "npm run db:migrate:local --workspace=api",
     "reset-code": "npm run reset-code --workspace=api --",

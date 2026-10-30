@@ -10,6 +10,8 @@
       "!**/dev-dist",
       "!**/public",
       "!**/coverage",
+      "!**/playwright-report",
+      "!**/test-results",
       "!**/.turbo",
       "!**/*.tsbuildinfo",
       "!package-lock.json"
@@ -49,6 +51,16 @@
         "rules": {
           "suspicious": {
             "noArrayIndexKey": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/e2e/support/test.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noEmptyPattern": "off"
           }
         }
       }
