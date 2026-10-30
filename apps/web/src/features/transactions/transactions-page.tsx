@@ -734,6 +734,7 @@ export function TransactionsPage() {
             amount: t('transactions.amount'),
             status: t('transactions.status'),
             selectAll: t('transactions.select-all'),
+            gridLabel: t('transactions.grid-label'),
             selectRow: t('transactions.select-row'),
             groupIncomes: t('transactions.group-incomes'),
             groupExpenses: t('transactions.group-expenses'),

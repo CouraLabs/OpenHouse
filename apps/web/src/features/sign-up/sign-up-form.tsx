@@ -9,7 +9,6 @@ import { Button } from '@workspace/ui/components/button'
 import { cn } from 'cn'
 import { ApiError } from '@/lib/api.js'
 import { useSignUp } from '@/lib/auth.js'
-import { browserCurrency, browserTimeZone } from '@/lib/settings.js'
 import { TextField } from '@workspace/ui/components/text-field'
 import { CaptchaField } from '@/components/captcha-field.js'
 import { useAuthConfig } from '@/lib/auth-config.js'
@@ -120,8 +119,6 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
             name: values.name,
             email: values.email,
             password: values.password,
-            timezone: browserTimeZone(),
-            currency: browserCurrency(),
             turnstileToken: turnstileToken ?? undefined,
           }
 

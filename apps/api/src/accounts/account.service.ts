@@ -155,7 +155,7 @@ function toWrite(body: CreateAccountBody): AccountWrite {
     agency: body.agency ?? null,
     number: body.number ?? null,
     type: body.type,
-    openingBalance: body.balance,
+    openingBalance: body.balance ?? '0.00',
     ...(body.openingDt === undefined ? {} : { openingDt: body.openingDt }),
     currency: body.currency,
     spreadPct: body.spreadPct,

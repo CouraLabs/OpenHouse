@@ -216,7 +216,6 @@
     "is-default": "Default account",
     "default-badge": "Default",
     "close-day-inclusive": "Close day on this bill",
-    "cycle-days-equal": "The close and due days must differ.",
     "cycle-gap-short": "Due fewer than 5 days after the close. Were the days swapped?",
     "cycle-gap-long": "Due more than 25 days after the close. Were the days swapped?",
     "cycle-missing": "Set the close and due days to see this card's bills",
@@ -762,6 +761,7 @@
     "group-expenses": "Expenses",
     "group-net": "Net",
     "select-all": "Select all loaded rows",
+    "grid-label": "Transactions",
     "select-row": "Select transaction",
     "name": "Name",
     "name-placeholder": "Groceries",
@@ -1021,6 +1021,12 @@
       "property": "Property value"
     }
   },
+  "initial-setup": {
+    "title": "Set up {{name}}",
+    "description": "Pick your time zone and main currency before you start. Days, limits, and goals follow them.",
+    "currency-hint": "Limits and goals use this currency. Each account keeps its own, and you can change this later in Settings.",
+    "submit": "Start using OpenHouse"
+  },
   "settings": {
     "title": "Settings",
     "subtitle": "The household's time zone, main currency, and members, and your own preferences and password.",
@@ -1055,11 +1061,6 @@
       "description": "Your own choices — they apply only to you.",
       "start-page": "Page to open after signing in",
       "home": "Home"
-    },
-    "confirm-timezone": {
-      "title": "Confirm your time zone",
-      "description": "Your household is on UTC until you confirm. We suggest the zone of this browser.",
-      "confirm": "Confirm"
     },
     "users": {
       "title": "Users",

@@ -118,21 +118,28 @@ export function TransactionRow({
   const isInstallment = transaction.installmentGroupId !== null
 
   return (
-    <div className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b px-3 py-2 text-sm hover:bg-muted/40">
-      <Checkbox
-        checked={selected}
-        aria-label={labels.selectRow}
-        onCheckedChange={() => onToggleRow(transaction)}
-      />
-      <span className="tabular-nums">
+    <div
+      role="row"
+      className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b px-3 py-2 text-sm hover:bg-muted/40"
+    >
+      <span role="cell">
+        <Checkbox
+          checked={selected}
+          aria-label={labels.selectRow}
+          onCheckedChange={() => onToggleRow(transaction)}
+        />
+      </span>
+      <span role="cell" className="tabular-nums">
         {new Intl.DateTimeFormat(locale, {
           day: '2-digit',
           month: '2-digit',
         }).format(new Date(`${transaction.transactionDt}T00:00:00`))}
       </span>
-      <span className="flex min-w-0 items-center gap-2">
+      <span role="cell" className="flex min-w-0 items-center gap-2">
         <Badge
           variant="outline"
+          className="min-w-0 shrink justify-start"
+          title={transaction.categoryName}
           style={
             transaction.categoryColor === ''
               ? undefined
@@ -142,7 +149,7 @@ export function TransactionRow({
                 }
           }
         >
-          {transaction.categoryName}
+          <span className="truncate">{transaction.categoryName}</span>
         </Badge>
         <span
           className="truncate text-muted-foreground"
@@ -151,7 +158,7 @@ export function TransactionRow({
           {transaction.accountName}
         </span>
       </span>
-      <span className="truncate" title={transaction.name}>
+      <span role="cell" className="truncate" title={transaction.name}>
         {transaction.name}
         {transaction.isAdjustment ? (
           <Badge variant="secondary" className="ml-2">
@@ -164,7 +171,7 @@ export function TransactionRow({
           </span>
         ) : null}
       </span>
-      <span className="flex flex-col items-end">
+      <span role="cell" className="flex flex-col items-end">
         <span
           className={`font-medium tabular-nums ${amountTone(transaction)}`}
         >
@@ -183,7 +190,7 @@ export function TransactionRow({
           )}
         </span>
       </span>
-      <span className="flex items-center gap-1">
+      <span role="cell" className="flex items-center gap-1">
         {transaction.locked ? (
           <Lock
             className="size-3.5 shrink-0 text-muted-foreground"
@@ -196,7 +203,7 @@ export function TransactionRow({
           onChange={(status) => actions.onStatusChange(transaction, status)}
         />
       </span>
-      <div className="flex items-center justify-end gap-1">
+      <div role="cell" className="flex items-center justify-end gap-1">
         <Button
           variant="ghost"
           size="icon-sm"

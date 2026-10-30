@@ -50,7 +50,7 @@ const newAccount = (mainCurrency: Currency): AccountFormValues => ({
   agency: null,
   number: null,
   type: 'Checking',
-  balance: '',
+  balance: undefined,
   currency: mainCurrency,
   spreadPct: '0',
   limit: null,
@@ -245,12 +245,14 @@ export function AccountForm({
           }
           labelFor="account-balance"
           placeholder={t('accounts.amount-placeholder')}
-          value={balance}
+          value={balance ?? undefined}
           onValueChange={(value) =>
-            setValue('balance', value, { shouldValidate: true })
+            setValue('balance', value === '' ? undefined : value, {
+              shouldValidate: true,
+            })
           }
           error={errors.balance}
-          required
+          required={!isCard}
         />
         <Field data-invalid={errors.currency !== undefined}>
           <FieldLabel htmlFor="account-currency">

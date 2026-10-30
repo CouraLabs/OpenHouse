@@ -82,4 +82,10 @@ describe('inferCategory', () => {
     // a floor, so three-letter noise matches nothing.
     expect(inferCategory('a e de', categories)).toBeUndefined()
   })
+
+  it('does not pick a category from a single shared short word', () => {
+    expect(
+      inferCategory('QA Incomplete', [category('QA Groceries')])
+    ).toBeUndefined()
+  })
 })

@@ -85,6 +85,26 @@ test.describe('accounts', () => {
     })
   })
 
+  test('a credit card can be saved without an opening balance', async ({ page }) => {
+    const name = uniqueName('QA Card No Balance')
+
+    await test.step('Action: create a Credit Card and leave the balance empty', async () => {
+      await page.goto('accounts')
+      await page.getByRole('button', { name: 'New account' }).click()
+      await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
+      await chooseOption(page, 'Type', 'Credit Card')
+      await page.getByRole('textbox', { name: 'Limit', exact: true }).fill('5000.00')
+      await chooseOption(page, 'Currency', currencyOption('BRL'))
+      await chooseDay(page, 'Close date', 5)
+      await chooseDay(page, 'Due date', 15)
+      await page.getByRole('button', { name: 'Save', exact: true }).click()
+    })
+
+    await test.step('Expect: the card is saved and listed', async () => {
+      await expect(page.getByRole('row').filter({ hasText: name })).toBeVisible()
+    })
+  })
+
   test('a credit card is created with its limit and cycle days', async ({ page }) => {
     const name = uniqueName('QA Card')
 
@@ -110,7 +130,7 @@ test.describe('accounts', () => {
     })
   })
 
-  test.fail('a wallet can start with a zero balance', async ({ page }) => {
+  test('a wallet can start with a zero balance', async ({ page }) => {
     const name = uniqueName('QA Zero Wallet')
 
     await test.step('Action: create a Wallet with a balance of 0.00', async () => {

@@ -21,10 +21,12 @@ export function isUniqueViolation(
       return true
     }
 
+    const marker = 'UNIQUE constraint failed:'
     const listed = message
-      .slice(message.indexOf(':') + 1)
-      .split(',')
-      .map((column) => column.trim())
+      .slice(message.indexOf(marker) + marker.length)
+      .split(':')[0]
+      ?.split(',')
+      .map((column) => column.trim()) ?? []
 
     return columns.every((column) => listed.includes(`${table}.${column}`))
   })

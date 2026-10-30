@@ -59,13 +59,9 @@ export function CardCycleFields({
           }
         />
       </Field>
-      {sameDay || gap !== null ? (
-        <p
-          className={`col-span-full text-sm ${sameDay ? 'text-destructive' : 'text-muted-foreground'}`}
-        >
-          {sameDay
-            ? t('accounts.cycle-days-equal')
-            : t(`accounts.cycle-gap-${gap}`)}
+      {gap !== null ? (
+        <p className="col-span-full text-sm text-muted-foreground">
+          {t(`accounts.cycle-gap-${gap}`)}
         </p>
       ) : null}
     </>

@@ -17,7 +17,16 @@ test.describe('sign-up', () => {
       await signUpThroughForm(page, owner)
     })
 
-    await test.step('Expect: the app opens the dashboard for the new household', async () => {
+    await test.step('Expect: the app is locked on the initial setup until the household is configured', async () => {
+      await expect(page.getByRole('heading', { name: `Set up ${owner.household}` })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Dashboard' })).toHaveCount(0)
+    })
+
+    await test.step('Action: confirm the time zone and main currency', async () => {
+      await page.getByRole('button', { name: 'Start using OpenHouse' }).click()
+    })
+
+    await test.step('Expect: the app unlocks and opens the dashboard for the new household', async () => {
       await expect(page).toHaveURL(/\/app\/$/)
       await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
       await expect(page.getByText(owner.household, { exact: true }).first()).toBeVisible()
@@ -57,7 +66,7 @@ test.describe('sign-up', () => {
     })
   })
 
-  test.fail(
+  test(
     'a household name that is already taken is refused with a readable message',
     async ({ page }) => {
       const taken = loadOwnerAccount()

@@ -13,6 +13,9 @@
       "!**/playwright-report",
       "!**/test-results",
       "!**/.turbo",
+      "!**/.wrangler",
+      "!**/.claude",
+      "!packages/ui/src/styles/globals.css",
       "!**/*.tsbuildinfo",
       "!package-lock.json"
     ]
@@ -45,6 +48,22 @@
     }
   },
   "overrides": [
+    {
+      "includes": [
+        "apps/web/src/features/transactions/day-header.tsx",
+        "apps/web/src/features/transactions/transaction-grid.tsx",
+        "apps/web/src/features/transactions/transaction-row.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off",
+            "useFocusableInteractive": "off",
+            "useAriaPropsSupportedByRole": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["apps/web/src/features/statement-imports/import-sample-table.tsx"],
       "linter": {

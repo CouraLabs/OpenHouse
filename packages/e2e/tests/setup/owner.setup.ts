@@ -18,6 +18,7 @@ setup('signs up the shared owner household in BRL', async ({ page }) => {
     email: owner.email,
     password: owner.password,
     currency: 'BRL',
+    timezone: 'America/Sao_Paulo',
   })
 
   await page.goto('')

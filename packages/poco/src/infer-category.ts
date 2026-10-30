@@ -1,5 +1,7 @@
 import type { CategoryRef } from './categories.js'
 
+const MIN_PARTIAL_TOKEN = 4
+
 function tokens(value: string): string[] {
   return value
     .normalize('NFD')
@@ -67,7 +69,13 @@ export function inferCategory(
 
       if (longCategory.length > 0 && matched === longCategory.length) {
         score = 2
-      } else if (matched > 0) {
+      } else if (
+        longCategory.some(
+          (token) =>
+            token.length >= MIN_PARTIAL_TOKEN &&
+            nameTokens.some((candidate) => tokenMatch(candidate, token))
+        )
+      ) {
         score = 1
       }
     }

@@ -18,6 +18,7 @@ setup('signs up a separate household for the sign-in tests', async ({ page }) =>
     email: account.email,
     password: account.password,
     currency: 'BRL',
+    timezone: 'America/Sao_Paulo',
   })
 
   await page.goto('')

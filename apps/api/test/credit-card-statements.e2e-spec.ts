@@ -330,7 +330,7 @@ describe('credit card statements (e2e, #5)', () => {
       dueDay: 5,
     })
 
-    expect(refused.status).toBe(409)
+    expect(refused.status).toBe(400)
   })
 
   it('asks before deleting a card that still owes', async () => {

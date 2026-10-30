@@ -19,9 +19,15 @@ export function DayHeader({
   }).format(new Date(`${group.day}T00:00:00`))
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 border-b bg-muted/60 px-3 py-1.5 text-sm font-medium">
-      <span>{title}</span>
-      <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground md:text-sm">
+    <div
+      role="row"
+      className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 border-b bg-muted/60 px-3 py-1.5 text-sm font-medium"
+    >
+      <span role="cell">{title}</span>
+      <span
+        role="cell"
+        className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground md:text-sm"
+      >
         {group.totals.map((total) => (
           <span key={total.currency} className="flex gap-3">
             <span>

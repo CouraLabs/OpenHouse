@@ -24,6 +24,7 @@ export interface TransactionGridLabels {
   amount: string
   status: string
   selectAll: string
+  gridLabel: string
   selectRow: string
   groupIncomes: string
   groupExpenses: string
@@ -150,21 +151,32 @@ export function TransactionGrid({
   const allSelected = rows.every((row) => selection.has(row.id))
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-lg border">
+    <div
+      role={isMobile ? undefined : 'table'}
+      aria-label={isMobile ? undefined : labels.gridLabel}
+      className="flex min-h-0 flex-1 flex-col rounded-lg border"
+    >
       {}
       {!isMobile ? (
-        <div className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground">
-          <Checkbox
-            checked={allSelected}
-            aria-label={labels.selectAll}
-            onCheckedChange={onToggleAll}
-          />
-          <span>{labels.when}</span>
-          <span>{labels.category}</span>
-          <span>{labels.description}</span>
-          <span className="text-right">{labels.amount}</span>
-          <span>{labels.status}</span>
-          <span />
+        <div
+          role="row"
+          className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground"
+        >
+          <span role="columnheader">
+            <Checkbox
+              checked={allSelected}
+              aria-label={labels.selectAll}
+              onCheckedChange={onToggleAll}
+            />
+          </span>
+          <span role="columnheader">{labels.when}</span>
+          <span role="columnheader">{labels.category}</span>
+          <span role="columnheader">{labels.description}</span>
+          <span role="columnheader" className="text-right">
+            {labels.amount}
+          </span>
+          <span role="columnheader">{labels.status}</span>
+          <span role="columnheader" />
         </div>
       ) : null}
       <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">

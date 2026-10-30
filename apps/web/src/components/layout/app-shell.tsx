@@ -1,22 +1,29 @@
 import type { ReactNode } from 'react'
 import type { SessionResponse } from '@workspace/poco'
 
+import { useSession } from '@/lib/auth.js'
 import { AppHeader } from '@/components/layout/app-header.js'
 import { AppSidebar } from '@/components/layout/app-sidebar.js'
+import { InitialSetup } from '@/components/layout/initial-setup.js'
 import { RecoveryCodesPrompt } from '@/components/layout/recovery-codes-prompt.js'
 import { ServerResetNotice } from '@/components/layout/server-reset-notice.js'
 import { TenantDeletionBanner } from '@/components/layout/tenant-deletion-banner.js'
-import { TimezoneConfirmBanner } from '@/components/layout/timezone-confirm-banner.js'
 import { SidebarInset, SidebarProvider } from '@workspace/ui/components/sidebar'
 import { Toaster } from '@workspace/ui/components/toast'
 
 export function AppShell({
-  session,
+  session: initialSession,
   children,
 }: {
   session: SessionResponse
   children: ReactNode
 }) {
+  const session = useSession().data ?? initialSession
+
+  if (session.user.role === 'owner' && !session.settings.timezoneConfirmed) {
+    return <InitialSetup tenantName={session.tenant.name} />
+  }
+
   return (
     <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar tenantName={session.tenant.name} />
@@ -24,7 +31,6 @@ export function AppShell({
         <AppHeader user={session.user} />
         <TenantDeletionBanner />
         <ServerResetNotice />
-        <TimezoneConfirmBanner />
         <RecoveryCodesPrompt />
         {}
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">

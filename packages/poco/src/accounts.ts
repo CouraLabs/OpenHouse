@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { csvLocaleField } from './csv-export.js'
+import { cycleDaysDiffer } from './credit-card-cycle.js'
 
 import { currencySchema, type Currency } from './currencies.js'
 import {
@@ -52,7 +53,7 @@ export const createAccountSchema = z
       )
       .nullish(),
     type: accountTypeSchema,
-    balance: balanceSchema,
+    balance: balanceSchema.nullish(),
     openingDt: dateOnlySchema.optional(),
     currency: currencySchema,
     spreadPct: spreadPctSchema.prefault('0'),
@@ -64,6 +65,27 @@ export const createAccountSchema = z
     ownership: accountOwnershipSchema.prefault('personal'),
   })
   .superRefine((account, ctx) => {
+    if (
+      account.type !== 'Credit Card' &&
+      (account.balance === undefined || account.balance === null)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['balance'],
+        message: 'Enter an amount like 12.34.',
+      })
+    }
+    if (
+      account.closeDay != null &&
+      account.dueDay != null &&
+      !cycleDaysDiffer(account.closeDay, account.dueDay)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['dueDay'],
+        message: 'The close and due days must differ.',
+      })
+    }
     if (account.type === 'Checking' || account.type === 'Savings') {
       if (
         account.agency === undefined ||

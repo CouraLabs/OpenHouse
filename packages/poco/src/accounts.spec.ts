@@ -25,4 +25,35 @@ describe('spreadPctSchema', () => {
 
     expect(parsed.spreadPct).toBe('0')
   })
+
+  it('lets a credit card omit the opening balance but requires it elsewhere', () => {
+    const card = {
+      name: 'Card',
+      type: 'Credit Card',
+      currency: 'USD',
+      limit: '1000.00',
+      closeDay: 5,
+      dueDay: 15,
+    }
+    const wallet = { name: 'Cash', type: 'Wallet', currency: 'USD' }
+
+    expect(createAccountSchema.safeParse(card).success).toBe(true)
+    expect(createAccountSchema.safeParse(wallet).success).toBe(false)
+  })
+
+  it('rejects a card whose close and due days match on the due day', () => {
+    const result = createAccountSchema.safeParse({
+      name: 'Card',
+      type: 'Credit Card',
+      currency: 'USD',
+      limit: '1000.00',
+      closeDay: 10,
+      dueDay: 10,
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual([
+      'dueDay',
+    ])
+  })
 })

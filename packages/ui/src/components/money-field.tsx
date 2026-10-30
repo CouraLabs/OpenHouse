@@ -28,6 +28,8 @@ export function MoneyField({
     ComponentProps<typeof TextField>,
     'type' | 'id' | 'label' | 'value' | 'onChange'
   >) {
+  const display = toDisplay(value, locale)
+
   return (
     <TextField
       type="text"
@@ -36,13 +38,20 @@ export function MoneyField({
       error={error}
       required={required}
       inputMode="decimal"
-      value={toDisplay(value, locale)}
+      value={display}
       onChange={(event) => {
-        onValueChange(parseInput(event.target.value))
+        const raw = event.target.value
+        const parsed = parseInput(raw)
+        const erasing = raw.length < display.length && isZero(parsed)
+        onValueChange(erasing ? '' : parsed)
       }}
       {...inputProps}
     />
   )
+}
+
+function isZero(amount: string): boolean {
+  return amount !== '' && BigInt(onlyDigits(amount)) === 0n
 }
 
 function onlyDigits(raw: string): string {
@@ -53,7 +62,7 @@ function parseInput(raw: string): string {
   const negative = raw.includes('-')
   const digits = onlyDigits(raw)
 
-  if (digits === '' || BigInt(digits) === 0n) {
+  if (digits === '') {
     return ''
   }
 
@@ -66,7 +75,7 @@ function toDisplay(value: string | undefined, locale: string): string {
   const text = value ?? ''
   const digits = onlyDigits(text)
 
-  if (digits === '' || BigInt(digits) === 0n) {
+  if (digits === '') {
     return ''
   }
 
