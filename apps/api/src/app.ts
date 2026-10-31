@@ -37,6 +37,7 @@ import { calendarRoutes } from './calendar/calendar.routes.js'
 import { statementImportsRoutes } from './statement-imports/statement-imports.routes.js'
 import { dataExportsRoutes } from './data-exports/data-exports.routes.js'
 import { tiersRoutes } from './tiers/tiers.routes.js'
+import { tipsRoutes } from './tips/tips.routes.js'
 import {
   meterUsage,
   requireCapacity,
@@ -126,6 +127,7 @@ export function createApp(env: AppEnv['Bindings']): {
   authenticated.route('/auth', protectedRouter)
 
   authenticated.route('/tiers', tiersRoutes())
+  authenticated.route('/tips', tipsRoutes())
 
   for (const [path, resource] of TIER_RESOURCE_PATHS) {
     authenticated.post(path, requireCapacity(resource))

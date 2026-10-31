@@ -78,6 +78,7 @@ import {
   type SiteverifyFn,
 } from './ports/turnstile-verifier.js'
 import { PreferencesService } from './preferences/preferences.service.js'
+import { TipsService } from './tips/tips.service.js'
 import { ReceiverService } from './receivers/receiver.service.js'
 import { RecurringRuleSource } from './recurring-transactions/recurring-rule.source.js'
 import { RecurringRunService } from './recurring-transactions/recurring-run.service.js'
@@ -141,6 +142,7 @@ export interface Business {
   accounts: AccountService
   limits: LimitService
   goals: GoalService
+  tips: TipsService
   balances: BalanceService
   statements: CreditCardStatementService
   transactions: TransactionService
@@ -457,6 +459,7 @@ export function createBusiness(options: CreateBusinessOptions): Business {
     limits,
     goals,
     balances,
+    tips: new TipsService(),
     statements,
     transactions,
     installments,

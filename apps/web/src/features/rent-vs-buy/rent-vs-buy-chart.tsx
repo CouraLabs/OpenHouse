@@ -12,7 +12,7 @@ import { compactMoney } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 
-import type { RentVsBuyRow } from './simulate.js'
+import type { RentVsBuyRow } from '@workspace/dto'
 import { formattingLocale } from '@/lib/i18n.js'
 
 const PROPERTY_COLOR = '#2a78d6'
@@ -50,13 +50,13 @@ export function RentVsBuyChart({ rows, sampleStep }: RentVsBuyChartProps) {
               key: 'property',
               label: t('rent-vs-buy.chart.property'),
               color: PROPERTY_COLOR,
-              values: sampled.map((row) => row.propertyValue),
+              values: sampled.map((row) => Number(row.propertyValue)),
             },
             {
               key: 'investment',
               label: t('rent-vs-buy.chart.investment'),
               color: INVESTMENT_COLOR,
-              values: sampled.map((row) => row.investment),
+              values: sampled.map((row) => Number(row.investment)),
             },
           ]}
           formatValue={(value) =>

@@ -1,15 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import {
+  interestInputSchema,
+  type InterestProjection,
+  type InterestUnit,
+} from '@workspace/dto'
+
 import { PageHeader } from '@/components/page-header.js'
-import { periodicRate } from '@/lib/finance.js'
+import { fieldErrorsOf } from '@/lib/field-errors.js'
+import { useTipCalculation } from '@/lib/tip-calculation.js'
 
 import { InterestGrowthChart } from './interest-growth-chart.js'
-import { InterestParams, type InterestUnit } from './interest-params.js'
+import { InterestParams } from './interest-params.js'
 import { InterestSummary } from './interest-summary.js'
-import { InterestTable, type InterestRow } from './interest-table.js'
-
-const MAX_PERIODS = 300
+import { InterestTable } from './interest-table.js'
 
 const MAX_CHART_POINTS = 150
 
@@ -21,36 +26,17 @@ export function InterestComparisonPage() {
   const [periods, setPeriods] = useState('15')
   const [unit, setUnit] = useState<InterestUnit>('year')
 
-  const rows = useMemo<Array<InterestRow>>(() => {
-    const pv = Number(presentValue) || 0
-    const perPeriod =
-      unit === 'year'
-        ? (Number(rate) || 0) / 100
-        : periodicRate((Number(rate) || 0) / 100, 'month')
-    const count = Math.min(
-      Math.max(Math.round(Number(periods) || 0), 0),
-      MAX_PERIODS
-    )
-
-    const computed: Array<InterestRow> = []
-
-    for (let period = 0; period <= count; period += 1) {
-      const simple = pv * (1 + perPeriod * period)
-      const compound = pv * (1 + perPeriod) ** period
-
-      computed.push({
-        period,
-        simpleCapital: simple,
-        simpleInterest: simple - pv,
-        compoundCapital: compound,
-        compoundInterest: compound - pv,
-        variation: compound - simple,
-      })
-    }
-
-    return computed
-  }, [presentValue, rate, periods, unit])
-
+  const parsed = interestInputSchema.safeParse({
+    presentValue,
+    rate,
+    periods,
+    unit,
+  })
+  const projection = useTipCalculation<InterestProjection>(
+    'interest',
+    parsed.success ? parsed.data : undefined
+  )
+  const rows = parsed.success ? (projection.data?.rows ?? []) : []
   const last = rows.at(-1)
 
   return (
@@ -60,6 +46,7 @@ export function InterestComparisonPage() {
         subtitle={t('interest-comparison.subtitle')}
       />
       <InterestParams
+        errors={parsed.success ? {} : fieldErrorsOf(parsed.error)}
         presentValue={presentValue}
         rate={rate}
         periods={periods}

@@ -10,7 +10,7 @@ import {
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 
-import type { RentVsBuyResult } from './simulate.js'
+import type { RentVsBuyResult } from '@workspace/dto'
 import { formattingLocale } from '@/lib/i18n.js'
 
 interface RentVsBuySummaryProps {
@@ -20,7 +20,7 @@ interface RentVsBuySummaryProps {
 export function RentVsBuySummary({ result }: RentVsBuySummaryProps) {
   const { t } = useTranslation()
   const mainCurrency = useMainCurrency()
-  const format = (value: number) =>
+  const format = (value: string) =>
     formatMoney(String(value), formattingLocale(), mainCurrency)
 
   const panels = [

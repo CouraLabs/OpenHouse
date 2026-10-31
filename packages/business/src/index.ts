@@ -2,6 +2,7 @@ export { ACCOUNT_CSV_COLUMNS } from './accounts/account-csv.js'
 export { AccountService } from './accounts/account.service.js'
 export { availableLimit } from './accounts/accounts.js'
 export { AuditLogService } from './audit/audit-log.service.js'
+export { TipsService } from './tips/tips.service.js'
 export {
   AuthService,
   type PublicUser,

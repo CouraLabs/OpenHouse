@@ -16,8 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@workspace/ui/components/select'
+import {
+  rateConversionInputSchema,
+  type RateConversionResult,
+  type RateUnit,
+} from '@workspace/dto'
 
-import { convertRate, formatPercent, type RateUnit } from '@/lib/finance.js'
+import { fieldErrorsOf, type FieldErrors } from '@/lib/field-errors.js'
+import { formatPercent } from '@/lib/finance.js'
+import { useTipCalculation } from '@/lib/tip-calculation.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
 const UNITS: Array<{ value: RateUnit; labelKey: string }> = [
@@ -38,10 +45,13 @@ export function RateConverter() {
   const [rate, setRate] = useState('10')
   const selectedUnit = UNITS.find((choice) => choice.value === unit)
 
-  const converted = TARGETS.map((target) => ({
-    ...target,
-    value: convertRate((Number(rate) || 0) / 100, unit, target.value),
-  }))
+  const parsed = rateConversionInputSchema.safeParse({ rate, unit })
+  const errors: FieldErrors = parsed.success ? {} : fieldErrorsOf(parsed.error)
+  const calculation = useTipCalculation<RateConversionResult>(
+    'rate-conversion',
+    parsed.success ? parsed.data : undefined
+  )
+  const rates = parsed.success ? calculation.data?.rates : undefined
 
   return (
     <Card>
@@ -59,6 +69,7 @@ export function RateConverter() {
             placeholder={t('rate-conversion.converter.rate-placeholder')}
             value={rate}
             onValueChange={setRate}
+            error={errors.rate}
           />
           <Field>
             <FieldLabel htmlFor="rate-conversion-unit">
@@ -94,19 +105,25 @@ export function RateConverter() {
           </Field>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          {converted.map((row) => (
-            <div
-              key={row.labelKey}
-              className="flex flex-col gap-0.5 rounded-md border p-3"
-            >
-              <span className="text-sm text-muted-foreground">
-                {t(row.labelKey)}
-              </span>
-              <span className="text-lg font-semibold tabular-nums">
-                {formatPercent(row.value, formattingLocale())}
-              </span>
-            </div>
-          ))}
+          {TARGETS.map((target) => {
+            const converted = rates?.find((item) => item.unit === target.value)
+
+            return (
+              <div
+                key={target.labelKey}
+                className="flex flex-col gap-0.5 rounded-md border p-3"
+              >
+                <span className="text-sm text-muted-foreground">
+                  {t(target.labelKey)}
+                </span>
+                <span className="text-lg font-semibold tabular-nums">
+                  {converted === undefined
+                    ? '—'
+                    : formatPercent(converted.rate, formattingLocale())}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </CardContent>
     </Card>

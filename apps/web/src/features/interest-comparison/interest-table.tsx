@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
+import type { InterestRow } from '@workspace/dto'
+
 import {
   Card,
   CardContent,
@@ -10,15 +12,6 @@ import {
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
-
-export interface InterestRow {
-  period: number
-  simpleCapital: number
-  simpleInterest: number
-  compoundCapital: number
-  compoundInterest: number
-  variation: number
-}
 
 interface InterestTableProps {
   rows: InterestRow[]

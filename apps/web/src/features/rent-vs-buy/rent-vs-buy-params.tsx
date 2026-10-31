@@ -17,7 +17,9 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 
-import type { AmortizationSystem } from './simulate.js'
+import type { AmortizationSystem } from '@workspace/dto'
+
+import type { FieldErrors } from '@/lib/field-errors.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
 const SYSTEMS: Array<{ value: AmortizationSystem; labelKey: string }> = [
@@ -26,6 +28,7 @@ const SYSTEMS: Array<{ value: AmortizationSystem; labelKey: string }> = [
 ]
 
 interface RentVsBuyParamsProps {
+  errors: FieldErrors
   propertyValue: string
   downPayment: string
   mortgageRate: string
@@ -47,6 +50,7 @@ interface RentVsBuyParamsProps {
 }
 
 export function RentVsBuyParams({
+  errors,
   propertyValue,
   downPayment,
   mortgageRate,
@@ -82,6 +86,7 @@ export function RentVsBuyParams({
           className="h-8"
           label={t('rent-vs-buy.params.property-value')}
           labelFor="rent-vs-buy-property"
+          error={errors.propertyValue}
           value={propertyValue}
           onValueChange={onPropertyValueChange}
         />
@@ -90,6 +95,7 @@ export function RentVsBuyParams({
           className="h-8"
           label={t('rent-vs-buy.params.down-payment')}
           labelFor="rent-vs-buy-down"
+          error={errors.downPayment}
           value={downPayment}
           onValueChange={onDownPaymentChange}
         />
@@ -97,6 +103,7 @@ export function RentVsBuyParams({
           className="h-8"
           label={t('rent-vs-buy.params.mortgage-rate')}
           labelFor="rent-vs-buy-mortgage-rate"
+          error={errors.mortgageRate}
           value={mortgageRate}
           onValueChange={onMortgageRateChange}
         />
@@ -104,6 +111,7 @@ export function RentVsBuyParams({
           className="h-8"
           label={t('rent-vs-buy.params.appreciation')}
           labelFor="rent-vs-buy-appreciation"
+          error={errors.propertyAppreciation}
           value={appreciation}
           onValueChange={onAppreciationChange}
         />
@@ -111,6 +119,7 @@ export function RentVsBuyParams({
           className="h-8"
           label={t('rent-vs-buy.params.term')}
           labelFor="rent-vs-buy-term"
+          error={errors.termMonths}
           value={term}
           onValueChange={onTermChange}
         />
@@ -149,6 +158,7 @@ export function RentVsBuyParams({
           className="h-8"
           label={t('rent-vs-buy.params.rent')}
           labelFor="rent-vs-buy-rent"
+          error={errors.monthlyRent}
           value={rent}
           onValueChange={onRentChange}
         />
@@ -156,6 +166,7 @@ export function RentVsBuyParams({
           className="h-8"
           label={t('rent-vs-buy.params.return')}
           labelFor="rent-vs-buy-return"
+          error={errors.investmentReturn}
           value={annualReturn}
           onValueChange={onAnnualReturnChange}
         />
@@ -163,6 +174,7 @@ export function RentVsBuyParams({
           className="h-8"
           label={t('rent-vs-buy.params.rent-increase')}
           labelFor="rent-vs-buy-rent-increase"
+          error={errors.rentIncrease}
           value={rentIncrease}
           onValueChange={onRentIncreaseChange}
         />

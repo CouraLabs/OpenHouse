@@ -10,10 +10,13 @@ import {
 } from '@workspace/ui/components/card'
 import { MoneyField } from '@workspace/ui/components/money-field'
 import { NumberField } from '@workspace/ui/components/number-field'
+import { cdiInputSchema, type CdiResult } from '@workspace/dto'
 
+import { fieldErrorsOf, type FieldErrors } from '@/lib/field-errors.js'
 import { formatPercent } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
+import { useTipCalculation } from '@/lib/tip-calculation.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
 export function CdiExample() {
@@ -24,16 +27,14 @@ export function CdiExample() {
   const [deposit, setDeposit] = useState('10000.00')
   const [years, setYears] = useState('10')
 
-  const dailyRate = (1 + (Number(diRate) || 0) / 100) ** (1 / 252) - 1
-  const dailyNet = dailyRate * ((Number(share) || 0) / 100)
-  const effectiveAnnual = (1 + dailyNet) ** 252 - 1
-  const count = Math.max(Math.round(Number(years) || 0), 0)
-  const saved = (Number(deposit) || 0) * count
-  const futureValue =
-    effectiveAnnual === 0
-      ? saved
-      : ((Number(deposit) || 0) * ((1 + effectiveAnnual) ** count - 1)) /
-        effectiveAnnual
+  const parsed = cdiInputSchema.safeParse({ diRate, share, deposit, years })
+  const errors: FieldErrors = parsed.success ? {} : fieldErrorsOf(parsed.error)
+  const calculation = useTipCalculation<CdiResult>(
+    'cdi',
+    parsed.success ? parsed.data : undefined
+  )
+  const figures = parsed.success ? calculation.data : undefined
+  const count = parsed.success ? Number(parsed.data.years) : 0
 
   return (
     <Card>
@@ -53,6 +54,7 @@ export function CdiExample() {
             labelFor="cdi-di-rate"
             value={diRate}
             onValueChange={setDiRate}
+            error={errors.diRate}
           />
           <NumberField
             className="h-8"
@@ -60,6 +62,7 @@ export function CdiExample() {
             labelFor="cdi-share"
             value={share}
             onValueChange={setShare}
+            error={errors.share}
           />
           <MoneyField
             locale={formattingLocale()}
@@ -68,6 +71,7 @@ export function CdiExample() {
             labelFor="cdi-deposit"
             value={deposit}
             onValueChange={setDeposit}
+            error={errors.deposit}
           />
           <NumberField
             className="h-8"
@@ -75,20 +79,33 @@ export function CdiExample() {
             labelFor="cdi-years"
             value={years}
             onValueChange={setYears}
+            error={errors.years}
           />
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <ResultTile
             label={t('rate-conversion.cdi.daily-rate')}
-            value={formatPercent(dailyRate, formattingLocale())}
+            value={
+              figures === undefined
+                ? '—'
+                : formatPercent(figures.dailyDiRate, formattingLocale())
+            }
           />
           <ResultTile
             label={t('rate-conversion.cdi.daily-net')}
-            value={formatPercent(dailyNet, formattingLocale())}
+            value={
+              figures === undefined
+                ? '—'
+                : formatPercent(figures.dailyNetRate, formattingLocale())
+            }
           />
           <ResultTile
             label={t('rate-conversion.cdi.effective-annual')}
-            value={formatPercent(effectiveAnnual, formattingLocale())}
+            value={
+              figures === undefined
+                ? '—'
+                : formatPercent(figures.effectiveAnnualRate, formattingLocale())
+            }
           />
         </div>
         <div className="rounded-md border p-3">
@@ -96,7 +113,9 @@ export function CdiExample() {
             {t('rate-conversion.cdi.future-value', { count })}
           </span>
           <p className="text-2xl font-semibold">
-            {formatMoney(String(futureValue), formattingLocale(), mainCurrency)}
+            {figures === undefined
+              ? '—'
+              : formatMoney(figures.futureValue, formattingLocale(), mainCurrency)}
           </p>
         </div>
       </CardContent>

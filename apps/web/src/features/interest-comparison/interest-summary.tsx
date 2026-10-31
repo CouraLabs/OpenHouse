@@ -12,9 +12,9 @@ import { useMainCurrency } from '@/lib/settings.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
 interface InterestSummaryProps {
-  simpleCapital: number
-  compoundCapital: number
-  variation: number
+  simpleCapital: string
+  compoundCapital: string
+  variation: string
 }
 
 export function InterestSummary({

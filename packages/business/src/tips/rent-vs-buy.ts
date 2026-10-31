@@ -1,8 +1,8 @@
-import { pmt, periodicRate } from '@/lib/finance.js'
+import type { AmortizationSystem } from "@workspace/dto"
 
-export type AmortizationSystem = 'SAC' | 'PRICE'
+import { periodicRate, pmt } from "./finance-math.js"
 
-export interface RentVsBuyInput {
+export interface RentVsBuyScenario {
   propertyValue: number
   downPayment: number
   annualMortgageRate: number
@@ -14,7 +14,7 @@ export interface RentVsBuyInput {
   rentIncrease: number
 }
 
-export interface RentVsBuyRow {
+export interface RentVsBuyFigureRow {
   month: number
   balance: number
   payment: number
@@ -26,8 +26,8 @@ export interface RentVsBuyRow {
   investment: number
 }
 
-export interface RentVsBuyResult {
-  rows: RentVsBuyRow[]
+export interface RentVsBuyFigures {
+  rows: RentVsBuyFigureRow[]
   amortizationTotal: number
   interestTotal: number
   paidTotal: number
@@ -39,20 +39,20 @@ export interface RentVsBuyResult {
 
 const PAID_OFF = 0.005
 
-export function simulateRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
-  const term = Math.max(Math.round(input.termMonths), 1)
-  const financing = Math.max(input.propertyValue - input.downPayment, 0)
-  const monthlyMortgage = periodicRate(input.annualMortgageRate, 'month')
-  const monthlyAppreciation = periodicRate(input.propertyAppreciation, 'month')
-  const monthlyReturn = periodicRate(input.annualReturn, 'month')
-  const monthlyRentIncrease = periodicRate(input.rentIncrease, 'month')
+export function simulateRentVsBuy(scenario: RentVsBuyScenario): RentVsBuyFigures {
+  const term = Math.max(Math.round(scenario.termMonths), 1)
+  const financing = Math.max(scenario.propertyValue - scenario.downPayment, 0)
+  const monthlyMortgage = periodicRate(scenario.annualMortgageRate, "month")
+  const monthlyAppreciation = periodicRate(scenario.propertyAppreciation, "month")
+  const monthlyReturn = periodicRate(scenario.annualReturn, "month")
+  const monthlyRentIncrease = periodicRate(scenario.rentIncrease, "month")
   const pricePayment =
     financing > 0 ? pmt(monthlyMortgage, term, -financing) : 0
 
-  const rows: RentVsBuyRow[] = []
+  const rows: RentVsBuyFigureRow[] = []
   let balance = financing
-  let investment = input.downPayment
-  let propertyValue = input.propertyValue
+  let investment = scenario.downPayment
+  let propertyValue = scenario.propertyValue
   let amortizationTotal = 0
   let interestTotal = 0
   let paidTotal = 0
@@ -79,7 +79,7 @@ export function simulateRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
     if (balance > PAID_OFF) {
       interest = balance * monthlyMortgage
       amortization =
-        input.system === 'SAC'
+        scenario.system === "SAC"
           ? Math.min(financing / term, balance)
           : Math.min(Math.max(pricePayment - interest, 0), balance)
       payment = amortization + interest
@@ -90,10 +90,10 @@ export function simulateRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
       }
     }
 
-    const rent = input.monthlyRent * (1 + monthlyRentIncrease) ** (month - 1)
+    const rent = scenario.monthlyRent * (1 + monthlyRentIncrease) ** (month - 1)
     const surplus = payment - rent
     investment = investment * (1 + monthlyReturn) + surplus
-    propertyValue = input.propertyValue * (1 + monthlyAppreciation) ** month
+    propertyValue = scenario.propertyValue * (1 + monthlyAppreciation) ** month
 
     amortizationTotal += amortization
     interestTotal += interest
@@ -116,7 +116,7 @@ export function simulateRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
 
   return {
     rows,
-    amortizationTotal: amortizationTotal + input.downPayment,
+    amortizationTotal: amortizationTotal + scenario.downPayment,
     interestTotal,
     paidTotal,
     patrimony: propertyValue,

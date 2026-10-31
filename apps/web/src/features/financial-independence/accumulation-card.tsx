@@ -10,10 +10,15 @@ import {
 } from '@workspace/ui/components/card'
 import { MoneyField } from '@workspace/ui/components/money-field'
 import { NumberField } from '@workspace/ui/components/number-field'
+import {
+  accumulationInputSchema,
+  type AccumulationResult,
+} from '@workspace/dto'
 
-import { pmt, realRate } from '@/lib/finance.js'
+import { fieldErrorsOf, type FieldErrors } from '@/lib/field-errors.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
+import { useTipCalculation } from '@/lib/tip-calculation.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
 export function AccumulationCard() {
@@ -28,22 +33,22 @@ export function AccumulationCard() {
   const [incomeTax, setIncomeTax] = useState('15')
   const [years, setYears] = useState('40')
 
-  const months = Math.max(Math.round(Number(years) || 0), 0) * 12
-  const monthlyRate = realRate(
-    (Number(rate) || 0) / 100,
-    ((Number(inflation) || 0) + (Number(adminFee) || 0)) / 100
+  const parsed = accumulationInputSchema.safeParse({
+    target,
+    present,
+    rate,
+    inflation,
+    adminFee,
+    loadingFee,
+    incomeTax,
+    years,
+  })
+  const errors: FieldErrors = parsed.success ? {} : fieldErrorsOf(parsed.error)
+  const calculation = useTipCalculation<AccumulationResult>(
+    'accumulation',
+    parsed.success ? parsed.data : undefined
   )
-  const loading = (Number(loadingFee) || 0) / 100
-  const tax = (Number(incomeTax) || 0) / 100
-  const pv = (Number(present) || 0) * (1 - loading)
-  const fv = Number(target) || 0
-
-  const base = months > 0 ? -pmt(monthlyRate, months, -pv, fv) : 0
-  const grossContribution = base * (1 + loading)
-  const gains = Math.max(fv - grossContribution * months, 0)
-  const totalTax = gains * tax
-  const contribution = months > 0 ? grossContribution + totalTax / months : 0
-  const totalContributed = contribution * months
+  const figures = parsed.success ? calculation.data : undefined
 
   return (
     <Card>
@@ -64,6 +69,7 @@ export function AccumulationCard() {
             labelFor="accumulation-target"
             value={target}
             onValueChange={setTarget}
+            error={errors.target}
           />
           <MoneyField
             locale={formattingLocale()}
@@ -72,6 +78,7 @@ export function AccumulationCard() {
             labelFor="accumulation-present"
             value={present}
             onValueChange={setPresent}
+            error={errors.present}
           />
           <NumberField
             className="h-8"
@@ -79,6 +86,7 @@ export function AccumulationCard() {
             labelFor="accumulation-rate"
             value={rate}
             onValueChange={setRate}
+            error={errors.rate}
           />
           <NumberField
             className="h-8"
@@ -86,6 +94,7 @@ export function AccumulationCard() {
             labelFor="accumulation-inflation"
             value={inflation}
             onValueChange={setInflation}
+            error={errors.inflation}
           />
           <NumberField
             className="h-8"
@@ -93,6 +102,7 @@ export function AccumulationCard() {
             labelFor="accumulation-admin-fee"
             value={adminFee}
             onValueChange={setAdminFee}
+            error={errors.adminFee}
           />
           <NumberField
             className="h-8"
@@ -100,6 +110,7 @@ export function AccumulationCard() {
             labelFor="accumulation-loading-fee"
             value={loadingFee}
             onValueChange={setLoadingFee}
+            error={errors.loadingFee}
           />
           <NumberField
             className="h-8"
@@ -107,6 +118,7 @@ export function AccumulationCard() {
             labelFor="accumulation-income-tax"
             value={incomeTax}
             onValueChange={setIncomeTax}
+            error={errors.incomeTax}
           />
           <NumberField
             className="h-8"
@@ -114,6 +126,7 @@ export function AccumulationCard() {
             labelFor="accumulation-years"
             value={years}
             onValueChange={setYears}
+            error={errors.years}
           />
         </div>
         <div className="flex flex-col gap-2 rounded-md border p-3">
@@ -122,7 +135,13 @@ export function AccumulationCard() {
               {t('financial-independence.accumulation.result')}
             </span>
             <p className="text-2xl font-semibold">
-              {formatMoney(String(contribution), formattingLocale(), mainCurrency)}
+              {figures
+                ? formatMoney(
+                    figures.monthlyContribution,
+                    formattingLocale(),
+                    mainCurrency
+                  )
+                : '—'}
             </p>
           </div>
           <div className="flex justify-between gap-2 text-sm">
@@ -130,11 +149,13 @@ export function AccumulationCard() {
               {t('financial-independence.accumulation.contributed')}
             </span>
             <span className="font-medium tabular-nums">
-              {formatMoney(
-                String(totalContributed),
-                formattingLocale(),
-                mainCurrency
-              )}
+              {figures
+                ? formatMoney(
+                    figures.totalContributed,
+                    formattingLocale(),
+                    mainCurrency
+                  )
+                : '—'}
             </span>
           </div>
           <div className="flex justify-between gap-2 text-sm">
@@ -142,7 +163,13 @@ export function AccumulationCard() {
               {t('financial-independence.accumulation.tax')}
             </span>
             <span className="font-medium tabular-nums">
-              {formatMoney(String(totalTax), formattingLocale(), mainCurrency)}
+              {figures
+                ? formatMoney(
+                    figures.totalIncomeTax,
+                    formattingLocale(),
+                    mainCurrency
+                  )
+                : '—'}
             </span>
           </div>
         </div>

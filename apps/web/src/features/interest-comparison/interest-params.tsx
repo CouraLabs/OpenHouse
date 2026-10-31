@@ -16,9 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@workspace/ui/components/select'
+import type { InterestUnit } from '@workspace/dto'
+
+import type { FieldErrors } from '@/lib/field-errors.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-export type InterestUnit = 'year' | 'month'
 
 const UNITS: Array<{ value: InterestUnit; labelKey: string }> = [
   { value: 'year', labelKey: 'interest-comparison.params.unit-year' },
@@ -26,6 +28,7 @@ const UNITS: Array<{ value: InterestUnit; labelKey: string }> = [
 ]
 
 interface InterestParamsProps {
+  errors: FieldErrors
   presentValue: string
   rate: string
   periods: string
@@ -37,6 +40,7 @@ interface InterestParamsProps {
 }
 
 export function InterestParams({
+  errors,
   presentValue,
   rate,
   periods,
@@ -62,6 +66,7 @@ export function InterestParams({
           className="h-8"
           label={t('interest-comparison.params.present-value')}
           labelFor="interest-present-value"
+          error={errors.presentValue}
           placeholder={t('interest-comparison.params.amount-placeholder')}
           value={presentValue}
           onValueChange={onPresentValueChange}
@@ -70,6 +75,7 @@ export function InterestParams({
           className="h-8"
           label={t('interest-comparison.params.rate')}
           labelFor="interest-rate"
+          error={errors.rate}
           placeholder={t('interest-comparison.params.rate-placeholder')}
           value={rate}
           onValueChange={onRateChange}
@@ -78,6 +84,7 @@ export function InterestParams({
           className="h-8"
           label={t('interest-comparison.params.periods')}
           labelFor="interest-periods"
+          error={errors.periods}
           placeholder={t('interest-comparison.params.periods-placeholder')}
           value={periods}
           onValueChange={onPeriodsChange}

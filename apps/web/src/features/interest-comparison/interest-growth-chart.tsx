@@ -12,7 +12,7 @@ import { compactMoney } from '@/lib/finance.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useMainCurrency } from '@/lib/settings.js'
 
-import type { InterestRow } from './interest-table.js'
+import type { InterestRow } from '@workspace/dto'
 import { formattingLocale } from '@/lib/i18n.js'
 
 const SIMPLE_COLOR = '#2a78d6'
@@ -53,13 +53,13 @@ export function InterestGrowthChart({
               key: 'simple',
               label: t('interest-comparison.chart.simple'),
               color: SIMPLE_COLOR,
-              values: sampled.map((row) => row.simpleCapital),
+              values: sampled.map((row) => Number(row.simpleCapital)),
             },
             {
               key: 'compound',
               label: t('interest-comparison.chart.compound'),
               color: COMPOUND_COLOR,
-              values: sampled.map((row) => row.compoundCapital),
+              values: sampled.map((row) => Number(row.compoundCapital)),
             },
           ]}
           formatValue={(value) =>
