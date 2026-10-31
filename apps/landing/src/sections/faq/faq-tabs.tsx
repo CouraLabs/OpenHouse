@@ -29,15 +29,14 @@ export function FaqTabs({ items }: { items: Question[] }) {
   }
 
   const current = items[selected]
-  const counter = (index: number) => String(index + 1).padStart(2, '0')
 
   return (
-    <div className="grid grid-cols-[var(--split)_1fr]">
+    <div className="grid grid-cols-[minmax(0,22rem)_1fr] gap-6 surface-card p-3">
       <div
         role="tablist"
         aria-orientation="vertical"
         onKeyDown={onKeyDown}
-        className="divide-line flex flex-col divide-y"
+        className="flex flex-col gap-1"
       >
         {items.map((item, index) => {
           const active = index === selected
@@ -55,19 +54,13 @@ export function FaqTabs({ items }: { items: Question[] }) {
               tabIndex={active ? 0 : -1}
               onClick={() => setSelected(index)}
               className={cn(
-                'grid grid-cols-[2rem_1fr] items-baseline gap-3 py-4 pr-6 pl-(--pad) text-left transition-colors duration-200 ease-(--ease-out-expo)',
-                active ? 'bg-ink text-on-ink' : 'text-ink hover:bg-surface'
+                'rounded-2xl px-4 py-3 text-left transition-colors duration-150 ease-(--ease-out-expo)',
+                active
+                  ? 'bg-action-soft text-action'
+                  : 'text-ink hover:bg-surface-2'
               )}
             >
-              <span
-                className={cn(
-                  'font-mono text-[0.78rem] tabular-nums',
-                  active ? 'opacity-70' : 'text-muted'
-                )}
-              >
-                {counter(index)}
-              </span>
-              <span className="text-[1rem] leading-snug font-medium text-pretty">
+              <span className="text-[0.9375rem] leading-snug font-medium text-pretty">
                 {item.question}
               </span>
             </button>
@@ -78,19 +71,16 @@ export function FaqTabs({ items }: { items: Question[] }) {
         id={panelId}
         role="tabpanel"
         aria-labelledby={tabId(selected)}
-        className="split-rule p-(--pad) pt-10"
+        className="rounded-2xl bg-surface-2 p-8 lg:p-10"
       >
         <div
           key={selected}
           className="faq-panel flex max-w-[62ch] flex-col gap-5"
         >
-          <span className="font-mono text-[0.78rem] text-muted tabular-nums">
-            {counter(selected)} / {String(items.length).padStart(2, '0')}
-          </span>
-          <h3 className="text-ink font-display text-[clamp(1.5rem,2.4vw,2.1rem)] leading-[1.1] font-medium tracking-[-0.035em] text-balance">
+          <h3 className="text-ink text-[clamp(1.5rem,2.4vw,2rem)] leading-[1.12] font-bold tracking-[-0.025em] text-balance">
             {current.question}
           </h3>
-          <p className="text-body text-[1.1rem] text-pretty">
+          <p className="text-body text-[1.0625rem] text-pretty">
             {current.answer}
           </p>
         </div>

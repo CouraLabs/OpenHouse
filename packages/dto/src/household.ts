@@ -20,7 +20,7 @@ import {
 } from "@workspace/domain"
 import { currencySchema } from "./currencies.js"
 import { dateOnlySchema } from "./goals.js"
-import { amountSchema } from "./limits.js"
+import { positiveAmountSchema } from "./limits.js"
 
 export {
   accountOwnerships,
@@ -58,7 +58,7 @@ export const settleUpSchema = z
   .object({
     fromUserId: z.number({ error: "Pick who pays." }).int().positive(),
     toUserId: z.number({ error: "Pick who receives." }).int().positive(),
-    amount: amountSchema,
+    amount: positiveAmountSchema,
     currency: currencySchema,
     fromAccountId: z
       .number({ error: "Pick the paying account." })

@@ -68,7 +68,9 @@ export function LimitUsageCard({
         <GaugeBar
           value={spent}
           max={cap}
-          format={(amount) => formatMoney(String(amount), locale, limit.currency)}
+          format={(amount) =>
+            formatMoney(String(amount), locale, limit.currency)
+          }
           colorFor={over ? () => 'var(--destructive)' : undefined}
           aria-label={t('transactions.dashboard-limit-aria', {
             name: limit.categoryName,
@@ -99,8 +101,10 @@ export function LimitUsageGrid({
   const sorted = useMemo(
     () =>
       [...usage].sort((a, b) => {
-        const ratioA = Number(a.amount) > 0 ? Number(a.spent) / Number(a.amount) : 0
-        const ratioB = Number(b.amount) > 0 ? Number(b.spent) / Number(b.amount) : 0
+        const ratioA =
+          Number(a.amount) > 0 ? Number(a.spent) / Number(a.amount) : 0
+        const ratioB =
+          Number(b.amount) > 0 ? Number(b.spent) / Number(b.amount) : 0
         return ratioB - ratioA
       }),
     [usage]

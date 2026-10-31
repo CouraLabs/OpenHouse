@@ -39,9 +39,7 @@ export function CdiExample() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('rate-conversion.cdi.title')}
-        </CardTitle>
+        <CardTitle>{t('rate-conversion.cdi.title')}</CardTitle>
         <CardDescription>
           {t('rate-conversion.cdi.description')}
         </CardDescription>
@@ -115,7 +113,11 @@ export function CdiExample() {
           <p className="text-2xl font-semibold">
             {figures === undefined
               ? '—'
-              : formatMoney(figures.futureValue, formattingLocale(), mainCurrency)}
+              : formatMoney(
+                  figures.futureValue,
+                  formattingLocale(),
+                  mainCurrency
+                )}
           </p>
         </div>
       </CardContent>

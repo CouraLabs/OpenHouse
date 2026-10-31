@@ -64,7 +64,7 @@ export function CardCycleFields({
         </FieldLabel>
       </Field>
       {gap !== null ? (
-        <p className="col-span-full text-sm text-muted-foreground">
+        <p role="alert" className="col-span-full text-sm text-muted-foreground">
           {t(`accounts.cycle-gap-${gap}`)}
         </p>
       ) : null}

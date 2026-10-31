@@ -13,13 +13,13 @@ export function SelfHostPlan() {
   const { selfHosted } = useContent()
   return (
     <Reveal>
-      <article className="border-line bg-surface grid gap-10 rounded-[20px] border p-7 md:grid-cols-2 md:p-10">
+      <article className="grid gap-10 surface-card p-7 md:grid-cols-2 md:p-10">
         <div className="flex min-w-0 flex-col gap-7">
           <div className="flex flex-col gap-3">
             <Tag tone="green" className="self-start">
               {selfHosted.badge}
             </Tag>
-            <h3 className="text-ink font-display text-3xl leading-[1.1] font-medium tracking-[-0.045em]">
+            <h3 className="text-ink font-display text-3xl leading-[1.1] font-bold tracking-[-0.02em]">
               {selfHosted.name}
             </h3>
             <p className="text-sm text-pretty text-muted">

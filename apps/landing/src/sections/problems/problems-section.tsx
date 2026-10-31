@@ -10,12 +10,12 @@ export function ProblemsSection() {
   return (
     <Section id="why">
       <SectionHeading {...problemsIntro} />
-      <Reveal className="-mx-(--pad) -mt-14 -mb-(--pad) md:-mt-20">
-        <ol>
-          {problems.map((problem, index) => (
-            <ProblemCard key={problem.pain} problem={problem} index={index} />
+      <Reveal>
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {problems.map((problem) => (
+            <ProblemCard key={problem.pain} problem={problem} />
           ))}
-        </ol>
+        </ul>
       </Reveal>
     </Section>
   )

@@ -15,22 +15,22 @@ export function GoalRing({ percent }: { percent: number }) {
           cy="50"
           r={RADIUS}
           fill="none"
-          strokeWidth="4"
-          className="stroke-bone"
+          strokeWidth="6"
+          className="stroke-surface-2"
         />
         <circle
           cx="50"
           cy="50"
           r={RADIUS}
           fill="none"
-          strokeWidth="4"
+          strokeWidth="6"
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}
           strokeDashoffset={offset}
-          className="stroke-ink ease-out-expo transition-[stroke-dashoffset] duration-1000 motion-reduce:transition-none"
+          className="ease-out-expo stroke-data-blue transition-[stroke-dashoffset] duration-1000 motion-reduce:transition-none"
         />
       </svg>
-      <span className="text-ink font-display absolute inset-0 flex items-center justify-center text-2xl font-medium tracking-tight">
+      <span className="text-ink absolute inset-0 flex items-center justify-center text-xl font-bold tracking-[-0.02em] tabular-nums">
         {percent}%
       </span>
     </div>

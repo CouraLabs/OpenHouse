@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateTransactionLinkerBody, TransactionLinker } from '@workspace/dto'
+import type {
+  CreateTransactionLinkerBody,
+  TransactionLinker,
+} from '@workspace/dto'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
@@ -166,7 +169,7 @@ export function TransactionLinkersPage() {
   )
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
+    <main className="mx-auto flex w-full max-w-[90rem] flex-1 animate-page-in flex-col gap-6 px-4 pt-4 pb-12 md:px-8 md:pt-6">
       <PageHeader
         title={t('linkers.title')}
         subtitle={t('linkers.subtitle')}

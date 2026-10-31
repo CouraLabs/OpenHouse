@@ -56,9 +56,7 @@ export function RateConverter() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('rate-conversion.converter.title')}
-        </CardTitle>
+        <CardTitle>{t('rate-conversion.converter.title')}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3">

@@ -80,7 +80,7 @@ export function UsersSection() {
       setActive.reset,
       setActive.mutate,
       balanceCheck.mutate,
-      anonymize.reset
+      anonymize.reset,
     ]
   )
 
@@ -109,7 +109,7 @@ export function UsersSection() {
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <h2 className="font-heading text-xl font-medium tracking-tight">
+            <h2 className="text-xl font-semibold tracking-[-0.02em]">
               {t('settings.users.title')}
             </h2>
             <p className="text-sm text-muted-foreground">

@@ -8,7 +8,6 @@ export interface NavLink {
 export type Tone = 'red' | 'blue' | 'green' | 'yellow' | 'bone'
 
 export interface Intro {
-  eyebrow: string
   title: string
   lede?: string
 }
@@ -49,6 +48,32 @@ export interface SampleRule {
   name: string
   when: string
   posted: boolean
+}
+
+export interface HeroKpi {
+  label: string
+  value: string
+  note: string
+  tone: 'primary' | 'in' | 'out'
+}
+
+export interface HeroPreviewContent {
+  label: string
+  example: string
+  home: string
+  nav: string[]
+  section: string
+  date: string
+  title: string
+  search: string
+  newTransaction: string
+  monthLabel: string
+  monthValue: string
+  kpis: HeroKpi[]
+  soonTitle: string
+  soonSubtitle: string
+  soon: LedgerDay[]
+  overdue: string
 }
 
 export interface Feature {
@@ -138,6 +163,7 @@ export interface Content {
     windowTitle: string
     balance: { label: string; amount: string }
     limitsTitle: string
+    preview: HeroPreviewContent
   }
   problemsIntro: Intro
   problems: Problem[]
@@ -170,7 +196,6 @@ export interface Content {
   faqIntro: Intro
   faq: Question[]
   openSource: {
-    eyebrow: string
     title: string
     body: string
     points: { icon: Icon; label: string }[]

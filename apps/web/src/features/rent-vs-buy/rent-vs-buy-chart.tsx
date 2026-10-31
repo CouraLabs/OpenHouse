@@ -37,9 +37,7 @@ export function RentVsBuyChart({ rows, sampleStep }: RentVsBuyChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('rent-vs-buy.chart.title')}
-        </CardTitle>
+        <CardTitle>{t('rent-vs-buy.chart.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <ProjectionLineChart

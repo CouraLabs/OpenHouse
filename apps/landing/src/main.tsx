@@ -4,8 +4,8 @@ import { IconContext } from '@phosphor-icons/react'
 
 import { ThemeProvider } from '@workspace/ui/components/theme-provider'
 
+import '@fontsource-variable/geist'
 import '@fontsource-variable/geist-mono'
-import '@fontsource-variable/jost'
 import './landing.css'
 import { App } from './App.tsx'
 import { LocaleProvider } from './components/locale-provider.tsx'

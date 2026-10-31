@@ -40,9 +40,7 @@ export function InterestGrowthChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('interest-comparison.chart.title')}
-        </CardTitle>
+        <CardTitle>{t('interest-comparison.chart.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <ProjectionLineChart

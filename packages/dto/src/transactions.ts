@@ -35,7 +35,7 @@ import {
 import { csvLocaleField } from "./csv-export.js"
 import { entityStatusSchema, fetchArgsSchema } from "./fetch.js"
 import { dateOnlySchema } from "./goals.js"
-import { amountSchema } from "./limits.js"
+import { amountSchema, positiveAmountSchema } from "./limits.js"
 import { splitInputSchema, splitModes } from "./splits.js"
 
 export {
@@ -142,7 +142,7 @@ export const createTransactionSchema = z.object({
     .string()
     .max(255, "Keep the invoice under 255 characters.")
     .nullish(),
-  amount: amountSchema,
+  amount: positiveAmountSchema,
   transactionDt: transactionDtSchema,
   linkedAccountId: z
     .number({ error: "Pick an account." })
@@ -250,7 +250,7 @@ export const transferSchema = z
       .int()
       .positive("Pick a category.")
       .optional(),
-    amount: amountSchema,
+    amount: positiveAmountSchema,
     transactionDt: transactionDtSchema,
     note: z
       .string()

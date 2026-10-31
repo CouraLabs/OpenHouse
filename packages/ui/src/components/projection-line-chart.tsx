@@ -57,19 +57,27 @@ export function ProjectionLineChart({
       aria-label={ariaLabel}
     >
       <RechartsLineChart data={data} margin={{ top: 8, right: 16, left: 8 }}>
-        <CartesianGrid vertical={false} stroke="#ccc" />
+        <CartesianGrid
+          vertical={false}
+          stroke="var(--muted-foreground)"
+          strokeOpacity={0.22}
+          strokeDasharray="1 5"
+          strokeLinecap="round"
+        />
         <XAxis
           dataKey="label"
           tickLine={false}
           axisLine={false}
-          tickMargin={8}
+          tickMargin={10}
           minTickGap={32}
+          tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
         />
         <YAxis
           tickLine={false}
           axisLine={false}
           width={72}
           tickFormatter={formatTick}
+          tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
         />
         <ChartTooltip
           content={
@@ -78,7 +86,9 @@ export function ProjectionLineChart({
                 <TooltipRow
                   value={Number(value)}
                   name={String(name)}
-                  color={colorByKey.get(String(name)) ?? 'var(--muted-foreground)'}
+                  color={
+                    colorByKey.get(String(name)) ?? 'var(--muted-foreground)'
+                  }
                   formatValue={formatValue}
                 />
               )}

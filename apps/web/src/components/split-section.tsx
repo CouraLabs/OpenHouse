@@ -89,8 +89,7 @@ export function SplitSection({
             formattingLocale(),
             currency
           )
-        } catch {
-        }
+        } catch {}
       }
     }
   }

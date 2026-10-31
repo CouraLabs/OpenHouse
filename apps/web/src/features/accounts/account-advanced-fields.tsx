@@ -25,7 +25,10 @@ export function AccountAdvancedFields({
 }: AccountAdvancedFieldsProps) {
   const { t } = useTranslation()
   const [initiallyOpen] = useState(
-    spreadPct !== undefined && spreadPct !== '' && spreadPct !== '0' && spreadPct !== '0.00'
+    spreadPct !== undefined &&
+      spreadPct !== '' &&
+      spreadPct !== '0' &&
+      spreadPct !== '0.00'
   )
   const settledSpread = useDebouncedValue(spreadPct ?? '')
   const preview = useAccountPreview(

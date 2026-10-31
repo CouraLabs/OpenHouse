@@ -10,7 +10,7 @@
     "home": "Home",
     "dashboard": "Home",
     "your-home": "Your home",
-    "financial": "Financial",
+    "financial": "Money",
     "subgroup": {
       "setup": "Setup",
       "activity": "Activity",
@@ -34,15 +34,25 @@
     "settings": "Settings",
     "general": "General",
     "users": "Users",
+    "plan": "Plan",
+    "data": "Data",
+    "preferences": "Preferences",
     "security": "Security",
     "household": "Household",
     "upcoming": "Upcoming"
   },
+  "not-found": {
+    "title": "Nothing here",
+    "description": "That page does not exist or has moved.",
+    "home": "Back to the dashboard"
+  },
   "sidebar": {
-    "copyright": "© 2026 CouraLabs",
     "month-summary": "This month",
-    "incomes": "Income",
-    "expenses": "Expenses"
+    "incomes": "In",
+    "expenses": "Out",
+    "month-empty": "Nothing moved yet this month.",
+    "other-currencies_one": "Plus {{count}} other currency on the home screen.",
+    "other-currencies_other": "Plus {{count}} other currencies on the home screen."
   },
   "profile": {
     "settings": "Settings",
@@ -256,7 +266,13 @@
     "import": "Import statement",
     "shared": "Shared account",
     "shared-hint": "Expenses paid from a shared account create no debts between members.",
-    "more-actions": "More actions"
+    "more-actions": "More actions",
+    "cards-label": "Accounts at a glance",
+    "card-open": "Open the balance history of {{name}}",
+    "card-frozen": "Frozen",
+    "card-balance": "Balance",
+    "card-due": "Due {{day}}",
+    "card-create": "A bank account, a card or a wallet."
   },
   "imports": {
     "title": "Import into {{name}}",
@@ -379,6 +395,7 @@
     "status-partiallypaid": "Partially paid",
     "status-overdue": "Overdue",
     "status-paid": "Paid",
+    "status-credit": "Credit",
     "empty": "No bills yet. A card's first charge opens its bill.",
     "rows-per-page": "Rows per page",
     "page-of": "Page {{page}} of {{count}}",
@@ -789,7 +806,7 @@
     "receiver-placeholder": "Pick a receiver…",
     "status-note": "Status note",
     "status-note-placeholder": "Why does the status change?",
-    "new": "Add Transaction",
+    "new": "New transaction",
     "edit-title": "Edit transaction",
     "new-title": "New transaction",
     "save": "Save",
@@ -854,6 +871,7 @@
     "transfer-amount": "Amount",
     "transfer-date": "Date",
     "transfer-note": "Note",
+    "transfer-no-destination": "No other account shares the currency of the account you picked.",
     "transfer-currency-mismatch": "The two accounts must share a currency.",
     "transfer-currency-hint": "Both accounts must be in the same currency; only {{currency}} accounts are listed.",
     "transfer-saved": "Transfer created.",
@@ -1016,7 +1034,7 @@
     "rent": {
       "title": "Renting",
       "rent-total": "Paid in rent",
-      "surplus": "Difference invested",
+      "surplus": "Installment minus rent, invested (negative: rent is higher, so the investment is drawn down)",
       "investment": "Investment at the end"
     },
     "chart": {
@@ -1043,6 +1061,14 @@
   "settings": {
     "title": "Settings",
     "subtitle": "The household's time zone, main currency, and members, and your own preferences and password.",
+    "subtitles": {
+      "general": "The household's time zone, main currency and how shared expenses count.",
+      "users": "Who belongs to the household, and invitations to join it.",
+      "plan": "The plan your household is on and what each plan includes.",
+      "data": "Export or import the household's records.",
+      "preferences": "How Kantim looks and reads for you.",
+      "security": "Your password and recovery codes."
+    },
     "save": "Save",
     "saving": "Saving…",
     "saved": "Settings saved.",
@@ -1284,6 +1310,7 @@
     "password-hint": "At least 8 characters",
     "password-short": "Use at least 8 characters.",
     "household-name-required": "Enter a household name.",
+    "code-required": "Enter an invite code.",
     "choice-error": "Fill either a new household name or an invite code, not both.",
     "submit": "Sign up",
     "submitting": "Signing up…",
@@ -1380,7 +1407,7 @@
     "limits-empty": "No limits yet. Add one from Limits to watch a category.",
     "limit-aria": "Spending against the {{name}} limit",
     "limit-excluded": "{{count}} expenses left out of this total.",
-    "greeting": "Hi, {{name}}. Here is where the house stands."
+    "greeting": "Hi, {{name}}. Here is where the home stands today."
   },
   "upcoming": {
     "title": "Upcoming",
@@ -1405,7 +1432,22 @@
     "limit": "{{category}} at {{percent}}% of {{type}} limit",
     "limit-amount": "{{spent}} / {{amount}}",
     "goal": "{{name}}: {{amount}} behind pace",
-    "goal-target": "Target {{date}}"
+    "goal-target": "Target {{date}}",
+    "row-bill": "Card bill",
+    "row-due": "due",
+    "row-recurring": "Repeats · {{account}}",
+    "row-scheduled": "scheduled",
+    "row-scheduled-pill": "Scheduled",
+    "row-limit": "Limit · {{type}} · {{percent}}% used",
+    "row-of": "of {{amount}}",
+    "row-limit-pill": "{{percent}}%",
+    "row-goal": "Goal · still to save",
+    "row-to-go": "to go",
+    "group-overdue": "Overdue",
+    "group-today": "Today",
+    "list-title": "Coming up",
+    "list-subtitle": "Bills, repeating payments, limits and goals over the next {{days}} days.",
+    "balances-title": "Where balances land"
   },
   "notifications": {
     "title": "Notifications",
@@ -1472,5 +1514,59 @@
     "resent": "If that address has an unconfirmed account, a new link is on its way. You can ask again in a minute.",
     "error": "Something went wrong. Try again.",
     "back": "Back to sign in"
+  },
+  "shell": {
+    "search": "Search or jump to…",
+    "search-label": "Search pages and actions",
+    "search-empty": "Nothing matches that.",
+    "group-actions": "Actions",
+    "group-pages": "Pages",
+    "new-transaction": "New transaction",
+    "new-transfer": "New transfer",
+    "show-amounts": "Show amounts",
+    "hide-amounts": "Hide amounts",
+    "month-net": "This month",
+    "month-net-hint": "Money in minus money out so far this month, in the main currency.",
+    "trend-up": "More came in than went out",
+    "trend-down": "More went out than came in",
+    "breadcrumb": "You are here"
+  },
+  "home": {
+    "kpi-balance": "Total balance",
+    "kpi-balance-by": "{{amount}} by {{date}}",
+    "kpi-in": "Money in",
+    "kpi-out": "Money out",
+    "kpi-month-so-far": "This month so far",
+    "kpi-bills": "Bills to pay",
+    "kpi-bills-window": "In the next 30 days",
+    "kpi-bills-late_one": "{{count}} bill late",
+    "kpi-bills-late_other": "{{count}} bills late",
+    "cover-title": "Can we cover it?",
+    "cover-subtitle": "Your {{currency}} balance as bills and repeating payments land.",
+    "cover-open": "Open Upcoming",
+    "cover-empty": "Add an account to see where the balance is heading.",
+    "cover-series": "Projected balance",
+    "cover-aria": "Projected balance going from {{start}} today to {{end}} at the end of the window.",
+    "cover-ok": "Stays above zero. About {{amount}} left by {{date}}.",
+    "cover-short": "Goes below zero on {{date}}, reaching {{amount}}.",
+    "cover-legend-line": "Projected",
+    "cover-legend-step": "A payment lands",
+    "soon-title": "Going out soon",
+    "soon-subtitle": "Bills and repeating payments due in the next {{days}} days.",
+    "soon-empty-title": "Nothing due",
+    "balances-subtitle": "What each account holds right now.",
+    "limits-subtitle": "How each watched category is pacing.",
+    "limit-used": "{{percent}}% used",
+    "goals-subtitle": "What you are saving toward.",
+    "goal-of": "of",
+    "cover-steady-title": "Nothing lands before {{date}}.",
+    "cover-steady-body": "No bills or repeating payments are due, so the balance holds at {{amount}}."
+  },
+  "auth-hero": {
+    "card-tier-home": "Home",
+    "card-tier-shared": "Shared",
+    "card-caption": "Example",
+    "card-holder-a": "Groceries card",
+    "card-holder-b": "House account"
   }
 }

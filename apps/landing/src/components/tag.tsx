@@ -3,8 +3,17 @@ import { cn } from 'cn'
 
 import type { Tone } from '@/lib/content.js'
 
+const tones: Record<Tone, string> = {
+  red: 'bg-attention-soft text-attention-foreground',
+  blue: 'bg-info-soft text-info',
+  green: 'bg-action-soft text-action',
+  yellow: 'bg-attention-soft text-attention-foreground',
+  bone: 'bg-surface-2 text-muted',
+}
+
 export function Tag({
   children,
+  tone = 'bone',
   className,
 }: {
   children: ReactNode
@@ -14,7 +23,8 @@ export function Tag({
   return (
     <span
       className={cn(
-        'ring-line-2 text-body inline-flex items-center gap-1.5 rounded-full px-3 py-[3px] font-mono text-[0.78rem] ring-1 ring-inset',
+        'inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium whitespace-nowrap',
+        tones[tone],
         className
       )}
     >

@@ -15,8 +15,11 @@ export function NavButtonItem({ item }: { item: NavItem }) {
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        render={<Link to={item.to} activeOptions={{ exact: true }} />}
-        className="data-[status=active]:bg-sidebar-accent data-[status=active]:font-medium data-[status=active]:text-sidebar-accent-foreground"
+        tooltip={t(item.key)}
+        render={
+          <Link to={item.to} activeOptions={{ exact: item.to === '/' }} />
+        }
+        className="data-[status=active]:bg-sidebar-primary data-[status=active]:font-semibold data-[status=active]:text-sidebar-primary-foreground"
       >
         {Icon ? <Icon /> : null}
         <span>{t(item.key)}</span>

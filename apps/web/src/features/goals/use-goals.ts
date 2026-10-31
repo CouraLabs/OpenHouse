@@ -4,7 +4,14 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import type { AccountRef, CreateGoalBody, Goal, PagedResults, SearchGoalsArgs, UpdateGoalBody } from '@workspace/dto'
+import type {
+  AccountRef,
+  CreateGoalBody,
+  Goal,
+  PagedResults,
+  SearchGoalsArgs,
+  UpdateGoalBody,
+} from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 

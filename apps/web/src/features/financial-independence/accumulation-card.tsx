@@ -53,9 +53,7 @@ export function AccumulationCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('financial-independence.accumulation.title')}
-        </CardTitle>
+        <CardTitle>{t('financial-independence.accumulation.title')}</CardTitle>
         <CardDescription>
           {t('financial-independence.accumulation.description')}
         </CardDescription>

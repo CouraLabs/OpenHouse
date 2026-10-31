@@ -1,42 +1,46 @@
 import { useTranslation } from 'react-i18next'
 
+import { PaymentCard } from '@workspace/ui/components/payment-card'
+
 export function AuthHero() {
   const { t } = useTranslation()
 
   return (
-    <section className="relative hidden overflow-hidden rounded-[20px] bg-background p-12 ring-1 ring-input md:flex md:flex-col md:justify-between lg:p-16">
+    <section className="relative hidden overflow-hidden rounded-3xl bg-sidebar p-12 text-sidebar-foreground ring-1 ring-sidebar-border md:flex md:flex-col md:justify-between lg:p-16">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 [background-image:radial-gradient(var(--muted-foreground)_1px,transparent_1.2px)] [mask-image:linear-gradient(to_bottom,black,transparent_85%)] [background-size:24px_24px] opacity-40"
+        className="pointer-events-none absolute inset-0 [background-image:radial-gradient(40rem_26rem_at_110%_-10%,rgb(157_216_188/0.16),transparent_60%),radial-gradient(30rem_22rem_at_-10%_110%,rgb(222_148_102/0.12),transparent_60%)]"
       />
-      <svg
+      <div
         aria-hidden
-        viewBox="0 0 100 100"
-        className="relative size-40 self-end text-foreground lg:size-52"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        className="relative ml-auto h-56 w-full max-w-sm lg:h-64"
       >
-        <path
-          className="plot-stroke"
-          pathLength={1}
-          strokeWidth={1.5}
-          d="M50 12 L86 44 H14 Z"
+        <PaymentCard
+          variant="coral"
+          brand="kantim."
+          tier={t('auth-hero.card-tier-home')}
+          identifier="•••• 4821"
+          caption={t('auth-hero.card-caption')}
+          title={t('auth-hero.card-holder-a')}
+          corner="09/29"
+          className="absolute top-0 right-0 w-[78%] rotate-[6deg]"
         />
-        <path
-          className="plot-stroke [animation-delay:380ms]"
-          pathLength={1}
-          strokeWidth={1.5}
-          d="M22 52 H78 V88 H22 Z"
+        <PaymentCard
+          variant="emerald"
+          brand="kantim."
+          tier={t('auth-hero.card-tier-shared')}
+          identifier="•••• 5512"
+          caption={t('auth-hero.card-caption')}
+          title={t('auth-hero.card-holder-b')}
+          corner="03/30"
+          className="absolute top-12 left-0 w-[78%] -rotate-[4deg]"
         />
-        <circle cx="50" cy="12" r="3.2" fill="currentColor" stroke="none" />
-      </svg>
-      <div className="relative flex max-w-lg animate-page-in flex-col gap-6">
-        <h1 className="text-5xl leading-[1.02] tracking-[-0.045em] text-balance lg:text-6xl">
+      </div>
+      <div className="relative flex max-w-lg animate-page-in flex-col gap-5">
+        <h1 className="text-[clamp(2.5rem,4.4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.03em] text-balance text-white">
           {t('app.headline')}
         </h1>
-        <p className="max-w-md text-[1.1rem] text-pretty text-ink-2">
+        <p className="max-w-md text-[1.0625rem] text-pretty text-sidebar-muted">
           {t('app.tagline')}
         </p>
       </div>

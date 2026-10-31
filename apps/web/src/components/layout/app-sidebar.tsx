@@ -1,3 +1,4 @@
+import type { SessionUser } from '@workspace/dto'
 import {
   Sidebar,
   SidebarContent,
@@ -11,12 +12,18 @@ import { NavButtonItem } from './nav-button-item.js'
 import { NavGroupContent } from './nav-group-content.js'
 import { DASHBOARD_ITEM, NAV_GROUPS } from './nav.js'
 
-export function AppSidebar({ tenantName }: { tenantName: string }) {
+export function AppSidebar({
+  tenantName,
+  user,
+}: {
+  tenantName: string
+  user: SessionUser
+}) {
   return (
-    <Sidebar variant="inset">
+    <Sidebar variant="floating" collapsible="offcanvas">
       <BrandHeader tenantName={tenantName} />
-      <SidebarContent>
-        <SidebarGroup className="pb-0">
+      <SidebarContent className="gap-1">
+        <SidebarGroup>
           <SidebarMenu>
             <NavButtonItem item={DASHBOARD_ITEM} />
           </SidebarMenu>
@@ -25,7 +32,7 @@ export function AppSidebar({ tenantName }: { tenantName: string }) {
           <NavGroupContent key={group.key} group={group} />
         ))}
       </SidebarContent>
-      <MonthSummaryFooter />
+      <MonthSummaryFooter user={user} />
     </Sidebar>
   )
 }

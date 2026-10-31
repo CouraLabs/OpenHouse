@@ -52,7 +52,8 @@ export function DataTablePagination<TData extends RowData>({
         <label className="flex items-center gap-2">
           {labels.rowsPerPage}
           <NativeSelect
-            className="h-8 w-18 py-0"
+            size="sm"
+            className="w-20"
             value={pageSize}
             onChange={(event) => table.setPageSize(Number(event.target.value))}
           >
@@ -68,7 +69,7 @@ export function DataTablePagination<TData extends RowData>({
           <Button
             variant="outline"
             size="icon"
-            className="size-8"
+            className="size-9"
             aria-label={labels.previous}
             disabled={!table.getCanPreviousPage()}
             onClick={() => table.previousPage()}
@@ -78,7 +79,7 @@ export function DataTablePagination<TData extends RowData>({
           <Button
             variant="outline"
             size="icon"
-            className="size-8"
+            className="size-9"
             aria-label={labels.next}
             disabled={!table.getCanNextPage()}
             onClick={() => table.nextPage()}

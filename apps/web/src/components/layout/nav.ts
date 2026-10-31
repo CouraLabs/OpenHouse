@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  Activity,
   ArrowLeftRight,
+  Compass,
   CalendarClock,
   HeartHandshake,
   LayoutDashboard,
@@ -10,6 +12,7 @@ import {
   ReceiptText,
   Repeat,
   Settings,
+  SlidersHorizontal,
   Tags,
   Target,
   Users,
@@ -26,6 +29,7 @@ export type CollapsibleNavItem = NavItem & { children: NavItem[] }
 
 export type NavSubgroup = {
   key: string
+  icon: LucideIcon
   items: NavItem[]
 }
 
@@ -45,6 +49,7 @@ export const FINANCIAL_GROUP: NavGroup = {
   items: [
     {
       key: 'nav.subgroup.activity',
+      icon: Activity,
       items: [
         { key: 'nav.transactions', to: '/transactions', icon: ArrowLeftRight },
         { key: 'nav.upcoming', to: '/upcoming', icon: CalendarClock },
@@ -63,6 +68,7 @@ export const FINANCIAL_GROUP: NavGroup = {
     },
     {
       key: 'nav.subgroup.setup',
+      icon: SlidersHorizontal,
       items: [
         { key: 'nav.accounts', to: '/accounts', icon: Wallet },
         { key: 'nav.categories', to: '/categories', icon: Tags },
@@ -71,6 +77,7 @@ export const FINANCIAL_GROUP: NavGroup = {
     },
     {
       key: 'nav.subgroup.planning',
+      icon: Compass,
       items: [
         { key: 'nav.limits', to: '/limits', icon: PiggyBank },
         { key: 'nav.goals', to: '/goals', icon: Target },

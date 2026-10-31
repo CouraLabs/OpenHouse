@@ -50,7 +50,7 @@ export function DayOfMonthPick({
         </SelectTrigger>
         <SelectContent>
           {DAYS_OF_MONTH.map((day) => (
-            <SelectItem key={day} value={String(day)}>
+            <SelectItem key={day} value={String(day)} label={String(day)}>
               {String(day).padStart(2, '0')}
             </SelectItem>
           ))}

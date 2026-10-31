@@ -27,9 +27,9 @@ export function NotificationBell() {
         <PopoverTrigger
           render={
             <Button
-              variant="ghost"
-              size="icon-sm"
-              className="relative rounded-full"
+              variant="outline"
+              size="icon"
+              className="relative"
               aria-label={
                 unread > 0
                   ? t('notifications.bell-unread', { count: unread })
@@ -42,13 +42,15 @@ export function NotificationBell() {
           {unread > 0 ? (
             <span
               aria-hidden
-              className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-none font-medium text-white"
-            >
-              {unread > BADGE_MAX ? `${BADGE_MAX}+` : unread}
-            </span>
+              title={unread > BADGE_MAX ? `${BADGE_MAX}+` : String(unread)}
+              className="absolute top-2 right-2.5 size-2 rounded-full bg-data-orange ring-2 ring-card"
+            />
           ) : null}
         </PopoverTrigger>
-        <PopoverContent align="end" className="w-80 gap-0 p-0">
+        <PopoverContent
+          align="end"
+          className="w-96 max-w-[calc(100vw-2rem)] gap-0 p-0"
+        >
           <NotificationCentre
             onOpenPreferences={() => {
               setMenuOpen(false)

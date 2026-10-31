@@ -2,34 +2,35 @@ import { cn } from 'cn'
 
 import type { LedgerRow } from '@/lib/content.js'
 
+import { InitialsTile } from './initials-tile.js'
+
 export function LedgerRows({
   days,
 }: {
   days: { day: string; rows: LedgerRow[] }[]
 }) {
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {days.map((group) => (
-        <div key={group.day} className="flex flex-col">
-          <span className="pb-1 font-mono text-[0.74rem] tracking-[0.05em] text-muted uppercase">
-            {group.day}
-          </span>
-          <ul className="divide-line flex flex-col divide-y">
+        <div key={group.day} className="flex flex-col gap-1">
+          <span className="label-caps">{group.day}</span>
+          <ul className="flex flex-col">
             {group.rows.map((row) => (
               <li
                 key={row.description}
-                className="flex items-center justify-between gap-4 py-2.5"
+                className="flex items-center justify-between gap-3 py-2"
               >
-                <div className="flex min-w-0 flex-col leading-snug">
-                  <span className="text-ink truncate text-sm">
+                <InitialsTile name={row.description} />
+                <div className="flex min-w-0 flex-1 flex-col leading-snug">
+                  <span className="text-ink truncate text-[0.875rem] font-medium">
                     {row.description}
                   </span>
                   <span className="text-xs text-muted">{row.category}</span>
                 </div>
                 <span
                   className={cn(
-                    'shrink-0 font-mono text-[0.82rem] tabular-nums',
-                    row.income ? 'text-action' : 'text-alert'
+                    'shrink-0 text-[0.875rem] font-semibold tabular-nums',
+                    row.income ? 'text-positive' : 'text-ink'
                   )}
                 >
                   {row.amount}

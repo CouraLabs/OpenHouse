@@ -42,8 +42,7 @@ const TRANSACTIONS_KEY = ['transactions'] as const
 const ACCOUNTS_KEY = ['accounts'] as const
 
 export function useSplitPreview(body: SplitPreviewBody | null) {
-  const valid =
-    body !== null && amountSchema.safeParse(body.amount).success
+  const valid = body !== null && amountSchema.safeParse(body.amount).success
   return useQuery({
     queryKey: [...TRANSACTIONS_KEY, 'split-preview', body],
     queryFn: ({ signal }) =>
@@ -58,8 +57,7 @@ export function useSplitPreview(body: SplitPreviewBody | null) {
 }
 
 export function useInstallmentsPreview(body: InstallmentsPreviewBody | null) {
-  const valid =
-    body !== null && amountSchema.safeParse(body.amount).success
+  const valid = body !== null && amountSchema.safeParse(body.amount).success
   return useQuery({
     queryKey: [...TRANSACTIONS_KEY, 'installments-preview', body],
     queryFn: ({ signal }) =>

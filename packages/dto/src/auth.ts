@@ -33,7 +33,10 @@ export {
   type SignUpResponse,
 }
 
-const password = z.string().min(8).max(72)
+const password = z
+  .string()
+  .min(8, "Use at least 8 characters.")
+  .max(72, "Use at most 72 characters.")
 
 const email = z.string().trim().toLowerCase().email().max(320)
 

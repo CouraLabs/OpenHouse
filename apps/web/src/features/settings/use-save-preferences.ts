@@ -1,5 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import type { SessionResponse, UpdatePreferencesBody, UserPreferences } from '@workspace/dto'
+import type {
+  SessionResponse,
+  UpdatePreferencesBody,
+  UserPreferences,
+} from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 import { SESSION_QUERY_KEY } from '@/lib/query.js'

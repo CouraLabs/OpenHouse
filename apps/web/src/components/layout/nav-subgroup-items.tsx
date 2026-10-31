@@ -1,19 +1,62 @@
+import { Link, useLocation } from '@tanstack/react-router'
+import { ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@workspace/ui/components/collapsible'
+import {
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from '@workspace/ui/components/sidebar'
+
 import type { NavSubgroup } from './nav.js'
-import { NavButtonItem } from './nav-button-item.js'
 
 export function NavSubgroupItems({ subgroup }: { subgroup: NavSubgroup }) {
   const { t } = useTranslation()
+  const { pathname } = useLocation()
+  const Icon = subgroup.icon
+  const holdsActive = subgroup.items.some(
+    (item) => pathname === item.to || pathname.startsWith(`${item.to}/`)
+  )
 
   return (
-    <>
-      <li className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70">
-        {t(subgroup.key)}
-      </li>
-      {subgroup.items.map((item) => (
-        <NavButtonItem key={item.key} item={item} />
-      ))}
-    </>
+    <Collapsible className="group/collapsible" defaultOpen>
+      <SidebarMenuItem>
+        <CollapsibleTrigger
+          render={
+            <SidebarMenuButton
+              tooltip={t(subgroup.key)}
+              className={
+                holdsActive ? 'text-sidebar-accent-foreground' : undefined
+              }
+            >
+              <Icon />
+              <span>{t(subgroup.key)}</span>
+              <ChevronRight className="ml-auto size-4! text-sidebar-muted transition-transform duration-150 group-data-[panel-open]/menu-button:rotate-90" />
+            </SidebarMenuButton>
+          }
+        />
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {subgroup.items.map((item) => (
+              <SidebarMenuSubItem key={item.key}>
+                <SidebarMenuSubButton
+                  render={<Link to={item.to} />}
+                  className="data-[status=active]:font-medium data-[status=active]:text-sidebar-accent-foreground data-[status=active]:before:opacity-100"
+                >
+                  <span>{t(item.key)}</span>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
   )
 }

@@ -55,6 +55,69 @@ export const enUS: Content = {
     windowTitle: 'kantim · Transactions',
     balance: { label: 'Checking · Main Street Bank', amount: '$8,412.36' },
     limitsTitle: 'Limits · October',
+    preview: {
+      label: 'Example of the Kantim home screen',
+      example: 'Example data',
+      home: 'The Rivera home',
+      nav: ['Home', 'Transactions', 'Upcoming', 'Bills', 'Limits'],
+      section: 'Money',
+      date: 'Saturday, October 31',
+      title: 'Home',
+      search: 'Search or jump to…',
+      newTransaction: 'New',
+      monthLabel: 'This month',
+      monthValue: '+$2,261.05',
+      kpis: [
+        {
+          label: 'Total balance',
+          value: '$8,412.36',
+          note: '$6,790 by Nov 30',
+          tone: 'primary',
+        },
+        {
+          label: 'Money in',
+          value: '+$4,200.00',
+          note: 'This month so far',
+          tone: 'in',
+        },
+        {
+          label: 'Money out',
+          value: '−$1,938.95',
+          note: 'This month so far',
+          tone: 'out',
+        },
+      ],
+      soonTitle: 'Going out soon',
+      soonSubtitle: 'Bills and repeating payments, next 30 days.',
+      soon: [
+        {
+          day: 'Today',
+          rows: [
+            {
+              description: 'City Power',
+              category: 'Bill · Checking',
+              amount: '−$112.00',
+            },
+          ],
+        },
+        {
+          day: 'Tue, Nov 3',
+          rows: [
+            {
+              description: 'Fiber Internet',
+              category: 'Repeats · Checking',
+              amount: '−$59.90',
+            },
+            {
+              description: 'Monthly rent',
+              category: 'Repeats · Checking',
+              amount: '−$1,450.00',
+            },
+          ],
+        },
+      ],
+      overdue: 'Due today',
+    },
   },
 
   sampleLedger: [
@@ -148,7 +211,6 @@ export const enUS: Content = {
   ruleStatus: { posted: 'Posted', scheduled: 'Scheduled' },
 
   problemsIntro: {
-    eyebrow: 'Why Kantim',
     title:
       'A home runs on hundreds of small things. Most of them live in someone’s head.',
     lede: 'The bills sit in one app, the groceries on a sticky note, the vet visit in a group chat, and the chores nowhere at all. Kantim gathers all of it in one place and keeps it current, so nothing depends on who remembered.',
@@ -182,7 +244,6 @@ export const enUS: Content = {
   ],
 
   houseIntro: {
-    eyebrow: 'The whole home',
     title: 'One assistant for everything your home needs.',
     lede: 'Kantim comes from “meu cantinho,” the affectionate Brazilian way of saying “my little corner.” It’s the place where daily life happens and where you live with the people you love. Kantim looks after all of it, for one person or for the whole family.',
   },
@@ -254,7 +315,6 @@ export const enUS: Content = {
   ],
 
   featuresIntro: {
-    eyebrow: 'How it works',
     title: 'Set it up once. Then the home keeps itself up to date.',
     lede: 'Kantim does the bookkeeping and the remembering, so you can get on with your day.',
   },
@@ -312,7 +372,6 @@ export const enUS: Content = {
   },
 
   plannersIntro: {
-    eyebrow: 'Planners',
     title: 'Run the numbers before you decide.',
     lede: 'Calculators for the big decisions of the home. They work without an account and never touch your books: change a number and see what happens over the next twenty years.',
   },
@@ -351,7 +410,6 @@ export const enUS: Content = {
   ],
 
   pricingIntro: {
-    eyebrow: 'Pricing',
     title: 'Start free. Pay when your home grows.',
     lede: 'Every plan gets the whole app. Paid plans add room for more accounts, members and history, plus messaging and AI. Hosted prices are per month, in Brazilian reais. Hosting it yourself costs nothing.',
   },
@@ -450,7 +508,6 @@ export const enUS: Content = {
   earlyAccessBadge: 'Early access',
 
   faqIntro: {
-    eyebrow: 'Questions',
     title: 'Before you move your home in.',
   },
 
@@ -503,7 +560,6 @@ export const enUS: Content = {
   ],
 
   openSource: {
-    eyebrow: 'Open source',
     title: 'Your home. Your server. Your code.',
     body: 'All of Kantim is on GitHub. Read the code, run it on your own account, or send a pull request when your home needs a new room.',
     points: [

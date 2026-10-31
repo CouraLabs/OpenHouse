@@ -4,6 +4,7 @@ import type { Database } from '../../database.js'
 import { LedgerBatchPlan, stampFor } from '../../ledger/ledger-batch.js'
 import { decimalToCents } from '../../money.js'
 import { buildPagedQuery } from '../../query/paged-query.js'
+import { centsToDecimalSql } from '../../money-sql.js'
 import { accounts, transactions, type Account } from '../../schema.js'
 
 export interface AccountSearch {
@@ -102,6 +103,62 @@ export class AccountRepository {
       .where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id)))
 
     return row
+  }
+
+  async heldPaymentTotals(
+    tenantId: number,
+    today: string
+  ): Promise<
+    Array<{ accountId: number; type: 'Income' | 'Expense'; total: string }>
+  > {
+    const cardGroups = sql`(
+      select t2.transfer_group_id from transactions t2
+      join accounts a2 on a2.id = t2.linked_account_id
+      where t2.tenant_id = ${tenantId}
+        and t2.transfer_group_id is not null
+        and a2.type = 'Credit Card'
+    )`
+
+    return this.db
+      .select({
+        accountId: transactions.linkedAccountId,
+        type: transactions.type,
+        total: centsToDecimalSql(sql`coalesce(sum(${transactions.amount}), 0)`),
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.tenantId, tenantId),
+          eq(transactions.status, 'ACTIVE'),
+          ne(transactions.reviewStatus, 'Canceled'),
+          sql`${transactions.transactionDt} > ${today}`,
+          sql`${transactions.transferGroupId} in ${cardGroups}`
+        )
+      )
+      .groupBy(transactions.linkedAccountId, transactions.type)
+  }
+
+  async countActiveByName(
+    tenantId: number,
+    name: string,
+    exceptId?: number
+  ): Promise<number> {
+    const conditions = [
+      eq(accounts.tenantId, tenantId),
+      eq(accounts.status, 'ACTIVE'),
+      sql`lower(${accounts.name}) = ${name.toLowerCase()}`,
+    ]
+
+    if (exceptId !== undefined) {
+      conditions.push(ne(accounts.id, exceptId))
+    }
+
+    const [counted] = await this.db
+      .select({ value: count() })
+      .from(accounts)
+      .where(and(...conditions))
+
+    return counted.value
   }
 
   async update(

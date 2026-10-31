@@ -8,10 +8,7 @@ import { useTranslation } from 'react-i18next'
 
 import { DayHeader } from './day-header.js'
 import { groupByDay, type DayGroup } from './group-by-day.js'
-import {
-  TransactionCardRow,
-  TransactionRow,
-} from './transaction-row.js'
+import { TransactionCardRow, TransactionRow } from './transaction-row.js'
 
 type GridItem =
   | { kind: 'header'; group: DayGroup }
@@ -40,9 +37,9 @@ export interface TransactionRowActions {
   onStatusChange: (transaction: Transaction, status: TransactionStatus) => void
 }
 
-const HEADER_HEIGHT = 40
-const ROW_HEIGHT = 44
-const CARD_ROW_HEIGHT = 68
+const HEADER_HEIGHT = 46
+const ROW_HEIGHT = 62
+const CARD_ROW_HEIGHT = 84
 const DESKTOP_MIN = 1100
 
 function useIsWide(): boolean {
@@ -142,7 +139,7 @@ export function TransactionGrid({
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-lg border p-8 text-sm text-muted-foreground">
+      <div className="flex flex-1 items-center justify-center rounded-[1.25rem] bg-card p-10 text-sm text-muted-foreground shadow-soft">
         {emptyMessage}
       </div>
     )
@@ -154,12 +151,12 @@ export function TransactionGrid({
     <div
       role={isMobile ? undefined : 'table'}
       aria-label={isMobile ? undefined : labels.gridLabel}
-      className="flex min-h-0 flex-1 flex-col rounded-lg border"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.25rem] bg-card shadow-soft"
     >
       {!isMobile ? (
         <div
           role="row"
-          className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground"
+          className="grid grid-cols-[2.25rem_4rem_minmax(0,1.4fr)_minmax(0,1fr)_9.5rem_7.5rem_5rem] items-center gap-x-5 border-b px-4 py-3 text-[0.6875rem] font-semibold tracking-[0.12em] text-muted-foreground uppercase"
         >
           <span role="columnheader">
             <Checkbox
@@ -169,12 +166,14 @@ export function TransactionGrid({
             />
           </span>
           <span role="columnheader">{labels.when}</span>
-          <span role="columnheader">{labels.category}</span>
           <span role="columnheader">{labels.description}</span>
+          <span role="columnheader">{labels.category}</span>
           <span role="columnheader" className="text-right">
             {labels.amount}
           </span>
-          <span role="columnheader">{labels.status}</span>
+          <span role="columnheader" className="pl-3">
+            {labels.status}
+          </span>
           <span role="columnheader" />
         </div>
       ) : null}
@@ -225,7 +224,7 @@ export function TransactionGrid({
           })}
           {stickyItem !== undefined && stickyItem.kind === 'header' ? (
             <div
-              className="absolute inset-x-0 z-10 shadow-sm"
+              className="absolute inset-x-0 z-10"
               style={{
                 transform: `translateY(${virtualizer.scrollOffset ?? 0}px)`,
               }}
@@ -251,7 +250,7 @@ export function TransactionGrid({
         </div>
       </div>
       {hasMore && !isFetchingNextPage ? (
-        <div className="border-t p-2 text-center">
+        <div className="border-t p-3 text-center">
           <Button variant="ghost" size="sm" onClick={onLoadMore}>
             {t('transactions.load-more')}
           </Button>

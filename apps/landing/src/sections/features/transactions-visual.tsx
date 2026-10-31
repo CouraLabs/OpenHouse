@@ -8,16 +8,17 @@ export function TransactionsVisual() {
   return (
     <div className="flex grow flex-col justify-between gap-8">
       <LedgerRows days={sampleLedger} />
-      <div className="border-line bg-line grid grid-cols-2 gap-px overflow-hidden rounded-lg border">
+      <div className="grid grid-cols-2 gap-2">
         {sampleTotals.map((total) => (
-          <div key={total.label} className="bg-bone flex flex-col px-4 py-3">
-            <span className="font-mono text-[0.74rem] tracking-[0.05em] text-muted uppercase">
-              {total.label}
-            </span>
+          <div
+            key={total.label}
+            className="flex flex-col gap-1 rounded-2xl bg-surface-2 px-4 py-3"
+          >
+            <span className="label-caps">{total.label}</span>
             <span
               className={cn(
-                'font-mono text-sm tabular-nums',
-                total.income ? 'text-action' : 'text-alert'
+                'text-[1.125rem] font-bold tracking-[-0.02em] tabular-nums',
+                total.income ? 'text-positive' : 'text-ink'
               )}
             >
               {total.amount}

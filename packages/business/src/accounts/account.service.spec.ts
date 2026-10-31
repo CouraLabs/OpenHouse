@@ -44,6 +44,13 @@ const repository = () => ({
   findById: vi.fn(),
   update: vi.fn(),
   softDelete: vi.fn(),
+  listActive: vi.fn(),
+  countActiveByName: vi.fn(async () => 0),
+  heldPaymentTotals: vi.fn(
+    async (): Promise<
+      Array<{ accountId: number; type: 'Income' | 'Expense'; total: string }>
+    > => []
+  ),
 })
 
 const cardCycle = () => {
@@ -130,6 +137,46 @@ describe('AccountService', () => {
       isDefault: false,
       ownership: 'personal' as const,
     })
+  })
+
+  it('rejects a name another active account already holds', async () => {
+    const repo = repository()
+    repo.countActiveByName.mockResolvedValueOnce(1)
+
+    await expect(
+      accountService(repo).create(
+        1,
+        7,
+        createAccountSchema.parse({
+          name: 'Everyday',
+          agency: '1',
+          number: '1',
+          type: 'Checking',
+          balance: '5',
+          currency: 'USD',
+        })
+      )
+    ).rejects.toThrow(ConflictError)
+    expect(repo.insert).not.toHaveBeenCalled()
+  })
+
+  it('holds a future-dated card payment out of the shown balance', async () => {
+    const repo = repository()
+    repo.listActive.mockResolvedValue([row({ id: 1, balance: '1920.00' })])
+    repo.heldPaymentTotals.mockResolvedValue([
+      { accountId: 1, type: 'Expense', total: '100.00' },
+    ])
+    const service = new AccountService(
+      repo as unknown as AccountRepository,
+      cardCycle() as unknown as CardCycleSync,
+      statements() as unknown as StatementBills,
+      { of: async () => '2026-10-30' }
+    )
+
+    const [shown] = await service.listActive(1)
+
+    expect(shown.balance).toBe('2020.00')
+    expect(repo.heldPaymentTotals).toHaveBeenCalledWith(1, '2026-10-30')
   })
 
   it('searches through to the repository', async () => {
@@ -429,5 +476,40 @@ describe('createAccountSchema', () => {
     if (!parsed.success) {
       expect(parsed.error.issues[0]?.path).toEqual(['number'])
     }
+  })
+})
+
+describe('input validation', () => {
+  const base = {
+    agency: '1',
+    number: '1',
+    type: 'Checking',
+    balance: '5',
+    currency: 'USD',
+  }
+
+  it('rejects a name that is only whitespace', () => {
+    expect(
+      createAccountSchema.safeParse({ ...base, name: '    ' }).success
+    ).toBe(false)
+  })
+
+  it('trims the name', () => {
+    expect(createAccountSchema.parse({ ...base, name: ' Main ' }).name).toBe(
+      'Main'
+    )
+  })
+
+  it('rejects a card limit of zero', () => {
+    expect(
+      createAccountSchema.safeParse({
+        name: 'Card',
+        type: 'Credit Card',
+        currency: 'USD',
+        limit: '0',
+        closeDay: 5,
+        dueDay: 15,
+      }).success
+    ).toBe(false)
   })
 })

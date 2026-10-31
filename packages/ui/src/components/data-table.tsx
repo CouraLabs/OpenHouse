@@ -12,7 +12,6 @@ import {
   flexRender,
 } from '@tanstack/react-table'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
-import { cn } from 'cn'
 
 import {
   Table,
@@ -80,13 +79,13 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative min-w-0 overflow-hidden rounded-[1.25rem] bg-card ring-1 ring-foreground/[0.06]">
+      <div className="relative min-w-0 overflow-x-auto rounded-[1.25rem] bg-card shadow-soft">
         {isLoading ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/70 backdrop-blur-[2px]">
             <Spinner className="size-6" />
           </div>
         ) : null}
-        <Table className="min-w-[40rem]">
+        <Table className="min-w-[40rem] [&_td:first-child]:pl-5 [&_td:last-child]:pr-5 [&_th:first-child]:pl-5 [&_th:last-child]:pr-5">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -98,11 +97,8 @@ export function DataTable<TData extends RowData>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row, index) => (
-                <TableRow
-                  key={row.id}
-                  className={cn(index % 2 === 1 && 'bg-muted/30')}
-                >
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
                   {row.getAllCells().map((cell) => (
                     <TableCell key={cell.id}>
                       <table.FlexRender cell={cell} />
@@ -114,7 +110,7 @@ export function DataTable<TData extends RowData>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-28 text-center text-muted-foreground"
                 >
                   {emptyMessage}
                 </TableCell>
@@ -152,7 +148,7 @@ function DataTableHead<TData extends RowData>({
       {sortable && column.getCanSort() ? (
         <button
           type="button"
-          className="flex items-center gap-1 hover:text-foreground"
+          className="flex items-center gap-1 tracking-[inherit] uppercase hover:text-foreground"
           onClick={column.getToggleSortingHandler()}
         >
           {rendered}

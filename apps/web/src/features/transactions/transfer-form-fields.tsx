@@ -68,14 +68,20 @@ export function TransferFormFields({
   const to = accounts.find((account) => account.id === toId)
   const paysCard = to?.type === 'Credit Card'
   const chosenCurrency: Currency | undefined = from?.currency ?? to?.currency
+  const hasPeer = (account: AccountRef) =>
+    accounts.some(
+      (other) => other.id !== account.id && other.currency === account.currency
+    )
   const destinationOptions = accounts.filter(
     (account) =>
       account.id !== fromId &&
+      hasPeer(account) &&
       (chosenCurrency === undefined || account.currency === chosenCurrency)
   )
   const sourceOptions = accounts.filter(
     (account) =>
       account.id !== toId &&
+      hasPeer(account) &&
       (chosenCurrency === undefined || account.currency === chosenCurrency)
   )
 
@@ -127,6 +133,11 @@ export function TransferFormFields({
           }}
         />
       </div>
+      {fromId !== undefined && destinationOptions.length === 0 ? (
+        <p role="alert" className="text-sm text-muted-foreground">
+          {t('transactions.transfer-no-destination')}
+        </p>
+      ) : null}
       {paysCard && to !== undefined ? (
         <PaymentBillPick
           cardId={to.id}

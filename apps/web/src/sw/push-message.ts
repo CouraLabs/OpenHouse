@@ -1,4 +1,8 @@
-import type { NotificationBody, PushPayload, ReminderDetail } from '@workspace/dto'
+import type {
+  NotificationBody,
+  PushPayload,
+  ReminderDetail,
+} from '@workspace/dto'
 
 export interface PushMessage {
   title: string

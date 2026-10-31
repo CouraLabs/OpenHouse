@@ -4,7 +4,14 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import type { CreateReceiverBody, PagedResults, Receiver, ReceiverRef, SearchReceiversArgs, UpdateReceiverBody } from '@workspace/dto'
+import type {
+  CreateReceiverBody,
+  PagedResults,
+  Receiver,
+  ReceiverRef,
+  SearchReceiversArgs,
+  UpdateReceiverBody,
+} from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 

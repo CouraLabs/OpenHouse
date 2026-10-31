@@ -29,7 +29,7 @@ export function CollapsibleNavItemView({ item }: { item: CollapsibleNavItem }) {
             <SidebarMenuButton tooltip={t(item.key)}>
               {Icon ? <Icon /> : null}
               <span>{t(item.key)}</span>
-              <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+              <ChevronRight className="ml-auto size-4! text-sidebar-muted transition-transform duration-150 group-data-[panel-open]/menu-button:rotate-90" />
             </SidebarMenuButton>
           }
         />
@@ -41,7 +41,7 @@ export function CollapsibleNavItemView({ item }: { item: CollapsibleNavItem }) {
                   render={
                     <Link to={child.to} activeOptions={{ exact: true }} />
                   }
-                  className="data-[status=active]:bg-sidebar-accent data-[status=active]:font-medium data-[status=active]:text-sidebar-accent-foreground"
+                  className="data-[status=active]:font-medium data-[status=active]:text-sidebar-accent-foreground data-[status=active]:before:opacity-100"
                 >
                   <span>{t(child.key)}</span>
                 </SidebarMenuSubButton>

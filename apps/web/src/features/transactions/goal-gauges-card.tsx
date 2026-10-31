@@ -2,17 +2,18 @@ import type { Goal } from '@workspace/dto'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@workspace/ui/components/card'
-import { Badge } from '@workspace/ui/components/badge'
-import { GaugeBar } from '@workspace/ui/components/gauge-bar'
+import { RingGauge } from '@workspace/ui/components/ring-gauge'
+import { StatusPill } from '@workspace/ui/components/status-pill'
 
 import { formatMoney } from '@/lib/format-money.js'
-import { goalGaugeColor } from '@/lib/goal-gauge-color.js'
 
 export function GoalGaugesCard({
   title,
+  description,
   icon,
   goals,
   locale,
@@ -20,43 +21,62 @@ export function GoalGaugesCard({
   labels,
 }: {
   title: string
-  icon: React.ReactNode
+  description?: string
+  icon?: React.ReactNode
   goals: Goal[]
   locale: string
   ariaLabelFor: (goal: Goal) => string
-  labels: { empty: string; currencyMismatch: string }
+  labels: { empty: string; currencyMismatch: string; of?: string }
 }) {
   const targeted = goals.filter((goal) => goal.targetBalance !== '0.00')
 
   return (
-    <Card className="gap-2">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
           {icon}
           {title}
         </CardTitle>
+        {description !== undefined ? (
+          <CardDescription>{description}</CardDescription>
+        ) : null}
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+      <CardContent className="gap-4">
         {targeted.length === 0 ? (
           <p className="text-sm text-muted-foreground">{labels.empty}</p>
         ) : (
           targeted.map((goal) => (
-            <div key={goal.id} className="flex flex-col gap-1">
-              <span className="flex items-center gap-2 text-sm">
-                <span className="truncate">{goal.name}</span>
-                {goal.accountCurrency !== goal.currency ? (
-                  <Badge variant="outline">{labels.currencyMismatch}</Badge>
-                ) : null}
-              </span>
-              <GaugeBar
-                value={Number(goal.balance)}
-                max={Number(goal.targetBalance)}
-                format={(amount) =>
-                  formatMoney(String(amount), locale, goal.currency)
-                }
-                colorFor={goalGaugeColor}
-                aria-label={ariaLabelFor(goal)}
+            <div
+              key={goal.id}
+              role="progressbar"
+              aria-label={ariaLabelFor(goal)}
+              aria-valuemin={0}
+              aria-valuemax={Number(goal.targetBalance)}
+              aria-valuenow={Number(goal.balance)}
+              className="flex items-center gap-3"
+            >
+              <RingGauge
+                fraction={Number(goal.balance) / Number(goal.targetBalance)}
+                tone="blue"
               />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <span className="truncate">{goal.name}</span>
+                  {goal.accountCurrency !== goal.currency ? (
+                    <StatusPill tone="warning">
+                      {labels.currencyMismatch}
+                    </StatusPill>
+                  ) : null}
+                </span>
+                <span className="text-[0.8125rem] text-muted-foreground">
+                  <span className="font-semibold text-foreground">
+                    {formatMoney(goal.balance, locale, goal.currency)}
+                  </span>
+                  {' / '}
+                  {labels.of !== undefined ? `${labels.of} ` : ''}
+                  {formatMoney(goal.targetBalance, locale, goal.currency)}
+                </span>
+              </span>
             </div>
           ))
         )}

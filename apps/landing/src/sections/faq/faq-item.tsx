@@ -3,7 +3,7 @@ import { Minus, Plus } from '@phosphor-icons/react'
 
 import type { Question } from '@/lib/content.js'
 
-export function FaqItem({ item, index }: { item: Question; index: number }) {
+export function FaqItem({ item }: { item: Question }) {
   const [open, setOpen] = useState(false)
   const answerId = useId()
 
@@ -14,22 +14,19 @@ export function FaqItem({ item, index }: { item: Question; index: number }) {
         aria-expanded={open}
         aria-controls={answerId}
         onClick={() => setOpen((value) => !value)}
-        className="group text-ink hover:bg-surface grid w-full grid-cols-[2.5rem_1fr_auto] items-center gap-4 px-(--pad) py-5 text-left transition-colors duration-200"
+        className="group text-ink grid w-full grid-cols-[1fr_auto] items-center gap-4 px-5 py-4 text-left"
       >
-        <span className="font-mono text-[0.78rem] text-muted tabular-nums">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-        <span className="text-[1.05rem] font-medium text-pretty">
+        <span className="text-[1rem] font-medium text-pretty">
           {item.question}
         </span>
-        <span className="ring-line-2 group-hover:bg-ink group-hover:text-on-ink inline-flex size-[34px] items-center justify-center rounded-full ring-1 transition-colors duration-200 ring-inset">
+        <span className="group-hover:bg-action-soft group-hover:text-action inline-flex size-9 items-center justify-center rounded-full bg-surface-2 transition-colors duration-150">
           {open ? <Minus aria-hidden /> : <Plus aria-hidden />}
         </span>
       </button>
       <p
         id={answerId}
         hidden={!open}
-        className="text-body max-w-[62ch] px-(--pad) pb-6 pl-[calc(var(--pad)+2.5rem+1rem)] text-[1rem] text-pretty"
+        className="text-body max-w-[62ch] px-5 pb-5 text-[0.9375rem] text-pretty"
       >
         {item.answer}
       </p>

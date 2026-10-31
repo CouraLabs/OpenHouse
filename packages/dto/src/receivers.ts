@@ -24,7 +24,7 @@ export const receiverTypeSchema = z.enum(receiverTypes, {
 })
 
 export const createReceiverSchema = z.object({
-  name: z.string().min(1, "Enter a name.").max(255),
+  name: z.string().trim().min(1, "Enter a name.").max(255),
   type: receiverTypeSchema,
 })
 

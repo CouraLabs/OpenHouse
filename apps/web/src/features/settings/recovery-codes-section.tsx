@@ -25,7 +25,7 @@ export function RecoveryCodesSection() {
     generate.mutate(undefined, { onSettled: () => setConfirming(false) })
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border p-4">
+    <section className="flex flex-col gap-4 rounded-[1.25rem] bg-card p-6 shadow-soft">
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium">{t('settings.recovery.title')}</p>
         <p className="text-sm text-muted-foreground">

@@ -25,23 +25,23 @@ export function NavMenu() {
         aria-controls={panelId}
         aria-label={navActions.menu}
         onClick={() => setOpen((value) => !value)}
-        className="border-line-2 hover:bg-ink hover:text-on-ink text-ink aria-expanded:bg-ink aria-expanded:text-on-ink relative inline-flex size-[38px] shrink-0 items-center justify-center rounded-full border transition-[color,background-color] duration-200"
+        className="border-line-2 bg-surface text-ink relative inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-[color,background-color] duration-200 hover:bg-surface-2 aria-expanded:bg-surface-2"
       >
         {open ? <X aria-hidden /> : <List aria-hidden />}
       </button>
       <ol
         id={panelId}
         hidden={!open}
-        className="border-line bg-canvas absolute inset-x-0 top-full border-y"
+        className="absolute inset-x-0 top-full mt-2 overflow-hidden surface-card"
       >
         {navLinks.map((link) => (
           <li key={link.href} className="border-line border-b last:border-b-0">
             <a
               href={link.href}
               onClick={() => setOpen(false)}
-              className="text-ink hover:bg-ink hover:text-on-ink block px-(--pad) py-4 font-mono text-[0.95rem] transition-colors duration-200"
+              className="text-ink block px-5 py-3.5 text-[0.9375rem] transition-colors duration-150 hover:bg-surface-2"
             >
-              {`/${link.label.toLowerCase().replaceAll(' ', '-')}`}
+              {link.label}
             </a>
           </li>
         ))}

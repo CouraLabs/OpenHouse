@@ -38,7 +38,7 @@ export function PreferencesForm() {
   return (
     <form
       onSubmit={handleSubmit((values) => save.mutate(values))}
-      className="flex flex-col gap-4 rounded-lg border p-4"
+      className="flex flex-col gap-4 rounded-[1.25rem] bg-card p-6 shadow-soft"
       noValidate
     >
       <div className="flex flex-col gap-1">

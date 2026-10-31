@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from 'cn'
 
-import { Tick } from './tick.js'
-
 export function Section({
   id,
   children,
@@ -15,11 +13,12 @@ export function Section({
   return (
     <section
       id={id}
-      className={cn('cell relative scroll-mt-16 p-(--pad)', className)}
+      className={cn(
+        'relative scroll-mt-20 px-(--pad) py-20 md:py-28',
+        className
+      )}
     >
-      <Tick x="0" y="0" />
-      <Tick x="100%" y="0" />
-      <div className="flex flex-col gap-14 md:gap-20">{children}</div>
+      <div className="flex flex-col gap-12 md:gap-16">{children}</div>
     </section>
   )
 }

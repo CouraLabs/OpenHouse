@@ -10,10 +10,7 @@ import {
 } from '@workspace/ui/components/card'
 import { MoneyField } from '@workspace/ui/components/money-field'
 import { NumberField } from '@workspace/ui/components/number-field'
-import {
-  withdrawalInputSchema,
-  type WithdrawalResult,
-} from '@workspace/dto'
+import { withdrawalInputSchema, type WithdrawalResult } from '@workspace/dto'
 
 import { fieldErrorsOf, type FieldErrors } from '@/lib/field-errors.js'
 import { formatMoney } from '@/lib/format-money.js'
@@ -49,9 +46,7 @@ export function WithdrawalCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('financial-independence.withdrawal.title')}
-        </CardTitle>
+        <CardTitle>{t('financial-independence.withdrawal.title')}</CardTitle>
         <CardDescription>
           {t('financial-independence.withdrawal.description')}
         </CardDescription>

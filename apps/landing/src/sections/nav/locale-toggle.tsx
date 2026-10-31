@@ -9,7 +9,7 @@ export function LocaleToggle() {
       type="button"
       onClick={() => setLocale(locale === 'en-US' ? 'pt-BR' : 'en-US')}
       aria-label={content.navActions.localeToggle}
-      className="border-line-2 hover:bg-ink hover:text-on-ink text-ink size-[38px] shrink-0 rounded-full border font-mono text-[0.74rem] transition-[color,background-color,transform] duration-200 active:scale-[0.98]"
+      className="border-line-2 bg-surface text-ink size-10 shrink-0 rounded-full border text-xs font-semibold transition-[color,background-color,transform] duration-200 hover:bg-surface-2 active:scale-[0.98]"
     >
       {LOCALE_SHORT[locale]}
     </button>

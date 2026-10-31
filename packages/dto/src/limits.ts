@@ -27,12 +27,17 @@ export const amountSchema = z
   .string()
   .regex(/^\d{1,14}(\.\d{1,2})?$/, "Enter an amount like 12.34.")
 
+export const positiveAmountSchema = amountSchema.refine(
+  (value) => Number(value) > 0,
+  "Enter an amount greater than zero."
+)
+
 export const createLimitSchema = z.object({
   categoryId: z
     .number({ error: "Pick a category." })
     .int()
     .positive("Pick a category."),
-  amount: amountSchema,
+  amount: positiveAmountSchema,
   type: limitTypeSchema,
 })
 

@@ -23,7 +23,7 @@ export function NextMonthCard({
   return (
     <Card className="gap-2">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <CardTitle className="flex items-center gap-2">
           <CalendarClock aria-hidden className="size-4" />
           {title}
         </CardTitle>

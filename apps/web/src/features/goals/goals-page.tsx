@@ -159,7 +159,7 @@ export function GoalsPage() {
   )
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
+    <main className="mx-auto flex w-full max-w-[90rem] flex-1 animate-page-in flex-col gap-6 px-4 pt-4 pb-12 md:px-8 md:pt-6">
       <PageHeader
         title={t('goals.title')}
         subtitle={t('goals.subtitle')}

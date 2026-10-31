@@ -13,8 +13,18 @@ const VARIANTS: Record<
   Paid: 'outline',
 }
 
-export function StatementStatusBadge({ status }: { status: StatementStatus }) {
+export function StatementStatusBadge({
+  status,
+  amountDue,
+}: {
+  status: StatementStatus
+  amountDue?: string
+}) {
   const { t } = useTranslation()
+
+  if (amountDue !== undefined && Number(amountDue) < 0) {
+    return <Badge variant="outline">{t('bills.status-credit')}</Badge>
+  }
 
   return (
     <Badge variant={VARIANTS[status]}>

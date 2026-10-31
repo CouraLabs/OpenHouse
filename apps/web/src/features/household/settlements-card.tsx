@@ -42,7 +42,11 @@ export function SettlementsCard({
                   })}
                 </span>
                 <span className="tabular-nums">
-                  {formatMoney(entry.amount, formattingLocale(), entry.currency)}
+                  {formatMoney(
+                    entry.amount,
+                    formattingLocale(),
+                    entry.currency
+                  )}
                 </span>
               </li>
             ))}

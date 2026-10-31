@@ -10,16 +10,14 @@ export function PlanCard({ plan }: { plan: Plan }) {
   const { featuredBadge, earlyAccessBadge } = useContent()
 
   return (
-    <article className="border-line bg-surface hover:bg-bone flex h-full flex-col gap-8 rounded-[20px] border p-7 transition-shadow duration-200 md:p-8">
+    <article className="flex h-full flex-col gap-8 surface-card p-7 transition-transform duration-150 hover:-translate-y-px md:p-8">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-ink font-display text-[1.05rem] font-medium tracking-[-0.02em]">
+          <h3 className="text-ink font-display text-[1.05rem] font-semibold tracking-[-0.02em]">
             {plan.name}
           </h3>
           {plan.featured && <Tag tone="green">{featuredBadge}</Tag>}
-          {plan.earlyAccess && (
-            <Tag className="ring-line text-muted">{earlyAccessBadge}</Tag>
-          )}
+          {plan.earlyAccess && <Tag>{earlyAccessBadge}</Tag>}
         </div>
         <p className="text-sm text-pretty text-muted">{plan.tagline}</p>
       </div>

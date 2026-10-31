@@ -17,7 +17,12 @@ export function PerkList({ perks }: { perks: Perk[] }) {
             )}
           >
             {included ? (
-              <Check aria-hidden className="text-ink mt-1 shrink-0" size={14} />
+              <Check
+                aria-hidden
+                className="text-action mt-1 shrink-0"
+                size={14}
+                weight="bold"
+              />
             ) : (
               <Minus
                 aria-hidden

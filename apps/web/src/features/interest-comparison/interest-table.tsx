@@ -24,9 +24,7 @@ export function InterestTable({ rows }: InterestTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('interest-comparison.table.title')}
-        </CardTitle>
+        <CardTitle>{t('interest-comparison.table.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="max-h-96 overflow-y-auto rounded-md border">

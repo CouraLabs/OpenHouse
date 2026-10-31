@@ -8,10 +8,8 @@ export function LinkerVisual() {
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-      <div className="border-line bg-bone flex flex-col rounded-md border px-3 py-2">
-        <span className="font-mono text-[0.74rem] tracking-[0.05em] text-muted uppercase">
-          {sampleLinker.descriptionLabel}
-        </span>
+      <div className="border-line flex flex-col gap-0.5 rounded-[0.875rem] border bg-surface-2 px-4 py-2.5">
+        <span className="label-caps">{sampleLinker.descriptionLabel}</span>
         <span className="text-ink text-sm">{sampleLinker.description}</span>
       </div>
       <ArrowRight

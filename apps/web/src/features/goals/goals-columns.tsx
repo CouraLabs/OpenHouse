@@ -58,7 +58,11 @@ export function buildGoalColumns(
 
         return (
           <GaugeBar
-            value={Number(goal.balance)}
+            value={Number(
+              goal.accountCurrency === goal.currency
+                ? goal.accountBalance
+                : goal.balance
+            )}
             max={Number(goal.targetBalance)}
             format={(amount) =>
               formatMoney(String(amount), locale, goal.currency)

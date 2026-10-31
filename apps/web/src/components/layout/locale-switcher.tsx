@@ -22,8 +22,8 @@ export function LocaleSwitcher() {
       <DropdownMenuTrigger
         render={
           <Button
-            variant="ghost"
-            size="icon-sm"
+            variant="outline"
+            size="icon"
             aria-label={t('language.label')}
           />
         }

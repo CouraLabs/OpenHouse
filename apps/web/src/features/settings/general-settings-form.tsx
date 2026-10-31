@@ -2,7 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import type { Currency, CurrencyChangeConflict, UnsplitMode, UpdateSettingsBody } from '@workspace/dto'
+import type {
+  Currency,
+  CurrencyChangeConflict,
+  UnsplitMode,
+  UpdateSettingsBody,
+} from '@workspace/dto'
 import { currencies, unsplitModes, updateSettingsSchema } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
@@ -82,7 +87,7 @@ export function GeneralSettingsForm() {
     <>
       <form
         onSubmit={handleSubmit((values) => submit(values))}
-        className="flex flex-col gap-4 rounded-lg border p-4"
+        className="flex flex-col gap-4 rounded-[1.25rem] bg-card p-6 shadow-soft"
         noValidate
       >
         <div className="flex flex-col gap-1">
@@ -156,7 +161,7 @@ export function GeneralSettingsForm() {
             {unsplitModes.map((value) => (
               <span
                 key={value}
-                className="flex items-center gap-2 rounded-lg border p-2 text-sm has-[[data-checked]]:border-primary"
+                className="flex items-center gap-2 rounded-lg border bg-surface-2 p-3 text-sm has-[[data-checked]]:border-primary/50 has-[[data-checked]]:bg-primary-soft"
               >
                 <RadioGroupItem value={value} />
                 {t(`settings.general.unsplit-${value}`)}

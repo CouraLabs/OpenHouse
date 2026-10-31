@@ -36,9 +36,7 @@ export function ReconcilePreviewSummary({
         <dt className="font-medium">{t('accounts.reconcile-difference')}</dt>
         <dd
           className={`text-right font-medium tabular-nums ${
-            matches
-              ? 'text-primary'
-              : 'text-destructive'
+            matches ? 'text-positive' : 'text-negative'
           }`}
           data-testid="reconcile-difference"
         >

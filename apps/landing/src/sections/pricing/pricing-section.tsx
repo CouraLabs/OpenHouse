@@ -9,7 +9,7 @@ import { SelfHostPlan } from './self-host-plan.js'
 export function PricingSection() {
   const { hostedPlans, pricingIntro } = useContent()
   return (
-    <Section id="pricing" className="bg-bone/50">
+    <Section id="pricing">
       <SectionHeading {...pricingIntro} />
       <div className="flex flex-col gap-4">
         <SelfHostPlan />

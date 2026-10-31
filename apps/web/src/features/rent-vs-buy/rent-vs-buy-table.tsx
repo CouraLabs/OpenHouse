@@ -26,9 +26,7 @@ export function RentVsBuyTable({ rows }: RentVsBuyTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('rent-vs-buy.table.title')}
-        </CardTitle>
+        <CardTitle>{t('rent-vs-buy.table.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="max-h-96 overflow-y-auto rounded-md border">

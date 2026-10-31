@@ -8,8 +8,10 @@ export function GoalVisual() {
     <div className="flex items-center gap-6">
       <GoalRing percent={68} />
       <div className="flex flex-col leading-snug">
-        <span className="text-ink text-sm">{sampleGoal.name}</span>
-        <span className="font-mono text-xs text-muted tabular-nums">
+        <span className="text-ink text-[0.9375rem] font-semibold">
+          {sampleGoal.name}
+        </span>
+        <span className="text-[0.8125rem] text-muted tabular-nums">
           {sampleGoal.progress}
         </span>
         <span className="text-xs text-muted">{sampleGoal.account}</span>

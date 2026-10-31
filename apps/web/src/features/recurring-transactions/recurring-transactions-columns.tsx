@@ -39,8 +39,8 @@ export function buildRecurringColumns(
           <span
             className={
               isIncome
-                ? 'font-medium text-primary'
-                : 'font-medium text-destructive'
+                ? 'font-medium text-positive'
+                : 'font-medium text-foreground'
             }
           >
             {t(`recurring.type-${context.row.original.type.toLowerCase()}`)}

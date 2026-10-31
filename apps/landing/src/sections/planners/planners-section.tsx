@@ -9,7 +9,7 @@ export function PlannersSection() {
   return (
     <Section id="planners">
       <SectionHeading {...plannersIntro} />
-      <ul className="border-line border-t">
+      <ul className="flex flex-col gap-3">
         {planners.map((planner, index) => (
           <PlannerRow key={planner.title} planner={planner} index={index} />
         ))}

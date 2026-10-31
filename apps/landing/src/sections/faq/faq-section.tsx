@@ -11,12 +11,12 @@ export function FaqSection() {
   return (
     <Section id="faq">
       <SectionHeading {...faqIntro} />
-      <Reveal className="-mx-(--pad) -mt-14 -mb-(--pad) md:-mt-20">
-        <ol className="md:hidden">
-          {faq.map((item, index) => (
-            <FaqItem key={item.question} item={item} index={index} />
+      <Reveal>
+        <ul className="surface-card md:hidden">
+          {faq.map((item) => (
+            <FaqItem key={item.question} item={item} />
           ))}
-        </ol>
+        </ul>
         <div className="hidden md:block">
           <FaqTabs items={faq} />
         </div>

@@ -21,7 +21,6 @@ import type { InterestUnit } from '@workspace/dto'
 import type { FieldErrors } from '@/lib/field-errors.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-
 const UNITS: Array<{ value: InterestUnit; labelKey: string }> = [
   { value: 'year', labelKey: 'interest-comparison.params.unit-year' },
   { value: 'month', labelKey: 'interest-comparison.params.unit-month' },
@@ -56,9 +55,7 @@ export function InterestParams({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('interest-comparison.params.title')}
-        </CardTitle>
+        <CardTitle>{t('interest-comparison.params.title')}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-2 items-start gap-3 md:grid-cols-4">
         <MoneyField

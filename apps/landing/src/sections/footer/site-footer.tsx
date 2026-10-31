@@ -1,21 +1,18 @@
-import { HouseGlyph } from '@/components/house-glyph.js'
+import { LogoTile } from '@/components/logo-tile.js'
 import { Wordmark } from '@/components/wordmark.js'
-import { Tick } from '@/components/tick.js'
 import { useContent } from '@/lib/use-locale.js'
 
 export function SiteFooter() {
   const { footer } = useContent()
   return (
-    <footer className="cell relative px-(--pad) py-12">
-      <Tick x="0" y="0" />
-      <Tick x="100%" y="0" />
-      <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="text-ink flex items-center gap-2">
-            <HouseGlyph weight={5} className="size-5" />
-            <Wordmark />
+    <footer className="px-(--pad) pt-4 pb-10">
+      <div className="bg-chrome text-chrome-ink flex flex-col gap-8 rounded-3xl p-8 md:flex-row md:items-end md:justify-between md:p-10">
+        <div className="flex flex-col gap-2">
+          <span className="flex items-center gap-2.5">
+            <LogoTile />
+            <Wordmark className="text-chrome-ink" />
           </span>
-          <span className="text-sm text-muted">{footer.tagline}</span>
+          <span className="text-chrome-muted text-sm">{footer.tagline}</span>
         </div>
         <div className="flex flex-col gap-3 md:items-end">
           <ul className="flex flex-wrap gap-6">
@@ -23,16 +20,14 @@ export function SiteFooter() {
               <li key={link.label}>
                 <a
                   href={link.href}
-                  className="hover:text-ink text-sm text-muted transition-colors"
+                  className="text-chrome-muted text-sm transition-colors hover:text-white"
                 >
                   {link.label}
                 </a>
               </li>
             ))}
           </ul>
-          <span className="font-mono text-xs text-muted">
-            {footer.copyright}
-          </span>
+          <span className="text-chrome-muted text-xs">{footer.copyright}</span>
         </div>
       </div>
     </footer>

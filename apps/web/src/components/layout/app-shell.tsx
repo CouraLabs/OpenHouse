@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { SessionResponse } from '@workspace/dto'
 
 import { useSession } from '@/lib/auth.js'
+import { useAmountsHidden } from '@/lib/privacy.js'
 import { AppHeader } from '@/components/layout/app-header.js'
 import { AppSidebar } from '@/components/layout/app-sidebar.js'
 import { InitialSetup } from '@/components/layout/initial-setup.js'
@@ -20,6 +21,7 @@ export function AppShell({
 }) {
   const { t } = useTranslation()
   const session = useSession().data ?? initialSession
+  const amountsHidden = useAmountsHidden()
 
   if (session.user.role === 'owner' && !session.settings.timezoneConfirmed) {
     return <InitialSetup tenantName={session.tenant.name} />
@@ -29,16 +31,21 @@ export function AppShell({
     <SidebarProvider className="h-svh overflow-hidden">
       <a
         href="#main-content"
-        className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
         {t('app.skip-to-content')}
       </a>
-      <AppSidebar tenantName={session.tenant.name} />
+      <AppSidebar
+        key={amountsHidden ? 'hidden' : 'shown'}
+        tenantName={session.tenant.name}
+        user={session.user}
+      />
       <SidebarInset className="overflow-hidden">
-        <AppHeader user={session.user} />
+        <AppHeader />
         <TenantDeletionBanner />
         <ServerResetNotice />
         <main
+          key={amountsHidden ? 'hidden' : 'shown'}
           id="main-content"
           tabIndex={-1}
           className="flex min-h-0 flex-1 flex-col overflow-y-auto outline-none"

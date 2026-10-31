@@ -1,14 +1,9 @@
 import type { TransactionSummaryGroup } from '@workspace/dto'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@workspace/ui/components/card'
-import { CreditCard, Scale, TrendingDown, TrendingUp } from 'lucide-react'
-import { cn } from 'cn'
+import { ArrowDownLeft, ArrowUpRight, CreditCard, Scale } from 'lucide-react'
 
-import { formatMoney } from '@/lib/format-money.js'
+import { KpiCard } from '@workspace/ui/components/kpi-card'
+
+import { asOutflow, formatMoney } from '@/lib/format-money.js'
 
 export interface SummaryLabels {
   incomes: string
@@ -26,79 +21,42 @@ export function SummaryRow({
   locale: string
   labels: SummaryLabels
 }) {
-  const netNegative = group.net.startsWith('-')
+  const label = (text: string) => `${text} · ${group.currency}`
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="gap-2">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {group.currency}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          <SummaryLine
-            icon={<TrendingUp aria-hidden className="size-4" />}
-            label={labels.incomes}
-            amount={formatMoney(group.incomes, locale, group.currency)}
-            className="text-primary"
-          />
-          <SummaryLine
-            icon={<TrendingDown aria-hidden className="size-4" />}
-            label={labels.expenses}
-            amount={formatMoney(group.expenses, locale, group.currency)}
-            className="text-destructive"
-          />
-          <SummaryLine
-            icon={<Scale aria-hidden className="size-4" />}
-            label={labels.net}
-            amount={formatMoney(group.net, locale, group.currency)}
-            className={cn(
-              'border-t pt-2',
-              netNegative
-                ? 'text-destructive'
-                : 'text-primary'
-            )}
-          />
-        </CardContent>
-      </Card>
-      <Card className="gap-2">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <CreditCard aria-hidden className="size-4" />
-            {labels.creditExpenses}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-semibold tabular-nums">
-            {formatMoney(group.creditExpenses, locale, group.currency)}
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function SummaryLine({
-  icon,
-  label,
-  amount,
-  className,
-}: {
-  icon: React.ReactNode
-  label: string
-  amount: string
-  className?: string
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="flex items-center gap-2 text-sm text-muted-foreground">
-        {icon}
-        {label}
-      </span>
-      <span className={cn('text-lg font-semibold tabular-nums', className)}>
-        {amount}
-      </span>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <KpiCard
+        icon={<ArrowDownLeft />}
+        tone="in"
+        label={label(labels.incomes)}
+        value={
+          <span className="text-positive">
+            {formatMoney(group.incomes, locale, group.currency, {
+              signed: true,
+            })}
+          </span>
+        }
+      />
+      <KpiCard
+        icon={<ArrowUpRight />}
+        tone="out"
+        label={label(labels.expenses)}
+        value={formatMoney(asOutflow(group.expenses), locale, group.currency)}
+      />
+      <KpiCard
+        icon={<Scale />}
+        tone={group.net.startsWith('-') ? 'warning' : 'primary'}
+        label={label(labels.net)}
+        value={formatMoney(group.net, locale, group.currency, {
+          signed: true,
+        })}
+      />
+      <KpiCard
+        icon={<CreditCard />}
+        tone="slate"
+        label={label(labels.creditExpenses)}
+        value={formatMoney(group.creditExpenses, locale, group.currency)}
+      />
     </div>
   )
 }

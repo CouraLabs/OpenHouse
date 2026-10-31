@@ -1,4 +1,3 @@
-import { AmbientLight } from '@/components/ambient-light.js'
 import { FaqSection } from '@/sections/faq/faq-section.js'
 import { FeaturesSection } from '@/sections/features/features-section.js'
 import { SiteFooter } from '@/sections/footer/site-footer.js'
@@ -13,7 +12,6 @@ import { ProblemsSection } from '@/sections/problems/problems-section.js'
 export function App() {
   return (
     <>
-      <AmbientLight />
       <SiteNav />
       <div className="sheet">
         <main>

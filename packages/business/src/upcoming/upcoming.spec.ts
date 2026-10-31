@@ -197,6 +197,7 @@ describe('assembleUpcoming', () => {
       targetDt: '2026-12-03',
       currency: 'BRL',
       accountCurrency: 'BRL',
+      accountBalance: '0.00',
       status: 'ACTIVE',
       createdDt: '2026-01-01T00:00:00.000Z',
       updateDt: '2026-01-01T00:00:00.000Z',

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { Transaction, TransactionStatus } from '@workspace/dto'
 import { transactionStatuses } from '@workspace/dto'
-import { Badge } from '@workspace/ui/components/badge'
+import { StatusPill } from '@workspace/ui/components/status-pill'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,21 +17,21 @@ export function StatusBadge({
   onChange: (status: TransactionStatus) => void
 }) {
   const { t } = useTranslation()
-  const variants = {
-    Verify: 'secondary',
-    Checked: 'default',
-    Canceled: 'destructive',
+  const tones = {
+    Verify: 'warning',
+    Checked: 'positive',
+    Canceled: 'neutral',
   } as const
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={t('transactions.status-change')}
-        className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <Badge variant={variants[status]}>
+        <StatusPill tone={tones[status]} dot>
           {t(`transactions.status-${status.toLowerCase()}`)}
-        </Badge>
+        </StatusPill>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         {transactionStatuses.map((value) => (

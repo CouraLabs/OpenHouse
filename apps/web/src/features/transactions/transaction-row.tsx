@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import type { Transaction } from '@workspace/dto'
-import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import {
@@ -9,16 +8,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu'
-import {
-  Ellipsis,
-  Layers,
-  Lock,
-  Pencil,
-  Split,
-  Trash2,
-} from 'lucide-react'
+import { Ellipsis, Layers, Lock, Pencil, Split, Trash2 } from 'lucide-react'
 
-import { formatMoney } from '@/lib/format-money.js'
+import { InitialsAvatar } from '@workspace/ui/components/initials-avatar'
+import { StatusPill } from '@workspace/ui/components/status-pill'
+import { cn } from 'cn'
+
+import { asOutflow, formatMoney } from '@/lib/format-money.js'
+import { CategoryPill } from './category-pill.js'
 import { StatusBadge } from './status-badge.js'
 import type {
   TransactionGridLabels,
@@ -26,15 +23,26 @@ import type {
 } from './transaction-grid.js'
 
 function signedAmount(transaction: Transaction, locale: string): string {
-  const isIncome = transaction.type === 'Income'
-
-  return `${isIncome ? '+' : '\u2212'}${formatMoney(transaction.amount, locale, transaction.currency)}`
+  return transaction.type === 'Income'
+    ? formatMoney(transaction.amount, locale, transaction.currency, {
+        signed: true,
+      })
+    : formatMoney(asOutflow(transaction.amount), locale, transaction.currency)
 }
 
 function amountTone(transaction: Transaction): string {
-  return transaction.type === 'Income'
-    ? 'text-primary'
-    : 'text-destructive'
+  return transaction.type === 'Income' ? 'text-positive' : 'text-foreground'
+}
+
+function metaLine(transaction: Transaction): string {
+  return [
+    transaction.accountName,
+    transaction.installmentGroupId !== null
+      ? `${transaction.installmentNumber}/${transaction.installmentCount}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 }
 
 function canSplitOf(transaction: Transaction): boolean {
@@ -115,12 +123,14 @@ export function TransactionRow({
   actions: TransactionRowActions
 }) {
   const { t } = useTranslation()
-  const isInstallment = transaction.installmentGroupId !== null
 
   return (
     <div
       role="row"
-      className="grid grid-cols-[2.5rem_10rem_1fr_1fr_10rem_7rem_7rem] items-center gap-2 border-b px-3 py-2 text-sm hover:bg-muted/40"
+      className={cn(
+        'grid grid-cols-[2.25rem_4rem_minmax(0,1.4fr)_minmax(0,1fr)_9.5rem_7.5rem_5rem] items-center gap-x-5 border-b border-border px-4 py-2.5 text-sm transition-colors hover:bg-surface-2/60',
+        selected && 'bg-primary-soft/50'
+      )}
     >
       <span role="cell">
         <Checkbox
@@ -129,56 +139,48 @@ export function TransactionRow({
           onCheckedChange={() => onToggleRow(transaction)}
         />
       </span>
-      <span role="cell" className="tabular-nums">
+      <span role="cell" className="text-[0.8125rem] text-muted-foreground">
         {new Intl.DateTimeFormat(locale, {
           day: '2-digit',
-          month: '2-digit',
+          month: 'short',
         }).format(new Date(`${transaction.transactionDt}T00:00:00`))}
       </span>
-      <span role="cell" className="flex min-w-0 items-center gap-2">
-        <Badge
-          variant="outline"
-          className="min-w-0 shrink justify-start"
-          title={transaction.categoryName}
-          style={
-            transaction.categoryColor === ''
-              ? undefined
-              : {
-                  borderColor: transaction.categoryColor,
-                  color: transaction.categoryColor,
-                }
-          }
-        >
-          <span className="truncate">{transaction.categoryName}</span>
-        </Badge>
-        <span
-          className="truncate text-muted-foreground"
-          title={transaction.accountName}
-        >
-          {transaction.accountName}
+      <span role="cell" className="flex min-w-0 items-center gap-3">
+        <InitialsAvatar name={transaction.name} kind="organization" size="sm" />
+        <span className="flex min-w-0 flex-col">
+          <span
+            className="flex min-w-0 items-center gap-2 font-medium"
+            title={transaction.name}
+          >
+            <span className="truncate">{transaction.name}</span>
+            {transaction.isAdjustment ? (
+              <StatusPill tone="neutral" className="h-5 px-2 text-[0.6875rem]">
+                {t('transactions.adjustment-badge')}
+              </StatusPill>
+            ) : null}
+          </span>
+          <span
+            className="truncate text-[0.8125rem] text-muted-foreground"
+            title={transaction.accountName}
+          >
+            {metaLine(transaction)}
+          </span>
         </span>
       </span>
-      <span role="cell" className="truncate" title={transaction.name}>
-        {transaction.name}
-        {transaction.isAdjustment ? (
-          <Badge variant="secondary" className="ml-2">
-            {t('transactions.adjustment-badge')}
-          </Badge>
-        ) : null}
-        {isInstallment ? (
-          <span className="ml-1 text-muted-foreground tabular-nums">
-            {transaction.installmentNumber}/{transaction.installmentCount}
-          </span>
-        ) : null}
+      <span role="cell" className="min-w-0">
+        <CategoryPill
+          name={transaction.categoryName}
+          color={transaction.categoryColor}
+        />
       </span>
       <span role="cell" className="flex flex-col items-end">
         <span
-          className={`font-medium tabular-nums ${amountTone(transaction)}`}
+          className={`text-[0.9375rem] font-semibold ${amountTone(transaction)}`}
         >
           {signedAmount(transaction, locale)}
         </span>
         <span
-          className="text-xs text-muted-foreground tabular-nums"
+          className="text-xs text-muted-foreground"
           title={t('transactions.running-balance')}
           data-testid="running-balance"
         >
@@ -189,7 +191,7 @@ export function TransactionRow({
           )}
         </span>
       </span>
-      <span role="cell" className="flex items-center gap-1">
+      <span role="cell" className="flex items-center gap-1 pl-3">
         {transaction.locked ? (
           <Lock
             className="size-3.5 shrink-0 text-muted-foreground"
@@ -202,7 +204,7 @@ export function TransactionRow({
           onChange={(status) => actions.onStatusChange(transaction, status)}
         />
       </span>
-      <div role="cell" className="flex items-center justify-end gap-1">
+      <div role="cell" className="flex items-center justify-end gap-0.5">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -231,17 +233,20 @@ export function TransactionCardRow({
   const isInstallment = transaction.installmentGroupId !== null
 
   return (
-    <div className="border-b px-3 py-2.5 hover:bg-muted/40">
+    <div className="border-b px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <span
-          className="min-w-0 truncate text-sm font-medium"
+          className="min-w-0 truncate text-[0.9375rem] font-medium"
           title={transaction.name}
         >
           {transaction.name}
           {transaction.isAdjustment ? (
-            <Badge variant="secondary" className="ml-2 align-middle">
+            <StatusPill
+              tone="neutral"
+              className="ml-2 h-5 px-2 align-middle text-[0.6875rem]"
+            >
               {t('transactions.adjustment-badge')}
-            </Badge>
+            </StatusPill>
           ) : null}
           {isInstallment ? (
             <span className="ml-1 text-muted-foreground tabular-nums">
@@ -251,12 +256,12 @@ export function TransactionCardRow({
         </span>
         <span className="flex shrink-0 flex-col items-end">
           <span
-            className={`text-sm font-medium tabular-nums whitespace-nowrap ${amountTone(transaction)}`}
+            className={`text-[0.9375rem] font-semibold whitespace-nowrap ${amountTone(transaction)}`}
           >
             {signedAmount(transaction, locale)}
           </span>
           <span
-            className="text-xs text-muted-foreground tabular-nums whitespace-nowrap"
+            className="text-xs whitespace-nowrap text-muted-foreground tabular-nums"
             title={t('transactions.running-balance')}
             data-testid="running-balance"
           >
@@ -270,20 +275,11 @@ export function TransactionCardRow({
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-          <Badge
-            variant="outline"
-            className="max-w-40 truncate"
-            style={
-              transaction.categoryColor === ''
-                ? undefined
-                : {
-                    borderColor: transaction.categoryColor,
-                    color: transaction.categoryColor,
-                  }
-            }
-          >
-            {transaction.categoryName}
-          </Badge>
+          <CategoryPill
+            name={transaction.categoryName}
+            color={transaction.categoryColor}
+            className="max-w-40"
+          />
           <span className="truncate" title={transaction.accountName}>
             {transaction.accountName}
           </span>

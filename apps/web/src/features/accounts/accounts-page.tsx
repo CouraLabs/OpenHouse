@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Account, AccountDeleteConflict, AccountType, CreateAccountBody } from '@workspace/dto'
+import type {
+  Account,
+  AccountDeleteConflict,
+  AccountType,
+  CreateAccountBody,
+} from '@workspace/dto'
 import { accountTypes } from '@workspace/dto'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
@@ -20,6 +25,7 @@ import { PageHeader } from '@/components/page-header.js'
 import { ApiError } from '@/lib/api.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { buildAccountsColumns } from './accounts-columns.js'
+import { AccountCards } from './account-cards.js'
 import { AccountForm } from './account-form.js'
 import { BalanceHistoryDialog } from './balance-history-dialog.js'
 import { ReconcileDialog } from './reconcile-dialog.js'
@@ -186,12 +192,22 @@ export function AccountsPage() {
   )
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
+    <main className="mx-auto flex w-full max-w-[90rem] flex-1 animate-page-in flex-col gap-6 px-4 pt-4 pb-12 md:px-8 md:pt-6">
       <PageHeader
         title={t('accounts.title')}
         subtitle={t('accounts.subtitle')}
         actions={toolbar}
       />
+      {search.data !== undefined ? (
+        <AccountCards
+          accounts={search.data.items}
+          onOpen={setViewingHistory}
+          onCreate={() => {
+            setEditing(null)
+            setFormOpen(true)
+          }}
+        />
+      ) : null}
       {formOpen ? (
         <AccountForm
           key={editing?.id ?? 'new'}

@@ -1,8 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { Button } from '@workspace/ui/components/button'
-import {
-  DropdownMenuItem,
-} from '@workspace/ui/components/dropdown-menu'
+import { DropdownMenuItem } from '@workspace/ui/components/dropdown-menu'
 import { Download } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -30,7 +28,10 @@ export function useExportCsv(path: string, args: object): ExportCsv {
         path,
         {
           method: 'POST',
-          body: JSON.stringify({ ...args, locale: csvLocaleOf(formattingLocale()) }),
+          body: JSON.stringify({
+            ...args,
+            locale: csvLocaleOf(formattingLocale()),
+          }),
         },
         'export.csv'
       ),
@@ -51,7 +52,11 @@ export function ExportCsvButton({ path, args, csv }: ExportCsvButtonProps) {
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button variant="outline" disabled={state.isPending} onClick={state.trigger}>
+      <Button
+        variant="outline"
+        disabled={state.isPending}
+        onClick={state.trigger}
+      >
         <Download />
         {state.isPending ? t('export.csv-pending') : t('export.csv')}
       </Button>

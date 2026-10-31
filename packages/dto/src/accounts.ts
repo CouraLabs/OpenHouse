@@ -14,7 +14,7 @@ import { currencySchema } from "./currencies.js"
 import { entityStatusSchema, fetchArgsSchema } from "./fetch.js"
 import { dateOnlySchema } from "./goals.js"
 import { accountOwnershipSchema } from "./household.js"
-import { amountSchema } from "./limits.js"
+import { positiveAmountSchema } from "./limits.js"
 
 export {
   accountTypes,
@@ -50,7 +50,7 @@ export const spreadPctSchema = z
 
 export const createAccountSchema = z
   .object({
-    name: z.string().min(1, "Enter a name.").max(255),
+    name: z.string().trim().min(1, "Enter a name.").max(255),
     agency: z.string().max(255).nullish(),
     number: z
       .string()
@@ -67,7 +67,7 @@ export const createAccountSchema = z
     openingDt: dateOnlySchema.optional(),
     currency: currencySchema,
     spreadPct: spreadPctSchema.prefault("0"),
-    limit: amountSchema.nullish(),
+    limit: positiveAmountSchema.nullish(),
     closeDay: z.number().int().min(1).max(31).nullish(),
     dueDay: z.number().int().min(1).max(31).nullish(),
     closeDayInclusive: z.boolean().prefault(false),

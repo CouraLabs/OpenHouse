@@ -48,7 +48,11 @@ export function InterestSummary({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">
-              {formatMoney(String(tile.value), formattingLocale(), mainCurrency)}
+              {formatMoney(
+                String(tile.value),
+                formattingLocale(),
+                mainCurrency
+              )}
             </p>
           </CardContent>
         </Card>

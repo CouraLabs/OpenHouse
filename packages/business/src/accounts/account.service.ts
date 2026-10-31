@@ -1,8 +1,4 @@
-import type {
-  Account,
-  AccountRepository,
-  AccountWrite,
-} from '@workspace/db'
+import type { Account, AccountRepository, AccountWrite } from '@workspace/db'
 import { SPREAD_WARNING_PCT } from '@workspace/domain'
 import type {
   AccountDeleteConflict,
@@ -14,7 +10,8 @@ import type {
   UpdateAccountBody,
 } from '@workspace/dto'
 
-import { compareMoney } from '../calc/money.js'
+import { addMoney, compareMoney, negateMoney } from '../calc/money.js'
+import type { TenantToday } from '../settings/tenant-today.js'
 import { ConflictError, NotFoundError } from '../errors.js'
 import type { CardCycleSync } from '../ports/card-cycle-sync.js'
 import {
@@ -28,8 +25,42 @@ export class AccountService {
   constructor(
     private readonly repository: AccountRepository,
     private readonly cardCycle: CardCycleSync,
-    private readonly bills: Pick<StatementBills, 'unpaidSummary'>
+    private readonly bills: Pick<StatementBills, 'unpaidSummary'>,
+    private readonly today?: Pick<TenantToday, 'of'>
   ) {}
+
+  /**
+   * A card payment dated after today is upcoming: it is stored on the
+   * balance, but the balance shown to the user holds it back until its day.
+   */
+  private async withHeldPayments<Row extends { id: number; balance: string }>(
+    tenantId: number,
+    rows: Row[]
+  ): Promise<Row[]> {
+    if (this.today === undefined || rows.length === 0) {
+      return rows
+    }
+
+    const held = await this.repository.heldPaymentTotals(
+      tenantId,
+      await this.today.of(tenantId)
+    )
+
+    return rows.map((row) => {
+      let balance = row.balance
+
+      for (const entry of held) {
+        if (entry.accountId === row.id) {
+          balance = addMoney(
+            balance,
+            entry.type === 'Income' ? negateMoney(entry.total) : entry.total
+          )
+        }
+      }
+
+      return balance === row.balance ? row : { ...row, balance }
+    })
+  }
 
   preview(body: AccountPreviewBody): AccountPreview {
     const spread = Number(body.spreadPct)
@@ -53,16 +84,22 @@ export class AccountService {
 
   async create(tenantId: number, userId: number, body: CreateAccountBody) {
     assertCycleDaysDiffer(body)
+    await this.assertNameFree(tenantId, body.name)
 
     return this.repository.insert(tenantId, userId, toWrite(body))
   }
 
   async listActive(tenantId: number) {
-    return this.repository.listActive(tenantId)
+    return this.withHeldPayments(
+      tenantId,
+      await this.repository.listActive(tenantId)
+    )
   }
 
   async search(tenantId: number, args: SearchAccountsArgs) {
-    return this.repository.search(tenantId, args)
+    const { rows, total } = await this.repository.search(tenantId, args)
+
+    return { rows: await this.withHeldPayments(tenantId, rows), total }
   }
 
   async find(tenantId: number, id: number) {
@@ -72,7 +109,9 @@ export class AccountService {
       throw new NotFoundError(`No account with id ${id}.`)
     }
 
-    return row
+    const [held] = await this.withHeldPayments(tenantId, [row])
+
+    return held
   }
 
   async update(tenantId: number, userId: number, body: UpdateAccountBody) {
@@ -99,6 +138,10 @@ export class AccountService {
 
     assertCycleDaysDiffer(body)
 
+    if (body.name !== row.name) {
+      await this.assertNameFree(tenantId, body.name, body.id)
+    }
+
     const write = toWrite(body)
     const cycle = changedCycle(row, write)
 
@@ -117,6 +160,22 @@ export class AccountService {
     }
 
     return updated
+  }
+
+  private async assertNameFree(
+    tenantId: number,
+    name: string,
+    exceptId?: number
+  ): Promise<void> {
+    const taken = await this.repository.countActiveByName(
+      tenantId,
+      name,
+      exceptId
+    )
+
+    if (taken > 0) {
+      throw new ConflictError(`An account named "${name}" already exists.`)
+    }
   }
 
   async softDelete(

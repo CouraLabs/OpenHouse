@@ -14,16 +14,16 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <BrandMark />
-            <BrandName className="text-lg tracking-[-0.01em]" />
+            <BrandName className="text-lg" />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <ThemeSwitcher />
             <LocaleSwitcher />
           </div>
         </header>
         <main className="flex flex-1 items-center justify-center px-4 py-12">
           <div className="w-full max-w-md animate-page-in">
-            <div className="flex justify-center rounded-[20px] bg-card p-8 ring-1 ring-input sm:p-10">
+            <div className="flex justify-center rounded-3xl bg-card p-7 shadow-lift sm:p-10">
               {children}
             </div>
           </div>

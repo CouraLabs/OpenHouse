@@ -1,4 +1,5 @@
 import { useDiscardGuard } from '@/lib/use-discard-guard.js'
+import { withoutSystemCategories } from '@/lib/system-categories.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -68,7 +69,7 @@ export function LimitForm({
   const categoryId = watch('categoryId')
   const type = watch('type')
   const amount = watch('amount')
-  const categories = useActiveCategories()
+  const categories = withoutSystemCategories(useActiveCategories())
   const selectedCategory = (categories.data ?? []).find(
     (category) => category.id === categoryId
   )

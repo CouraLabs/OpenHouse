@@ -88,7 +88,7 @@ export function BillDetailPage() {
   const statement = bill.data
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
+    <main className="mx-auto flex w-full max-w-[90rem] flex-1 animate-page-in flex-col gap-6 px-4 pt-4 pb-12 md:px-8 md:pt-6">
       <PageHeader
         title={t('bills.detail-title', {
           card: statement.accountName,
@@ -102,7 +102,10 @@ export function BillDetailPage() {
         })}
         actions={
           <>
-            <StatementStatusBadge status={statement.status} />
+            <StatementStatusBadge
+              status={statement.status}
+              amountDue={statement.amountDue}
+            />
             {statement.status === 'Paid' ? null : (
               <Button onClick={() => setPaying(true)}>
                 <WalletCards />

@@ -19,13 +19,7 @@ type HouseholdChoice = 'join' | 'create'
 function buildSignUpSchema(t: TFunction) {
   return z
     .object({
-      tenantName: z
-        .string()
-        .max(120)
-        .refine(
-          (value) => value.trim() === '' || value.length > 0,
-          t('sign-up.household-name-required')
-        ),
+      tenantName: z.string().max(120),
       tenantCode: z.string().max(120),
       name: z.string().min(1, t('sign-up.name-required')).max(120),
       email: z.string().email(t('sign-up.email-invalid')),
@@ -34,7 +28,18 @@ function buildSignUpSchema(t: TFunction) {
     .superRefine((values, ctx) => {
       const hasName = values.tenantName.trim() !== ''
       const hasCode = values.tenantCode.trim() !== ''
-      if (
+      if (!hasName && !hasCode) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['tenantName'],
+          message: t('sign-up.household-name-required'),
+        })
+        ctx.addIssue({
+          code: 'custom',
+          path: ['tenantCode'],
+          message: t('sign-up.code-required'),
+        })
+      } else if (
         !hasExactlyOneTenantField({
           tenantName: hasName ? values.tenantName : undefined,
           tenantCode: hasCode ? values.tenantCode : undefined,
@@ -138,6 +143,8 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
 
         if (codeFieldIssue !== undefined) {
           setError('tenantCode', { message: codeFieldIssue.message })
+        } else if (body.tenantCode !== undefined) {
+          setError('tenantCode', { message: error.message })
         } else {
           setError('email', { message: error.message })
         }
@@ -185,6 +192,7 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
           labelFor="sign-up-tenant-code"
           label={t('sign-up.code')}
           placeholder={t('sign-up.code-placeholder')}
+          required
           error={errors.tenantCode}
           {...register('tenantCode')}
         />
@@ -194,6 +202,7 @@ export function SignUpForm({ onSuccess, defaultTenantCode }: SignUpFormProps) {
           labelFor="sign-up-tenant-name"
           label={t('sign-up.household-name')}
           placeholder={t('sign-up.household-name-placeholder')}
+          required
           error={errors.tenantName}
           {...register('tenantName')}
         />

@@ -11,9 +11,11 @@ export function ScheduleVisual() {
           key={rule.name}
           className="flex items-center justify-between gap-4 py-2.5"
         >
-          <span className="text-ink text-sm">{rule.name}</span>
+          <span className="text-ink text-[0.875rem] font-medium">
+            {rule.name}
+          </span>
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-muted">{rule.when}</span>
+            <span className="text-xs text-muted">{rule.when}</span>
             <Tag tone={rule.posted ? 'green' : 'blue'}>
               {rule.posted ? ruleStatus.posted : ruleStatus.scheduled}
             </Tag>

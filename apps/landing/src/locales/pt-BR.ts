@@ -58,6 +58,69 @@ export const ptBR: Content = {
       amount: 'R$ 8.412,36',
     },
     limitsTitle: 'Limites · Outubro',
+    preview: {
+      label: 'Exemplo da tela inicial do Kantim',
+      example: 'Dados de exemplo',
+      home: 'Casa dos Souza',
+      nav: ['Início', 'Transações', 'Próximos', 'Faturas', 'Limites'],
+      section: 'Dinheiro',
+      date: 'Sábado, 31 de outubro',
+      title: 'Início',
+      search: 'Buscar ou ir para…',
+      newTransaction: 'Nova',
+      monthLabel: 'Este mês',
+      monthValue: '+R$ 2.261,05',
+      kpis: [
+        {
+          label: 'Saldo total',
+          value: 'R$ 8.412,36',
+          note: 'R$ 6.790 até 30/11',
+          tone: 'primary',
+        },
+        {
+          label: 'Entrou',
+          value: '+R$ 4.200,00',
+          note: 'Neste mês',
+          tone: 'in',
+        },
+        {
+          label: 'Saiu',
+          value: '−R$ 1.938,95',
+          note: 'Neste mês',
+          tone: 'out',
+        },
+      ],
+      soonTitle: 'Saindo em breve',
+      soonSubtitle: 'Contas e pagamentos fixos dos próximos 30 dias.',
+      soon: [
+        {
+          day: 'Hoje',
+          rows: [
+            {
+              description: 'Conta de luz',
+              category: 'Conta · Corrente',
+              amount: '−R$ 112,00',
+            },
+          ],
+        },
+        {
+          day: 'Ter, 3 nov',
+          rows: [
+            {
+              description: 'Internet fibra',
+              category: 'Fixo · Corrente',
+              amount: '−R$ 59,90',
+            },
+            {
+              description: 'Aluguel',
+              category: 'Fixo · Corrente',
+              amount: '−R$ 1.450,00',
+            },
+          ],
+        },
+      ],
+      overdue: 'Vence hoje',
+    },
   },
 
   sampleLedger: [
@@ -151,7 +214,6 @@ export const ptBR: Content = {
   ruleStatus: { posted: 'Lançada', scheduled: 'Agendada' },
 
   problemsIntro: {
-    eyebrow: 'Por que o Kantim',
     title:
       'A casa funciona com centenas de coisinhas. A maioria mora na cabeça de alguém.',
     lede: 'A conta de luz fica num aplicativo, a lista de compras num bilhete na geladeira, a consulta do pet num grupo de conversa, e as tarefas da casa em lugar nenhum. O Kantim junta tudo em um só lugar e mantém tudo em dia, para que nada dependa de quem lembrou.',
@@ -185,7 +247,6 @@ export const ptBR: Content = {
   ],
 
   houseIntro: {
-    eyebrow: 'A casa toda',
     title: 'Um assistente para tudo o que a sua casa precisa.',
     lede: 'O nome vem de “meu cantinho”: o seu lugar, aquele canto onde a rotina acontece e onde você vive com as pessoas que ama. O Kantim cuida de tudo isso, para uma pessoa sozinha ou para a família inteira.',
   },
@@ -257,7 +318,6 @@ export const ptBR: Content = {
   ],
 
   featuresIntro: {
-    eyebrow: 'Como funciona',
     title: 'Configure uma vez. Depois a casa se mantém em dia.',
     lede: 'O Kantim faz a contabilidade e a memória, para você cuidar do seu dia.',
   },
@@ -315,7 +375,6 @@ export const ptBR: Content = {
   },
 
   plannersIntro: {
-    eyebrow: 'Planejadores',
     title: 'Faça as contas antes de decidir.',
     lede: 'Calculadoras para as grandes decisões da casa. Elas funcionam sem conta e não mexem nos seus livros: mude um número e veja o que acontece nos próximos vinte anos.',
   },
@@ -354,7 +413,6 @@ export const ptBR: Content = {
   ],
 
   pricingIntro: {
-    eyebrow: 'Preços',
     title: 'Comece grátis. Pague quando sua casa crescer.',
     lede: 'Todos os planos têm o app inteiro. Os planos pagos aumentam o espaço para mais contas, membros e histórico, além de mensagens e IA. Os preços hospedados são por mês, em reais. Hospedar você mesmo não custa nada.',
   },
@@ -453,7 +511,6 @@ export const ptBR: Content = {
   earlyAccessBadge: 'Acesso antecipado',
 
   faqIntro: {
-    eyebrow: 'Dúvidas',
     title: 'Antes de mudar a sua casa para cá.',
   },
 
@@ -506,7 +563,6 @@ export const ptBR: Content = {
   ],
 
   openSource: {
-    eyebrow: 'Código aberto',
     title: 'Sua casa. Seu servidor. Seu código.',
     body: 'Todo o Kantim está no GitHub. Leia o código, rode na sua própria conta ou mande um pull request quando a sua casa precisar de um cômodo novo.',
     points: [

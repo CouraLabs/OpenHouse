@@ -1,128 +1,155 @@
 import { Link } from '@tanstack/react-router'
-import {
-  CalendarClock,
-  Gauge,
-  Repeat,
-  Target,
-  type LucideIcon,
-} from 'lucide-react'
+import { Gauge, Target } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { UpcomingItem } from '@workspace/dto'
-import { Badge } from '@workspace/ui/components/badge'
+
+import { IconTile } from '@workspace/ui/components/icon-tile'
+import { InitialsAvatar } from '@workspace/ui/components/initials-avatar'
+import { StatusPill } from '@workspace/ui/components/status-pill'
+import { cn } from 'cn'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
-import { formatMoney } from '@/lib/format-money.js'
+import { asOutflow, formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
-
-const ICONS: Record<UpcomingItem['kind'], LucideIcon> = {
-  bill: CalendarClock,
-  recurring: Repeat,
-  limit: Gauge,
-  goal: Target,
-}
 
 export function UpcomingItemRow({ item }: { item: UpcomingItem }) {
   const { t } = useTranslation()
-  const Icon = ICONS[item.kind]
-  const money = (amount: string) =>
-    formatMoney(amount, formattingLocale(), item.currency)
-  const day = (value: string) => formatDayLabel(value, formattingLocale())
+  const locale = formattingLocale()
+  const money = (amount: string, signed = false) =>
+    formatMoney(amount, locale, item.currency, { signed })
+  const row = describe(item, t, money, (value) => formatDayLabel(value, locale))
 
-  const { label, amount, badge, tone } = describe(item, t, money, day)
-
-  const text = (
-    <span className="flex min-w-0 flex-col">
-      <span className="truncate text-sm">{label}</span>
-      {badge !== undefined ? (
-        <span className="text-xs text-muted-foreground">{badge}</span>
-      ) : null}
-    </span>
+  const body = (
+    <>
+      {item.kind === 'limit' ? (
+        <IconTile tone="orange" size="lg" className="rounded-xl">
+          <Gauge />
+        </IconTile>
+      ) : item.kind === 'goal' ? (
+        <IconTile tone="blue" size="lg" className="rounded-xl">
+          <Target />
+        </IconTile>
+      ) : (
+        <InitialsAvatar name={row.name} kind="organization" />
+      )}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-[0.9375rem] font-medium">
+          {row.name}
+        </span>
+        <span className="truncate text-[0.8125rem] text-muted-foreground">
+          {row.meta}
+        </span>
+      </span>
+      {row.pill}
+      <span className="flex shrink-0 flex-col items-end text-right">
+        <span
+          className={cn(
+            'text-[0.9375rem] font-semibold',
+            row.tone === 'in' && 'text-positive'
+          )}
+        >
+          {row.amount}
+        </span>
+        {row.qualifier !== undefined ? (
+          <span className="text-xs text-muted-foreground">{row.qualifier}</span>
+        ) : null}
+      </span>
+    </>
   )
 
   return (
-    <li className="flex items-center gap-3 py-2">
-      <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+    <li>
       {item.kind === 'bill' ? (
         <Link
           to="/bills/$statementId"
           params={{ statementId: String(item.statementId) }}
-          className="min-w-0 flex-1 hover:underline"
+          className="-mx-2 flex items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-surface-2/70"
         >
-          {text}
+          {body}
         </Link>
       ) : (
-        <div className="min-w-0 flex-1">{text}</div>
+        <div className="flex items-center gap-3 py-2.5">{body}</div>
       )}
-      {item.kind === 'bill' && item.overdue ? (
-        <Badge variant="destructive">{t('upcoming.overdue')}</Badge>
-      ) : null}
-      <span
-        className={`text-sm font-medium tabular-nums ${tone === 'in' ? 'text-primary' : ''}`}
-      >
-        {amount}
-      </span>
     </li>
   )
 }
 
-interface Description {
-  label: string
+interface Row {
+  name: string
+  meta: string
   amount: string
-  badge?: string
+  qualifier?: string
+  pill?: React.ReactNode
   tone?: 'in'
 }
 
 function describe(
   item: UpcomingItem,
   t: (key: string, options?: Record<string, unknown>) => string,
-  money: (amount: string) => string,
+  money: (amount: string, signed?: boolean) => string,
   day: (value: string) => string
-): Description {
+): Row {
   switch (item.kind) {
     case 'bill':
       return {
-        label: t(item.overdue ? 'upcoming.bill-overdue' : 'upcoming.bill', {
-          account: item.accountName,
-          date: day(item.date),
-        }),
-        amount: money(item.amount),
-        badge: item.estimate ? t('upcoming.estimate') : undefined,
+        name: item.accountName,
+        meta: t('upcoming.row-bill'),
+        amount: money(asOutflow(item.amount)),
+        qualifier: item.estimate
+          ? t('upcoming.estimate')
+          : t('upcoming.row-due'),
+        pill: item.overdue ? (
+          <StatusPill tone="negative" dot className="max-sm:hidden">
+            {t('upcoming.overdue')}
+          </StatusPill>
+        ) : undefined,
       }
     case 'recurring':
       return {
-        label: t('upcoming.recurring', {
-          name: item.name,
-          date: day(item.date),
-        }),
+        name: item.name,
+        meta: t('upcoming.row-recurring', { account: item.accountName }),
         amount:
           item.type === 'Income'
-            ? `+${money(item.amount)}`
-            : money(item.amount),
-        badge: item.type === 'Income' ? t('upcoming.incoming') : undefined,
+            ? money(item.amount, true)
+            : money(asOutflow(item.amount)),
+        qualifier:
+          item.type === 'Income'
+            ? t('upcoming.incoming')
+            : t('upcoming.row-scheduled'),
         tone: item.type === 'Income' ? 'in' : undefined,
+        pill: (
+          <StatusPill tone="info" dot className="max-sm:hidden">
+            {t('upcoming.row-scheduled-pill')}
+          </StatusPill>
+        ),
       }
     case 'limit':
       return {
-        label: t('upcoming.limit', {
-          category: item.categoryName,
+        name: item.categoryName,
+        meta: t('upcoming.row-limit', {
           percent: item.percent,
           type: t(`limits.type-${item.limitType.toLowerCase()}`).toLowerCase(),
         }),
-        amount: t('upcoming.limit-amount', {
-          spent: money(item.spent),
-          amount: money(item.amount),
-        }),
+        amount: money(item.spent),
+        qualifier: t('upcoming.row-of', { amount: money(item.amount) }),
+        pill: (
+          <StatusPill
+            tone={item.percent >= 100 ? 'negative' : 'warning'}
+            dot
+            className="max-sm:hidden"
+          >
+            {t('upcoming.row-limit-pill', { percent: item.percent })}
+          </StatusPill>
+        ),
       }
     case 'goal':
       return {
-        label: t('upcoming.goal', {
-          name: item.name,
-          amount: money(item.shortfall),
-        }),
+        name: item.name,
+        meta: t('upcoming.row-goal'),
         amount: money(item.shortfall),
-        badge:
+        qualifier:
           item.targetDt === null
-            ? undefined
+            ? t('upcoming.row-to-go')
             : t('upcoming.goal-target', { date: day(item.targetDt) }),
       }
     default: {

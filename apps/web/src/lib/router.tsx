@@ -34,11 +34,12 @@ import { FinancialIndependencePage } from '@/features/financial-independence/fin
 import { RentVsBuyPage } from '@/features/rent-vs-buy/rent-vs-buy-page.js'
 import { SettingsPage } from '@/features/settings/settings-page.js'
 import { isSectionFor } from '@/features/settings/settings-sections.js'
+import { NotFound } from '@/components/not-found.js'
 import { MainLayout } from '@/components/layout/main-layout.js'
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
-  notFoundComponent: () => <p>Nothing here.</p>,
+  notFoundComponent: NotFound,
 })
 
 const signInRoute = createRoute({
@@ -147,6 +148,14 @@ const transactionsRoute = createRoute({
   getParentRoute: () => mainLayoutRoute,
   path: 'transactions',
   component: TransactionsPage,
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { new?: boolean; transfer?: boolean } => ({
+    ...(search.new === true || search.new === 'true' ? { new: true } : {}),
+    ...(search.transfer === true || search.transfer === 'true'
+      ? { transfer: true }
+      : {}),
+  }),
 })
 
 const billsRoute = createRoute({

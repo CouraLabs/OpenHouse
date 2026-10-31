@@ -275,7 +275,8 @@ export function createBusiness(options: CreateBusinessOptions): Business {
   const accounts = new AccountService(
     accountRepo,
     statementCycleSync,
-    ledger.bills
+    ledger.bills,
+    ledger.today
   )
 
   const balanceRepo = ledger.balances

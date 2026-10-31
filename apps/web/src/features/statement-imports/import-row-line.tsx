@@ -62,7 +62,7 @@ export function ImportRowLine({
       <TableCell
         className={
           row.type === 'Income'
-            ? 'text-right whitespace-nowrap text-primary'
+            ? 'text-right whitespace-nowrap text-positive'
             : 'text-right whitespace-nowrap'
         }
       >
@@ -120,11 +120,15 @@ export function ImportRowLine({
           {row.statement === null
             ? '—'
             : t('imports.bill-due', {
-                date: formatDayLabel(row.statement.dueDate, formattingLocale(), {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                }),
+                date: formatDayLabel(
+                  row.statement.dueDate,
+                  formattingLocale(),
+                  {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  }
+                ),
               })}
         </TableCell>
       ) : null}

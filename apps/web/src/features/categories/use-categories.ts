@@ -4,7 +4,13 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import type { Category, CreateCategoryBody, PagedResults, SearchCategoriesArgs, UpdateCategoryBody } from '@workspace/dto'
+import type {
+  Category,
+  CreateCategoryBody,
+  PagedResults,
+  SearchCategoriesArgs,
+  UpdateCategoryBody,
+} from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 

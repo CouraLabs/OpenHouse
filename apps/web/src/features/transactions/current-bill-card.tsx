@@ -25,7 +25,7 @@ export function CurrentBillCard({
   return (
     <Card className="gap-2">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <CardTitle className="flex items-center gap-2">
           <CreditCard aria-hidden className="size-4" />
           {title}
         </CardTitle>
@@ -48,7 +48,7 @@ export function CurrentBillCard({
                 </span>
               </span>
               <span className="text-sm font-semibold tabular-nums">
-                {formatMoney(bill.total, locale, bill.currency)}
+                {formatMoney(bill.amountDue, locale, bill.currency)}
               </span>
             </Link>
           ))

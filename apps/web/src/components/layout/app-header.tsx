@@ -1,29 +1,26 @@
-import { Breadcrumb, BreadcrumbList } from '@workspace/ui/components/breadcrumb'
-import type { SessionUser } from '@workspace/dto'
-import { Separator } from '@workspace/ui/components/separator'
 import { SidebarTrigger } from '@workspace/ui/components/sidebar'
 
-import { NotificationBell } from '@/components/layout/notification-bell.js'
-import { LocaleSwitcher } from '@/components/layout/locale-switcher.js'
-import { RouteBreadcrumbs } from '@/components/layout/route-breadcrumbs.js'
-import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
-import { UserMenu } from '@/components/layout/user-menu.js'
+import { BrandName } from '@/components/layout/brand-name.js'
 
-export function AppHeader({ user }: { user: SessionUser }) {
+import { CommandPalette } from '@/components/layout/command-palette.js'
+import { MonthNetPill } from '@/components/layout/month-net-pill.js'
+import { NewTransactionButton } from '@/components/layout/new-transaction-button.js'
+import { NotificationBell } from '@/components/layout/notification-bell.js'
+import { PrivacyToggle } from '@/components/layout/privacy-toggle.js'
+import { ThemeSwitcher } from '@/components/layout/theme-switcher.js'
+
+export function AppHeader() {
   return (
-    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-nav-glass px-4 backdrop-blur-[18px] backdrop-saturate-150 backdrop-saturate-[1.4] md:rounded-t-3xl md:px-6">
-      <SidebarTrigger className="-ml-1" />
-      <Separator orientation="vertical" className="mr-2 h-4 self-center!" />
-      <Breadcrumb className="min-w-0">
-        <BreadcrumbList>
-          <RouteBreadcrumbs />
-        </BreadcrumbList>
-      </Breadcrumb>
-      <div className="ml-auto flex items-center gap-1">
+    <header className="z-10 flex shrink-0 items-center gap-2 px-4 pt-4 pb-2 md:gap-3 md:px-8 md:pt-5">
+      <SidebarTrigger className="size-10 rounded-full md:hidden" />
+      <BrandName className="text-[1.0625rem] md:hidden" />
+      <CommandPalette />
+      <div className="flex items-center gap-2 sm:ml-auto">
+        <MonthNetPill />
+        <PrivacyToggle />
         <ThemeSwitcher />
-        <LocaleSwitcher />
         <NotificationBell />
-        <UserMenu user={user} />
+        <NewTransactionButton />
       </div>
     </header>
   )

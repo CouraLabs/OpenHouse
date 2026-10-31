@@ -71,7 +71,11 @@ export function ReconcileFields({
           {matches
             ? t('bills.reconcile-matches')
             : t('bills.reconcile-difference', {
-                amount: formatMoney(difference, formattingLocale(), bill.currency),
+                amount: formatMoney(
+                  difference,
+                  formattingLocale(),
+                  bill.currency
+                ),
               })}
         </p>
       )}

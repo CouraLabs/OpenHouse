@@ -1,9 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronDown, LogOut, Settings } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { Avatar, AvatarFallback } from '@workspace/ui/components/avatar'
-import { Button } from '@workspace/ui/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,34 +11,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu'
+import { InitialsAvatar } from '@workspace/ui/components/initials-avatar'
 import type { SessionUser } from '@workspace/dto'
 
 import { useSignOut } from '@/lib/auth.js'
-import { firstName } from '@/lib/first-name.js'
 
-export function UserMenu({ user }: { user: SessionUser }) {
+export function SidebarUser({ user }: { user: SessionUser }) {
   const { t } = useTranslation()
   const signOut = useSignOut()
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-full pl-1"
-            aria-label={user.name}
-          />
-        }
+        aria-label={user.name}
+        className="flex w-full items-center gap-3 rounded-2xl p-1.5 text-left text-sidebar-foreground transition-colors outline-none group-data-[collapsible=icon]:p-0 hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       >
-        <Avatar size="sm">
-          <AvatarFallback>{initials(user.name)}</AvatarFallback>
-        </Avatar>
-        <span>{firstName(user.name)}</span>
-        <ChevronDown data-icon="inline-end" className="text-muted-foreground" />
+        <InitialsAvatar name={user.name} size="sm" />
+        <span className="grid min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+          <span className="truncate text-sm font-medium">{user.name}</span>
+          <span className="truncate text-xs text-sidebar-muted">
+            {user.email}
+          </span>
+        </span>
+        <ChevronsUpDown
+          aria-hidden
+          className="size-4 shrink-0 text-sidebar-muted group-data-[collapsible=icon]:hidden"
+        />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent side="top" align="start" className="w-60">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex flex-col">
             <span>{user.name}</span>
@@ -64,10 +62,4 @@ export function UserMenu({ user }: { user: SessionUser }) {
       </DropdownMenuContent>
     </DropdownMenu>
   )
-}
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).slice(0, 2)
-
-  return parts.map((part) => part.charAt(0).toUpperCase()).join('')
 }

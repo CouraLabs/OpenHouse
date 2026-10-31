@@ -35,7 +35,7 @@ export function PlanSection() {
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-xl font-medium tracking-tight">
+        <h2 className="text-xl font-semibold tracking-[-0.02em]">
           {t('settings.plan.title', { name: plan.name })}
         </h2>
         <p className="text-sm text-pretty text-muted-foreground">
@@ -50,7 +50,7 @@ export function PlanSection() {
             })}
           </p>
         )}
-        <ul className="divide-y divide-foreground/[0.06] rounded-2xl bg-card px-5 shadow-soft ring-1 ring-foreground/[0.06]">
+        <ul className="divide-y divide-border rounded-[1.25rem] bg-card px-5 shadow-soft">
           <PlanUsageRow
             label={t('settings.plan.usage-users')}
             used={usage.users}
@@ -81,7 +81,7 @@ export function PlanSection() {
         </ul>
       </section>
       <section className="flex flex-col gap-3">
-        <h3 className="font-heading text-lg font-medium tracking-tight">
+        <h3 className="text-lg font-semibold tracking-[-0.02em]">
           {t('settings.plan.compare')}
         </h3>
         <p className="text-sm text-pretty text-muted-foreground">

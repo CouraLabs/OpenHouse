@@ -7,11 +7,15 @@ import { saveFile } from '@/lib/save-file.js'
 export function useDataExport() {
   const run = useMutation({
     mutationFn: async (body: CreateDataExportBody) => {
-      const file = await apiFile('/data-exports', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      }, 'kantim-export.zip')
+      const file = await apiFile(
+        '/data-exports',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+        'kantim-export.zip'
+      )
 
       saveFile(file)
     },

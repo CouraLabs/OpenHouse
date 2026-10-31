@@ -6,7 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type { Account, AccountType, Currency, CreateAccountBody } from '@workspace/dto'
+import type {
+  Account,
+  AccountType,
+  Currency,
+  CreateAccountBody,
+} from '@workspace/dto'
 import { accountTypes, createAccountSchema, currencies } from '@workspace/dto'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'

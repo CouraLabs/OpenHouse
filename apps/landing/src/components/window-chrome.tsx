@@ -13,22 +13,17 @@ export function WindowChrome({
   return (
     <div
       className={cn(
-        'border-line bg-surface overflow-hidden rounded-[20px] border',
+        'bg-surface overflow-hidden rounded-[1.25rem] shadow-(--shadow-soft)',
         className
       )}
     >
-      <div className="border-line relative flex h-9 items-center border-b px-3.5">
-        <div className="flex gap-1.5" aria-hidden>
-          <span className="bg-line size-2.5 rounded-full" />
-          <span className="bg-line size-2.5 rounded-full" />
-          <span className="bg-line size-2.5 rounded-full" />
-        </div>
-        {title && (
-          <span className="absolute inset-x-0 text-center font-mono text-[0.74rem] text-muted">
+      {title && (
+        <div className="border-line flex h-11 items-center border-b px-5">
+          <span className="text-ink text-[0.8125rem] font-semibold">
             {title}
           </span>
-        )}
-      </div>
+        </div>
+      )}
       {children}
     </div>
   )

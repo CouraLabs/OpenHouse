@@ -26,7 +26,7 @@ export function InstallmentFields({
   const { t } = useTranslation()
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-3">
+    <div className="flex flex-col gap-3 rounded-[0.875rem] bg-surface-2 p-4">
       <NumberField
         label={t('transactions.installments')}
         labelFor="transaction-installments"
@@ -50,7 +50,7 @@ export function InstallmentFields({
             {installmentAmountModes.map((mode) => (
               <span
                 key={mode}
-                className="flex items-center gap-2 rounded-lg border p-2 text-sm has-[[data-checked]]:border-primary"
+                className="flex items-center gap-2 rounded-lg border bg-surface-2 p-3 text-sm has-[[data-checked]]:border-primary/50 has-[[data-checked]]:bg-primary-soft"
               >
                 <RadioGroupItem value={mode} />
                 {t(`transactions.installment-mode-${mode}`)}

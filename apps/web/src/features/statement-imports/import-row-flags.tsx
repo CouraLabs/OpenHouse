@@ -18,7 +18,10 @@ export function ImportRowFlags({ row }: { row: ImportPreviewRow }) {
           variant="outline"
           title={t('imports.flag-probable-title', {
             name: row.duplicate.name,
-            date: formatDayLabel(row.duplicate.transactionDt, formattingLocale()),
+            date: formatDayLabel(
+              row.duplicate.transactionDt,
+              formattingLocale()
+            ),
           })}
         >
           {t('imports.flag-probable')}

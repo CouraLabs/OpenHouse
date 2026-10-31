@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type {
   CreateTransactionBody,
@@ -88,9 +89,9 @@ export function TransactionsPage() {
   const today = useTenantToday()
 
   const [anchor, setAnchor] = useState(() => {
-    const now = new Date()
+    const [year, month] = today.split('-').map(Number)
 
-    return new Date(now.getFullYear(), now.getMonth(), 1)
+    return new Date(year, month - 1, 1)
   })
   const range = monthRange(anchor)
 
@@ -362,6 +363,26 @@ export function TransactionsPage() {
     setTransferOpen(true)
   }
 
+  const intent = useSearch({ from: '/_main/transactions' })
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (intent.new !== true && intent.transfer !== true) {
+      return
+    }
+
+    if (intent.new === true) {
+      setEditing(null)
+      save.reset()
+      setFormOpen(true)
+    } else {
+      transfer.reset()
+      setTransferOpen(true)
+    }
+
+    void navigate({ to: '/transactions', search: {}, replace: true })
+  }, [intent.new, intent.transfer, navigate, save, transfer])
+
   const submitTransfer = (body: TransferBody) => {
     transfer.mutate(body, {
       onSuccess: () => {
@@ -425,7 +446,7 @@ export function TransactionsPage() {
   }
 
   return (
-    <main className="flex h-full min-h-0 w-full animate-page-in flex-col gap-6 px-4 pt-8 pb-24 md:px-10 md:py-10">
+    <main className="mx-auto flex h-full min-h-0 w-full max-w-[90rem] animate-page-in flex-col gap-6 px-4 pt-4 pb-24 md:px-8 md:pt-6 md:pb-10">
       <PageHeader
         title={t('transactions.title')}
         subtitle={t('transactions.subtitle')}
@@ -535,7 +556,11 @@ export function TransactionsPage() {
                 cash: t('transactions.mode-cash'),
               }}
             />
-            <Button className="max-md:hidden" onClick={openNew}>
+            <Button
+              variant="secondary"
+              className="max-md:hidden"
+              onClick={openNew}
+            >
               <Plus />
               {t('transactions.new')}
             </Button>

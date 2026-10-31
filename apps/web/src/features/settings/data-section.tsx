@@ -20,7 +20,7 @@ export function DataSection() {
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-xl font-medium tracking-tight">
+        <h2 className="text-xl font-semibold tracking-[-0.02em]">
           {t('settings.data.title')}
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -32,7 +32,7 @@ export function DataSection() {
         />
       </section>
       <section className="flex flex-col gap-3">
-        <h3 className="font-heading text-lg font-medium tracking-tight">
+        <h3 className="text-lg font-semibold tracking-[-0.02em]">
           {t('settings.data.delete-heading')}
         </h3>
         {deletionDate === null ? (

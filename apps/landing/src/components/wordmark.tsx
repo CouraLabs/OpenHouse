@@ -1,8 +1,15 @@
-export function Wordmark() {
+import { cn } from 'cn'
+
+export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className="font-sans text-[1.02rem] tracking-[-0.01em]">
-      <span className="text-ink font-semibold">kantim</span>
-      <span className="font-medium text-brand">.</span>
+    <span
+      className={cn(
+        'text-ink font-sans text-[1.0625rem] font-bold tracking-[-0.02em]',
+        className
+      )}
+    >
+      kantim
+      <span className="text-brand">.</span>
     </span>
   )
 }

@@ -55,7 +55,7 @@ export function VerifyEmailPage() {
         ) : (
           <>
             <div className="flex flex-col gap-1">
-              <h1 className="font-heading text-2xl font-normal tracking-tight text-balance">
+              <h1 className="text-2xl font-semibold tracking-[-0.02em] text-balance">
                 {title}
               </h1>
               <p className="text-sm text-pretty text-muted-foreground">

@@ -278,11 +278,34 @@ export class TransactionService {
       activeAccounts.map((account) => [account.id, account.currency])
     )
 
-    return forecastNextMonthExpenses(
+    const forecast = forecastNextMonthExpenses(
       rules,
       new Date(year, month, 1),
       (accountId) => currencies.get(accountId)
     )
+    const prefix = `${month === 12 ? year + 1 : year}-${String(
+      (month % 12) + 1
+    ).padStart(2, '0')}`
+    const lastDay = new Date(year, month + 1, 0).getDate()
+    const scheduled = await this.repository.expenseTotalsByCategory(
+      tenantId,
+      `${prefix}-01`,
+      `${prefix}-${String(lastDay).padStart(2, '0')}`
+    )
+    const totals = new Map(
+      forecast.map((slice) => [slice.currency, slice.total])
+    )
+
+    for (const row of scheduled) {
+      totals.set(
+        row.currency,
+        addMoney(totals.get(row.currency) ?? '0', row.total)
+      )
+    }
+
+    return [...totals]
+      .map(([currency, total]) => ({ currency, total }))
+      .sort((a, b) => (a.currency < b.currency ? -1 : 1))
   }
 
   previewSplit(body: SplitPreviewBody): SplitResolution {
@@ -346,9 +369,9 @@ export class TransactionService {
       Array<{ name: string; color: string | null; total: string }>
     >()
 
-    for (const row of [...totals].sort((a, b) =>
-      compareMoney(b.total, a.total)
-    )) {
+    for (const row of [...totals]
+      .filter((row) => compareMoney(row.total, '0') !== 0)
+      .sort((a, b) => compareMoney(b.total, a.total))) {
       const items = groups.get(row.currency) ?? []
 
       items.push({ name: row.name, color: row.color, total: row.total })
@@ -451,22 +474,17 @@ export class TransactionService {
     const payer = paidByUserId ?? row.paidByUserId
     const splits = this.splitsForUpdate(row, account, body, split, payer)
 
-    const updated = await this.writes.update(
-      tenantId,
-      body.id,
-      userId,
-      {
-        ...rest,
-        ...(paidByUserId == null ? {} : { paidByUserId }),
-        ...(splits === undefined ? {} : { splits }),
-        note: body.note ?? null,
-        invoice: body.invoice ?? null,
-        receiverId: body.receiverId ?? null,
-        statusNote: body.statusNote ?? null,
-        recurringId: row.recurringId,
-        reviewStatus: status,
-      }
-    )
+    const updated = await this.writes.update(tenantId, body.id, userId, {
+      ...rest,
+      ...(paidByUserId == null ? {} : { paidByUserId }),
+      ...(splits === undefined ? {} : { splits }),
+      note: body.note ?? null,
+      invoice: body.invoice ?? null,
+      receiverId: body.receiverId ?? null,
+      statusNote: body.statusNote ?? null,
+      recurringId: row.recurringId,
+      reviewStatus: status,
+    })
 
     if (updated === undefined) {
       throw new NotFoundError(`No transaction with id ${body.id}.`)

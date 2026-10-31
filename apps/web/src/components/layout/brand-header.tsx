@@ -7,15 +7,15 @@ import { BrandName } from './brand-name.js'
 
 export function BrandHeader({ tenantName }: { tenantName: string }) {
   return (
-    <SidebarHeader>
+    <SidebarHeader className="pt-4 pb-2">
       <Link
         to="/"
-        className="flex items-center gap-3 rounded-md px-2 py-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex items-center gap-3 rounded-2xl px-1.5 py-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       >
         <BrandMark />
-        <div className="grid flex-1 leading-tight">
-          <BrandName className="truncate text-lg tracking-[-0.01em]" />
-          <span className="truncate text-xs text-muted-foreground">
+        <div className="grid min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+          <BrandName className="truncate text-[1.0625rem] text-sidebar-foreground" />
+          <span className="truncate text-xs text-sidebar-muted">
             {tenantName}
           </span>
         </div>

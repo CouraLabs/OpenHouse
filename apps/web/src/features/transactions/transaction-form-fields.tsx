@@ -1,4 +1,5 @@
 import { useDiscardGuard } from '@/lib/use-discard-guard.js'
+import { withoutSystemCategories } from '@/lib/system-categories.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,8 +7,20 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type { CreateTransactionBody, InstallmentsBody, ReceiverRef, SplitInput, Transaction, TransactionStatus, TransactionType } from '@workspace/dto'
-import { createTransactionSchema, transactionStatuses, transactionTypes } from '@workspace/dto'
+import type {
+  CreateTransactionBody,
+  InstallmentsBody,
+  ReceiverRef,
+  SplitInput,
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from '@workspace/dto'
+import {
+  createTransactionSchema,
+  transactionStatuses,
+  transactionTypes,
+} from '@workspace/dto'
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
@@ -127,7 +140,7 @@ export function TransactionFormFields({
   const shownSplit = touchedSplit === undefined ? existingSplit : touchedSplit
 
   const accounts = useActiveAccounts()
-  const categories = useActiveCategories()
+  const categories = withoutSystemCategories(useActiveCategories())
   const receivers = useActiveReceivers()
   const account = (accounts.data ?? []).find(
     (candidate) => candidate.id === accountId

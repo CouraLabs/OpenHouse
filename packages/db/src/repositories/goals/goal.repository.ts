@@ -4,11 +4,16 @@ import type { Database } from '../../database.js'
 import { buildPagedQuery } from '../../query/paged-query.js'
 import { accounts, goals, type Goal } from '../../schema.js'
 
-export type GoalRow = Goal & { accountName: string; accountCurrency: Currency }
+export type GoalRow = Goal & {
+  accountName: string
+  accountCurrency: Currency
+  accountBalance: string
+}
 
 const ACCOUNT_COLUMNS = {
   accountName: accounts.name,
   accountCurrency: accounts.currency,
+  accountBalance: accounts.balance,
 }
 
 export interface GoalSearch {
@@ -82,12 +87,11 @@ export class GoalRepository {
 
   async listActiveWithBalance(
     tenantId: number
-  ): Promise<Array<GoalRow & { accountBalance: string }>> {
+  ): Promise<GoalRow[]> {
     return this.db
       .select({
         ...getTableColumns(goals),
         ...ACCOUNT_COLUMNS,
-        accountBalance: accounts.balance,
       })
       .from(goals)
       .innerJoin(accounts, eq(goals.linkedAccountId, accounts.id))

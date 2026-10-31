@@ -1,7 +1,6 @@
 import { GithubLogo } from '@phosphor-icons/react'
 
 import { ButtonLink } from '@/components/button-link.js'
-import { Eyebrow } from '@/components/eyebrow.js'
 import { Reveal } from '@/components/reveal.js'
 import { Section } from '@/components/section.js'
 import { useContent } from '@/lib/use-locale.js'
@@ -9,14 +8,10 @@ import { useContent } from '@/lib/use-locale.js'
 export function OpenSourceSection() {
   const { openSource } = useContent()
   return (
-    <Section id="open-source" className="isolate">
-      <div aria-hidden className="line-grid absolute inset-0 -z-10" />
+    <Section id="open-source">
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
-        <Reveal>
-          <Eyebrow>{openSource.eyebrow}</Eyebrow>
-        </Reveal>
         <Reveal index={1}>
-          <h2 className="text-ink font-display text-5xl leading-[1.05] font-medium tracking-[-0.045em] text-balance md:text-6xl">
+          <h2 className="text-ink text-[clamp(2.25rem,5vw,3.75rem)] leading-[1.04] font-bold tracking-[-0.035em] text-balance">
             {openSource.title}
           </h2>
         </Reveal>
@@ -35,7 +30,7 @@ export function OpenSourceSection() {
           </ButtonLink>
         </Reveal>
       </div>
-      <ul className="border-line bg-surface grid overflow-hidden rounded-[20px] border md:grid-cols-3">
+      <ul className="grid overflow-hidden surface-card md:grid-cols-3">
         {openSource.points.map((point, index) => {
           const Glyph = point.icon
           return (
@@ -45,7 +40,7 @@ export function OpenSourceSection() {
               index={index}
               className="border-line text-ink flex items-center gap-3 p-6 text-sm last:border-0 max-md:border-b md:border-r"
             >
-              <Glyph aria-hidden className="shrink-0 text-muted" />
+              <Glyph aria-hidden size={18} className="text-action shrink-0" />
               {point.label}
             </Reveal>
           )

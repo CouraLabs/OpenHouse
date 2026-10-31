@@ -20,7 +20,7 @@ export function PendingInvites({
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-heading text-xl font-medium tracking-tight">
+      <h2 className="text-xl font-semibold tracking-[-0.02em]">
         {t('settings.invite.pending-title')}
       </h2>
       {invites.length === 0 ? (
@@ -28,7 +28,7 @@ export function PendingInvites({
           {t('settings.invite.pending-empty')}
         </p>
       ) : (
-        <ul className="flex flex-col divide-y rounded-2xl ring-1 ring-foreground/[0.06]">
+        <ul className="flex flex-col divide-y rounded-[1.25rem] bg-card shadow-soft">
           {invites.map((invite) => (
             <li
               key={invite.id}

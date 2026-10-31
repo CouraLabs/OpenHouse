@@ -2,7 +2,11 @@ import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import type { AccountRef, CreditCardStatement, TransferBody } from '@workspace/dto'
+import type {
+  AccountRef,
+  CreditCardStatement,
+  TransferBody,
+} from '@workspace/dto'
 import { transferSchema } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { DatePicker } from '@workspace/ui/components/date-picker'

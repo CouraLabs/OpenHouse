@@ -9,11 +9,7 @@ import { Plus } from 'lucide-react'
 import { PageHeader } from '@/components/page-header.js'
 import { LimitForm } from './limit-form.js'
 import { LimitUsageGrid } from './limit-usage-grid.js'
-import {
-  useLimitsUsage,
-  useDeleteLimit,
-  useSaveLimit,
-} from './use-limits.js'
+import { useLimitsUsage, useDeleteLimit, useSaveLimit } from './use-limits.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
 export function LimitsPage() {
@@ -83,7 +79,7 @@ export function LimitsPage() {
   )
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
+    <main className="mx-auto flex w-full max-w-[90rem] flex-1 animate-page-in flex-col gap-6 px-4 pt-4 pb-12 md:px-8 md:pt-6">
       <PageHeader
         title={t('limits.title')}
         subtitle={t('limits.subtitle')}

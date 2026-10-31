@@ -63,17 +63,17 @@ export function PlanCard({ plan, current }: PlanCardProps) {
   return (
     <article
       className={cn(
-        'flex flex-col gap-4 rounded-2xl bg-card p-5 shadow-soft ring-1 ring-foreground/[0.06]',
+        'flex flex-col gap-4 rounded-[1.25rem] bg-card p-6 shadow-soft',
         current && 'ring-2 ring-primary/40'
       )}
     >
       <header className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-heading text-lg font-normal tracking-tight">
+          <h3 className="text-lg font-semibold tracking-[-0.02em]">
             {plan.name}
           </h3>
           {current && (
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium tracking-[0.2em] text-primary uppercase ring-1 ring-primary/15">
+            <span className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary">
               {t('settings.plan.current')}
             </span>
           )}

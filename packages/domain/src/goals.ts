@@ -21,6 +21,7 @@ export type Goal = {
   targetDt: string | null
   currency: Currency
   accountCurrency: Currency
+  accountBalance: string
   status: EntityStatus
   createdDt: string
   updateDt: string

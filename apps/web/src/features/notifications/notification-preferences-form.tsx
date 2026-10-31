@@ -1,7 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { MAX_LEAD_DAYS, notificationPreferencesSchema, reminderDeliveries, type NotificationPreferences, type ReminderDelivery } from '@workspace/dto'
+import {
+  MAX_LEAD_DAYS,
+  notificationPreferencesSchema,
+  reminderDeliveries,
+  type NotificationPreferences,
+  type ReminderDelivery,
+} from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { NumberField } from '@workspace/ui/components/number-field'

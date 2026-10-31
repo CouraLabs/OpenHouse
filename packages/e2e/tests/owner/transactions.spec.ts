@@ -11,9 +11,9 @@ test.describe('transactions', () => {
     const category = await seedCategory(request)
     const name = uniqueName('QA Lunch')
 
-    await test.step('Action: open Transactions and choose Add Transaction', async () => {
+    await test.step('Action: open Transactions and choose New transaction', async () => {
       await page.goto('transactions')
-      await page.getByRole('button', { name: 'Add Transaction' }).click()
+      await page.locator('#main-content').getByRole('button', { name: 'New transaction' }).click()
       await expect(page.getByRole('dialog').getByText('New transaction')).toBeVisible()
     })
 
@@ -44,7 +44,7 @@ test.describe('transactions', () => {
 
     await test.step('Action: add an Income of 4,500.00 to the account', async () => {
       await page.goto('transactions')
-      await page.getByRole('button', { name: 'Add Transaction' }).click()
+      await page.locator('#main-content').getByRole('button', { name: 'New transaction' }).click()
       const dialog = page.getByRole('dialog')
       await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
       await dialog.getByRole('radiogroup').getByRole('radio').nth(0).check()
@@ -65,7 +65,7 @@ test.describe('transactions', () => {
   test('a transaction without account and category is refused', async ({ page }) => {
     await test.step('Action: save a new transaction with only a name and amount', async () => {
       await page.goto('transactions')
-      await page.getByRole('button', { name: 'Add Transaction' }).click()
+      await page.locator('#main-content').getByRole('button', { name: 'New transaction' }).click()
       const dialog = page.getByRole('dialog')
       await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill(uniqueName('Unsorted entry'))
       await dialog.getByRole('textbox', { name: 'Amount', exact: true }).fill('10.00')
@@ -130,7 +130,7 @@ test.describe('transactions', () => {
   test('closing a filled form asks before discarding it', async ({ page }) => {
     await test.step('Action: type an amount and press Escape', async () => {
       await page.goto('transactions')
-      await page.getByRole('button', { name: 'Add Transaction' }).click()
+      await page.locator('#main-content').getByRole('button', { name: 'New transaction' }).click()
       const dialog = page.getByRole('dialog')
       await dialog
         .getByRole('textbox', { name: 'Amount', exact: true })

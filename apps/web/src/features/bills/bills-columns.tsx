@@ -84,7 +84,10 @@ export function buildBillsColumns(
       header: t('bills.column-status'),
       enableSorting: false,
       cell: (context) => (
-        <StatementStatusBadge status={context.row.original.status} />
+        <StatementStatusBadge
+          status={context.row.original.status}
+          amountDue={context.row.original.amountDue}
+        />
       ),
     },
   ]

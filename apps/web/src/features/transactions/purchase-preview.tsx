@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { Currency, InstallmentsBody } from '@workspace/dto'
-import { amountSchema } from '@workspace/dto'
+import { amountSchema, MAX_INSTALLMENTS } from '@workspace/dto'
 
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
@@ -21,13 +21,14 @@ export function PurchasePreview({
   currency: Currency
 }) {
   const { t } = useTranslation()
-  const count =
-    Number.isInteger(installments.count) && installments.count >= 1
-      ? installments.count
-      : 1
+  const validCount =
+    Number.isInteger(installments.count) &&
+    installments.count >= 1 &&
+    installments.count <= MAX_INSTALLMENTS
+  const count = validCount ? installments.count : 1
   const settledAmount = useDebouncedValue(amount)
   const settledCashPrice = useDebouncedValue(cashPrice)
-  const validAmount = amountSchema.safeParse(amount).success
+  const validAmount = amountSchema.safeParse(amount).success && validCount
   const preview = useInstallmentsPreview(
     validAmount
       ? {

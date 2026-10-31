@@ -1,11 +1,19 @@
 import { useDiscardGuard } from '@/lib/use-discard-guard.js'
+import { withoutSystemCategories } from '@/lib/system-categories.js'
 import { FormSheet } from '@workspace/ui/components/form-sheet'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type { CreateRecurringTransactionBody, Frequency, RecurringTransaction } from '@workspace/dto'
-import { createRecurringTransactionSchema, transactionTypes } from '@workspace/dto'
+import type {
+  CreateRecurringTransactionBody,
+  Frequency,
+  RecurringTransaction,
+} from '@workspace/dto'
+import {
+  createRecurringTransactionSchema,
+  transactionTypes,
+} from '@workspace/dto'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { RadioOption } from '@workspace/ui/components/radio-option'
 import { MoneyField } from '@workspace/ui/components/money-field'
@@ -92,7 +100,7 @@ export function RecurringForm({
   const paidByUserId = watch('paidByUserId') ?? null
 
   const receivers = useActiveReceivers()
-  const categories = useActiveCategories()
+  const categories = withoutSystemCategories(useActiveCategories())
   const accounts = useActiveAccounts()
 
   const ruleCurrency =

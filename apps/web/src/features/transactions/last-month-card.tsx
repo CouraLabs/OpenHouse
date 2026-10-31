@@ -8,7 +8,7 @@ import {
 import { CalendarDays, TrendingDown, TrendingUp } from 'lucide-react'
 import { cn } from 'cn'
 
-import { formatMoney } from '@/lib/format-money.js'
+import { asOutflow, formatMoney } from '@/lib/format-money.js'
 
 export function LastMonthCard({
   title,
@@ -24,7 +24,7 @@ export function LastMonthCard({
   return (
     <Card className="gap-2">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <CardTitle className="flex items-center gap-2">
           <CalendarDays aria-hidden className="size-4" />
           {title}
         </CardTitle>
@@ -40,8 +40,10 @@ export function LastMonthCard({
                   <TrendingUp aria-hidden className="size-4" />
                   {labels.incomes}
                 </span>
-                <span className="text-sm font-semibold text-primary tabular-nums">
-                  {formatMoney(group.incomes, locale, group.currency)}
+                <span className="text-sm font-semibold text-positive tabular-nums">
+                  {formatMoney(group.incomes, locale, group.currency, {
+                    signed: true,
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
@@ -51,10 +53,14 @@ export function LastMonthCard({
                 </span>
                 <span
                   className={cn(
-                    'text-sm font-semibold text-destructive tabular-nums'
+                    'text-sm font-semibold text-foreground tabular-nums'
                   )}
                 >
-                  {formatMoney(group.expenses, locale, group.currency)}
+                  {formatMoney(
+                    asOutflow(group.expenses),
+                    locale,
+                    group.currency
+                  )}
                 </span>
               </div>
             </div>

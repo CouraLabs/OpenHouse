@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from 'cn'
 
+import { IconWell } from '@/components/icon-well.js'
 import { Reveal } from '@/components/reveal.js'
 import type { Feature } from '@/lib/content.js'
 
@@ -17,27 +18,21 @@ export function FeatureCard({
   className,
   index,
 }: FeatureCardProps) {
-  const Glyph = feature.icon
-
   return (
     <Reveal index={index} className={cn('col-span-1', className)}>
-      <article className="border-line hover:bg-surface flex h-full flex-col gap-8 border-r border-b p-7 transition-colors duration-200 ease-(--ease-out-expo) md:p-9">
+      <article className="flex h-full flex-col gap-7 surface-card p-6 transition-transform duration-150 hover:-translate-y-px md:p-7">
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <Glyph
-              aria-hidden
-              weight="light"
-              className="text-ink size-5 shrink-0"
-            />
-            <h3 className="text-ink font-display text-[1.05rem] font-medium tracking-[-0.02em]">
+          <IconWell icon={feature.icon} tone={feature.tone} />
+          <div className="flex flex-col gap-1">
+            <h3 className="text-ink text-[1.125rem] font-semibold tracking-[-0.015em]">
               {feature.title}
             </h3>
+            <p className="max-w-md text-[0.875rem] text-pretty text-muted">
+              {feature.body}
+            </p>
           </div>
-          <p className="max-w-md text-sm text-pretty text-muted">
-            {feature.body}
-          </p>
         </div>
-        {children}
+        <div className="mt-auto">{children}</div>
       </article>
     </Reveal>
   )

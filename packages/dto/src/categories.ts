@@ -6,6 +6,11 @@ import type {
   CategorySuggestion,
   SearchCategoriesArgs,
 } from "@workspace/domain"
+import {
+  CARD_PAYMENT_CATEGORY,
+  SETTLEMENT_CATEGORY,
+  TRANSFER_CATEGORY,
+} from "@workspace/domain"
 import { csvLocaleField } from "./csv-export.js"
 import { entityStatusSchema, fetchArgsSchema } from "./fetch.js"
 import { splitInputSchema } from "./splits.js"
@@ -18,6 +23,12 @@ export type {
   SearchCategoriesArgs,
 }
 
+export const SYSTEM_CATEGORY_NAMES: readonly string[] = [
+  CARD_PAYMENT_CATEGORY.name,
+  SETTLEMENT_CATEGORY.name,
+  TRANSFER_CATEGORY.name,
+]
+
 export const suggestCategorySchema = z.object({
   description: z.string(),
 })
@@ -29,7 +40,7 @@ export const categoryColorSchema = z
   .regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/, "Use a hex color like #1D4ED8.")
 
 export const createCategorySchema = z.object({
-  name: z.string().min(1, "Name is required.").max(255),
+  name: z.string().trim().min(1, "Name is required.").max(255),
   color: categoryColorSchema,
   defaultSplit: splitInputSchema.nullish(),
 })

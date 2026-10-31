@@ -9,7 +9,7 @@ function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-export function ThemeSwitcher() {
+export function ThemeSwitcher({ className }: { className?: string }) {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
   const isDark = theme === 'dark' || (theme === 'system' && systemPrefersDark())
@@ -17,10 +17,11 @@ export function ThemeSwitcher() {
 
   return (
     <Button
-      variant="ghost"
-      size="icon-sm"
+      variant="outline"
+      size="icon"
       aria-label={t(`theme.switch-to-${next}`)}
       title={t(`theme.switch-to-${next}`)}
+      className={className}
       onClick={() => setTheme(next)}
     >
       {isDark ? <Moon /> : <Sun />}

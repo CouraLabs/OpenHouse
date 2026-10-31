@@ -32,7 +32,7 @@ export interface AccountRowActions {
 }
 
 export function buildAccountsColumns(
-  t: (key: string) => string,
+  t: (key: string, options?: Record<string, unknown>) => string,
   locale: string,
   actions: AccountRowActions
 ): Array<DataTableColumn<Account>> {
@@ -75,25 +75,26 @@ export function buildAccountsColumns(
     },
     {
       id: 'balance',
-      header: t('accounts.balance'),
+      header: () => <span className="block text-right">{t('accounts.balance')}</span>,
       cell: (context) => {
         const account = context.row.original
-        const freeCredit =
-          account.type === 'Credit Card' && account.limit !== null
-            ? Number(account.limit) - Number(account.balance)
-            : null
 
         return (
-          <div className="flex flex-col">
-            <span>
+          <div className="flex flex-col items-end text-right">
+            <span className="font-semibold">
               {formatMoney(account.balance, locale, account.currency)}
-              {freeCredit !== null ? (
-                <span className="text-muted-foreground">
-                  {' '}
-                  ({formatMoney(String(freeCredit), locale, account.currency)})
-                </span>
-              ) : null}
             </span>
+            {account.availableLimit !== null ? (
+              <span className="text-xs text-muted-foreground">
+                {t('main.available', {
+                  amount: formatMoney(
+                    account.availableLimit,
+                    locale,
+                    account.currency
+                  ),
+                })}
+              </span>
+            ) : null}
             {account.reconciledThrough !== null ? (
               <span className="text-xs text-muted-foreground">
                 {t('accounts.reconciled-through')}{' '}
@@ -104,7 +105,7 @@ export function buildAccountsColumns(
             ) : null}
             {account.type === 'Credit Card' ? (
               account.closeDay === null || account.dueDay === null ? (
-                <span className="text-xs text-amber-600 dark:text-amber-400">
+                <span className="text-xs text-warning">
                   {t('accounts.cycle-missing')}
                 </span>
               ) : (
@@ -168,9 +169,7 @@ function AccountActionsCell({
         <DropdownMenuContent align="end">
           {account.type === 'Credit Card' ? (
             <DropdownMenuItem
-              render={
-                <Link to="/bills" search={{ accountId: account.id }} />
-              }
+              render={<Link to="/bills" search={{ accountId: account.id }} />}
             >
               <ReceiptText />
               {t('accounts.bills')}

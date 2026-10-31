@@ -36,7 +36,7 @@ export function InitialSetup({ tenantName }: { tenantName: string }) {
   return (
     <main className="flex min-h-svh items-center justify-center p-4">
       <form
-        className="flex w-full max-w-md flex-col gap-5 rounded-2xl p-6 ring-1 ring-foreground/10"
+        className="flex w-full max-w-md flex-col gap-5 rounded-3xl bg-card p-7 shadow-lift"
         onSubmit={(event) => {
           event.preventDefault()
           save.mutate({ timezone, mainCurrency })
@@ -45,7 +45,7 @@ export function InitialSetup({ tenantName }: { tenantName: string }) {
       >
         <BrandMark className="size-10" />
         <div className="flex flex-col gap-1">
-          <h1 className="font-heading text-xl font-medium">
+          <h1 className="text-2xl font-bold tracking-[-0.02em]">
             {t('initial-setup.title', { name: tenantName })}
           </h1>
           <p className="text-sm text-muted-foreground">

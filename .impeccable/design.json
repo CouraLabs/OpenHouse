@@ -1,0 +1,640 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-31T00:00:00Z",
+  "title": "Design System: Kantim",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Forest Ledger Green",
+        "canonical": "#2e6a55",
+        "tonalRamp": [
+          "#0f2a20",
+          "#173d30",
+          "#1f4f3f",
+          "#255a47",
+          "#2e6a55",
+          "#5e8f7c",
+          "#a9cbbb",
+          "#dcebe2"
+        ]
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "Forest Ledger Green (dark theme)",
+        "canonical": "#9dd8bc",
+        "tonalRamp": [
+          "#1f4f3f",
+          "#2e6a55",
+          "#4f9478",
+          "#74b293",
+          "#9dd8bc",
+          "#b4e3cc",
+          "#cdeedd",
+          "#e6f6ee"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Ledger Mint Wash",
+        "canonical": "#dcebe2",
+        "tonalRamp": [
+          "#5e8f7c",
+          "#86ad9c",
+          "#a9cbbb",
+          "#c3dccf",
+          "#dcebe2",
+          "#e6f1ea",
+          "#eff6f2",
+          "#f7fbf9"
+        ]
+      },
+      "brand-coral": {
+        "role": "secondary",
+        "displayName": "Coral Spark",
+        "canonical": "#de9466",
+        "tonalRamp": [
+          "#5a2e17",
+          "#7d4223",
+          "#a8522f",
+          "#c8744a",
+          "#de9466",
+          "#e7ad88",
+          "#f0cbb1",
+          "#f8e6da"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Washed Canvas",
+        "canonical": "#f1f1ec",
+        "tonalRamp": [
+          "#18221e",
+          "#3c4842",
+          "#5f6a65",
+          "#9aa39e",
+          "#d6d8d1",
+          "#e9ebe5",
+          "#f1f1ec",
+          "#fafaf7"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card Paper",
+        "canonical": "#fafaf7",
+        "tonalRamp": [
+          "#18221e",
+          "#3c4842",
+          "#5f6a65",
+          "#9aa39e",
+          "#e9ebe5",
+          "#f0f0eb",
+          "#f5f5f1",
+          "#fafaf7"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ledger Ink",
+        "canonical": "#18221e",
+        "tonalRamp": [
+          "#0c120f",
+          "#18221e",
+          "#2a3530",
+          "#3c4842",
+          "#5f6a65",
+          "#8e9a94",
+          "#c3ccc7",
+          "#e7ede9"
+        ]
+      },
+      "canvas-dark": {
+        "role": "neutral",
+        "displayName": "Night Canvas",
+        "canonical": "#121815",
+        "tonalRamp": [
+          "#0a0e0c",
+          "#121815",
+          "#1a211d",
+          "#222a26",
+          "#26302b",
+          "#3c4842",
+          "#8e9a94",
+          "#e7ede9"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "Sidebar Night",
+        "canonical": "#1f2b26",
+        "tonalRamp": [
+          "#0f1f18",
+          "#19211d",
+          "#1f2b26",
+          "#2c3a34",
+          "#3c4842",
+          "#9aa6a0",
+          "#c3ccc7",
+          "#e7ede9"
+        ]
+      },
+      "positive": {
+        "role": "status",
+        "displayName": "Money-In Green",
+        "canonical": "#2f7a4a",
+        "tonalRamp": [
+          "#123620",
+          "#1d4f2f",
+          "#2f7a4a",
+          "#4f9a68",
+          "#8fd3a0",
+          "#b6e3c1",
+          "#dcebe2",
+          "#eef6f0"
+        ]
+      },
+      "negative": {
+        "role": "status",
+        "displayName": "Trouble Red",
+        "canonical": "#c2413a",
+        "tonalRamp": [
+          "#4a1714",
+          "#7a2622",
+          "#a5352f",
+          "#c2413a",
+          "#f08a80",
+          "#f3b1aa",
+          "#f6dedb",
+          "#fbefed"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Copper Caution",
+        "canonical": "#a8522f",
+        "tonalRamp": [
+          "#3e1d10",
+          "#6a3420",
+          "#a8522f",
+          "#c8744a",
+          "#e9a68b",
+          "#f0c3ae",
+          "#f6e1d6",
+          "#fbf0ea"
+        ]
+      },
+      "info": {
+        "role": "status",
+        "displayName": "Ledger Blue",
+        "canonical": "#345d94",
+        "tonalRamp": [
+          "#14243a",
+          "#223e63",
+          "#345d94",
+          "#5579ae",
+          "#9db8e0",
+          "#bfd0ea",
+          "#dce6f4",
+          "#eef3fa"
+        ]
+      },
+      "data-in": {
+        "role": "tertiary",
+        "displayName": "In Green",
+        "canonical": "#5e9e7e",
+        "tonalRamp": [
+          "color-mix(in oklab, #5e9e7e 30%, #18221e)",
+          "color-mix(in oklab, #5e9e7e 50%, #18221e)",
+          "color-mix(in oklab, #5e9e7e 70%, #18221e)",
+          "color-mix(in oklab, #5e9e7e 85%, #18221e)",
+          "#5e9e7e",
+          "color-mix(in oklab, #5e9e7e 60%, #fafaf7)",
+          "color-mix(in oklab, #5e9e7e 35%, #fafaf7)",
+          "color-mix(in oklab, #5e9e7e 18%, #fafaf7)"
+        ]
+      },
+      "data-out": {
+        "role": "tertiary",
+        "displayName": "Out Peach",
+        "canonical": "#e3a386",
+        "tonalRamp": [
+          "color-mix(in oklab, #e3a386 30%, #18221e)",
+          "color-mix(in oklab, #e3a386 50%, #18221e)",
+          "color-mix(in oklab, #e3a386 70%, #18221e)",
+          "color-mix(in oklab, #e3a386 85%, #18221e)",
+          "#e3a386",
+          "color-mix(in oklab, #e3a386 60%, #fafaf7)",
+          "color-mix(in oklab, #e3a386 35%, #fafaf7)",
+          "color-mix(in oklab, #e3a386 18%, #fafaf7)"
+        ]
+      },
+      "data-blue": {
+        "role": "tertiary",
+        "displayName": "Cornflower",
+        "canonical": "#6f96cb",
+        "tonalRamp": [
+          "color-mix(in oklab, #6f96cb 30%, #18221e)",
+          "color-mix(in oklab, #6f96cb 50%, #18221e)",
+          "color-mix(in oklab, #6f96cb 70%, #18221e)",
+          "color-mix(in oklab, #6f96cb 85%, #18221e)",
+          "#6f96cb",
+          "color-mix(in oklab, #6f96cb 60%, #fafaf7)",
+          "color-mix(in oklab, #6f96cb 35%, #fafaf7)",
+          "color-mix(in oklab, #6f96cb 18%, #fafaf7)"
+        ]
+      },
+      "data-pink": {
+        "role": "tertiary",
+        "displayName": "Rose",
+        "canonical": "#d9849b",
+        "tonalRamp": [
+          "color-mix(in oklab, #d9849b 30%, #18221e)",
+          "color-mix(in oklab, #d9849b 50%, #18221e)",
+          "color-mix(in oklab, #d9849b 70%, #18221e)",
+          "color-mix(in oklab, #d9849b 85%, #18221e)",
+          "#d9849b",
+          "color-mix(in oklab, #d9849b 60%, #fafaf7)",
+          "color-mix(in oklab, #d9849b 35%, #fafaf7)",
+          "color-mix(in oklab, #d9849b 18%, #fafaf7)"
+        ]
+      },
+      "data-olive": {
+        "role": "tertiary",
+        "displayName": "Olive",
+        "canonical": "#6e9b47",
+        "tonalRamp": [
+          "color-mix(in oklab, #6e9b47 30%, #18221e)",
+          "color-mix(in oklab, #6e9b47 50%, #18221e)",
+          "color-mix(in oklab, #6e9b47 70%, #18221e)",
+          "color-mix(in oklab, #6e9b47 85%, #18221e)",
+          "#6e9b47",
+          "color-mix(in oklab, #6e9b47 60%, #fafaf7)",
+          "color-mix(in oklab, #6e9b47 35%, #fafaf7)",
+          "color-mix(in oklab, #6e9b47 18%, #fafaf7)"
+        ]
+      },
+      "data-slate": {
+        "role": "tertiary",
+        "displayName": "Slate",
+        "canonical": "#6c7782",
+        "tonalRamp": [
+          "color-mix(in oklab, #6c7782 30%, #18221e)",
+          "color-mix(in oklab, #6c7782 50%, #18221e)",
+          "color-mix(in oklab, #6c7782 70%, #18221e)",
+          "color-mix(in oklab, #6c7782 85%, #18221e)",
+          "#6c7782",
+          "color-mix(in oklab, #6c7782 60%, #fafaf7)",
+          "color-mix(in oklab, #6c7782 35%, #fafaf7)",
+          "color-mix(in oklab, #6c7782 18%, #fafaf7)"
+        ]
+      },
+      "data-orange": {
+        "role": "tertiary",
+        "displayName": "Apricot",
+        "canonical": "#de9466",
+        "tonalRamp": [
+          "color-mix(in oklab, #de9466 30%, #18221e)",
+          "color-mix(in oklab, #de9466 50%, #18221e)",
+          "color-mix(in oklab, #de9466 70%, #18221e)",
+          "color-mix(in oklab, #de9466 85%, #18221e)",
+          "#de9466",
+          "color-mix(in oklab, #de9466 60%, #fafaf7)",
+          "color-mix(in oklab, #de9466 35%, #fafaf7)",
+          "color-mix(in oklab, #de9466 18%, #fafaf7)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing hero H1 only."
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Landing section H2 with a lede beside it."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "App page H1, under a breadcrumb or date line."
+      },
+      "figure-hero": {
+        "displayName": "Figure Hero",
+        "purpose": "Headline balances."
+      },
+      "figure-kpi": {
+        "displayName": "Figure KPI",
+        "purpose": "KPI card values."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "App prose, row names."
+      },
+      "body-landing": {
+        "displayName": "Body (landing)",
+        "purpose": "Landing prose."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Descriptions, row meta, context line above H1."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "11px uppercase list-group headers and chrome section labels only."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Identifiers only: card digits, currency codes, recovery codes, commands."
+      }
+    },
+    "shadows": [
+      {
+        "name": "soft",
+        "value": "0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(20 40 30 / 0.1)",
+        "dark": "0 0 0 1px rgb(255 255 255 / 0.07)",
+        "purpose": "Every card and KPI card, the landing nav."
+      },
+      {
+        "name": "lift",
+        "value": "0 1px 2px rgb(0 0 0 / 0.05), 0 14px 32px -14px rgb(20 40 30 / 0.16)",
+        "dark": "0 0 0 1px rgb(255 255 255 / 0.1)",
+        "purpose": "Dialogs and sheets over the blurred scrim."
+      },
+      {
+        "name": "glow",
+        "value": "0 1px 2px rgb(20 50 40 / 0.12), 0 8px 18px -8px rgb(46 106 85 / 0.55)",
+        "dark": "none",
+        "purpose": "Primary buttons, light theme only."
+      },
+      {
+        "name": "sidebar-float",
+        "value": "0 18px 40px -20px rgb(15 25 20 / 0.55)",
+        "dark": "none",
+        "purpose": "Floating sidebar, with a 1px sidebar ring."
+      },
+      {
+        "name": "payment-card",
+        "value": "0 1px 2px rgb(0 0 0 / 0.08), 0 14px 30px -16px rgb(20 30 25 / 0.5)",
+        "purpose": "Payment card faces."
+      },
+      {
+        "name": "scrim",
+        "value": "rgb(24 34 30 / 0.18) + backdrop-filter: blur(7px)",
+        "dark": "rgb(0 0 0 / 0.4)",
+        "purpose": "Overlay backdrop for dialogs and sheets."
+      }
+    ],
+    "gradients": [
+      {
+        "name": "canvas-wash",
+        "value": "radial-gradient(52rem 34rem at -6% -10%, #e2eee5 0%, transparent 62%), radial-gradient(46rem 30rem at 106% -12%, #f7e5dc 0%, transparent 60%)",
+        "dark": "radial-gradient(70rem 30rem at 50% -14%, rgb(157 216 188 / 0.07) 0%, transparent 70%)",
+        "purpose": "Fixed page wash; the landing uses a larger, stronger version of the same two washes."
+      },
+      {
+        "name": "payment-emerald",
+        "value": "linear-gradient(135deg, #2f6f5a 0%, #1d4a3c 100%)",
+        "text": "#f4f8f5",
+        "purpose": "Checking accounts."
+      },
+      {
+        "name": "payment-olive",
+        "value": "linear-gradient(135deg, #4f6e2f 0%, #2c4519 100%)",
+        "text": "#f4f6ef",
+        "purpose": "Savings accounts."
+      },
+      {
+        "name": "payment-coral",
+        "value": "linear-gradient(135deg, #ebaa90 0%, #d7826a 100%)",
+        "text": "#2a1710",
+        "purpose": "Wallets."
+      },
+      {
+        "name": "payment-onyx",
+        "value": "linear-gradient(135deg, #2b2727 0%, #110f0f 100%)",
+        "text": "#f3f1ee",
+        "purpose": "Credit cards."
+      },
+      {
+        "name": "payment-ice",
+        "value": "linear-gradient(135deg, #d3e3e9 0%, #a8c6d0 100%)",
+        "text": "#3b4f57",
+        "purpose": "Any inactive (frozen) account."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-spring",
+        "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "purpose": "Default easing for every transition, sheets, and landing reveals."
+      },
+      {
+        "name": "duration-default",
+        "value": "150ms",
+        "purpose": "Hover, press, color transitions."
+      },
+      {
+        "name": "page-in",
+        "value": "0.4s ease-spring, translateY(6px) to 0 with fade",
+        "purpose": "App page entry."
+      },
+      {
+        "name": "reveal",
+        "value": "600ms ease-spring, translateY(12px), 80ms stagger per index",
+        "purpose": "Landing scroll reveal; disabled under reduced motion."
+      },
+      {
+        "name": "gauge-fill",
+        "value": "400ms ease-spring",
+        "purpose": "Ring gauge and gauge bar fill."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action per view: pill, forest green, green glow in light theme only.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>New transaction</button>",
+      "css": ".ds-btn-primary{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 18px;border:1px solid transparent;border-radius:9999px;background:var(--primary,#2e6a55);color:var(--primary-foreground,#fff);font-size:14px;font-weight:500;box-shadow:0 1px 2px rgb(20 50 40/.12),0 8px 18px -8px rgb(46 106 85/.55);transition:background-color 150ms cubic-bezier(.2,.8,.2,1),transform 150ms cubic-bezier(.2,.8,.2,1);cursor:pointer}.ds-btn-primary:hover{background:var(--primary-hover,#255a47)}.ds-btn-primary:active{transform:scale(.98)}.ds-btn-primary:focus-visible{outline:2px solid var(--ring,#2e6a55);outline-offset:2px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions beside a primary: card paper, hairline, 1px shadow.",
+      "html": "<button class=\"ds-btn-outline\">Open Upcoming</button>",
+      "css": ".ds-btn-outline{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;height:40px;padding:0 18px;border:1px solid var(--border,rgb(20 30 25/.07));border-radius:9999px;background:var(--card,#fafaf7);color:var(--foreground,#18221e);font-size:14px;font-weight:500;box-shadow:0 1px 2px rgb(0 0 0/.04);transition:background-color 150ms cubic-bezier(.2,.8,.2,1);cursor:pointer}.ds-btn-outline:hover{background:var(--surface-2,#f0f0eb)}.ds-btn-outline:active{transform:scale(.98)}.ds-btn-outline:focus-visible{outline:2px solid var(--ring,#2e6a55);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Soft green pill for supporting actions.",
+      "html": "<button class=\"ds-btn-secondary\">See all</button>",
+      "css": ".ds-btn-secondary{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;height:40px;padding:0 18px;border:0;border-radius:9999px;background:var(--primary-soft,#dcebe2);color:var(--primary,#2e6a55);font-size:14px;font-weight:500;cursor:pointer;transition:background-color 150ms}.ds-btn-secondary:hover{background:color-mix(in oklab,var(--primary-soft,#dcebe2),var(--primary,#2e6a55) 12%)}.ds-btn-secondary:focus-visible{outline:2px solid var(--ring,#2e6a55);outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "52px surface-2 well, 14px radius, primary halo on focus.",
+      "html": "<input class=\"ds-input\" placeholder=\"Description\" />",
+      "css": ".ds-input{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;height:52px;width:100%;padding:0 16px;border:1px solid var(--input,rgb(20 30 25/.1));border-radius:14px;background:var(--surface-2,#f0f0eb);color:var(--foreground,#18221e);font-size:15px;caret-color:var(--primary,#2e6a55);outline:none;transition:border-color 150ms,box-shadow 150ms}.ds-input::placeholder{color:var(--muted-foreground,#5f6a65)}.ds-input:focus-visible{border-color:color-mix(in oklab,var(--primary,#2e6a55) 50%,transparent);box-shadow:0 0 0 4px color-mix(in oklab,var(--primary,#2e6a55) 25%,transparent)}"
+    },
+    {
+      "name": "KPI Card",
+      "kind": "card",
+      "refersTo": "kpi-card",
+      "description": "Icon tile, muted label, bold tabular figure, footnote. Money in green with +, money out ink with U+2212.",
+      "html": "<section class=\"ds-kpi\"><div class=\"ds-kpi-head\"><span class=\"ds-kpi-tile\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><path d=\"M17 7 7 17M17 17H7V7\"/></svg></span><h2>Money in</h2></div><div class=\"ds-kpi-value ds-in\">+R$4,850.00</div><p>This month so far</p></section><section class=\"ds-kpi\"><div class=\"ds-kpi-head\"><span class=\"ds-kpi-tile ds-out\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><path d=\"M7 17 17 7M7 7h10v10\"/></svg></span><h2>Money out</h2></div><div class=\"ds-kpi-value\">−R$1,938.95</div><p>This month so far</p></section>",
+      "css": ".ds-kpi{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;flex-direction:column;gap:16px;width:240px;margin:6px;padding:24px;border-radius:20px;background:var(--card,#fafaf7);color:var(--foreground,#18221e);box-shadow:0 1px 2px rgb(0 0 0/.04),0 8px 24px -12px rgb(20 40 30/.1)}.ds-kpi-head{display:flex;align-items:center;gap:10px}.ds-kpi-head h2{margin:0;font-size:13px;font-weight:500;color:var(--muted-foreground,#5f6a65)}.ds-kpi-tile{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:color-mix(in oklab,#5e9e7e 20%,transparent);color:color-mix(in oklab,#5e9e7e 62%,#18221e)}.ds-kpi-tile.ds-out{background:color-mix(in oklab,#e3a386 24%,transparent);color:color-mix(in oklab,#e3a386 58%,#18221e)}.ds-kpi-value{font-size:32px;line-height:1.1;font-weight:700;letter-spacing:-.025em}.ds-kpi-value.ds-in{color:var(--positive,#2f7a4a)}.ds-kpi p{margin:0;font-size:13px;color:var(--muted-foreground,#5f6a65)}"
+    },
+    {
+      "name": "Filter Chip and Category Pill",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Pill filters that invert to ink when active; category pills tinted by their own hue.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"true\">All <span class=\"ds-chip-count\">42</span></button><button class=\"ds-chip\" aria-pressed=\"false\">Pending</button><span class=\"ds-cat\"><span class=\"ds-cat-dot\"></span>Groceries</span>",
+      "css": ".ds-chip{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:8px;height:36px;margin:4px;padding:0 14px;border:1px solid var(--border,rgb(20 30 25/.07));border-radius:9999px;background:var(--card,#fafaf7);color:var(--foreground,#18221e);font-size:13px;font-weight:500;cursor:pointer;transition:background-color 150ms}.ds-chip:hover{background:var(--surface-2,#f0f0eb)}.ds-chip[aria-pressed=true]{border-color:transparent;background:var(--foreground,#18221e);color:var(--background,#f1f1ec)}.ds-chip-count{padding:0 6px;border-radius:9999px;font-size:11px;line-height:20px;background:rgb(241 241 236/.15)}.ds-chip:focus-visible{outline:2px solid var(--ring,#2e6a55);outline-offset:2px}.ds-cat{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:6px;height:24px;margin:4px;padding:0 10px;border-radius:9999px;font-size:12px;font-weight:500;background:color-mix(in oklab,#de9466 16%,transparent);color:color-mix(in oklab,#de9466 62%,#18221e)}.ds-cat-dot{width:6px;height:6px;border-radius:9999px;background:#de9466}"
+    },
+    {
+      "name": "Floating Sidebar",
+      "kind": "nav",
+      "refersTo": "sidebar",
+      "description": "Dark in both themes; 11px caps group labels; mint active pill.",
+      "html": "<nav class=\"ds-side\"><div class=\"ds-side-brand\"><span class=\"ds-mark\"><svg viewBox=\"-6 -6 112 112\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 12 L86 44 H14 Z\"/><path d=\"M22 52 H78 V88 H22 Z\"/><circle cx=\"50\" cy=\"12\" r=\"7\" fill=\"#de9466\" stroke=\"none\"/></svg></span><b>kantim<span class=\"ds-dot\">.</span></b></div><a class=\"ds-side-item ds-active\" href=\"#\">Home</a><span class=\"ds-side-label\">Money</span><a class=\"ds-side-item\" href=\"#\">Transactions</a><a class=\"ds-side-item\" href=\"#\">Upcoming</a></nav>",
+      "css": ".ds-side{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:4px;width:240px;padding:16px 12px;border-radius:24px;background:#1f2b26;color:#e7ede9;box-shadow:0 18px 40px -20px rgb(15 25 20/.55),0 0 0 1px rgb(255 255 255/.07)}.ds-side-brand{display:flex;align-items:center;gap:12px;padding:4px 6px 12px;font-size:17px;letter-spacing:-.02em}.ds-mark{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:#dcebe2;color:#2e6a55}.ds-dot{color:#de9466}.ds-side-label{height:32px;display:flex;align-items:center;padding:0 12px;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#9aa6a0}.ds-side-item{padding:8px 12px;border-radius:9999px;font-size:14px;color:rgb(231 237 233/.85);text-decoration:none;transition:background-color 150ms}.ds-side-item:hover{background:rgb(255 255 255/.06);color:#fff}.ds-side-item.ds-active{background:#9dd8bc;color:#0f1f18;font-weight:600}.ds-side-item:focus-visible{outline:2px solid #9dd8bc;outline-offset:2px}"
+    },
+    {
+      "name": "Payment Card",
+      "kind": "custom",
+      "refersTo": "payment-card",
+      "description": "Account face; gradient by account type (checking emerald shown).",
+      "html": "<div class=\"ds-pay\"><div class=\"ds-pay-top\"><b>Banco da Praça</b><span class=\"ds-pay-cap\">Checking</span></div><div class=\"ds-pay-mid\"><span class=\"ds-chipgold\"></span><span class=\"ds-pay-num\">•••• 4821</span></div><div class=\"ds-pay-bot\"><div><span class=\"ds-pay-cap\">Balance</span><b>R$11,323.41</b></div></div></div>",
+      "css": ".ds-pay{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;justify-content:space-between;width:300px;aspect-ratio:1.586;padding:20px;border-radius:20px;background:linear-gradient(135deg,#2f6f5a 0%,#1d4a3c 100%);color:#f4f8f5;box-shadow:0 1px 2px rgb(0 0 0/.08),0 14px 30px -16px rgb(20 30 25/.5)}.ds-pay-top,.ds-pay-bot{display:flex;justify-content:space-between;align-items:flex-start;font-size:14px}.ds-pay-bot div{display:flex;flex-direction:column;font-size:15px}.ds-pay-cap{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;opacity:.75}.ds-pay-mid{display:flex;align-items:center;gap:12px}.ds-chipgold{width:32px;height:24px;border-radius:5px;background:linear-gradient(135deg,#e9d18f 0%,#c9a24f 55%,#e4c77c 100%)}.ds-pay-num{font-family:'Geist Mono Variable',ui-monospace,monospace;font-size:13px;letter-spacing:.12em;opacity:.9}"
+    },
+    {
+      "name": "Status Pill and Date Tile",
+      "kind": "custom",
+      "refersTo": "status-pill",
+      "description": "Tone-tiled pills; date tiles turn red-soft only when overdue.",
+      "html": "<span class=\"ds-pill ds-pos\"><i></i>Paid</span><span class=\"ds-pill ds-neg\"><i></i>Late</span><span class=\"ds-date\"><b>15</b><small>Nov</small></span><span class=\"ds-date ds-over\"><b>02</b><small>Nov</small></span>",
+      "css": ".ds-pill{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:6px;height:24px;margin:4px;padding:0 10px;border-radius:9999px;font-size:12px;font-weight:500}.ds-pill i{width:6px;height:6px;border-radius:9999px;background:currentColor}.ds-pos{background:var(--positive-soft,#dcebe2);color:var(--positive,#2f7a4a)}.ds-neg{background:var(--negative-soft,#f6dedb);color:var(--negative,#c2413a)}.ds-date{font-family:'Geist Variable','Inter Tight',ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:44px;height:44px;margin:4px;border-radius:12px;background:var(--surface-2,#f0f0eb);color:var(--foreground,#18221e);line-height:1;vertical-align:middle}.ds-date b{font-size:15px}.ds-date small{margin-top:2px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-foreground,#5f6a65)}.ds-date.ds-over{background:var(--negative-soft,#f6dedb);color:var(--negative,#c2413a)}.ds-date.ds-over small{color:var(--negative,#c2413a)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Private Ledger for the Home",
+    "overview": "Obolo is calm editorial fintech for a household. The canvas is a warm off-white (dark: a near-black forest) washed at its top corners with faint mint and blush light; on it sit soft cards that hold numbers as the hero. Hierarchy comes from type weight and size, not from color: bold Geist figures, a quiet muted line beneath each one, and color reserved for meaning (money in, problems, and data hues inside graphics). Every card explains itself with a title and a one-line description; the member never has to decode a widget.\n\nStructure is a floating dark sidebar on the left (dark in both themes), a transparent top bar of pill tools, a context line and a 40px H1, then a KPI strip and a two-column body with a right rail. Forms and detail work open in drawers and dialogs on a blurred scrim, so the ledger stays in view. Light theme is lifted by barely-there shadows; dark theme is drawn with 1px hairlines. Shapes are rounded and friendly: pill buttons and chips, 20px cards, 24px sheets.\n\nThe landing is product-led: the hero is a large H1 and lead with pill CTAs beside a live-built Kantim home screen (sidebar, KPI strip, Going out soon, limits) floating on the same washed canvas. The landing uses the same values under its own token names (`action`, `surface`, `chrome`, `line`), so the visitor sees the exact product material. The world refuses the dense admin-table dashboard and the neon fintech look.",
+    "keyCharacteristics": [
+      "Numbers are the hero: bold, tight-tracked, always tabular.",
+      "Hierarchy by weight, not by color; color carries meaning only.",
+      "Warm washed canvas, soft 20px cards, pill controls.",
+      "Floating dark sidebar in both themes.",
+      "Whisper shadows in light, 1px borders in dark.",
+      "Pastel data palette shared by charts, module hues, category pills, and avatars.",
+      "Product-led landing built from the app's own components and values."
+    ],
+    "rules": [
+      {
+        "name": "The Green-In Rule",
+        "body": "Money in is `positive` green and always carries an explicit `+` (signed display).",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink-Out Rule",
+        "body": "Money out is ink, never red, and its sign is a real minus (U+2212 \"−\"), never a hyphen. Out Peach appears only in graphics: chart series, the out tone tile, legend swatches.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red-Means-Trouble Rule",
+        "body": "`negative` red is reserved for problems: overdue dates, limits over pace or over budget, failed loads, destructive actions, field errors. A normal expense is never red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Module Hue Rule",
+        "body": "Modules map onto the data palette and nowhere else: finance = In Green, pantry = Apricot, tasks = Cornflower, pets = Olive, home care = Slate, household = Rose.",
+        "section": "colors"
+      },
+      {
+        "name": "The Coral Period Rule",
+        "body": "The wordmark is lowercase \"kantim.\" in bold ink with a coral period; the house glyph sits on a `primary-soft` tile with a coral roof dot. Coral is the brand's spark, not a UI color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Everywhere Rule",
+        "body": "Body text sets `font-variant-numeric: tabular-nums` globally in the app and the landing; every figure aligns in columns.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono-For-Identifiers Rule",
+        "body": "Geist Mono is for things a person copies or matches (codes, card digits, currency codes, commands), never for amounts or labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Eyebrow Rule",
+        "body": "Nothing uppercase sits above a heading. Above an H1 goes a muted 13px breadcrumb trail or, on Home, the date. Landing section headings have no kicker.",
+        "section": "typography"
+      },
+      {
+        "name": "The Caps-In-Chrome Rule",
+        "body": "The 11px uppercase label appears only as a list-group header (day groups, upcoming groups, table heads) or a section label inside chrome (sidebar groups, the sidebar month summary, the command palette, form fieldset legends).",
+        "section": "typography"
+      },
+      {
+        "name": "The Whisper-and-Hairline Rule",
+        "body": "Light theme uses barely-there shadows; dark theme uses 1px borders. A card never gets a heavier shadow to win attention.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Glow-In-Light-Only Rule",
+        "body": "The primary button glows green in light theme and is flat in dark.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** show money in as `positive` green with an explicit `+`, and money out in ink with U+2212.",
+      "**Do** set every figure in tabular numerals and let weight (700) carry its importance.",
+      "**Do** give every card a title and a one-line muted description.",
+      "**Do** put a muted breadcrumb line or the date above an H1.",
+      "**Do** use the Soft shadow in light and the 1px hairline in dark; keep the glow on primary buttons in light only.",
+      "**Do** keep the sidebar dark in both themes.",
+      "**Do** pick module hues and chart series from the data palette by the module map.",
+      "**Do** choose payment-card gradients by account type, and Frozen Ice for any inactive account.",
+      "**Do** build landing visuals from the product's own components and values."
+    ],
+    "donts": [
+      "**Don't** color an ordinary expense red or peach in text; peach is for graphics, red is for problems.",
+      "**Don't** place an uppercase eyebrow or kicker above any heading.",
+      "**Don't** use the 11px caps label outside list-group headers and chrome section labels.",
+      "**Don't** set amounts, labels or headings in Geist Mono.",
+      "**Don't** use a hyphen-minus for negative money.",
+      "**Don't** add heavier shadows, hard offset shadows, or neon glows; dark theme gets no glow at all.",
+      "**Don't** use coral as a control fill or text color.",
+      "**Don't** compute a chart in the web that no endpoint returns; defer it instead."
+    ]
+  }
+}

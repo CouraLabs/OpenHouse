@@ -10,7 +10,7 @@ import {
 import { csvLocaleField } from "./csv-export.js"
 import { entityStatusSchema, fetchArgsSchema } from "./fetch.js"
 import { dateOnlySchema } from "./goals.js"
-import { amountSchema } from "./limits.js"
+import { positiveAmountSchema } from "./limits.js"
 import { splitInputSchema } from "./splits.js"
 import { transactionTypeSchema } from "./transactions.js"
 
@@ -50,7 +50,7 @@ export const createRecurringTransactionSchema = z
       .number({ error: "Pick an account." })
       .int()
       .positive("Pick an account."),
-    amount: amountSchema,
+    amount: positiveAmountSchema,
     type: transactionTypeSchema,
     frequency: frequencySchema,
     frequencyDay: z

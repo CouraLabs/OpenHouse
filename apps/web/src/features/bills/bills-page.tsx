@@ -2,7 +2,11 @@ import { useSearch } from '@tanstack/react-router'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { statementStatuses, type SearchStatementsArgs, type StatementStatus } from '@workspace/dto'
+import {
+  statementStatuses,
+  type SearchStatementsArgs,
+  type StatementStatus,
+} from '@workspace/dto'
 import { DataTable } from '@workspace/ui/components/data-table'
 import {
   FilterDialog,
@@ -56,10 +60,7 @@ export function BillsPage() {
   )
 
   const search = useStatementSearch(args)
-  const columns = useMemo(
-    () => buildBillsColumns(t, formattingLocale()),
-    [t]
-  )
+  const columns = useMemo(() => buildBillsColumns(t, formattingLocale()), [t])
 
   const resetToFirstPage = () => {
     setPagination((current) =>
@@ -68,7 +69,7 @@ export function BillsPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
+    <main className="mx-auto flex w-full max-w-[90rem] flex-1 animate-page-in flex-col gap-6 px-4 pt-4 pb-12 md:px-8 md:pt-6">
       <PageHeader
         title={t('bills.title')}
         subtitle={t('bills.subtitle')}

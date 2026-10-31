@@ -22,8 +22,7 @@ export function CodeShare({ code, link, labels }: CodeShareProps) {
   const share = async () => {
     try {
       await navigator.share({ title: labels.shareTitle, url: link })
-    } catch {
-    }
+    } catch {}
   }
 
   return (
