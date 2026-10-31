@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import type { TransactionSummary } from '@workspace/poco'
+import type { TransactionSummary } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 import { useTenantToday } from '@/lib/settings.js'

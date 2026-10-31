@@ -1,9 +1,9 @@
+import { todayIn } from '@workspace/business'
 import {
-  todayIn,
   type HouseholdMember,
   type HouseholdOverview,
   type Transaction,
-} from '@workspace/poco'
+} from '@workspace/dto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
@@ -87,7 +87,10 @@ describe('household splitting and settle-up (e2e, #14)', () => {
     })
 
     expect(created.paidByUserId).toBe(ownerId)
-    expect(created.splits.map((entry) => entry.share)).toEqual(['50.00', '50.00'])
+    expect(created.splits.map((entry) => entry.share)).toEqual([
+      '50.00',
+      '50.00',
+    ])
 
     const before = await overview()
 
@@ -189,17 +192,21 @@ describe('household splitting and settle-up (e2e, #14)', () => {
     const check = await owner.get(`/api/household/members/${member.id}/balance`)
 
     expect(check.status).toBe(200)
-    expect(check.body.lines).toEqual([{ currency, balance: '-30.00' }])
+    expect(check.body.lines).toEqual([
+      { currency, balance: '-30.00', absBalance: '30.00', tone: 'negative' },
+    ])
 
-    const removed = await owner.post(`/api/tenants/users/${member.id}/deactivate`)
+    const removed = await owner.post(
+      `/api/tenants/users/${member.id}/deactivate`
+    )
 
     expect(removed.status).toBe(200)
 
     const after = await overview()
 
-    expect(
-      after.balances.find((entry) => entry.userId === member.id)
-    ).toEqual(expect.objectContaining({ isActive: false, balance: '-30.00' }))
+    expect(after.balances.find((entry) => entry.userId === member.id)).toEqual(
+      expect.objectContaining({ isActive: false, balance: '-30.00' })
+    )
 
     // A removed member can still be settled.
     const settled = await owner.post('/api/transactions/settle', {

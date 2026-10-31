@@ -1,10 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type {
-  CalendarFeed,
-  NotificationList,
-  NotificationPreferences,
-  PushConfig,
-} from '@workspace/poco'
+import type { CalendarFeed, NotificationList, NotificationPreferences, PushConfig } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import type { InstallmentAmountMode, InstallmentsBody } from '@workspace/poco'
-import { installmentAmountModes } from '@workspace/poco'
+import type { InstallmentAmountMode, InstallmentsBody } from '@workspace/dto'
+import { installmentAmountModes } from '@workspace/dto'
 import { Field, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
 import { NumberField } from '@workspace/ui/components/number-field'

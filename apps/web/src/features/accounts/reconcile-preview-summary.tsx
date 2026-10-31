@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { ReconcilePreview } from '@workspace/poco'
-import { isZeroMoney } from '@workspace/poco'
+import type { ReconcilePreview } from '@workspace/dto'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
@@ -14,7 +13,7 @@ export function ReconcilePreviewSummary({
   const { t } = useTranslation()
   const money = (amount: string) =>
     formatMoney(amount, formattingLocale(), preview.currency)
-  const matches = isZeroMoney(preview.difference)
+  const matches = preview.tone === 'zero'
 
   return (
     <div className="flex flex-col gap-3 rounded-md border p-3 text-sm">

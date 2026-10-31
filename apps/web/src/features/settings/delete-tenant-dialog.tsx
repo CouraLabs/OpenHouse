@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { tenantNameMatches, TENANT_DELETION_GRACE_DAYS } from '@workspace/poco'
 import { Button } from '@workspace/ui/components/button'
 import {
   Dialog,
@@ -46,9 +45,7 @@ export function DeleteTenantDialog({ open, onClose }: DeleteTenantDialogProps) {
         <DialogHeader>
           <DialogTitle>{t('settings.data.delete-title')}</DialogTitle>
           <DialogDescription>
-            {t('settings.data.delete-description', {
-              days: TENANT_DELETION_GRACE_DAYS,
-            })}
+            {t('settings.data.delete-description')}
           </DialogDescription>
         </DialogHeader>
         <TextField
@@ -72,9 +69,7 @@ export function DeleteTenantDialog({ open, onClose }: DeleteTenantDialogProps) {
           </Button>
           <Button
             variant="destructive"
-            disabled={
-              schedule.isPending || !tenantNameMatches(typed, tenantName)
-            }
+            disabled={schedule.isPending || typed.trim() === ''}
             onClick={() => schedule.mutate(typed, { onSuccess: () => close() })}
           >
             {schedule.isPending

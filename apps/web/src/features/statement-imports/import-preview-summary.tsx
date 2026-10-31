@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { ImportPreview } from '@workspace/poco'
+import type { ImportPreview } from '@workspace/dto'
 
 import type { ResolvedRow } from './import-rows.js'
 

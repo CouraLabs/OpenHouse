@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { TierStatus } from '@workspace/poco'
+import type { TierStatus } from '@workspace/dto'
 import { api } from './api.js'
 
 export const TIER_STATUS_KEY = ['tier-status'] as const

@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import type { IssueResetCodeBody, IssuedResetCode } from '@workspace/poco'
+import type { IssueResetCodeBody, IssuedResetCode } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 import { appUrl } from '@/lib/app-url.js'

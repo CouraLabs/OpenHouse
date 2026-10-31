@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type { CreateGoalBody, Goal } from '@workspace/poco'
-import { createGoalSchema } from '@workspace/poco'
+import type { CreateGoalBody, Goal } from '@workspace/dto'
+import { createGoalSchema } from '@workspace/dto'
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import {
   Field,

@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import type { CreateDataExportBody } from '@workspace/poco'
+import type { CreateDataExportBody } from '@workspace/dto'
 
 import { apiFile } from '@/lib/api.js'
 import { saveFile } from '@/lib/save-file.js'
@@ -11,7 +11,7 @@ export function useDataExport() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
-      }, 'openhouse-export.zip')
+      }, 'kantim-export.zip')
 
       saveFile(file)
     },

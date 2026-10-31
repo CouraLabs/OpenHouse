@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ReminderDetail } from '@workspace/poco'
+import type { ReminderDetail } from '@workspace/dto'
 
 import { parsePushPayload, pushMessage } from './push-message.js'
 
@@ -16,7 +16,7 @@ describe('pushMessage', () => {
   it('is quiet without details: no amount, name, or kind', () => {
     const message = pushMessage({ v: 1, count: 1, url: '/upcoming' })
 
-    expect(message.body).toBe('You have a reminder. Open OpenHouse to see it.')
+    expect(message.body).toBe('You have a reminder. Open Kantim to see it.')
     expect(`${message.title} ${message.body}`).not.toMatch(
       /Nubank|300|overdue|bill/
     )

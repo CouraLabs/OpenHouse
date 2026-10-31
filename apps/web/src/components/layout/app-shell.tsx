@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { SessionResponse } from '@workspace/poco'
+import type { SessionResponse } from '@workspace/dto'
 
 import { useSession } from '@/lib/auth.js'
 import { AppHeader } from '@/components/layout/app-header.js'

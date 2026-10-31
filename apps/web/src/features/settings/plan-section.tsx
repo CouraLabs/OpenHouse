@@ -1,18 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { TIER_PLANS, type TierResource } from '@workspace/poco'
+import { type TierResource } from '@workspace/dto'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formattingLocale } from '@/lib/i18n.js'
 import { useTierStatus } from '@/lib/tier-status.js'
 import { PlanCard } from './plan-card.js'
 import { PlanUsageRow } from './plan-usage-row.js'
-
-const PUBLIC_PLANS = [
-  TIER_PLANS[0],
-  TIER_PLANS[1],
-  TIER_PLANS[2],
-  TIER_PLANS[3],
-]
 
 const RESOURCE_ORDER: TierResource[] = [
   'accounts',
@@ -36,7 +29,7 @@ export function PlanSection() {
     )
   }
 
-  const { plan, usage, transactionWindowStart } = status.data
+  const { plan, plans, usage, transactionWindowStart } = status.data
   const unlimited = t('settings.plan.unlimited')
 
   return (
@@ -95,7 +88,7 @@ export function PlanSection() {
           {t('settings.plan.change-hint')}
         </p>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {PUBLIC_PLANS.map((candidate) => (
+          {plans.map((candidate) => (
             <PlanCard
               key={candidate.level}
               plan={candidate}

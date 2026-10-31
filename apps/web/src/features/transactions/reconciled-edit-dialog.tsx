@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { ReconciledEditConflict } from '@workspace/poco'
+import type { ReconciledEditConflict } from '@workspace/dto'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'

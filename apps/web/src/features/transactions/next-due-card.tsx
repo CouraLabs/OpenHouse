@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import type { CreditCardStatement } from '@workspace/poco'
+import type { CreditCardStatement } from '@workspace/dto'
 import {
   Card,
   CardContent,

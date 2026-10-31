@@ -1,11 +1,6 @@
-import {
-  addDays,
-  CARD_PAYMENT_CATEGORY,
-  resolveStatement,
-  todayIn,
-  type CreditCardStatement,
-  type StatementStatus,
-} from '@workspace/poco'
+import { addDays, resolveStatement, todayIn } from '@workspace/business'
+import { CARD_PAYMENT_CATEGORY } from '@workspace/business/testing'
+import { type CreditCardStatement, type StatementStatus } from '@workspace/dto'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -191,13 +186,7 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
     )
     const first = await bill(agent, statementId)
     expect(first.accountId).toBe(card)
-    const next = await charge(
-      agent,
-      card,
-      categoryId,
-      first.closeDate,
-      '10.00'
-    )
+    const next = await charge(agent, card, categoryId, first.closeDate, '10.00')
 
     await pay(agent, {
       fromAccountId: checking,
@@ -224,13 +213,7 @@ describe('bill payment and reconciliation (e2e, #7)', () => {
       today
     )
     const first = await bill(agent, statementId)
-    const next = await charge(
-      agent,
-      card,
-      categoryId,
-      first.closeDate,
-      '10.00'
-    )
+    const next = await charge(agent, card, categoryId, first.closeDate, '10.00')
 
     await pay(agent, {
       fromAccountId: checking,

@@ -21,9 +21,8 @@
     "set-tier": "node scripts/set-tier.mjs"
   },
   "dependencies": {
-    "@workspace/db": "*",
-    "@workspace/poco": "*",
-    "bcryptjs": "^3.0.3",
+    "@workspace/business": "*",
+    "@workspace/dto": "*",
     "fflate": "^0.8.3",
     "hono": "^4.13.14",
     "zod": "^4.6.5"

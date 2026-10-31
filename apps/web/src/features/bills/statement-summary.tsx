@@ -1,5 +1,4 @@
-import type { CreditCardStatement } from '@workspace/poco'
-import { compareMoney, isPrepaid, negateMoney } from '@workspace/poco'
+import type { CreditCardStatement } from '@workspace/dto'
 import { Card, CardContent } from '@workspace/ui/components/card'
 import { useTranslation } from 'react-i18next'
 
@@ -21,19 +20,15 @@ export function StatementSummary({
     { label: t('bills.paid'), amount: bill.paid },
   ]
 
-  const credit = compareMoney(bill.amountDue, '0') < 0
+  const credit = bill.amountDueTone === 'negative'
   const notes = [
-    bill.carriedTo === null
+    bill.carriedTo === null || bill.carriedAmount === null
       ? null
       : t(credit ? 'bills.credit-carried' : 'bills.remainder-carried', {
-          amount: formatMoney(
-            credit ? negateMoney(bill.amountDue) : bill.amountDue,
-            locale,
-            bill.currency
-          ),
+          amount: formatMoney(bill.carriedAmount, locale, bill.currency),
           due: formatDayLabel(bill.carriedTo, locale),
         }),
-    isPrepaid(bill) ? t('bills.prepaid') : null,
+    bill.isPrepaid ? t('bills.prepaid') : null,
     bill.minimumDue === null
       ? null
       : t('bills.minimum-due-note', {

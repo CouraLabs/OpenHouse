@@ -1,15 +1,10 @@
 import { createHash } from 'node:crypto'
 
 import { createExecutionContext } from 'cloudflare:test'
-import { createDatabase, type Database, passwordResetCodes } from '@workspace/db'
-import { eq } from 'drizzle-orm'
+import { TestDatabaseHarness } from '@workspace/business/testing'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 
-import { PasswordResetRepository } from '../src/auth/password-reset.repository.js'
-import { PasswordResetService } from '../src/auth/password-reset.service.js'
-import { ResetAttemptLimiter } from '../src/auth/reset-attempt-limiter.js'
-import { SystemClock } from '../src/common/clock/clock.js'
 import {
   type Agent,
   type TestApp,
@@ -58,7 +53,7 @@ function freshBrowser(app: TestApp): Agent {
     const contentType = response.headers.get('content-type') ?? ''
     const body = contentType.includes('application/json')
       ? await response.json()
-      : ((await response.text()) || null)
+      : (await response.text()) || null
 
     return { status: response.status, body, headers: response.headers }
   }
@@ -75,8 +70,7 @@ function freshBrowser(app: TestApp): Agent {
     })
 
   return {
-    request: (path, init = {}) =>
-      post(path, init.body),
+    request: (path, init = {}) => post(path, init.body),
     get: (path) => send(path, { method: 'GET' }),
     post,
     put: (path, body) => post(path, body),
@@ -89,7 +83,10 @@ function freshBrowser(app: TestApp): Agent {
 
 /** Redeems a code from a fresh, signed-out browser. */
 function redeem(app: TestApp, code: string, newPassword = 'password-new') {
-  return freshBrowser(app).post('/api/auth/password/reset', { code, newPassword })
+  return freshBrowser(app).post('/api/auth/password/reset', {
+    code,
+    newPassword,
+  })
 }
 
 /** Signs in from a fresh browser and answers the status. */
@@ -119,7 +116,7 @@ async function issueFor(owner: Agent, userId: number): Promise<string> {
 
 describe('password recovery without email (e2e, #11)', () => {
   const { app } = startApp()
-  const db: Database = createDatabase(env.DB as never)
+  const harness = new TestDatabaseHarness(env.DB)
 
   it('lets a member redeem an owner-issued code once: new password, every session signed out', async () => {
     const owner = await signUp(app)
@@ -171,10 +168,7 @@ describe('password recovery without email (e2e, #11)', () => {
     // Every column of the code row, read back: no field carries the
     // plaintext (or its normalized spelling) anywhere.
     const hash = createHash('sha256').update(normalized).digest('hex')
-    const rows = await db
-      .select()
-      .from(passwordResetCodes)
-      .where(eq(passwordResetCodes.codeHash, hash))
+    const rows = await harness.findPasswordResetCodesByHash(hash)
     expect(rows).toHaveLength(1)
     expect(JSON.stringify(rows)).not.toContain(normalized)
     expect(JSON.stringify(rows)).not.toContain(code)
@@ -194,19 +188,10 @@ describe('password recovery without email (e2e, #11)', () => {
 
     expect(replaced.status).toBe(400)
 
-    await db
-      .update(passwordResetCodes)
-      .set({
-        expiresAt: new Date(Date.now() - 1000),
-      })
-      .where(
-        eq(
-          passwordResetCodes.codeHash,
-          createHash('sha256')
-            .update(second.replace('-', ''))
-            .digest('hex')
-        )
-      )
+    await harness.setPasswordResetCodeExpiry(
+      createHash('sha256').update(second.replace('-', '')).digest('hex'),
+      new Date(Date.now() - 1000)
+    )
     const expired = await redeem(app, second)
     const wrong = await redeem(app, 'ZZZZZ-ZZZZZ')
 
@@ -226,13 +211,21 @@ describe('password recovery without email (e2e, #11)', () => {
     expect(me.status).toBe(200)
 
     expect(
-      (await member.agent.post('/api/auth/password/reset-codes', { userId: member.id }))
-        .status
+      (
+        await member.agent.post('/api/auth/password/reset-codes', {
+          userId: member.id,
+        })
+      ).status
     ).toBe(403)
-    expect((await member.agent.post('/api/auth/recovery-codes')).status).toBe(403)
+    expect((await member.agent.post('/api/auth/recovery-codes')).status).toBe(
+      403
+    )
     expect(
-      (await owner.post('/api/auth/password/reset-codes', { userId: me.body.user.id }))
-        .status
+      (
+        await owner.post('/api/auth/password/reset-codes', {
+          userId: me.body.user.id,
+        })
+      ).status
     ).toBe(409)
 
     // A user of another tenant is not the owner's to reset.
@@ -264,7 +257,9 @@ describe('password recovery without email (e2e, #11)', () => {
 
     expect(redeemedFirst.status).toBe(200)
     expect(await signInStatus(app, email, 'password-r1')).toBe(200)
-    expect((await redeem(app, first.body.codes[0], 'password-r2')).status).toBe(400)
+    expect((await redeem(app, first.body.codes[0], 'password-r2')).status).toBe(
+      400
+    )
 
     const relogged = freshBrowser(app)
     const signedIn = await relogged.post('/api/auth/sign-in', {
@@ -292,11 +287,9 @@ describe('password recovery without email (e2e, #11)', () => {
     await signUp(app, email)
 
     // The command's own service — no HTTP route issues these codes.
-    const issued = await new PasswordResetService(
-      new PasswordResetRepository(db),
-      new ResetAttemptLimiter(new SystemClock()),
-      new SystemClock()
-    ).issueFromServer(email.toUpperCase())
+    const issued = await harness.issueServerPasswordResetCode(
+      email.toUpperCase()
+    )
 
     const browser = freshBrowser(app)
     const redeemed = await browser.post('/api/auth/password/reset', {
@@ -311,7 +304,9 @@ describe('password recovery without email (e2e, #11)', () => {
     expect(security.status).toBe(200)
     expect(security.body.serverResetNotices).toHaveLength(1)
 
-    expect((await browser.post('/api/auth/security/notices/seen')).status).toBe(204)
+    expect((await browser.post('/api/auth/security/notices/seen')).status).toBe(
+      204
+    )
     const cleared = await browser.get('/api/auth/security')
 
     expect(cleared.status).toBe(200)

@@ -1,13 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type {
-  CreditCardStatement,
-  Goal,
-  LimitUsage,
-  PagedResults,
-  RecurringTransaction,
-  TransactionBreakdown,
-  TransactionBreakdownArgs,
-} from '@workspace/poco'
+import type { CreditCardStatement, Goal, LimitUsage, PagedResults, TransactionBreakdown, TransactionBreakdownArgs } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 import { useStatementSearch } from '@/lib/statements.js'
@@ -45,26 +37,6 @@ export function useGoals() {
         }),
         signal,
       }),
-  })
-}
-
-export function useRecurringRules() {
-  return useQuery({
-    queryKey: ['recurring-transactions', 'dashboard'],
-    queryFn: ({ signal }) =>
-      api<PagedResults<RecurringTransaction>>(
-        '/recurring-transactions/search',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            sort: [{ field: 'receiverName', dir: 'asc' }],
-            filter: {},
-            skip: 0,
-            limit: 100,
-          }),
-          signal,
-        }
-      ),
   })
 }
 

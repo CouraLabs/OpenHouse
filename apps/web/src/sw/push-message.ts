@@ -1,8 +1,4 @@
-import type {
-  NotificationBody,
-  PushPayload,
-  ReminderDetail,
-} from '@workspace/poco'
+import type { NotificationBody, PushPayload, ReminderDetail } from '@workspace/dto'
 
 export interface PushMessage {
   title: string
@@ -34,15 +30,15 @@ export function parsePushPayload(text: string | undefined): PushPayload {
 }
 
 export function pushMessage(payload: PushPayload): PushMessage {
-  const title = 'OpenHouse'
+  const title = 'Kantim'
 
   if (payload.details === undefined || payload.details.length === 0) {
     return {
       title,
       body:
         payload.count === 1
-          ? 'You have a reminder. Open OpenHouse to see it.'
-          : `You have ${payload.count} reminders. Open OpenHouse to see them.`,
+          ? 'You have a reminder. Open Kantim to see it.'
+          : `You have ${payload.count} reminders. Open Kantim to see them.`,
     }
   }
 

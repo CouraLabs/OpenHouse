@@ -25,7 +25,7 @@ describe('the session guard (e2e)', () => {
 
   it('rejects a request whose access cookie does not verify', async () => {
     const response = await app.request('/api/settings', {
-      headers: { cookie: 'openhouse_access=not-a-token' },
+      headers: { cookie: 'kantim_access=not-a-token' },
     })
 
     expect(response.status).toBe(401)

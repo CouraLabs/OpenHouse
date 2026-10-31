@@ -20,8 +20,8 @@ export interface Env {
   ASSETS: unknown
 
   ENVIRONMENT?: string
-  OPENHOUSE_ENABLE_EMAIL_VERIFICATION?: string
-  OPENHOUSE_ENABLE_CAPTCHA_CHECK?: string
+  KANTIM_ENABLE_EMAIL_VERIFICATION?: string
+  KANTIM_ENABLE_CAPTCHA_CHECK?: string
   JWT_SECRET?: string
   JWT_ACCESS_TTL_S?: string
   JWT_REFRESH_TTL_S?: string
@@ -71,20 +71,20 @@ const DEVELOPMENT_JWT_SECRET = 'development-only-secret'
 
 const varsSchema = z.object({
   ENVIRONMENT: z.enum(['development', 'production']).default('production'),
-  OPENHOUSE_ENABLE_EMAIL_VERIFICATION: flag.default(true),
-  OPENHOUSE_ENABLE_CAPTCHA_CHECK: flag.default(true),
+  KANTIM_ENABLE_EMAIL_VERIFICATION: flag.default(true),
+  KANTIM_ENABLE_CAPTCHA_CHECK: flag.default(true),
   JWT_SECRET: z.string().min(1).default(DEVELOPMENT_JWT_SECRET),
   JWT_ACCESS_TTL_S: positiveInt.default(900),
   JWT_REFRESH_TTL_S: positiveInt.default(86_400),
   JWT_REMEMBER_REFRESH_TTL_S: positiveInt.default(2_592_000),
   PUSH_VAPID_PUBLIC_KEY: z.string().optional(),
   PUSH_VAPID_PRIVATE_KEY: z.string().optional(),
-  PUSH_VAPID_SUBJECT: z.string().default('mailto:admin@openhouse.invalid'),
+  PUSH_VAPID_SUBJECT: z.string().default('mailto:admin@kantim.invalid'),
   TURNSTILE_SECRET: z.string().min(1).optional(),
   TURNSTILE_HOSTNAMES: z.string().default(''),
   TURNSTILE_SITE_KEY: z.string().min(1).optional(),
   EMAIL_FROM: z.string().email().default('no-reply@couralabs.dev'),
-  EMAIL_FROM_NAME: z.string().min(1).default('OpenHouse'),
+  EMAIL_FROM_NAME: z.string().min(1).default('Kantim'),
   APP_URL: z
     .string()
     .url()
@@ -122,8 +122,8 @@ export function config(env: Env): Config {
 
   const production = vars.ENVIRONMENT === 'production'
   const features: Features = {
-    emailVerification: production && vars.OPENHOUSE_ENABLE_EMAIL_VERIFICATION,
-    captcha: production && vars.OPENHOUSE_ENABLE_CAPTCHA_CHECK,
+    emailVerification: production && vars.KANTIM_ENABLE_EMAIL_VERIFICATION,
+    captcha: production && vars.KANTIM_ENABLE_CAPTCHA_CHECK,
   }
 
   if (production && vars.JWT_SECRET === DEVELOPMENT_JWT_SECRET) {
@@ -141,7 +141,7 @@ export function config(env: Env): Config {
       turnstileHostnames.length === 0)
   ) {
     throw new Error(
-      'OPENHOUSE_ENABLE_CAPTCHA_CHECK needs TURNSTILE_SECRET, TURNSTILE_SITE_KEY and TURNSTILE_HOSTNAMES.'
+      'KANTIM_ENABLE_CAPTCHA_CHECK needs TURNSTILE_SECRET, TURNSTILE_SITE_KEY and TURNSTILE_HOSTNAMES.'
     )
   }
 

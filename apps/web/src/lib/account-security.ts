@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { AccountSecurity, RecoveryCodes } from '@workspace/poco'
+import type { AccountSecurity, RecoveryCodes } from '@workspace/dto'
 
 import { api } from './api.js'
 

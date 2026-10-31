@@ -12,11 +12,11 @@ interface __BaseEnv_Env {
 	JWT_ACCESS_TTL_S: "900";
 	JWT_REFRESH_TTL_S: "86400";
 	JWT_REMEMBER_REFRESH_TTL_S: "2592000";
-	PUSH_VAPID_SUBJECT: "mailto:openhouse@couralabs.dev";
+	PUSH_VAPID_SUBJECT: "mailto:kantim@couralabs.dev";
 	EMAIL_FROM: "no-reply@couralabs.dev";
-	EMAIL_FROM_NAME: "OpenHouse";
-	APP_URL: "https://openhouse.couralabs.dev/app";
-	TURNSTILE_HOSTNAMES: "openhouse.couralabs.dev";
+	EMAIL_FROM_NAME: "Kantim";
+	APP_URL: "https://kantim.couralabs.dev/app";
+	TURNSTILE_HOSTNAMES: "kantim.couralabs.dev";
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

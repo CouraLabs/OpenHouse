@@ -1,10 +1,5 @@
-import {
-  addDays,
-  resolveStatement,
-  todayIn,
-  type InstallmentGroup,
-  type Transaction,
-} from '@workspace/poco'
+import { addDays, resolveStatement, todayIn } from '@workspace/business'
+import { type InstallmentGroup, type Transaction } from '@workspace/dto'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -83,10 +78,7 @@ describe('installment purchases (e2e, #6)', () => {
     return response.body
   }
 
-  async function group(
-    agent: Agent,
-    id: string
-  ): Promise<InstallmentGroup> {
+  async function group(agent: Agent, id: string): Promise<InstallmentGroup> {
     const response = await agent.get(`/api/transactions/installments/${id}`)
     expect(response.status).toBe(200)
 
@@ -97,10 +89,7 @@ describe('installment purchases (e2e, #6)', () => {
     const { agent, categoryId, today, currency } = await session()
     const card = await createCard(agent, currency)
     const first = await buy(agent, categoryId, card, today, '1000.00', 3)
-    const purchase = await group(
-      agent,
-      first.installmentGroupId as string
-    )
+    const purchase = await group(agent, first.installmentGroupId as string)
 
     expect(purchase.total).toBe('1000.00')
     expect(purchase.editable).toBe(true)
@@ -137,7 +126,9 @@ describe('installment purchases (e2e, #6)', () => {
     const purchase = await group(agent, first.installmentGroupId as string)
     const closes = await Promise.all(
       purchase.installments.map(async (row) => {
-        const bill = await agent.get(`/api/credit-card-statements/${row.statementId}`)
+        const bill = await agent.get(
+          `/api/credit-card-statements/${row.statementId}`
+        )
         expect(bill.status).toBe(200)
 
         return bill.body.closeDate
@@ -160,9 +151,9 @@ describe('installment purchases (e2e, #6)', () => {
       'perInstallment'
     )
 
-    expect(
-      (await group(agent, first.installmentGroupId as string)).total
-    ).toBe('330.00')
+    expect((await group(agent, first.installmentGroupId as string)).total).toBe(
+      '330.00'
+    )
   })
 
   it('answers 409 for installments off a credit card', async () => {
@@ -255,7 +246,9 @@ describe('installment purchases (e2e, #6)', () => {
       installments: { count: 4, amountMode: 'total' },
     })
     expect(response.status).toBe(409)
-    response = await agent.delete(`/api/transactions/installments/${id}?scope=all`)
+    response = await agent.delete(
+      `/api/transactions/installments/${id}?scope=all`
+    )
     expect(response.status).toBe(409)
   })
 

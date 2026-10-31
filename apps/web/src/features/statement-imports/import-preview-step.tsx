@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Account, ImportCommitRow, ImportPreview } from '@workspace/poco'
+import type { Account, ImportCommitRow, ImportPreview } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { Field, FieldLabel } from '@workspace/ui/components/field'
 import {

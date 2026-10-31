@@ -1,4 +1,4 @@
-import type { ReminderDetail } from '@workspace/poco'
+import type { ReminderDetail } from '@workspace/dto'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'

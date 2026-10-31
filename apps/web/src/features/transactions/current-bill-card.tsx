@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { daysBetween, type CreditCardStatement } from '@workspace/poco'
+import { type CreditCardStatement } from '@workspace/dto'
 import {
   Card,
   CardContent,
@@ -13,13 +13,12 @@ import { formatMoney } from '@/lib/format-money.js'
 export function CurrentBillCard({
   title,
   bills,
-  today,
   locale,
   labels,
 }: {
   title: string
   bills: CreditCardStatement[]
-  today: string
+  today?: string
   locale: string
   labels: { empty: string; closesIn: (days: number) => string }
 }) {
@@ -45,7 +44,7 @@ export function CurrentBillCard({
               <span className="flex flex-col">
                 <span className="text-sm">{bill.accountName}</span>
                 <span className="text-xs text-muted-foreground">
-                  {labels.closesIn(daysBetween(today, bill.closesOn))}
+                  {labels.closesIn(bill.daysUntilClose)}
                 </span>
               </span>
               <span className="text-sm font-semibold tabular-nums">

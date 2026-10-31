@@ -22,9 +22,9 @@ import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/links.js'
 
 export const enUS: Content = {
   meta: {
-    title: 'OpenHouse | Household money, shared',
+    title: 'Kantim | Household money, shared',
     description:
-      'OpenHouse keeps every account and credit card your household uses in one shared ledger. It records the recurring bills, adds up each card bill as you spend, and reminds you before anything is due. Free to start, open source, and free forever if you host it yourself.',
+      'Kantim keeps every account and credit card your household uses in one shared ledger. It records the recurring bills, adds up each card bill as you spend, and reminds you before anything is due. Free to start, open source, and free forever if you host it yourself.',
   },
 
   navLinks: [
@@ -46,11 +46,11 @@ export const enUS: Content = {
   hero: {
     headline: 'Know what’s due before the bill shows up.',
     tagline:
-      'OpenHouse keeps every bank account and credit card in your home in one place, and everyone who lives there sees the same numbers. Rent and subscriptions are logged each month without anyone typing them, card bills add up as you spend, and you get a reminder a few days before each due date.',
+      'Kantim keeps every bank account and credit card in your home in one place, and everyone who lives there sees the same numbers. Rent and subscriptions are logged each month without anyone typing them, card bills add up as you spend, and you get a reminder a few days before each due date.',
     primary: { label: 'Start free', href: SIGN_UP_URL },
     secondary: { label: 'Host it yourself', href: GITHUB_URL },
     stack: 'Free plan, no credit card. The code is open on GitHub.',
-    windowTitle: 'openhouse · Transactions',
+    windowTitle: 'kantim · Transactions',
     balance: { label: 'Checking · Main Street Bank', amount: '$8,412.36' },
     limitsTitle: 'Limits · October',
   },
@@ -146,9 +146,9 @@ export const enUS: Content = {
   ruleStatus: { posted: 'Posted', scheduled: 'Scheduled' },
 
   problemsIntro: {
-    eyebrow: 'Why OpenHouse',
+    eyebrow: 'Why Kantim',
     title: 'Household money goes wrong in the same few ways.',
-    lede: 'The numbers usually live in one person’s head, a spreadsheet nobody updates, and three or four banking apps. OpenHouse brings them into one place and keeps them current.',
+    lede: 'The numbers usually live in one person’s head, a spreadsheet nobody updates, and three or four banking apps. Kantim brings them into one place and keeps them current.',
   },
 
   problems: [
@@ -181,7 +181,7 @@ export const enUS: Content = {
   houseIntro: {
     eyebrow: 'What’s next',
     title: 'Money is the first room. More are on the way.',
-    lede: 'OpenHouse is growing into one app for running the home. Each new part will use the same sign-in and the same household members.',
+    lede: 'Kantim is growing into one app for running the home. Each new part will use the same sign-in and the same household members.',
   },
 
   houseStatus: { live: 'Available now', coming: 'Planned' },
@@ -285,7 +285,7 @@ export const enUS: Content = {
       tone: 'green',
       icon: Repeat,
       title: 'Bills that record themselves',
-      body: 'Tell OpenHouse the rent is due on the 1st and it records the payment every month, so nothing goes missing from the books.',
+      body: 'Tell Kantim the rent is due on the 1st and it records the payment every month, so nothing goes missing from the books.',
     },
     limits: {
       key: 'limits',
@@ -377,7 +377,7 @@ export const enUS: Content = {
     ],
     commands: [
       `git clone ${GITHUB_URL}.git`,
-      'cd OpenHouse && npm install',
+      'cd Kantim && npm install',
       'npx wrangler login && npm run deploy',
     ],
     cta: { label: 'Get it on GitHub', href: GITHUB_URL },
@@ -457,7 +457,7 @@ export const enUS: Content = {
 
   faq: [
     {
-      question: 'Does OpenHouse connect to my bank?',
+      question: 'Does Kantim connect to my bank?',
       answer:
         'No. You add transactions by hand, from recurring bills, or by uploading a statement file (OFX, QFX or CSV) from your bank. The file is read once and not stored, and an import can be undone for 24 hours.',
     },
@@ -469,7 +469,7 @@ export const enUS: Content = {
     {
       question: 'Where does my data live?',
       answer:
-        'If you host it yourself, in a D1 database on your own Cloudflare account. On a hosted plan, OpenHouse runs the server and handles backups and updates.',
+        'If you host it yourself, in a D1 database on your own Cloudflare account. On a hosted plan, Kantim runs the server and handles backups and updates.',
     },
     {
       question: 'Can more than one person use the same books?',
@@ -501,7 +501,7 @@ export const enUS: Content = {
   openSource: {
     eyebrow: 'Open source',
     title: 'Your house. Your server. Your code.',
-    body: 'All of OpenHouse is on GitHub. Read the code, run it on your own account, or send a pull request when the house needs a new room.',
+    body: 'All of Kantim is on GitHub. Read the code, run it on your own account, or send a pull request when the house needs a new room.',
     points: [
       { icon: Bank, label: 'Data in your own D1 database' },
       { icon: House, label: 'One Worker, one deploy command' },

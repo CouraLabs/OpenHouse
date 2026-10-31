@@ -1,6 +1,6 @@
 ---
 name: qa-browser
-description: How to test OpenHouse's web app in a real browser after a web change — the Playwright suite in packages/e2e, dev servers, isolated browser contexts, seeding fixtures, driving base-ui controls, and the local QA account for manual checks. Use after any change under apps/web or packages/ui, before calling the work done.
+description: How to test Kantim's web app in a real browser after a web change — the Playwright suite in packages/e2e, dev servers, isolated browser contexts, seeding fixtures, driving base-ui controls, and the local QA account for manual checks. Use after any change under apps/web or packages/ui, before calling the work done.
 ---
 
 # Testing the web app in a browser
@@ -24,7 +24,7 @@ After any web change, drive the real UI with the Playwright suite in `packages/e
 - The transaction and recurring forms have radios with no accessible name. Use `getByRole('radiogroup').getByRole('radio').nth(i)`; Income is the first radio.
 - Row actions: categories, accounts, and receivers have direct `Edit` and `Delete` buttons. Transactions keep `Delete` and `Split into installments` under `More actions`. Delete confirmations are `alertdialog`s, so scope them to `page.getByRole('alertdialog')`.
 - Tables (accounts, categories, receivers, bills, recurring rules, goals) expose `role="row"`. The transactions list is a grid of divs with no roles (issue OBS-3); filter `div.grid.items-center` by the row's text.
-- `MoneyField` reads digits as cents. `fill('1200.00')` and typing `120000` both give `1,200.00`. A zero cannot be entered yet (issue BUG-2).
+- `MoneyField` reads decimals: `fill('1200.00')` and `fill('1200')` both give `1,200.00`, and `fill('0.00')` gives a zero amount.
 - A transaction whose name shares a word with a category pre-selects that category (issue OBS-1). Give test rows names without common words.
 - The API allows 300 requests per 60 seconds per client address, and 10 sign-up or sign-in calls per 60 seconds. The owner project runs on one worker, and `E2E_PACE_MS` (default 2500) pauses between tests so a full run stays under the request limit. Wait a minute before a second full run.
 

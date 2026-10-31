@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { CreditCardStatement } from '@workspace/poco'
+import type { CreditCardStatement } from '@workspace/dto'
 import {
   Dialog,
   DialogContent,

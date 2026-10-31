@@ -8,16 +8,32 @@ import type {
   AccountRef,
   CategoryRef,
   CreateRecurringTransactionBody,
+  NextOccurrenceBody,
+  NextOccurrencePreview,
   PagedResults,
   ReceiverRef,
   RecurringTransaction,
   SearchRecurringTransactionsArgs,
   UpdateRecurringTransactionBody,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 
 const RECURRING_KEY = ['recurring-transactions'] as const
+
+export function useNextOccurrence(body: NextOccurrenceBody | null) {
+  return useQuery({
+    queryKey: [...RECURRING_KEY, 'next-occurrence', body],
+    queryFn: ({ signal }) =>
+      api<NextOccurrencePreview>('/recurring-transactions/next-occurrence', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        signal,
+      }),
+    enabled: body !== null,
+    placeholderData: keepPreviousData,
+  })
+}
 
 export function useRecurringSearch(args: SearchRecurringTransactionsArgs) {
   return useQuery({

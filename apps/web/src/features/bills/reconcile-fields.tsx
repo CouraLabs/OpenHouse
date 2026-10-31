@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreditCardStatement } from '@workspace/poco'
-import { addMoney, isZeroMoney, negateMoney } from '@workspace/poco'
+import type { CreditCardStatement } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { DialogFooter } from '@workspace/ui/components/dialog'
 import { MoneyField } from '@workspace/ui/components/money-field'
@@ -9,8 +8,10 @@ import { MoneyField } from '@workspace/ui/components/money-field'
 import { formatMoney } from '@/lib/format-money.js'
 import {
   useReconcileStatement,
+  useStatementReconcilePreview,
   useUpdateBankFigures,
 } from '@/lib/statements.js'
+import { useDebouncedValue } from '@/lib/use-debounced-value.js'
 import { ReconcileCandidates } from './reconcile-candidates.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
@@ -26,9 +27,16 @@ export function ReconcileFields({
   const [minimumDue, setMinimumDue] = useState(bill.minimumDue ?? '')
   const save = useUpdateBankFigures()
   const reconcile = useReconcileStatement()
+  const settledTotal = useDebouncedValue(bankTotal)
+  const preview = useStatementReconcilePreview(bill.id, settledTotal)
   const difference =
-    bankTotal === '' ? null : addMoney(bankTotal, negateMoney(bill.total))
-  const matches = difference !== null && isZeroMoney(difference)
+    bankTotal === '' || preview.data === undefined
+      ? null
+      : preview.data.difference
+  const matches =
+    difference !== null &&
+    settledTotal === bankTotal &&
+    preview.data?.tone === 'zero'
   const figures = {
     id: bill.id,
     bankTotal: bankTotal === '' ? null : bankTotal,

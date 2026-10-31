@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { DEFAULT_UPCOMING_DAYS, type UpcomingResponse } from '@workspace/poco'
+import { DEFAULT_UPCOMING_DAYS, type UpcomingResponse } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 

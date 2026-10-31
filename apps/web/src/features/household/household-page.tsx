@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { SettleSuggestion } from '@workspace/poco'
+import type { SettleSuggestion } from '@workspace/dto'
 
 import { PageHeader } from '@/components/page-header.js'
 import { formatMoney } from '@/lib/format-money.js'

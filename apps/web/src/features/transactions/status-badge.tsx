@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import type { Transaction, TransactionStatus } from '@workspace/poco'
-import { transactionStatuses } from '@workspace/poco'
+import type { Transaction, TransactionStatus } from '@workspace/dto'
+import { transactionStatuses } from '@workspace/dto'
 import { Badge } from '@workspace/ui/components/badge'
 import {
   DropdownMenu,

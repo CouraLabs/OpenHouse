@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { UpcomingItem } from '@workspace/poco'
+import type { UpcomingItem } from '@workspace/dto'
 import { Badge } from '@workspace/ui/components/badge'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'

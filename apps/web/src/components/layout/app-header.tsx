@@ -1,5 +1,5 @@
 import { Breadcrumb, BreadcrumbList } from '@workspace/ui/components/breadcrumb'
-import type { SessionUser } from '@workspace/poco'
+import type { SessionUser } from '@workspace/dto'
 import { Separator } from '@workspace/ui/components/separator'
 import { SidebarTrigger } from '@workspace/ui/components/sidebar'
 

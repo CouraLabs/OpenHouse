@@ -44,4 +44,21 @@ describe('one email is one user (e2e, #16)', () => {
     expect(response.status).toBe(409)
     expect(response.body.message).toBe('This email already has an account.')
   })
+
+  it('rejects a second sign-up with a taken tenant name', async () => {
+    const { app } = startApp()
+    const agent = await signUp(app)
+    const me = await agent.get('/api/auth/me')
+
+    const response = await agent.post('/api/auth/sign-up', {
+      tenantName: me.body.tenant.name,
+      name: 'Bia',
+      email: uniqueEmail(),
+      password: 'password-b',
+      turnstileToken: turnstileToken('signup'),
+    })
+
+    expect(response.status).toBe(409)
+    expect(response.body.message).toBe('This tenant name is already taken.')
+  })
 })

@@ -5,24 +5,32 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import type {
-  AccountRef,
-  CategoryRef,
-  CreateTransactionBody,
-  InstallmentDeleteScope,
-  InstallmentGroup,
-  InstallmentRefund,
-  InstallmentsBody,
-  PagedResults,
-  ReceiverRef,
-  SearchTransactionsArgs,
-  Transaction,
-  TransactionStatus,
-  TransactionSummary,
-  TransferBody,
-  UpdateInstallmentGroupBody,
-  UpdateTransactionBody,
-} from '@workspace/poco'
+import {
+  amountSchema,
+  type AccountRef,
+  type BilledOnPreview,
+  type BilledOnPreviewBody,
+  type CategoryRef,
+  type CategorySuggestion,
+  type CreateTransactionBody,
+  type InstallmentDeleteScope,
+  type InstallmentGroup,
+  type InstallmentRefund,
+  type InstallmentsBody,
+  type InstallmentsPreview,
+  type InstallmentsPreviewBody,
+  type PagedResults,
+  type ReceiverRef,
+  type SearchTransactionsArgs,
+  type SplitPreviewBody,
+  type SplitResolution,
+  type Transaction,
+  type TransactionStatus,
+  type TransactionSummary,
+  type TransferBody,
+  type UpdateInstallmentGroupBody,
+  type UpdateTransactionBody,
+} from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 import { STATEMENTS_KEY } from '@/lib/statements.js'
@@ -32,6 +40,62 @@ import i18next from 'i18next'
 const TRANSACTIONS_KEY = ['transactions'] as const
 
 const ACCOUNTS_KEY = ['accounts'] as const
+
+export function useSplitPreview(body: SplitPreviewBody | null) {
+  const valid =
+    body !== null && amountSchema.safeParse(body.amount).success
+  return useQuery({
+    queryKey: [...TRANSACTIONS_KEY, 'split-preview', body],
+    queryFn: ({ signal }) =>
+      api<SplitResolution>('/transactions/splits/preview', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        signal,
+      }),
+    enabled: valid,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useInstallmentsPreview(body: InstallmentsPreviewBody | null) {
+  const valid =
+    body !== null && amountSchema.safeParse(body.amount).success
+  return useQuery({
+    queryKey: [...TRANSACTIONS_KEY, 'installments-preview', body],
+    queryFn: ({ signal }) =>
+      api<InstallmentsPreview>('/transactions/installments/preview', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        signal,
+      }),
+    enabled: valid,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useBilledOnPreview(body: BilledOnPreviewBody | null) {
+  return useQuery({
+    queryKey: [...TRANSACTIONS_KEY, 'billed-on-preview', body],
+    queryFn: ({ signal }) =>
+      api<BilledOnPreview | null>('/transactions/billed-on/preview', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        signal,
+      }),
+    enabled: body !== null,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useSuggestCategory() {
+  return useMutation({
+    mutationFn: (description: string) =>
+      api<CategorySuggestion>('/categories/suggest', {
+        method: 'POST',
+        body: JSON.stringify({ description }),
+      }),
+  })
+}
 
 export function useTransactionsInfinite(args: SearchTransactionsArgs) {
   return useInfiniteQuery({

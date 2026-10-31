@@ -8,8 +8,8 @@ description: Hono on Cloudflare Workers patterns for this repository — composi
 ## When to apply
 
 - Writing or changing a route, middleware, or service in `apps/api`
-- Adding a feature directory (the `<feature>.routes.ts` / `<feature>.deps.ts`
-  recipe)
+- Adding a feature directory (the `<feature>.routes.ts` recipe, services
+  wired in `createBusiness`)
 - Touching `wrangler.jsonc`, bindings, cron/queue handlers, or
   `config/env.ts`
 
@@ -18,23 +18,28 @@ description: Hono on Cloudflare Workers patterns for this repository — composi
 - `src/app.ts` is the composition root. It builds the Hono app: public auth
   routes first, then the authenticated group carrying `authMiddleware`, then
   every feature router mounted under `/api/<feature>`.
-- Every feature is a directory: `<feature>.routes.ts` (a Hono sub-app),
-  `<feature>.deps.ts` (builds the feature's services from `(db, ports,
-  config)` — explicit, hand-wired, no DI container), repositories, services,
-  and pure `<concern>.ts` domain files.
-- Services are plain classes with constructor injection. A middleware builds
-  the deps once per request and sets `c.var.deps`. A D1 database handle per
-  request is cheap — there is no pool to manage.
-- Dependency direction is unchanged: `feature → common → (config,
-  packages)`. Ports (abstract classes in `common/`) stay the sanctioned
-  crossing between features.
+- Every feature is a directory holding only `<feature>.routes.ts` (a Hono
+  sub-app). Repositories live in `packages/db`, and services, rules and
+  ports live in `packages/business`.
+- Services are plain classes with constructor injection, wired once in
+  `createBusiness` (`packages/business/src/runtime.ts`) — explicit,
+  hand-wired, no DI container. `common/runtime.middleware.ts` builds the
+  business once per isolate (the in-memory rate limiters keep state across
+  requests) and sets `c.var.business`; routes read
+  `c.var.business.<service>`. Jobs call `businessFromEnv(env).jobs`.
+- Dependency direction: `apps/api → packages/business, packages/dto`.
+  Ports (abstract classes in `packages/business/src/ports/`) are the
+  sanctioned crossing between features; their adapters live in
+  `apps/api/src/infra/`. `biome.jsonc` enforces the graph.
 
 ## Routing and validation
 
 - One `new Hono<AppEnv>()` per feature, mounted with
   `app.route('/api/<feature>', router)`.
-- Request bodies validate through `@hono/zod-validator` with the **poco
-  schemas** — the same schemas the web forms use. Never re-declare a shape.
+- Request bodies validate through `@hono/zod-validator` with the **dto
+  schemas** from `packages/dto` — the same schemas the web forms use. Never
+  re-declare a shape. A route then calls one `packages/business` use case;
+  it never imports `packages/db`.
 - Status codes and response bodies stay as they were: `201` on create,
   `200` where the previous controller answered `@HttpCode(200)`, `409` for
   conflicts, `204` on deletes.
@@ -46,11 +51,11 @@ description: Hono on Cloudflare Workers patterns for this repository — composi
 | `AuthGuard` + `@Public()` | `authMiddleware` on the authenticated group; public routes mounted before it |
 | `@Roles`                  | `requireRole('owner')` middleware                       |
 | `@CurrentUser/@CurrentTenant/@CurrentSession` | `c.var.session`                     |
-| `ZodValidationPipe`       | `zValidator` over poco schemas                          |
+| `ZodValidationPipe`       | `zValidator` over dto schemas                           |
 | `@nestjs/throttler`       | the `RATE_LIMIT` Workers Rate Limiting binding, keyed by `cf-connecting-ip` |
 | `helmet`                  | `hono/secure-headers`                                   |
 | `cookie-parser`           | `hono/cookie`                                           |
-| `@nestjs/jwt`             | `hono/jwt` (`sign`/`verify`, HS256)                     |
+| `@nestjs/jwt`             | business `TokenService` (WebCrypto HS256, same claim checks as `hono/jwt`) |
 | exception filter          | `app.onError` mapping known domain errors               |
 
 ## D1

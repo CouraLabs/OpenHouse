@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { LimitUsage } from '@workspace/poco'
+import type { LimitUsage } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import {
   Card,

@@ -1,0 +1,315 @@
+import { randomUUID } from 'node:crypto'
+import type {
+  Account,
+  AccountRepository,
+  CategoryRepository,
+  ImportMappingRepository,
+  ImportTransactionRepository,
+  ReceiverRepository,
+  TransactionRepository,
+  TransactionWrite,
+} from '@workspace/db'
+import { LedgerBatchPlan } from '@workspace/db'
+import {
+  IMPORT_CHUNK_SIZE,
+  IMPORT_UNDO_HOURS,
+  type ImportBatch,
+  type ImportCommitBody,
+  type ImportCommitRow,
+  type ImportResult,
+  type ImportUndoResult,
+  type ReconciledEditConflict,
+} from '@workspace/dto'
+
+import { cardCycleOf } from '../calc/credit-card-cycle.js'
+import { ConflictError, NotFoundError } from '../errors.js'
+import type { Clock } from '../ports/clock.js'
+import { chunk } from './chunk.js'
+import {
+  assignInstallmentGroups,
+  type InstallmentLink,
+} from './import-installments.js'
+import { revertDeltaFor } from '../transactions/transaction-ledger.js'
+import type { TransactionPlanner } from '../transactions/transaction-planner.js'
+
+const HOUR_MS = 60 * 60 * 1000
+
+interface PlannedRow {
+  row: ImportCommitRow
+  link: InstallmentLink | null
+}
+
+export class ImportCommitService {
+  constructor(
+    private readonly planner: Pick<TransactionPlanner, 'insert'>,
+    private readonly transactions: TransactionRepository,
+    private readonly imports: ImportTransactionRepository,
+    private readonly mappings: ImportMappingRepository,
+    private readonly accounts: AccountRepository,
+    private readonly categories: CategoryRepository,
+    private readonly receivers: ReceiverRepository,
+    private readonly clock: Clock
+  ) {}
+
+  async commit(
+    tenantId: number,
+    userId: number,
+    body: ImportCommitBody
+  ): Promise<ImportResult> {
+    const account = await this.activeAccount(tenantId, body.accountId)
+
+    await this.assertReferences(tenantId, body.rows)
+    assertDatesOpen(account, body.rows, body.confirmReconciled)
+    assertInstallmentsAllowed(account, body.rows)
+
+    const batchId = randomUUID()
+    const planned = planRows(body.rows)
+
+    const existing = await this.imports.findByExternalIds(
+      tenantId,
+      account.id,
+      planned.flatMap(({ row }) =>
+        row.externalId == null ? [] : [row.externalId]
+      )
+    )
+    const seen = new Set<string>()
+    const fresh: PlannedRow[] = []
+    let skippedCount = 0
+
+    for (const entry of planned) {
+      const id = entry.row.externalId
+
+      if (id != null) {
+        if (existing.has(id) || seen.has(id)) {
+          skippedCount++
+          continue
+        }
+
+        seen.add(id)
+      }
+
+      fresh.push(entry)
+    }
+
+    for (const rows of chunk(fresh, IMPORT_CHUNK_SIZE)) {
+      const chunkPlan = new LedgerBatchPlan()
+
+      for (const { row, link } of rows) {
+        const group = await this.transactions.planInsert(
+          tenantId,
+          userId,
+          await this.planner.insert(
+            tenantId,
+            userId,
+            toWrite(account.id, batchId, row, link)
+          )
+        )
+
+        chunkPlan.append(group.plan)
+      }
+
+      await this.transactions.run(chunkPlan)
+    }
+
+    if (body.mapping != null) {
+      await this.mappings.save(tenantId, userId, account.id, body.mapping)
+    }
+
+    const imported = fresh.length
+    const skipped = skippedCount
+
+    return {
+      batchId: imported === 0 ? null : batchId,
+      imported,
+      skippedDuplicates: skipped,
+      undoUntil:
+        imported === 0
+          ? null
+          : new Date(
+              this.clock.now().getTime() + IMPORT_UNDO_HOURS * HOUR_MS
+            ).toISOString(),
+    }
+  }
+
+  async undo(
+    tenantId: number,
+    userId: number,
+    batchId: string
+  ): Promise<ImportUndoResult> {
+    const batch = await this.imports.findBatch(tenantId, batchId)
+
+    if (batch === undefined) {
+      throw new NotFoundError(`No import ${batchId}.`)
+    }
+
+    const deadline = batch.importedAt.getTime() + IMPORT_UNDO_HOURS * HOUR_MS
+
+    if (this.clock.now().getTime() > deadline) {
+      throw new ConflictError(
+        `An import can only be undone within ${IMPORT_UNDO_HOURS} hours.`
+      )
+    }
+
+    const undoPlan = new LedgerBatchPlan()
+
+    for (const row of batch.rows) {
+      undoPlan.append(
+        this.transactions.planSoftDelete(
+          tenantId,
+          userId,
+          row,
+          revertDeltaFor(row)
+        )
+      )
+    }
+
+    await this.transactions.run(undoPlan)
+
+    return { undone: batch.rows.length }
+  }
+
+  async recent(tenantId: number, accountId: number): Promise<ImportBatch[]> {
+    const since = new Date(
+      this.clock.now().getTime() - IMPORT_UNDO_HOURS * HOUR_MS
+    )
+    const batches = await this.imports.recentBatches(tenantId, accountId, since)
+
+    return batches.map((batch) => ({
+      batchId: batch.batchId,
+      accountId,
+      count: batch.count,
+      importedAt: batch.importedAt.toISOString(),
+      undoUntil: new Date(
+        batch.importedAt.getTime() + IMPORT_UNDO_HOURS * HOUR_MS
+      ).toISOString(),
+    }))
+  }
+
+  private async assertReferences(
+    tenantId: number,
+    rows: readonly ImportCommitRow[]
+  ): Promise<void> {
+    const [categories, receivers] = await Promise.all([
+      this.categories.listActive(tenantId),
+      this.receivers.listActive(tenantId),
+    ])
+    const categoryIds = new Set(categories.map((category) => category.id))
+    const receiverIds = new Set(receivers.map((receiver) => receiver.id))
+
+    for (const row of rows) {
+      if (!categoryIds.has(row.categoryId)) {
+        throw new NotFoundError(`No category with id ${row.categoryId}.`)
+      }
+
+      if (row.receiverId != null && !receiverIds.has(row.receiverId)) {
+        throw new NotFoundError(`No receiver with id ${row.receiverId}.`)
+      }
+    }
+  }
+
+  private async activeAccount(
+    tenantId: number,
+    accountId: number
+  ): Promise<Account> {
+    const account = await this.accounts.findById(tenantId, accountId)
+
+    if (account === undefined || account.status === 'DELETED') {
+      throw new NotFoundError(`No account with id ${accountId}.`)
+    }
+
+    return account
+  }
+}
+
+function planRows(rows: readonly ImportCommitRow[]): PlannedRow[] {
+  const ordered = rows
+    .map((row, index) => ({ row, index }))
+    .sort(
+      (a, b) =>
+        a.row.transactionDt.localeCompare(b.row.transactionDt) ||
+        a.index - b.index
+    )
+    .map(({ row }) => row)
+  const links = assignInstallmentGroups(ordered, randomUUID)
+
+  return ordered.map((row, index) => ({ row, link: links[index] }))
+}
+
+function toWrite(
+  accountId: number,
+  batchId: string,
+  row: ImportCommitRow,
+  link: InstallmentLink | null
+): TransactionWrite {
+  return {
+    name: row.name,
+    note: row.note ?? null,
+    invoice: null,
+    amount: row.amount,
+    transactionDt: row.transactionDt,
+    linkedAccountId: accountId,
+    categoryId: row.categoryId,
+    receiverId: row.receiverId ?? null,
+    recurringId: null,
+    type: row.type,
+    reviewStatus: row.status,
+    statusNote: null,
+    importBatchId: batchId,
+    ...(row.externalId == null ? {} : { externalId: row.externalId }),
+    ...(link === null
+      ? {}
+      : {
+          installment: {
+            groupId: link.groupId,
+            number: link.number,
+            count: link.count,
+            billOffset: 0,
+          },
+        }),
+  }
+}
+
+function assertDatesOpen(
+  account: Account,
+  rows: readonly ImportCommitRow[],
+  confirmed: boolean | undefined
+): void {
+  const through = account.reconciledThrough
+
+  if (
+    confirmed === true ||
+    through === null ||
+    !rows.some((row) => row.transactionDt <= through)
+  ) {
+    return
+  }
+
+  const conflict: ReconciledEditConflict = {
+    message:
+      'Some rows fall on days reconciled with the bank. Confirm to import them.',
+    reconciledThrough: through,
+  }
+
+  throw new ConflictError(conflict)
+}
+
+function assertInstallmentsAllowed(
+  account: Account,
+  rows: readonly ImportCommitRow[]
+): void {
+  const linked = rows.filter((row) => row.installment != null)
+
+  if (linked.length === 0) {
+    return
+  }
+
+  if (
+    account.type !== 'Credit Card' ||
+    cardCycleOf(account) === null ||
+    linked.some((row) => row.type !== 'Expense')
+  ) {
+    throw new ConflictError(
+      'Only a credit card expense can be linked as an installment.'
+    )
+  }
+}

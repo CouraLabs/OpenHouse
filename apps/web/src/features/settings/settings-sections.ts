@@ -1,4 +1,4 @@
-import type { SessionUser } from '@workspace/poco'
+import type { SessionUser } from '@workspace/dto'
 
 export const settingsSections = [
   'general',

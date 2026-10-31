@@ -4,14 +4,14 @@ import {
   type ImportPreviewRow,
   type ImportResult,
   type Transaction,
-} from '@workspace/poco'
+} from '@workspace/dto'
 import { describe, expect, it } from 'vitest'
 
 import {
   BANK_OFX_SGML,
   CARD_OFX_XML,
   FOREIGN_OFX,
-} from '../src/statement-imports/ofx-samples.fixture-spec.js'
+} from '@workspace/business/testing'
 import {
   type Agent,
   balanceOf,
@@ -220,9 +220,7 @@ describe('statement imports (e2e, #9)', () => {
       read.rows.map((row) => keep(row, { categoryId }))
     )
 
-    const recent = await agent.get(
-      `/api/imports/recent?accountId=${account}`
-    )
+    const recent = await agent.get(`/api/imports/recent?accountId=${account}`)
 
     expect(recent.status).toBe(200)
     expect(recent.body).toHaveLength(1)
@@ -554,7 +552,12 @@ describe('statement imports (e2e, #9)', () => {
     expect(oversized.status).toBe(400)
 
     const csv = `Data;Descrição;Valor\n${'05/01/2026;A;-1,00\n'.repeat(5001)}`
-    const many = await preview(agent, account, Buffer.from(csv, 'utf8'), 'many.csv')
+    const many = await preview(
+      agent,
+      account,
+      Buffer.from(csv, 'utf8'),
+      'many.csv'
+    )
 
     expect(many.status).toBe(400)
 

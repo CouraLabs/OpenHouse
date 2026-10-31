@@ -5,27 +5,22 @@ import type {
   Limit,
   LimitType,
   LimitUsage,
-} from '@workspace/poco'
+} from '@workspace/dto'
 import {
   createLimitSchema,
   exportLimitsSchema,
   searchLimitsSchema,
   updateLimitSchema,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
-import type { AuditRecorder } from '../common/audit/audit-recorder.js'
+import { LIMIT_CSV_COLUMNS, type LimitUsageView } from '@workspace/business'
 import type { App, AppEnv } from '../common/context.js'
-import { csvChunks, pagesOf, } from '../common/csv/csv.js'
+import { csvChunks, pagesOf } from '@workspace/business'
 import { parseJsonBody } from '../common/validation/parse.js'
-import { LIMIT_CSV_COLUMNS } from './limit-csv.js'
-import { LimitService, type LimitUsageView } from './limit.service.js'
 
 const CSV_PAGE_SIZE = 500
 
-export function limitRoutes(deps: {
-  limits: LimitService
-  audit: AuditRecorder
-}): App {
+export function limitRoutes(): App {
   const router: App = new Hono<AppEnv>()
 
   router.post('/', async (context) => {
@@ -33,7 +28,9 @@ export function limitRoutes(deps: {
     const body = await parseJsonBody(context, createLimitSchema)
 
     return context.json(
-      toWire(await deps.limits.create(session.tenant.id, session.user.id, body)),
+      toWire(
+        await context.var.business.limits.create(session.tenant.id, session.user.id, body)
+      ),
       201
     )
   })
@@ -42,7 +39,7 @@ export function limitRoutes(deps: {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchLimitsSchema)
 
-    const { rows, total } = await deps.limits.search(session.tenant.id, args)
+    const { rows, total } = await context.var.business.limits.search(session.tenant.id, args)
 
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
@@ -51,7 +48,7 @@ export function limitRoutes(deps: {
     const session = context.get('session')
     const args = await parseJsonBody(context, exportLimitsSchema)
 
-    await deps.audit.record({
+    await context.var.business.audit.record({
       tenantId: session.tenant.id,
       actorId: session.user.id,
       action: 'csv.export',
@@ -61,7 +58,7 @@ export function limitRoutes(deps: {
     const chunks = csvChunks(
       LIMIT_CSV_COLUMNS,
       pagesOf(async (skip, size) => {
-        const { rows } = await deps.limits.search(session.tenant.id, {
+        const { rows } = await context.var.business.limits.search(session.tenant.id, {
           ...args,
           skip,
           limit: size,
@@ -77,7 +74,7 @@ export function limitRoutes(deps: {
 
   router.get('/usage', async (context) => {
     const session = context.get('session')
-    const rows = await deps.limits.usage(session.tenant.id)
+    const rows = await context.var.business.limits.usage(session.tenant.id)
 
     return context.json(rows.map(toUsageWire))
   })
@@ -86,7 +83,7 @@ export function limitRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    return context.json(toWire(await deps.limits.find(session.tenant.id, id)))
+    return context.json(toWire(await context.var.business.limits.find(session.tenant.id, id)))
   })
 
   router.put('/', async (context) => {
@@ -94,7 +91,7 @@ export function limitRoutes(deps: {
     const body = await parseJsonBody(context, updateLimitSchema)
 
     return context.json(
-      toWire(await deps.limits.update(session.tenant.id, session.user.id, body))
+      toWire(await context.var.business.limits.update(session.tenant.id, session.user.id, body))
     )
   })
 
@@ -102,7 +99,7 @@ export function limitRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    await deps.limits.softDelete(session.tenant.id, session.user.id, id)
+    await context.var.business.limits.softDelete(session.tenant.id, session.user.id, id)
 
     return context.body(null, 204)
   })

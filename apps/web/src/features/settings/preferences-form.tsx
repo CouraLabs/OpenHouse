@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import type { StartPage, UpdatePreferencesBody } from '@workspace/poco'
-import { startPages, updatePreferencesSchema } from '@workspace/poco'
+import type { StartPage, UpdatePreferencesBody } from '@workspace/dto'
+import { startPages, updatePreferencesSchema } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {

@@ -1,6 +1,6 @@
 import { CalendarDays, Scale, TrendingDown, TrendingUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { TransactionSummaryGroup } from '@workspace/poco'
+import type { TransactionSummaryGroup } from '@workspace/dto'
 import {
   Card,
   CardContent,

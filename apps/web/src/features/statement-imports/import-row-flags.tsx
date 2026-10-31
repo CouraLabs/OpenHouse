@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { ImportPreviewRow } from '@workspace/poco'
+import type { ImportPreviewRow } from '@workspace/dto'
 import { Badge } from '@workspace/ui/components/badge'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'

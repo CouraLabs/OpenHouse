@@ -1,37 +1,26 @@
-import type { Database } from '@workspace/db'
-import { createDatabase, notificationLog } from '@workspace/db'
+import { shiftDay, todayIn } from '@workspace/business'
 import {
-  shiftDay,
-  todayIn,
   type CalendarFeed,
   type NotificationList,
   type UpcomingResponse,
-} from '@workspace/poco'
-import { eq } from 'drizzle-orm'
+} from '@workspace/dto'
 import { env } from 'cloudflare:workers'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { config } from '../src/config/env.js'
-import { SystemClock } from '../src/common/clock/clock.js'
-import { NotificationLogRepository } from '../src/notifications/notification-log.repository.js'
-import { runRemindersForTenant } from '../src/notifications/reminders.jobs.js'
-import { type Agent, createAccount, createCategory, signUp, startApp } from './support.js'
+import { FixedClock, TestDatabaseHarness } from '@workspace/business/testing'
+import {
+  type Agent,
+  createAccount,
+  createCategory,
+  signUp,
+  startApp,
+} from './support.js'
 
 /** Noon UTC today: past the reminders' send hour for a UTC tenant. */
 const NOW = new Date(`${todayIn('UTC')}T12:00:00.000Z`)
 const TODAY = todayIn('UTC', NOW)
 const TOMORROW = shiftDay(TODAY, 1)
 
-/** The clock a run is judged by, pinned to noon UTC of today. */
-class FixedClock extends SystemClock {
-  constructor(private readonly instant: Date) {
-    super()
-  }
-
-  override now(): Date {
-    return this.instant
-  }
-}
 
 describe('upcoming bills, projected balance and reminders (e2e, #13)', () => {
   let agent: Agent
@@ -132,17 +121,12 @@ describe('upcoming bills, projected balance and reminders (e2e, #13)', () => {
   })
 
   it('claims a reminder once in the log index, across repeated runs', async () => {
-    const db: Database = createDatabase(env.DB as never)
+    const harness = new TestDatabaseHarness(env.DB)
 
     // The default lead time is one day: the rent due tomorrow is due now.
-    const sent = await runRemindersForTenant(
-      db,
-      config(env),
-      new FixedClock(NOW),
-      tenantId
-    )
+    const sent = await harness.runReminders(tenantId, new FixedClock(NOW))
     expect(sent).toBe(1)
-    await runRemindersForTenant(db, config(env), new FixedClock(NOW), tenantId)
+    await harness.runReminders(tenantId, new FixedClock(NOW))
 
     const response = await agent.get('/api/notifications')
 
@@ -157,15 +141,11 @@ describe('upcoming bills, projected balance and reminders (e2e, #13)', () => {
       date: TOMORROW,
     })
 
-    const logged = await db
-      .select()
-      .from(notificationLog)
-      .where(eq(notificationLog.tenantId, tenantId))
+    const logged = await harness.listNotificationLogs(tenantId)
 
     expect(logged).toHaveLength(1)
 
     // The unique index itself: the same key is refused to a second claimer.
-    const log = new NotificationLogRepository(db)
     const key = {
       tenantId,
       userId: logged[0].userId,
@@ -174,8 +154,10 @@ describe('upcoming bills, projected balance and reminders (e2e, #13)', () => {
       dueDate: logged[0].dueDate,
     }
 
-    expect(await log.claim(key)).toBe(false)
-    expect(await log.claim({ ...key, refId: key.refId + 1 })).toBe(true)
+    expect(await harness.claimNotificationLog(key)).toBe(false)
+    expect(
+      await harness.claimNotificationLog({ ...key, refId: key.refId + 1 })
+    ).toBe(true)
   })
 
   it('marks notifications read', async () => {
@@ -227,14 +209,20 @@ describe('upcoming bills, projected balance and reminders (e2e, #13)', () => {
       keys: { p256dh: 'p', auth: 'a' },
     }
 
-    const stored = await agent.post('/api/notifications/push-subscriptions', subscription)
+    const stored = await agent.post(
+      '/api/notifications/push-subscriptions',
+      subscription
+    )
 
     expect(stored.status).toBe(204)
 
-    const removed = await agent.request('/api/notifications/push-subscriptions', {
-      method: 'DELETE',
-      body: { endpoint: subscription.endpoint },
-    })
+    const removed = await agent.request(
+      '/api/notifications/push-subscriptions',
+      {
+        method: 'DELETE',
+        body: { endpoint: subscription.endpoint },
+      }
+    )
 
     expect(removed.status).toBe(204)
   })
@@ -273,7 +261,9 @@ describe('upcoming bills, projected balance and reminders (e2e, #13)', () => {
     expect((rotated.body as CalendarFeed).path).not.toBe(path)
 
     expect((await app.request(`/api${path}`)).status).toBe(404)
-    expect((await app.request(`/api${(rotated.body as CalendarFeed).path}`)).status).toBe(200)
+    expect(
+      (await app.request(`/api${(rotated.body as CalendarFeed).path}`)).status
+    ).toBe(200)
 
     expect((await agent.delete('/api/calendar/feed')).status).toBe(204)
     expect(

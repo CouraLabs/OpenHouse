@@ -7,27 +7,28 @@ the auth feature (the reference port) before writing anything.**
 
 - The app runs on Cloudflare Workers through **Hono**. `src/app.ts` is the
   composition root — you do NOT touch it (the integrator mounts your router).
-- Every feature directory gets two new files:
-  - `<feature>.deps.ts` — builds the feature's services from `(db, config,
-    clock)` and answers `{ router }` (plus any port the feature implements).
-  - `<feature>.routes.ts` — `new Hono<AppEnv>()` with the routes, mounted by
-    app.ts under `/api/<feature-prefix>`.
-- Repositories and services KEEP their roles; the Nest decorators go away.
+- Every feature directory holds one file, `<feature>.routes.ts` —
+  `new Hono<AppEnv>()` with the routes, mounted by app.ts under
+  `/api/<feature-prefix>`. Handlers read services from `c.var.business`.
+- Repositories go to `packages/db/src/repositories/<feature>/`; services and
+  rules go to `packages/business/src/<feature>/` and are wired in
+  `createBusiness` (`packages/business/src/runtime.ts`). The Nest decorators
+  go away.
 
 ## Read these first (the reference port)
 
-- `src/auth/auth.routes.ts`, `src/auth/auth.deps.ts` — the pattern.
+- `src/auth/auth.routes.ts` and `packages/business/src/runtime.ts` — the pattern.
 - `src/common/context.ts` — `AppEnv`, `App` (a `Hono<AppEnv>` sub-app).
-- `src/common/errors.ts` — `BadRequestError`, `UnauthorizedError`,
+- `@workspace/business` errors — `BadRequestError`, `UnauthorizedError`,
   `ForbiddenError`, `NotFoundError`, `ConflictError`, `TooManyRequestsError`
   (the replacements of Nest's exceptions). `app.onError` maps them.
-- `src/common/session/session.ts` — `Session`; handlers read
+- `Session` (from `@workspace/business`); handlers read
   `context.get('session')` (the auth middleware set it).
-- `src/common/validation/parse.ts` — `parseJsonBody(context, pocoSchema)`
+- `src/common/validation/parse.ts` — `parseJsonBody(context, dtoSchema)`
   replaces `@Body(new ZodValidationPipe(...))`; `parseQuery` for query strings.
 - `src/common/session/auth.middleware.ts` — `requireRole(['owner'])` replaces
   `@Roles('owner')` (as a route-level middleware, before the handler).
-- `src/common/ledger/*` — the batch ledger primitives (see below).
+- `packages/business/src/ledger/` and `packages/db/src/ledger/` — the batch ledger primitives (see below).
 - `src/common/rate-limit.ts` — `limitRequest(env, 'credentials', addr)` where
   a controller had `@Throttle(...)`.
 
@@ -53,7 +54,7 @@ the auth feature (the reference port) before writing anything.**
 | `@CurrentSession()` | `context.get('session')` |
 | `@Roles('owner')` | `requireRole(['owner'])` middleware in the route chain |
 | `@Res() response.cookie(...)` | `setCookie(context, ...)` from `hono/cookie` |
-| module `providers/exports/imports` | gone — the deps builder wires constructors directly |
+| module `providers/exports/imports` | gone — `createBusiness` wires constructors directly |
 
 ## Route inventory — preserve EXACTLY
 
@@ -65,7 +66,7 @@ Read the old controller file(s) and reproduce:
    controller had `@HttpCode(200)` or `@HttpCode(204)`; PUT/PATCH answer 200;
    DELETE answers 200 or 204 exactly as the old controller did. The e2e
    specs assert these numbers.
-3. **Response bodies** — the same wire shapes from `@workspace/poco` (the
+3. **Response bodies** — the same wire shapes from `@workspace/dto` (the
    controllers' `toWire`/mapping code moves into the routes file or stays in
    services — whichever keeps it readable).
 4. **Error payloads** — a 409 with a structured body (e.g. the reconciled-edit

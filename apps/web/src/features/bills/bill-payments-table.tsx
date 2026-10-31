@@ -1,7 +1,7 @@
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { SearchTransactionsArgs, Transaction } from '@workspace/poco'
+import type { SearchTransactionsArgs, Transaction } from '@workspace/dto'
 import { DataTable } from '@workspace/ui/components/data-table'
 
 import { buildBillPaymentsColumns } from './bill-payments-columns.js'

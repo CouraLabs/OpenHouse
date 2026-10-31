@@ -7,7 +7,7 @@ import {
 import { CalendarClock } from 'lucide-react'
 
 import { formatMoney } from '@/lib/format-money.js'
-import type { ForecastSlice } from '@workspace/poco'
+import type { ForecastSlice } from '@workspace/dto'
 
 export function NextMonthCard({
   title,

@@ -6,30 +6,32 @@ import type {
   AccountType,
   Currency,
   EntityStatus,
-} from '@workspace/poco'
+} from '@workspace/dto'
+import { availableLimit } from '@workspace/business'
 import {
-  availableLimit,
+  accountPreviewSchema,
   createAccountSchema,
   deleteAccountQuerySchema,
   exportAccountsSchema,
   searchAccountsSchema,
   updateAccountSchema,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
-import type { AuditRecorder } from '../common/audit/audit-recorder.js'
 import type { App, AppEnv } from '../common/context.js'
-import { csvChunks, pagesOf } from '../common/csv/csv.js'
+import { csvChunks, pagesOf } from '@workspace/business'
 import { parseJsonBody, parseQuery } from '../common/validation/parse.js'
-import { ACCOUNT_CSV_COLUMNS } from './account-csv.js'
-import type { AccountService } from './account.service.js'
+import { ACCOUNT_CSV_COLUMNS } from '@workspace/business'
 
 const CSV_PAGE_SIZE = 500
 
-export function accountRoutes(deps: {
-  accounts: AccountService
-  audit: AuditRecorder
-}): App {
+export function accountRoutes(): App {
   const router: App = new Hono<AppEnv>()
+
+  router.post('/preview', async (context) => {
+    const body = await parseJsonBody(context, accountPreviewSchema)
+
+    return context.json(context.var.business.accounts.preview(body))
+  })
 
   router.post('/', async (context) => {
     const session = context.get('session')
@@ -37,7 +39,7 @@ export function accountRoutes(deps: {
 
     return context.json(
       toWire(
-        await deps.accounts.create(session.tenant.id, session.user.id, body)
+        await context.var.business.accounts.create(session.tenant.id, session.user.id, body)
       ),
       201
     )
@@ -47,7 +49,7 @@ export function accountRoutes(deps: {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchAccountsSchema)
 
-    const { rows, total } = await deps.accounts.search(session.tenant.id, args)
+    const { rows, total } = await context.var.business.accounts.search(session.tenant.id, args)
 
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
@@ -56,7 +58,7 @@ export function accountRoutes(deps: {
     const session = context.get('session')
     const args = await parseJsonBody(context, exportAccountsSchema)
 
-    await deps.audit.record({
+    await context.var.business.audit.record({
       tenantId: session.tenant.id,
       actorId: session.user.id,
       action: 'csv.export',
@@ -66,7 +68,7 @@ export function accountRoutes(deps: {
     const chunks = csvChunks(
       ACCOUNT_CSV_COLUMNS,
       pagesOf(async (skip, size) => {
-        const { rows } = await deps.accounts.search(session.tenant.id, {
+        const { rows } = await context.var.business.accounts.search(session.tenant.id, {
           ...args,
           skip,
           limit: size,
@@ -82,7 +84,7 @@ export function accountRoutes(deps: {
 
   router.get('/', async (context) => {
     const session = context.get('session')
-    const rows = await deps.accounts.listActive(session.tenant.id)
+    const rows = await context.var.business.accounts.listActive(session.tenant.id)
 
     return context.json(
       rows.map((row): AccountRef => ({
@@ -105,7 +107,7 @@ export function accountRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    return context.json(toWire(await deps.accounts.find(session.tenant.id, id)))
+    return context.json(toWire(await context.var.business.accounts.find(session.tenant.id, id)))
   })
 
   router.put('/', async (context) => {
@@ -114,7 +116,7 @@ export function accountRoutes(deps: {
 
     return context.json(
       toWire(
-        await deps.accounts.update(session.tenant.id, session.user.id, body)
+        await context.var.business.accounts.update(session.tenant.id, session.user.id, body)
       )
     )
   })
@@ -124,7 +126,7 @@ export function accountRoutes(deps: {
     const id = Number.parseInt(context.req.param('id'), 10)
     const query = parseQuery(context, deleteAccountQuerySchema)
 
-    await deps.accounts.softDelete(
+    await context.var.business.accounts.softDelete(
       session.tenant.id,
       session.user.id,
       id,

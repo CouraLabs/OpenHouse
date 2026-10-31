@@ -1,18 +1,28 @@
 import { Hono } from 'hono'
-import { updateSettingsSchema } from '@workspace/poco'
+import {
+  settingsDefaultsQuerySchema,
+  updateSettingsSchema,
+} from '@workspace/dto'
 
 import type { App, AppEnv } from '../common/context.js'
 import { requireRole } from '../common/session/auth.middleware.js'
-import { parseJsonBody } from '../common/validation/parse.js'
-import type { SettingsService } from './settings.service.js'
+import { parseJsonBody, parseQuery } from '../common/validation/parse.js'
 
-export function settingsRoutes(deps: { settings: SettingsService }): App {
+export function settingsRoutes(): App {
   const router: App = new Hono<AppEnv>()
+
+  router.get('/defaults', (context) => {
+    const query = parseQuery(context, settingsDefaultsQuerySchema)
+
+    return context.json(context.var.business.settings.defaults(query.locale))
+  })
 
   router.get('/', async (context) => {
     const session = context.get('session')
 
-    return context.json(await deps.settings.get(session.tenant.id))
+    return context.json(
+      await context.var.business.settings.get(session.tenant.id)
+    )
   })
 
   router.put(
@@ -23,7 +33,11 @@ export function settingsRoutes(deps: { settings: SettingsService }): App {
       const body = await parseJsonBody(context, updateSettingsSchema)
 
       return context.json(
-        await deps.settings.update(session.tenant.id, session.user.id, body)
+        await context.var.business.settings.update(
+          session.tenant.id,
+          session.user.id,
+          body
+        )
       )
     }
   )

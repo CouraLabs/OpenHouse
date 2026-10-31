@@ -1,15 +1,9 @@
-import {
-  addDays,
-  resolveStatement,
-  todayIn,
-  type CreditCardStatement,
-} from '@workspace/poco'
-import { createDatabase, type Database } from '@workspace/db'
+import { addDays, resolveStatement, todayIn } from '@workspace/business'
+import { type CreditCardStatement } from '@workspace/dto'
+import { TestDatabaseHarness } from '@workspace/business/testing'
 import { env } from 'cloudflare:workers'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { SystemClock } from '../src/common/clock/clock.js'
-import { runRecurringForTenant } from '../src/recurring-transactions/recurring.jobs.js'
 import {
   type Agent,
   createAccount,
@@ -67,7 +61,9 @@ async function billsOf(agent: Agent, accountId: number, status?: string[]) {
 
   expect(response.status).toBe(201)
 
-  return response.body.items as Array<Record<string, unknown> & { id: number; status: string }>
+  return response.body.items as Array<
+    Record<string, unknown> & { id: number; status: string }
+  >
 }
 
 describe('credit card statements (e2e, #5)', () => {
@@ -104,7 +100,9 @@ describe('credit card statements (e2e, #5)', () => {
     expect(first.statementDueDate).toBe(window.dueDate)
     expect(first.warning).toBe('STATEMENT_CLOSED')
 
-    const bill = (await agent.get(`/api/credit-card-statements/${first.statementId}`)).body as CreditCardStatement
+    const bill = (
+      await agent.get(`/api/credit-card-statements/${first.statementId}`)
+    ).body as CreditCardStatement
 
     expect(bill).toMatchObject({
       closeDate: window.closeDate,
@@ -115,7 +113,97 @@ describe('credit card statements (e2e, #5)', () => {
       total: '90.00',
       previousBalance: '0.00',
       amountDue: '90.00',
+      amountDueTone: 'positive',
+      isPrepaid: false,
       status: 'Overdue',
+    })
+    expect(bill.window.start).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(bill.window.end).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(typeof bill.daysUntilClose).toBe('number')
+    expect(typeof bill.daysUntilDue).toBe('number')
+
+    const reconcilePreview = await agent.post(
+      `/api/credit-card-statements/${first.statementId}/reconcile/preview`,
+      { bankTotal: '90.00' }
+    )
+    expect(reconcilePreview.status).toBe(200)
+    expect(reconcilePreview.body).toEqual({
+      difference: '0.00',
+      tone: 'zero',
+    })
+
+    const accountPreview = await agent.post('/api/accounts/preview', {
+      closeDay: 25,
+      dueDay: 27,
+      spreadPct: '25',
+    })
+    expect(accountPreview.status).toBe(200)
+    expect(accountPreview.body).toEqual({
+      cycleDaysDiffer: true,
+      cycleGapWarning: 'short',
+      spreadWarning: true,
+      spreadWarningPct: 20,
+    })
+
+    const suggest = await agent.post('/api/categories/suggest', {
+      description: 'nonexistent-category-xyz',
+    })
+    expect(suggest.status).toBe(200)
+    expect(suggest.body).toEqual({ categoryId: null })
+
+    const nextOcc = await agent.post(
+      '/api/recurring-transactions/next-occurrence',
+      {
+        frequency: 'Monthly',
+        frequencyDay: 15,
+        frequencyMonth: null,
+        today: '2026-10-10',
+      }
+    )
+    expect(nextOcc.status).toBe(200)
+    expect(nextOcc.body).toEqual({ nextDate: '2026-10-15' })
+
+    const splitPrev = await agent.post('/api/transactions/splits/preview', {
+      amount: '10.00',
+      split: { mode: 'equal', entries: [{ userId: 1 }, { userId: 2 }] },
+      payerUserId: 1,
+    })
+    expect(splitPrev.status).toBe(200)
+    expect(splitPrev.body).toEqual({
+      ok: true,
+      shares: [
+        { userId: 1, share: '5.00' },
+        { userId: 2, share: '5.00' },
+      ],
+    })
+
+    const instPrev = await agent.post(
+      '/api/transactions/installments/preview',
+      {
+        amount: '100.00',
+        count: 3,
+        amountMode: 'total',
+        availableLimit: '500.00',
+      }
+    )
+    expect(instPrev.status).toBe(200)
+    expect(instPrev.body).toMatchObject({
+      parts: ['33.34', '33.33', '33.33'],
+      total: '100.00',
+      availableAfter: '400.00',
+      availableAfterTone: 'positive',
+    })
+
+    const billedPrev = await agent.post('/api/transactions/billed-on/preview', {
+      closeDay: 25,
+      dueDay: 5,
+      closeDayInclusive: false,
+      transactionDt: '2026-10-10',
+    })
+    expect(billedPrev.status).toBe(200)
+    expect(billedPrev.body).toEqual({
+      dueDate: '2026-11-05',
+      closeDate: '2026-10-25',
     })
   })
 
@@ -230,9 +318,12 @@ describe('credit card statements (e2e, #5)', () => {
 
     expect(moved.body.statementId).toBe(later.statementId)
 
-    const pinned = await agent.patch(`/api/transactions/${created.id}/statement`, {
-      statementId: created.statementId,
-    })
+    const pinned = await agent.patch(
+      `/api/transactions/${created.id}/statement`,
+      {
+        statementId: created.statementId,
+      }
+    )
 
     expect(pinned.status).toBe(200)
     expect(pinned.body.statementPinned).toBe(true)
@@ -249,9 +340,12 @@ describe('credit card statements (e2e, #5)', () => {
     const created = await charge(agent, card, categoryId, addDays(today, 40))
     const foreign = await charge(agent, other, categoryId, addDays(today, 40))
 
-    const refused = await agent.patch(`/api/transactions/${created.id}/statement`, {
-      statementId: foreign.statementId,
-    })
+    const refused = await agent.patch(
+      `/api/transactions/${created.id}/statement`,
+      {
+        statementId: foreign.statementId,
+      }
+    )
 
     expect(refused.status).toBe(409)
   })
@@ -278,7 +372,7 @@ describe('credit card statements (e2e, #5)', () => {
 
     const every = await billsOf(agent, card)
 
-    for (const status of ["Open", "Closed", "Overdue", "Paid"] as string[]) {
+    for (const status of ['Open', 'Closed', 'Overdue', 'Paid'] as string[]) {
       const filtered = await billsOf(agent, card, [status])
 
       expect(filtered.map((bill) => bill.id)).toEqual(
@@ -314,7 +408,8 @@ describe('credit card statements (e2e, #5)', () => {
     expect(futureAfter.statementId).not.toBe(future.statementId)
     expect(futureAfter.statementDueDate).toBe(expected.dueDate)
 
-    const history = (await agent.get(`/api/transactions/${future.id}/history`)).body
+    const history = (await agent.get(`/api/transactions/${future.id}/history`))
+      .body
 
     expect(history[0].action).toBe('UPDATE')
   })
@@ -344,7 +439,9 @@ describe('credit card statements (e2e, #5)', () => {
     expect(refused.body.unpaidBills).toBe(1)
     expect(refused.body.amountDue).toBe('100.00')
 
-    const confirmed = await agent.delete(`/api/accounts/${card}?confirmUnpaidBills=true`)
+    const confirmed = await agent.delete(
+      `/api/accounts/${card}?confirmUnpaidBills=true`
+    )
 
     expect(confirmed.status).toBe(204)
   })
@@ -403,8 +500,7 @@ describe('credit card statements (e2e, #5)', () => {
 
     // The queue job the cron fans out: the rule was created today, so the
     // catch-up window materializes exactly today's charge.
-    const db: Database = createDatabase(env.DB as never)
-    const created = await runRecurringForTenant(db, new SystemClock(), tenantId)
+    const created = await new TestDatabaseHarness(env.DB).runRecurring(tenantId)
 
     expect(created).toBe(1)
 

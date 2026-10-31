@@ -1,4 +1,4 @@
-import type { StatementStatus } from '@workspace/poco'
+import type { StatementStatus } from '@workspace/dto'
 import { Badge } from '@workspace/ui/components/badge'
 import { useTranslation } from 'react-i18next'
 

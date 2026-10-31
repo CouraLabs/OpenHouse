@@ -23,7 +23,7 @@ test.describe('sign-up', () => {
     })
 
     await test.step('Action: confirm the time zone and main currency', async () => {
-      await page.getByRole('button', { name: 'Start using OpenHouse' }).click()
+      await page.getByRole('button', { name: 'Start using Kantim' }).click()
     })
 
     await test.step('Expect: the app unlocks and opens the dashboard for the new household', async () => {

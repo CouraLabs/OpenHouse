@@ -1,4 +1,4 @@
-import type { Currency } from '@workspace/poco'
+import type { Currency } from '@workspace/dto'
 
 export type RateUnit = 'year' | 'month' | 'day'
 

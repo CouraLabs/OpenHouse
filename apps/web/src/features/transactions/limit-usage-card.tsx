@@ -1,4 +1,4 @@
-import type { LimitUsage } from '@workspace/poco'
+import type { LimitUsage } from '@workspace/dto'
 import {
   Card,
   CardContent,

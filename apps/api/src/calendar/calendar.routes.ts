@@ -1,26 +1,26 @@
 import { Hono } from 'hono'
 
 import type { App, AppEnv } from '../common/context.js'
-import { NotFoundError } from '../common/errors.js'
-import type { CalendarService } from './calendar.service.js'
+import { NotFoundError } from '@workspace/business'
 
-export function calendarRoutes(deps: {
-  calendar: CalendarService
-}): { publicRouter: App; protectedRouter: App } {
+export function calendarRoutes(): {
+  publicRouter: App
+  protectedRouter: App
+} {
   const publicRouter: App = new Hono<AppEnv>()
   const protectedRouter: App = new Hono<AppEnv>()
 
   protectedRouter.get('/feed', async (context) => {
     const session = context.get('session')
 
-    return context.json(await deps.calendar.find(session.user.id))
+    return context.json(await context.var.business.calendar.find(session.user.id))
   })
 
   protectedRouter.post('/feed', async (context) => {
     const session = context.get('session')
 
     return context.json(
-      await deps.calendar.rotate(session.tenant.id, session.user.id),
+      await context.var.business.calendar.rotate(session.tenant.id, session.user.id),
       201
     )
   })
@@ -28,7 +28,7 @@ export function calendarRoutes(deps: {
   protectedRouter.delete('/feed', async (context) => {
     const session = context.get('session')
 
-    await deps.calendar.remove(session.user.id)
+    await context.var.business.calendar.remove(session.user.id)
 
     return context.body(null, 204)
   })
@@ -40,7 +40,7 @@ export function calendarRoutes(deps: {
       throw new NotFoundError('No such calendar.')
     }
 
-    const ics = await deps.calendar.render(file.slice(0, -'.ics'.length))
+    const ics = await context.var.business.calendar.render(file.slice(0, -'.ics'.length))
 
     context.header('Content-Type', 'text/calendar; charset=utf-8')
     context.header('Cache-Control', 'private, max-age=300')

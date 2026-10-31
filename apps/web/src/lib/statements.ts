@@ -4,18 +4,38 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import type {
-  CreditCardStatement,
-  PagedResults,
-  ReconcileStatementBody,
-  SearchStatementsArgs,
-  StatementBankFiguresBody,
-  Transaction,
-} from '@workspace/poco'
+import {
+  reconcileStatementSchema,
+  type CreditCardStatement,
+  type PagedResults,
+  type ReconcileStatementBody,
+  type SearchStatementsArgs,
+  type StatementBankFiguresBody,
+  type StatementReconcilePreview,
+  type Transaction,
+} from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 
 export const STATEMENTS_KEY = ['statements'] as const
+
+export function useStatementReconcilePreview(id: number, bankTotal: string) {
+  const valid = reconcileStatementSchema.safeParse({ bankTotal }).success
+  return useQuery({
+    queryKey: [...STATEMENTS_KEY, 'reconcile-preview', id, bankTotal],
+    queryFn: ({ signal }) =>
+      api<StatementReconcilePreview>(
+        `/credit-card-statements/${id}/reconcile/preview`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ bankTotal }),
+          signal,
+        }
+      ),
+    enabled: valid,
+    placeholderData: keepPreviousData,
+  })
+}
 
 export function useStatementSearch(
   args: SearchStatementsArgs,

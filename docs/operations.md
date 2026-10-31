@@ -17,7 +17,7 @@ tenant's rows back.
 ```sh
 # Point-in-time restore of the whole database (a timestamp or a commit
 # bookmark); the database is taken out of service for the restore.
-npx wrangler d1 time-travel restore openhouse --remote --timestamp="2026-10-29T12:00:00Z"
+npx wrangler d1 time-travel restore kantim --remote --timestamp="2026-10-29T12:00:00Z"
 ```
 
 ### Restore one household
@@ -25,7 +25,7 @@ npx wrangler d1 time-travel restore openhouse --remote --timestamp="2026-10-29T1
 1. Export a snapshot of the restored state: create a **fork** of the
    database at the point in time (restore into a scratch database —
    `wrangler d1 time-travel restore` works on the database itself, so fork
-   by creating a second database `openhouse-restore` and, with the D1 HTTP
+   by creating a second database `kantim-restore` and, with the D1 HTTP
    API's point-in-time restore, or by restoring the main database briefly
    and exporting the tenant with `POST /api/data-exports`).
 2. The export ZIP carries every row the tenant owns, children first — the
@@ -43,7 +43,7 @@ exchange format, which is why exports are audited and never stored server-side.
 One D1 database holds every tenant — **10 GB is the hard ceiling** (Workers
 Paid; 500 MB on Free), and it cannot be raised. Watch two signals:
 
-- **Bytes:** `npx wrangler d1 info openhouse --remote` answers the file
+- **Bytes:** `npx wrangler d1 info kantim --remote` answers the file
   size. Check it monthly, or whenever a household's books grow
   abnormally fast.
 - **Rows:** the daily balances cron (03:15 UTC) logs every table's row

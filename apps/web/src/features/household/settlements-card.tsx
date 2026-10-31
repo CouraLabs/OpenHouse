@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { SettlementEntry } from '@workspace/poco'
+import type { SettlementEntry } from '@workspace/dto'
 import {
   Card,
   CardContent,

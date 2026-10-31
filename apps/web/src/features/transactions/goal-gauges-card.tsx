@@ -1,4 +1,4 @@
-import type { Goal } from '@workspace/poco'
+import type { Goal } from '@workspace/dto'
 import {
   Card,
   CardContent,

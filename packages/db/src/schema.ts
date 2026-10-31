@@ -1,4 +1,38 @@
 import {
+  accountOwnerships,
+  accountTypes,
+  auditActions,
+  currencies,
+  entityStatuses,
+  frequencies,
+  limitTypes,
+  receiverTypes,
+  reminderDeliveries,
+  resetCodeKinds,
+  tenantUsageKinds,
+  transactionHistoryActions,
+  transactionStatuses,
+  transactionTypes,
+  unsplitModes,
+  userRoles,
+  type AccountOwnership,
+  type AccountType,
+  type AuditAction,
+  type Currency,
+  type EntityStatus,
+  type Frequency,
+  type LimitType,
+  type ReceiverType,
+  type ReminderDelivery,
+  type ResetCodeKind,
+  type TenantUsageKind,
+  type TransactionHistoryAction,
+  type TransactionStatus,
+  type TransactionType,
+  type UnsplitMode,
+  type UserRole,
+} from '@workspace/domain'
+import {
   check,
   index,
   integer,
@@ -11,9 +45,40 @@ import { sql } from 'drizzle-orm'
 
 import { money } from './money.js'
 
-export const entityStatuses = ['ACTIVE', 'DELETED'] as const
-
-export type EntityStatus = (typeof entityStatuses)[number]
+export {
+  accountOwnerships,
+  accountTypes,
+  auditActions,
+  currencies,
+  entityStatuses,
+  frequencies,
+  limitTypes,
+  receiverTypes,
+  reminderDeliveries,
+  resetCodeKinds,
+  tenantUsageKinds,
+  transactionHistoryActions,
+  transactionStatuses,
+  transactionTypes,
+  unsplitModes,
+  userRoles,
+  type AccountOwnership,
+  type AccountType,
+  type AuditAction,
+  type Currency,
+  type EntityStatus,
+  type Frequency,
+  type LimitType,
+  type ReceiverType,
+  type ReminderDelivery,
+  type ResetCodeKind,
+  type TenantUsageKind,
+  type TransactionHistoryAction,
+  type TransactionStatus,
+  type TransactionType,
+  type UnsplitMode,
+  type UserRole,
+}
 
 const dt = (name: string) => integer(name, { mode: 'timestamp_ms' })
 
@@ -37,14 +102,6 @@ export function tenantEntityColumns() {
   }
 }
 
-export const unsplitModes = ['personal', 'household'] as const
-
-export type UnsplitMode = (typeof unsplitModes)[number]
-
-export const accountOwnerships = ['personal', 'shared'] as const
-
-export type AccountOwnership = (typeof accountOwnerships)[number]
-
 export const tenants = sqliteTable('tenants', {
   id: integer().primaryKey({ autoIncrement: true }),
   name: text().notNull().unique(),
@@ -54,10 +111,6 @@ export const tenants = sqliteTable('tenants', {
   createdAt: dt('created_at').notNull().default(NOW),
   updatedAt: dt('updated_at').notNull().default(NOW),
 })
-
-export const tenantUsageKinds = ['export', 'import'] as const
-
-export type TenantUsageKind = (typeof tenantUsageKinds)[number]
 
 export const tenantUsage = sqliteTable(
   'tenant_usage',
@@ -73,8 +126,6 @@ export const tenantUsage = sqliteTable(
     primaryKey({ columns: [table.tenantId, table.kind, table.period] }),
   ]
 )
-
-export const userRoles = ['owner', 'user'] as const
 
 export const users = sqliteTable(
   'users',
@@ -144,10 +195,6 @@ export const tenantCodes = sqliteTable('tenant_codes', {
   expiresAt: dt('expires_at'),
   createdAt: dt('created_at').notNull().default(NOW),
 })
-
-export const resetCodeKinds = ['owner_issued', 'recovery', 'server'] as const
-
-export type ResetCodeKind = (typeof resetCodeKinds)[number]
 
 export const passwordResetCodes = sqliteTable(
   'password_reset_codes',
@@ -225,15 +272,6 @@ export type PasswordResetCode = typeof passwordResetCodes.$inferSelect
 export type NewPasswordResetCode = typeof passwordResetCodes.$inferInsert
 export type Category = typeof categories.$inferSelect
 export type NewCategory = typeof categories.$inferInsert
-export type UserRole = (typeof userRoles)[number]
-
-export const currencies = ['USD', 'BRL', 'EUR'] as const
-
-export type Currency = (typeof currencies)[number]
-
-export const limitTypes = ['Daily', 'Weekly', 'Monthly', 'Yearly'] as const
-
-export type LimitType = (typeof limitTypes)[number]
 
 export const limits = sqliteTable(
   'limits',
@@ -251,15 +289,6 @@ export const limits = sqliteTable(
 
 export type Limit = typeof limits.$inferSelect
 export type NewLimit = typeof limits.$inferInsert
-
-export const accountTypes = [
-  'Checking',
-  'Wallet',
-  'Savings',
-  'Credit Card',
-] as const
-
-export type AccountType = (typeof accountTypes)[number]
 
 export const accounts = sqliteTable(
   'accounts',
@@ -377,15 +406,6 @@ export const goals = sqliteTable(
 export type Goal = typeof goals.$inferSelect
 export type NewGoal = typeof goals.$inferInsert
 
-export const receiverTypes = [
-  'Person',
-  'Service',
-  'Merchant',
-  'Charity',
-] as const
-
-export type ReceiverType = (typeof receiverTypes)[number]
-
 export const receivers = sqliteTable(
   'receivers',
   {
@@ -432,10 +452,6 @@ export const transactionLinkers = sqliteTable(
 export type TransactionLinker = typeof transactionLinkers.$inferSelect
 export type NewTransactionLinker = typeof transactionLinkers.$inferInsert
 
-export const frequencies = ['Daily', 'Weekly', 'Monthly', 'Yearly'] as const
-
-export type Frequency = (typeof frequencies)[number]
-
 export const recurringTransactions = sqliteTable(
   'recurring_transactions',
   {
@@ -463,14 +479,6 @@ export const recurringTransactions = sqliteTable(
 
 export type RecurringTransaction = typeof recurringTransactions.$inferSelect
 export type NewRecurringTransaction = typeof recurringTransactions.$inferInsert
-
-export const transactionTypes = ['Income', 'Expense'] as const
-
-export type TransactionType = (typeof transactionTypes)[number]
-
-export const transactionStatuses = ['Verify', 'Canceled', 'Checked'] as const
-
-export type TransactionStatus = (typeof transactionStatuses)[number]
 
 export const transactions = sqliteTable(
   'transactions',
@@ -630,11 +638,6 @@ export const importMappings = sqliteTable(
 export type ImportMappingRow = typeof importMappings.$inferSelect
 export type NewImportMappingRow = typeof importMappings.$inferInsert
 
-export const transactionHistoryActions = ['CREATE', 'UPDATE', 'DELETE'] as const
-
-export type TransactionHistoryAction =
-  (typeof transactionHistoryActions)[number]
-
 export const transactionHistory = sqliteTable(
   'transaction_history',
   {
@@ -659,18 +662,6 @@ export const transactionHistory = sqliteTable(
 export type TransactionHistoryRow = typeof transactionHistory.$inferSelect
 export type NewTransactionHistoryRow = typeof transactionHistory.$inferInsert
 
-export const auditActions = [
-  'csv.export',
-  'tenant.export',
-  'member.export',
-  'member.anonymize',
-  'tenant.deletion_scheduled',
-  'tenant.deletion_canceled',
-  'tenant.deleted',
-] as const
-
-export type AuditAction = (typeof auditActions)[number]
-
 export const auditLog = sqliteTable(
   'audit_log',
   {
@@ -686,10 +677,6 @@ export const auditLog = sqliteTable(
 
 export type AuditLogRow = typeof auditLog.$inferSelect
 export type NewAuditLogRow = typeof auditLog.$inferInsert
-
-export const reminderDeliveries = ['individual', 'digest'] as const
-
-export type ReminderDelivery = (typeof reminderDeliveries)[number]
 
 export const notificationPreferences = sqliteTable('notification_preferences', {
   userId: integer('user_id')

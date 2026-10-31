@@ -1,6 +1,5 @@
 import { useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SPREAD_WARNING_PCT } from '@workspace/poco'
 import {
   Collapsible,
   CollapsibleContent,
@@ -9,6 +8,9 @@ import {
 import { FieldDescription } from '@workspace/ui/components/field'
 import { TextField } from '@workspace/ui/components/text-field'
 import { ChevronRight } from 'lucide-react'
+
+import { useDebouncedValue } from '@/lib/use-debounced-value.js'
+import { useAccountPreview } from './use-accounts.js'
 
 interface AccountAdvancedFieldsProps {
   spreadPct: string | undefined
@@ -22,9 +24,15 @@ export function AccountAdvancedFields({
   error,
 }: AccountAdvancedFieldsProps) {
   const { t } = useTranslation()
-  const spread = Number(spreadPct)
-  const isHigh = Number.isFinite(spread) && spread > SPREAD_WARNING_PCT
-  const [initiallyOpen] = useState(spread > 0)
+  const [initiallyOpen] = useState(
+    spreadPct !== undefined && spreadPct !== '' && spreadPct !== '0' && spreadPct !== '0.00'
+  )
+  const settledSpread = useDebouncedValue(spreadPct ?? '')
+  const preview = useAccountPreview(
+    { spreadPct: settledSpread },
+    settledSpread !== ''
+  )
+  const isHigh = settledSpread !== '' && preview.data?.spreadWarning === true
 
   return (
     <Collapsible defaultOpen={initiallyOpen}>
@@ -51,7 +59,9 @@ export function AccountAdvancedFields({
             {error?.message === undefined && (
               <FieldDescription>
                 {isHigh
-                  ? t('accounts.spread-high', { pct: SPREAD_WARNING_PCT })
+                  ? t('accounts.spread-high', {
+                      pct: preview.data?.spreadWarningPct ?? 20,
+                    })
                   : t('accounts.spread-hint')}
               </FieldDescription>
             )}

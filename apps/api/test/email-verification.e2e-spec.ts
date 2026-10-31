@@ -60,12 +60,16 @@ describe('email verification (e2e)', () => {
     const { created, email } = await signUpUnconfirmed(app)
 
     expect(created.status).toBe(201)
-    expect(created.body).toEqual({ verificationRequired: true, email })
+    expect(created.body).toEqual({
+      status: 'verificationRequired',
+      verificationRequired: true,
+      email,
+    })
     expect(created.headers.getSetCookie()).toEqual([])
 
     const [message] = mailTo(email)
     expect(message.from.email).toBe('no-reply@couralabs.dev')
-    expect(message.subject).toBe('Confirm your email for OpenHouse')
+    expect(message.subject).toBe('Confirm your email for Kantim')
     expect(message.text).toContain('/app/verify-email?token=')
   })
 

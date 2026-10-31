@@ -1,32 +1,37 @@
 import { createMiddleware } from 'hono/factory'
-import type { TierResource, TierUsageKind } from '@workspace/poco'
+import type { TierResource, TierUsageKind } from '@workspace/dto'
 
 import type { AppEnv } from '../context.js'
-import type { TierGate } from './tier-gate.js'
 
-export function requireCapacity(gate: TierGate, resource: TierResource) {
+export function requireCapacity(resource: TierResource) {
   return createMiddleware<AppEnv>(async (context, next) => {
-    await gate.assertCanAdd(context.get('session').tenant.id, resource)
+    await context.var.business.tiers.assertCanAdd(
+      context.get('session').tenant.id,
+      resource
+    )
     await next()
   })
 }
 
-export function requireUserSeat(gate: TierGate) {
+export function requireUserSeat() {
   return createMiddleware<AppEnv>(async (context, next) => {
-    await gate.assertCanAddUser(context.get('session').tenant.id)
+    await context.var.business.tiers.assertCanAddUser(
+      context.get('session').tenant.id
+    )
     await next()
   })
 }
 
-export function meterUsage(gate: TierGate, kind: TierUsageKind) {
+export function meterUsage(kind: TierUsageKind) {
   return createMiddleware<AppEnv>(async (context, next) => {
     const tenantId = context.get('session').tenant.id
+    const tiers = context.var.business.tiers
 
-    await gate.assertCanUse(tenantId, kind)
+    await tiers.assertCanUse(tenantId, kind)
     await next()
 
     if (context.res.ok) {
-      await gate.recordUse(tenantId, kind)
+      await tiers.recordUse(tenantId, kind)
     }
   })
 }

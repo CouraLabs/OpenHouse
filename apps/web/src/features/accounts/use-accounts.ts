@@ -6,16 +6,32 @@ import {
 } from '@tanstack/react-query'
 import type {
   Account,
+  AccountPreview,
+  AccountPreviewBody,
   CreateAccountBody,
   PagedResults,
   SearchAccountsArgs,
   UpdateAccountBody,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 import { STATEMENTS_KEY } from '@/lib/statements.js'
 
 const ACCOUNTS_KEY = ['accounts'] as const
+
+export function useAccountPreview(body: AccountPreviewBody, enabled = true) {
+  return useQuery({
+    queryKey: [...ACCOUNTS_KEY, 'preview', body],
+    queryFn: ({ signal }) =>
+      api<AccountPreview>('/accounts/preview', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        signal,
+      }),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
+}
 
 export function useAccountsSearch(args: SearchAccountsArgs) {
   return useQuery({

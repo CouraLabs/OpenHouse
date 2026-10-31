@@ -1,4 +1,4 @@
-import type { TransactionBreakdownGroup } from '@workspace/poco'
+import type { TransactionBreakdownGroup } from '@workspace/dto'
 import {
   ChartContainer,
   ChartTooltip,

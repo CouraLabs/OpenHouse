@@ -1,4 +1,4 @@
-import type { TransactionSummaryGroup } from '@workspace/poco'
+import type { TransactionSummaryGroup } from '@workspace/dto'
 
 import { SummaryRow, type SummaryLabels } from './summary-row.js'
 

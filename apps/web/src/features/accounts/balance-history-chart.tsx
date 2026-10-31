@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { BalanceHistory } from '@workspace/poco'
+import type { BalanceHistory } from '@workspace/dto'
 import { ProjectionLineChart } from '@workspace/ui/components/projection-line-chart'
 
 import { compactMoney } from '@/lib/finance.js'

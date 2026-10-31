@@ -2,27 +2,21 @@ import { Hono } from 'hono'
 
 import type { App, AppEnv } from '../common/context.js'
 import { parseJsonBody } from '../common/validation/parse.js'
-import type {
-  CreditCardStatement,
-  PagedResults,
-} from '@workspace/poco'
+import type { CreditCardStatement, PagedResults } from '@workspace/dto'
 import {
   reconcileStatementSchema,
   searchStatementsSchema,
   statementBankFiguresSchema,
-} from '@workspace/poco'
-import type { CreditCardStatementService } from './credit-card-statement.service.js'
+} from '@workspace/dto'
 
-export function creditCardStatementRoutes(deps: {
-  statements: CreditCardStatementService
-}): App {
+export function creditCardStatementRoutes(): App {
   const router: App = new Hono<AppEnv>()
 
   router.post('/search', async (context) => {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchStatementsSchema)
 
-    const { rows, total } = await deps.statements.search(
+    const { rows, total } = await context.var.business.statements.search(
       session.tenant.id,
       args
     )
@@ -37,7 +31,9 @@ export function creditCardStatementRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    return context.json(await deps.statements.find(session.tenant.id, id))
+    return context.json(
+      await context.var.business.statements.find(session.tenant.id, id)
+    )
   })
 
   router.patch('/:id', async (context) => {
@@ -46,9 +42,23 @@ export function creditCardStatementRoutes(deps: {
     const body = await parseJsonBody(context, statementBankFiguresSchema)
 
     return context.json(
-      await deps.statements.updateBankFigures(
+      await context.var.business.statements.updateBankFigures(
         session.tenant.id,
         session.user.id,
+        id,
+        body
+      )
+    )
+  })
+
+  router.post('/:id/reconcile/preview', async (context) => {
+    const session = context.get('session')
+    const id = Number.parseInt(context.req.param('id'), 10)
+    const body = await parseJsonBody(context, reconcileStatementSchema)
+
+    return context.json(
+      await context.var.business.statements.previewReconcile(
+        session.tenant.id,
         id,
         body
       )
@@ -61,7 +71,7 @@ export function creditCardStatementRoutes(deps: {
     const body = await parseJsonBody(context, reconcileStatementSchema)
 
     return context.json(
-      await deps.statements.reconcile(
+      await context.var.business.statements.reconcile(
         session.tenant.id,
         session.user.id,
         id,

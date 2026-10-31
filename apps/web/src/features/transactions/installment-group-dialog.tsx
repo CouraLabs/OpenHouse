@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { Transaction } from '@workspace/poco'
+import type { Transaction } from '@workspace/dto'
 import {
   Dialog,
   DialogContent,

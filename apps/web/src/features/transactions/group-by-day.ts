@@ -1,4 +1,4 @@
-import type { Currency, Transaction } from '@workspace/poco'
+import type { Currency, Transaction } from '@workspace/dto'
 
 export interface DayTotal {
   currency: Currency

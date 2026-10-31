@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && VITE_APP_URL=https://openhouse.couralabs.dev/app vite build",
+    "build": "tsc -b && VITE_APP_URL=https://kantim.couralabs.dev/app vite build",
     "deploy": "wrangler deploy",
     "lint": "biome lint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",

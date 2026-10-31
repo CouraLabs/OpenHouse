@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import type { SessionResponse } from '@workspace/poco'
+import type { SessionResponse } from '@workspace/dto'
 
 export const SESSION_QUERY_KEY = ['session'] as const
 

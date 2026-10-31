@@ -6,21 +6,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type {
-  CreateTransactionBody,
-  InstallmentsBody,
-  ReceiverRef,
-  SplitInput,
-  Transaction,
-  TransactionStatus,
-  TransactionType,
-} from '@workspace/poco'
-import {
-  createTransactionSchema,
-  inferCategory,
-  transactionStatuses,
-  transactionTypes,
-} from '@workspace/poco'
+import type { CreateTransactionBody, InstallmentsBody, ReceiverRef, SplitInput, Transaction, TransactionStatus, TransactionType } from '@workspace/dto'
+import { createTransactionSchema, transactionStatuses, transactionTypes } from '@workspace/dto'
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { MoneyField } from '@workspace/ui/components/money-field'
@@ -43,6 +30,7 @@ import {
   useActiveAccounts,
   useActiveCategories,
   useActiveReceivers,
+  useSuggestCategory,
 } from './use-transactions.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
@@ -163,18 +151,26 @@ export function TransactionFormFields({
   }, [transaction, accountId, accounts.data, setValue])
 
   const categoryPicked = useRef(transaction !== null)
+  const suggestCategory = useSuggestCategory()
 
   const inferFromName = (name: string) => {
     if (categoryPicked.current) {
       return
     }
 
-    setValue(
-      'categoryId',
-      inferCategory(name, categories.data ?? [])?.id ??
-        (undefined as unknown as number),
-      { shouldDirty: true }
-    )
+    suggestCategory.mutate(name, {
+      onSuccess: (suggestion) => {
+        if (categoryPicked.current) {
+          return
+        }
+
+        setValue(
+          'categoryId',
+          suggestion.categoryId ?? (undefined as unknown as number),
+          { shouldDirty: true }
+        )
+      },
+    })
   }
 
   const hasDetails =

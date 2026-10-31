@@ -4,15 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import type {
-  CategoryRef,
-  CreateTransactionLinkerBody,
-  PagedResults,
-  ReceiverRef,
-  SearchTransactionLinkersArgs,
-  TransactionLinker,
-  UpdateTransactionLinkerBody,
-} from '@workspace/poco'
+import type { CategoryRef, CreateTransactionLinkerBody, PagedResults, ReceiverRef, SearchTransactionLinkersArgs, TransactionLinker, UpdateTransactionLinkerBody } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 

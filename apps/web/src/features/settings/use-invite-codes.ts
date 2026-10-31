@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { CreateInviteCodeBody, InviteCode } from '@workspace/poco'
+import type { CreateInviteCodeBody, InviteCode } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 import { appUrl } from '@/lib/app-url.js'

@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig({
   // The app lives under /app on its domain: the Worker's zone route sends
-  // openhouse.couralabs.dev/app* here, while the landing stays at the root.
+  // kantim.couralabs.dev/app* here, while the landing stays at the root.
   base: '/app/',
   plugins: [
     react(),
@@ -27,9 +27,9 @@ export default defineConfig({
         'mask-icon.svg',
       ],
       manifest: {
-        name: 'OpenHouse',
-        short_name: 'OpenHouse',
-        description: 'OpenHouse — the tenant command center.',
+        name: 'Kantim',
+        short_name: 'Kantim',
+        description: 'Kantim — the tenant command center.',
         lang: 'en-US',
         start_url: '/app/',
         scope: '/app/',

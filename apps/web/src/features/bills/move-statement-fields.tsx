@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Transaction } from '@workspace/poco'
+import type { Transaction } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { DialogFooter } from '@workspace/ui/components/dialog'
 import { Field, FieldLabel } from '@workspace/ui/components/field'

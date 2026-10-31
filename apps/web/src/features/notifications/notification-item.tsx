@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { AppNotification } from '@workspace/poco'
+import type { AppNotification } from '@workspace/dto'
 
 import { reminderText } from './notification-text.js'
 import { formattingLocale } from '@/lib/i18n.js'

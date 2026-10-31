@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { CreditCardStatement, Transaction } from '@workspace/poco'
-import { addDays } from '@workspace/poco'
+import type { CreditCardStatement, Transaction } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
@@ -8,8 +7,6 @@ import { formatMoney } from '@/lib/format-money.js'
 import { useMoveToStatement } from '@/lib/statements.js'
 import { useBillTransactions, useMarkChecked } from './use-bills.js'
 import { formattingLocale } from '@/lib/i18n.js'
-
-const LATE_POSTING_DAYS = 3
 
 export function ReconcileCandidates({ bill }: { bill: CreditCardStatement }) {
   const { t } = useTranslation()
@@ -19,8 +16,8 @@ export function ReconcileCandidates({ bill }: { bill: CreditCardStatement }) {
     sort: [{ field: 'transactionDt', dir: 'asc' }],
     filter: {
       linkedAccountId: bill.accountId,
-      transactionDtFrom: addDays(bill.closesOn, -LATE_POSTING_DAYS),
-      transactionDtTo: addDays(bill.closesOn, LATE_POSTING_DAYS),
+      transactionDtFrom: bill.window.start,
+      transactionDtTo: bill.window.end,
       creditMode: 'accrual',
       lifecycle: 'ACTIVE',
     },

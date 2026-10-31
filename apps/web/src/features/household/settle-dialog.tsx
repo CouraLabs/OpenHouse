@@ -1,4 +1,4 @@
-import type { SettleSuggestion } from '@workspace/poco'
+import type { SettleSuggestion } from '@workspace/dto'
 import { Dialog, DialogContent } from '@workspace/ui/components/dialog'
 
 import { SettleForm } from './settle-form.js'

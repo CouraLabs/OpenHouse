@@ -1,4 +1,4 @@
-import type { Goal } from '@workspace/poco'
+import type { Goal } from '@workspace/dto'
 import { Badge } from '@workspace/ui/components/badge'
 import { GaugeBar } from '@workspace/ui/components/gauge-bar'
 import { Button } from '@workspace/ui/components/button'

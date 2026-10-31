@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { InviteCode } from '@workspace/poco'
+import type { InviteCode } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { Ban } from 'lucide-react'
 

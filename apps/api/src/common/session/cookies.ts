@@ -1,6 +1,6 @@
-export const ACCESS_COOKIE = 'openhouse_access'
+export const ACCESS_COOKIE = 'kantim_access'
 
-export const REFRESH_COOKIE = 'openhouse_refresh'
+export const REFRESH_COOKIE = 'kantim_refresh'
 
 export function baseCookieOptions(requestUrl: string) {
   return {

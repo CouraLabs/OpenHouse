@@ -1,8 +1,8 @@
-# OpenHouse
+# Kantim
 
 **Every coin in the house, in its place.**
 
-OpenHouse is an open-source household finance app. It keeps a household's
+Kantim is an open-source household finance app. It keeps a household's
 accounts, transactions, limits, and goals in one shared ledger, and everyone
 in the house signs in to the same books. Deploy it to your own Cloudflare
 account for free.
@@ -57,16 +57,19 @@ apps/
   web/        the React app (installable as a PWA)
   landing/    the public marketing page (static, no API)
 packages/
-  db/         Drizzle schema, relations, migrations; the only schema owner
-  poco/       shared contracts: zod request schemas and wire DTO types
+  domain/     interfaces, types, plain objects and constants; imports nothing
+  dto/        wire contract: zod request schemas and response types
+  db/         Drizzle schema, relations, migrations, repositories; the only schema owner
+  business/   every rule and use case; the API's only path to data
   ui/         shared design system: shadcn primitives, DataTable, MoneyField…
 ```
 
-Any shape that crosses HTTP is declared once in `packages/poco`, and both the
-API and the web app import it. [`CLAUDE.md`](./CLAUDE.md) holds the full
-architecture contract: dependency directions, where new code goes, and the
-recipes for tenant entities, money, and table pages. Read it before adding
-a feature. [`AGENTS.md`](./AGENTS.md) describes the design system.
+The web app renders what the API returns and imports only `packages/dto` and
+`packages/ui`. The API handles HTTP and imports only `packages/business` and
+`packages/dto`. [`CLAUDE.md`](./CLAUDE.md) holds the full architecture contract:
+the import graph, where new code goes, and the recipes for tenant entities,
+money, and table pages. Read it before adding a feature.
+[`AGENTS.md`](./AGENTS.md) describes the design system.
 
 ## Getting started
 
@@ -80,8 +83,8 @@ a feature. [`AGENTS.md`](./AGENTS.md) describes the design system.
 ### 1. Install
 
 ```sh
-git clone https://github.com/CouraLabs/OpenHouse.git
-cd OpenHouse
+git clone https://github.com/CouraLabs/Kantim.git
+cd Kantim
 npm install
 ```
 
@@ -141,8 +144,8 @@ ships everything.
 
 ```sh
 npx wrangler login
-npx wrangler d1 create openhouse          # copy the database_id it prints
-npx wrangler queues create openhouse-jobs
+npx wrangler d1 create kantim          # copy the database_id it prints
+npx wrangler queues create kantim-jobs
 ```
 
 Put the printed `database_id` into `apps/api/wrangler.jsonc`, and the queue
@@ -216,21 +219,22 @@ of your deployed web app, then host `apps/landing/dist` anywhere static
 (e.g. as a second static-assets Worker or a Pages project):
 
 ```sh
-VITE_APP_URL=https://openhouse.example.com npm run build -- --filter=landing
+VITE_APP_URL=https://kantim.example.com npm run build -- --filter=landing
 ```
 
 ### Checklist
 
 - [ ] `JWT_SECRET` set to a long random value, and backed up
 - [ ] The D1 `database_id` in `apps/api/wrangler.jsonc` matches your database
-- [ ] The `openhouse-jobs` queue exists
+- [ ] The `kantim-jobs` queue exists
 - [ ] A custom domain (HTTPS is automatic on Workers)
 
 ## Contributing
 
 1. Read [`CLAUDE.md`](./CLAUDE.md). Its structure rules are enforced in
    review.
-2. Change contracts in `packages/poco` first; the API and web follow.
+2. Change contracts in `packages/dto` first (and `packages/domain` when a
+   type changes); the API and web follow.
 3. Schema changes go in `packages/db`. Run `npm run db:generate` and commit
    the migration.
 4. Put every user-facing label in `apps/web/src/locales/en-US.json`.

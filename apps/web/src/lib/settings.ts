@@ -1,13 +1,12 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  currencyForLocale,
-  isSupportedTimeZone,
-  todayIn,
+  timeZoneSchema,
   type Currency,
   type SessionResponse,
+  type SettingsDefaults,
   type TenantSettings,
   type UpdateSettingsBody,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
 import { api } from './api.js'
 import { useSession } from './auth.js'
@@ -16,11 +15,19 @@ import { SESSION_QUERY_KEY } from './query.js'
 export function browserTimeZone(): string | undefined {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-  return isSupportedTimeZone(timeZone) ? timeZone : undefined
+  return timeZoneSchema.safeParse(timeZone).success ? timeZone : undefined
 }
 
-export function browserCurrency(): Currency {
-  return currencyForLocale(navigator.language)
+export function useSettingsDefaults(locale = navigator.language) {
+  return useQuery({
+    queryKey: ['settings', 'defaults', locale],
+    queryFn: ({ signal }) =>
+      api<SettingsDefaults>(
+        `/settings/defaults?locale=${encodeURIComponent(locale)}`,
+        { signal }
+      ),
+    staleTime: Number.POSITIVE_INFINITY,
+  })
 }
 
 export function useTenantSettings(): TenantSettings {
@@ -29,9 +36,10 @@ export function useTenantSettings(): TenantSettings {
   return (
     session.data?.settings ?? {
       timezone: browserTimeZone() ?? 'UTC',
-      mainCurrency: browserCurrency(),
+      mainCurrency: 'USD',
       timezoneConfirmed: true,
       unsplitMode: 'personal' as const,
+      today: '1970-01-01',
     }
   )
 }
@@ -41,7 +49,7 @@ export function useMainCurrency(): Currency {
 }
 
 export function useTenantToday(): string {
-  return todayIn(useTenantSettings().timezone)
+  return useTenantSettings().today
 }
 
 export function useSaveSettings() {

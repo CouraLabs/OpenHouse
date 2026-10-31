@@ -1,15 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type {
-  CreateTransactionBody,
-  CreditMode,
-  ReconciledEditConflict,
-  SearchTransactionsArgs,
-  Transaction,
-  TransactionStatus,
-  TransactionType,
-  TransferBody,
-} from '@workspace/poco'
+import type { CreateTransactionBody, CreditMode, ReconciledEditConflict, SearchTransactionsArgs, Transaction, TransactionStatus, TransactionType, TransferBody } from '@workspace/dto'
 import {
   ArrowLeftRight,
   Ellipsis,
@@ -46,7 +37,6 @@ import { ExpensePieCard } from './expense-pie-card.js'
 import { TransactionWindowNotice } from './transaction-window-notice.js'
 import { FilterChips } from './filter-chips.js'
 import { InstallmentGroupDialog } from './installment-group-dialog.js'
-import { forecastNextMonthExpenses } from '@workspace/poco'
 import { GoalGaugesCard } from './goal-gauges-card.js'
 import { LastMonthCard } from './last-month-card.js'
 import { LimitUsageCard } from './limit-usage-card.js'
@@ -68,7 +58,6 @@ import {
   useGoals,
   useNextDueBills,
   useLimitUsage,
-  useRecurringRules,
 } from './use-dashboard.js'
 import {
   useActiveAccounts,
@@ -199,21 +188,10 @@ export function TransactionsPage() {
   })
   const goals = useGoals()
   const limitUsage = useLimitUsage()
-  const recurringRules = useRecurringRules()
   const currentBills = useCurrentBills()
   const nextDueBills = useNextDueBills()
 
-  const nextMonthSlices = useMemo(
-    () =>
-      forecastNextMonthExpenses(
-        recurringRules.data?.items ?? [],
-        shiftMonth(anchor, 1),
-        (accountId) =>
-          (accounts.data ?? []).find((account) => account.id === accountId)
-            ?.currency
-      ),
-    [recurringRules.data, anchor, accounts.data]
-  )
+  const nextMonthSlices = summary.data?.forecastNextMonth ?? []
 
   const rows = useMemo(
     () => (search.data?.pages ?? []).flatMap((page) => page.items),

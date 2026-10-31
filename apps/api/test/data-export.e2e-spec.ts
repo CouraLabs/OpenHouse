@@ -1,37 +1,11 @@
-import { eq } from 'drizzle-orm'
 import { strFromU8, unzipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import { env } from 'cloudflare:workers'
 
-import {
-  accounts,
-  auditLog,
-  categories,
-  createDatabase,
-  creditCardStatements,
-  goals,
-  importMappings,
-  limits,
-  receivers,
-  recurringTransactions,
-  tenantCodes,
-  tenantSettings,
-  tenants,
-  transactionHistory,
-  transactionLinkers,
-  transactions,
-  users,
-} from '@workspace/db'
-import type { ExportManifest } from '@workspace/poco'
-import { todayIn } from '@workspace/poco'
+import type { ExportManifest } from '@workspace/dto'
+import { todayIn } from '@workspace/business'
 
-import { AuditLogRepository } from '../src/audit/audit-log.repository.js'
-import { AuditLogService } from '../src/audit/audit-log.service.js'
-import { SystemClock } from '../src/common/clock/clock.js'
-import { SettingsRepository } from '../src/settings/settings.repository.js'
-import { deleteTenantNow } from '../src/tenant-deletion/tenant-deletion.jobs.js'
-import { TenantDeletionRepository } from '../src/tenant-deletion/tenant-deletion.repository.js'
-import { TenantDeletionService } from '../src/tenant-deletion/tenant-deletion.service.js'
+import { TestDatabaseHarness } from '@workspace/business/testing'
 import {
   type Agent,
   createAccount,
@@ -48,7 +22,7 @@ describe('data export and tenant deletion (e2e, #10)', () => {
 
   /** The tenant's tables, through the isolate's D1 — created per test, the
    * storage being per-test isolated. */
-  const database = () => createDatabase(env.DB as never)
+  const harness = new TestDatabaseHarness(env.DB)
 
   /** Seeds one row of every entity type a tenant owns. */
   async function seedEverything(owner: Agent) {
@@ -148,9 +122,7 @@ describe('data export and tenant deletion (e2e, #10)', () => {
 
     expect(invite.status).toBe(201)
 
-    const db = database()
-
-    await db.insert(importMappings).values({
+    await harness.insertImportMapping({
       tenantId,
       accountId: checking,
       mapping: { any: 'thing' },
@@ -223,12 +195,7 @@ describe('data export and tenant deletion (e2e, #10)', () => {
 
     expect(forbidden.status).toBe(403)
 
-    const db = database()
-    const audit = await db
-      .select()
-      .from(auditLog)
-      .where(eq(auditLog.tenantId, tenantId))
-    expect(audit.map((line) => line.action)).toContain('tenant.export')
+    expect(await harness.listAuditActions(tenantId)).toContain('tenant.export')
   })
 
   it("exports one member's data", async () => {
@@ -260,15 +227,14 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     const owner = await signUp(app)
     const member = await joinAsMember(app, owner)
     const categoryId = await createCategory(member.agent)
-    const db = database()
 
-    const active = await owner.post(
-      `/api/tenants/users/${member.id}/anonymize`
-    )
+    const active = await owner.post(`/api/tenants/users/${member.id}/anonymize`)
 
     expect(active.status).toBe(409)
 
-    const removed = await owner.post(`/api/tenants/users/${member.id}/deactivate`)
+    const removed = await owner.post(
+      `/api/tenants/users/${member.id}/deactivate`
+    )
 
     expect(removed.status).toBe(200)
 
@@ -287,13 +253,8 @@ describe('data export and tenant deletion (e2e, #10)', () => {
 
     expect(restored.status).toBe(409)
 
-    const [row] = await db.select().from(users).where(eq(users.id, member.id))
-    expect(row.password).toBe('')
-    const [category] = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.id, categoryId))
-    expect(category.createdBy).toBe(member.id)
+    expect(await harness.findUserPassword(member.id)).toBe('')
+    expect(await harness.findCategoryCreatedBy(categoryId)).toBe(member.id)
   })
 
   it('streams a locale-aware CSV of the filtered view', async () => {
@@ -331,16 +292,12 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     expect(ptBr.headers.get('content-type')).toContain('text/csv')
     // The file opens with the UTF-8 BOM on the wire; the harness's text
     // decoding strips it, so the assertion reads the header alone.
-    expect((ptBr.body as string).startsWith('Date;Name;Type;Amount')).toBe(
-      true
-    )
+    expect((ptBr.body as string).startsWith('Date;Name;Type;Amount')).toBe(true)
     expect(ptBr.body).toContain("05/03/2026;'=cmd|calc;")
     expect(ptBr.body).toContain('1234,50')
     expect(ptBr.body).not.toContain('Other')
     expect(enUs.status).toBe(200)
-    expect((enUs.body as string).startsWith('Date,Name,Type,Amount')).toBe(
-      true
-    )
+    expect((enUs.body as string).startsWith('Date,Name,Type,Amount')).toBe(true)
     expect(enUs.body).toContain('2026-03-05')
     expect(enUs.body).toContain('Other')
   })
@@ -352,88 +309,48 @@ describe('data export and tenant deletion (e2e, #10)', () => {
   it('schedules, cancels, and carries out the deletion of a tenant with every entity', async () => {
     const owner = await signUp(app)
     const { tenantId, userId } = await seedEverything(owner)
-    const db = database()
-    const [tenant] = await db
-      .select()
-      .from(tenants)
-      .where(eq(tenants.id, tenantId))
+    const tenantName = await harness.findTenantName(tenantId)
 
-    const audit = new AuditLogService(new AuditLogRepository(db))
-    const deletion = new TenantDeletionService(
-      db,
-      new TenantDeletionRepository(db),
-      new SettingsRepository(db),
-      audit,
-      new SystemClock()
-    )
-    const clock = new SystemClock()
+    const wrong = await owner.post('/api/tenant-deletion', {
+      tenantName: 'wrong name',
+    })
+    expect(wrong.status).toBe(409)
 
-    await expect(
-      deletion.schedule(tenantId, userId, 'wrong name')
-    ).rejects.toMatchObject({ name: 'BadRequestError', status: 400 })
-
-    const scheduled = await deletion.schedule(tenantId, userId, tenant.name)
+    const scheduledRes = await owner.post('/api/tenant-deletion', {
+      tenantName,
+    })
+    expect(scheduledRes.status).toBe(201)
+    const scheduled = scheduledRes.body as {
+      deletionDate: string
+      deletesOn: string
+    }
 
     expect(scheduled.deletionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(
-      (await owner.get('/api/auth/me')).body.tenant.deletionDate
-    ).toBe(scheduled.deletionDate)
-    await expect(
-      deletion.schedule(tenantId, userId, tenant.name)
-    ).rejects.toMatchObject({ name: 'ConflictError', status: 409 })
-
-    // Not due yet: the job leaves it alone. Cancel, then schedule again.
-    await deleteTenantNow(db, clock, tenantId, audit)
+    expect(scheduled.deletesOn).toBe(scheduled.deletionDate)
+    expect((await owner.get('/api/auth/me')).body.tenant.deletionDate).toBe(
+      scheduled.deletionDate
+    )
     expect(
       (
-        await db
-          .select()
-          .from(transactions)
-          .where(eq(transactions.tenantId, tenantId))
-      ).length
-    ).toBeGreaterThan(0)
+        await owner.post('/api/tenant-deletion', {
+          tenantName,
+        })
+      ).status
+    ).toBe(409)
 
-    await deletion.cancel(tenantId, userId)
-    await expect(deletion.cancel(tenantId, userId)).rejects.toMatchObject({
-      name: 'NotFoundError',
-      status: 404,
-    })
-    await deletion.schedule(tenantId, userId, tenant.name)
+    await harness.deleteTenantNow(tenantId)
+    expect(await harness.countTenantTransactions(tenantId)).toBeGreaterThan(0)
 
-    await db
-      .update(tenants)
-      .set({ deletionDate: '2000-01-01' })
-      .where(eq(tenants.id, tenantId))
-    await deleteTenantNow(db, clock, tenantId, audit)
+    expect((await owner.delete('/api/tenant-deletion')).status).toBe(204)
+    expect((await owner.delete('/api/tenant-deletion')).status).toBe(404)
+    await harness.scheduleTenantDeletion(tenantId, userId, tenantName)
 
-    const left = await Promise.all(
-      [
-        transactionHistory,
-        transactions,
-        recurringTransactions,
-        transactionLinkers,
-        goals,
-        limits,
-        creditCardStatements,
-        accounts,
-        receivers,
-        categories,
-        tenantCodes,
-        tenantSettings,
-        users,
-        importMappings,
-      ].map((table) =>
-        db.select().from(table).where(eq(table.tenantId, tenantId))
-      )
-    )
-    expect(left.map((rows) => rows.length)).toEqual(left.map(() => 0))
-    expect(
-      await db.select().from(tenants).where(eq(tenants.id, tenantId))
-    ).toEqual([])
-    const auditLines = await db
-      .select()
-      .from(auditLog)
-      .where(eq(auditLog.tenantId, tenantId))
-    expect(auditLines.map((line) => line.action)).toContain('tenant.deleted')
+    await harness.setTenantDeletionDate(tenantId, '2000-01-01')
+    await harness.deleteTenantNow(tenantId)
+
+    const left = await harness.countRemainingTenantRows(tenantId)
+    expect(left).toEqual(left.map(() => 0))
+    expect(await harness.tenantExists(tenantId)).toBe(false)
+    expect(await harness.listAuditActions(tenantId)).toContain('tenant.deleted')
   })
 })

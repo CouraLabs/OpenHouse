@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { CalendarClock, TriangleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { DEFAULT_UPCOMING_DAYS } from '@workspace/poco'
+import { DEFAULT_UPCOMING_DAYS } from '@workspace/dto'
 import {
   Card,
   CardContent,

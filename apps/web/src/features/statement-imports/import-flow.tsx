@@ -1,13 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type {
-  Account,
-  ImportCommitRow,
-  ImportMapping,
-  ImportPreview,
-  ImportResult,
-  ReconciledEditConflict,
-} from '@workspace/poco'
+import type { Account, ImportCommitRow, ImportMapping, ImportPreview, ImportResult, ReconciledEditConflict } from '@workspace/dto'
 
 import { ApiError } from '@/lib/api.js'
 import { ImportMappingStep } from './import-mapping-step.js'

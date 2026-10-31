@@ -27,10 +27,7 @@ The web app is at `http://localhost:5173/app/` (override with `E2E_BASE_URL`). R
 
 ## Known bugs
 
-Known bugs are tested with `test.fail(...)`: the test passes while the bug exists and fails once it is fixed, which is the signal to drop the marker. The bugs, their root causes, and the observations from the QA pass are in [issue.md](issue.md).
-
-- `anonymous/auth.spec.ts` — BUG-1: a taken household name answers 500 instead of 409.
-- `owner/accounts.spec.ts` — BUG-2: a zero amount cannot be typed in `MoneyField`.
+Known bugs are tested with `test.fail(...)`: the test passes while the bug exists and fails once it is fixed, which is the signal to drop the marker. None are open: BUG-1 (a taken household name answered 500) and BUG-2 (a zero amount could not be typed in `MoneyField`) are fixed and their tests assert the correct behaviour.
 
 ## Layout
 

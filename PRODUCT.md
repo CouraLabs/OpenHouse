@@ -79,7 +79,7 @@ parked.
   you of due dates, bills, tasks and needs instead of waiting to be asked;
   everyone who lives in the home can take part.
 - Open source and free to self-host, with an optional hosted service. The
-  hosted plans are poco's `TIER_PLANS`: they sell limits, more members,
+  hosted plans are domain's `TIER_PLANS`: they sell limits, more members,
   messaging and AI, never core features.
 - Multi-currency homes are a real use case: USD, BRL and EUR accounts and
   cards side by side.
@@ -142,7 +142,7 @@ parked.
   the brand's home language; English copy keeps the same warmth without
   forcing Brazilian slang on English readers.
 - Infrastructure identifiers (Worker, D1 and queue names, cookie names,
-  `OPENHOUSE_*` variables) keep the old name until a planned migration
+  `KANTIM_*` variables) keep the old name until a planned migration
   changes them; renaming them blindly signs everyone out or deploys a new
   Worker.
 

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { TenantUser } from '@workspace/poco'
+import type { TenantUser } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import {
   Dialog,

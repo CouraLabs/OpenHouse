@@ -1,7 +1,7 @@
 import type { Context } from 'hono'
 import type { z, ZodType } from 'zod'
 
-import { BadRequestError } from '../errors.js'
+import { BadRequestError } from '@workspace/business'
 
 export async function parseJsonBody<S extends ZodType>(
   context: Context,

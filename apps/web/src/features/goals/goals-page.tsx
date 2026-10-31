@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateGoalBody, Goal } from '@workspace/poco'
+import type { CreateGoalBody, Goal } from '@workspace/dto'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'

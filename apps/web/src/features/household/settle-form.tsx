@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { SettleSuggestion } from '@workspace/poco'
+import type { SettleSuggestion } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import {
   DialogDescription,

@@ -6,20 +6,15 @@ import {
   importBatchesQuerySchema,
   importCommitSchema,
   importPreviewFieldsSchema,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
 import type { App, AppEnv } from '../common/context.js'
-import { BadRequestError } from '../common/errors.js'
+import { BadRequestError } from '@workspace/business'
 import { parseJsonBody, parseQuery } from '../common/validation/parse.js'
-import type { ImportCommitService } from './import-commit.service.js'
-import type { ImportPreviewService } from './import-preview.service.js'
 
 const batchIdSchema = z.string().uuid()
 
-export function statementImportsRoutes(deps: {
-  preview: ImportPreviewService
-  commits: ImportCommitService
-}): { router: App } {
+export function statementImportsRoutes(): { router: App } {
   const router = new Hono<AppEnv>()
 
   router.post('/preview', async (context) => {
@@ -27,7 +22,7 @@ export function statementImportsRoutes(deps: {
     const { file, fields } = await readUpload(context)
 
     return context.json(
-      await deps.preview.preview(session.tenant.id, file, fields),
+      await context.var.business.importPreview.preview(session.tenant.id, file, fields),
       201
     )
   })
@@ -51,7 +46,7 @@ export function statementImportsRoutes(deps: {
       const body = await parseJsonBody(context, importCommitSchema)
 
       return context.json(
-        await deps.commits.commit(session.tenant.id, session.user.id, body),
+        await context.var.business.importCommits.commit(session.tenant.id, session.user.id, body),
         201
       )
     }
@@ -62,7 +57,7 @@ export function statementImportsRoutes(deps: {
     const query = parseQuery(context, importBatchesQuerySchema)
 
     return context.json(
-      await deps.commits.recent(session.tenant.id, query.accountId)
+      await context.var.business.importCommits.recent(session.tenant.id, query.accountId)
     )
   })
 
@@ -75,22 +70,16 @@ export function statementImportsRoutes(deps: {
     }
 
     return context.json(
-      await deps.commits.undo(
-        session.tenant.id,
-        session.user.id,
-        batchId.data
-      )
+      await context.var.business.importCommits.undo(session.tenant.id, session.user.id, batchId.data)
     )
   })
 
   return { router }
 }
 
-async function readUpload(
-  context: import('hono').Context<AppEnv>
-): Promise<{
+async function readUpload(context: import('hono').Context<AppEnv>): Promise<{
   file: { originalname: string; bytes: Uint8Array; size: number }
-  fields: import('@workspace/poco').ImportPreviewFields
+  fields: import('@workspace/dto').ImportPreviewFields
 }> {
   const form = await context.req.parseBody()
   const file = form.file

@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "openhouse",
+  "name": "kantim",
   "main": "src/index.ts",
   "upload_source_maps": true,
   "compatibility_date": "2026-10-30",
@@ -32,8 +32,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "openhouse",
-      "database_id": "db289b16-8ae4-4970-9728-3b632623eb53",
+      "database_name": "kantim",
+      "database_id": "4cac3d3d-2e4b-40dc-b63d-4dc1b26b1083",
       "migrations_dir": "../../packages/db/drizzle"
     }
   ],
@@ -41,10 +41,10 @@
   // consumer runs the per-tenant service. At-least-once — every job is
   // idempotent.
   "queues": {
-    "producers": [{ "binding": "JOBS", "queue": "openhouse-jobs" }],
+    "producers": [{ "binding": "JOBS", "queue": "kantim-jobs" }],
     "consumers": [
       {
-        "queue": "openhouse-jobs",
+        "queue": "kantim-jobs",
         "max_batch_size": 10,
         "max_retries": 3,
         "max_batch_timeout": 5
@@ -87,8 +87,8 @@
   // takes the rest of the zone (most-specific route wins). Requires the
   // couralabs.dev zone in this Cloudflare account.
   "routes": [
-    { "pattern": "openhouse.couralabs.dev/api*", "zone_name": "couralabs.dev" },
-    { "pattern": "openhouse.couralabs.dev/app*", "zone_name": "couralabs.dev" }
+    { "pattern": "kantim.couralabs.dev/api*", "zone_name": "couralabs.dev" },
+    { "pattern": "kantim.couralabs.dev/app*", "zone_name": "couralabs.dev" }
   ],
   // Workers Logs captures the request lines and the jobs' errors; traces are
   // sampled at 1%; Issues groups production failures.
@@ -103,19 +103,19 @@
     "JWT_ACCESS_TTL_S": "900",
     "JWT_REFRESH_TTL_S": "86400",
     "JWT_REMEMBER_REFRESH_TTL_S": "2592000",
-    "PUSH_VAPID_SUBJECT": "mailto:openhouse@couralabs.dev",
+    "PUSH_VAPID_SUBJECT": "mailto:kantim@couralabs.dev",
     "EMAIL_FROM": "no-reply@couralabs.dev",
-    "EMAIL_FROM_NAME": "OpenHouse",
-    "APP_URL": "https://openhouse.couralabs.dev/app",
+    "EMAIL_FROM_NAME": "Kantim",
+    "APP_URL": "https://kantim.couralabs.dev/app",
     // Feature switches, read only when ENVIRONMENT is production (a secret
     // on the deployed Worker; `npm run dev` passes development, which turns
     // both off). ENVIRONMENT left unset means production.
-    "OPENHOUSE_ENABLE_EMAIL_VERIFICATION": "false",
-    "OPENHOUSE_ENABLE_CAPTCHA_CHECK": "true",
+    "KANTIM_ENABLE_EMAIL_VERIFICATION": "false",
+    "KANTIM_ENABLE_CAPTCHA_CHECK": "true",
     // The Turnstile bot check (sign-up, rapid sign-ins, resends, invites)
     // accepts tokens minted on these hostnames only; TURNSTILE_SECRET is a
     // secret.
-    "TURNSTILE_HOSTNAMES": "openhouse.couralabs.dev",
+    "TURNSTILE_HOSTNAMES": "kantim.couralabs.dev",
     "TURNSTILE_SITE_KEY": "0x4AAAAAAFr8E1AVU5Xzv0Ax"
   },
   // Secrets set with `wrangler secret put` survive every deploy.

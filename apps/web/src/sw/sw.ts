@@ -13,7 +13,7 @@ const BASE: string = new URL('.', self.location.href).pathname
 
 declare const self: ServiceWorkerGlobalScope
 
-setCacheNameDetails({ prefix: 'openhouse' })
+setCacheNameDetails({ prefix: 'kantim' })
 void self.skipWaiting()
 clientsClaim()
 
@@ -37,7 +37,7 @@ self.addEventListener('push', (event) => {
       body: message.body,
       icon: `${BASE}icon-192.png`,
       badge: `${BASE}icon-monochrome-512.png`,
-      tag: 'openhouse-reminders',
+      tag: 'kantim-reminders',
       data: { url: payload.url },
     })
   )

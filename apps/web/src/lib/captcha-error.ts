@@ -1,4 +1,4 @@
-import { CAPTCHA_FAILED, CAPTCHA_REQUIRED } from '@workspace/poco'
+import { CAPTCHA_FAILED, CAPTCHA_REQUIRED } from '@workspace/dto'
 import { ApiError } from './api.js'
 
 export function isCaptchaError(error: unknown): boolean {

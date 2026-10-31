@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { Currency, SplitInput } from '@workspace/poco'
-import { resolveSplit } from '@workspace/poco'
+import type { Currency, SplitInput } from '@workspace/dto'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { Field, FieldLabel } from '@workspace/ui/components/field'
 import {
@@ -9,9 +8,11 @@ import {
   type SplitEditorMode,
 } from '@workspace/ui/components/split-editor'
 
+import { useSplitPreview } from '@/features/transactions/use-transactions.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { useHouseholdMembers } from '@/lib/household.js'
 import { formattingLocale } from '@/lib/i18n.js'
+import { useDebouncedValue } from '@/lib/use-debounced-value.js'
 
 interface SplitSectionProps {
   value: SplitInput | null
@@ -48,14 +49,26 @@ export function SplitSection({
         .map((member) => ({ userId: member.id })),
     })
 
+  const settledAmount = useDebouncedValue(amount ?? '')
+  const settledSplit = useDebouncedValue(value)
+  const resolution = useSplitPreview(
+    settledSplit !== null && settledAmount !== ''
+      ? {
+          amount: settledAmount,
+          split: settledSplit,
+          payerUserId,
+        }
+      : null
+  )
+
   const preview: Record<number, string> = {}
   let message: string | undefined
 
   if (value !== null) {
     if (amount !== undefined && amount !== '') {
-      try {
-        const result = resolveSplit(amount, value, payerUserId)
+      const result = resolution.data
 
+      if (result !== undefined) {
         if (result.ok) {
           for (const share of result.shares) {
             preview[share.userId] = formatMoney(
@@ -67,7 +80,6 @@ export function SplitSection({
         } else if (value.entries.every((entry) => entry.value !== '')) {
           message = t(`split.error.${value.mode}`)
         }
-      } catch {
       }
     } else if (value.mode === 'exact') {
       for (const entry of value.entries) {

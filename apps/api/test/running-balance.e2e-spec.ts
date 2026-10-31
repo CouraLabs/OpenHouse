@@ -1,6 +1,5 @@
-import { eq } from 'drizzle-orm'
 import { env } from 'cloudflare:workers'
-import { accounts, createDatabase, type Database } from '@workspace/db'
+import { TestDatabaseHarness } from '@workspace/business/testing'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -119,8 +118,9 @@ describe('the chronological running balance (e2e)', () => {
     const deleted = await agent.delete(`/api/transactions/${kept}`)
     expect(deleted.status).toBe(204)
 
-    expect((await rowsOf(agent, accountId)).map((row) => row.runningBalance))
-      .toEqual(['140.00', '140.00'])
+    expect(
+      (await rowsOf(agent, accountId)).map((row) => row.runningBalance)
+    ).toEqual(['140.00', '140.00'])
   })
 
   it('computes the window before the filters and the paging', async () => {
@@ -183,8 +183,9 @@ describe('the chronological running balance (e2e)', () => {
     expect(response.status).toBe(201)
 
     const byId = new Map<number, string>(
-      (response.body.items as Array<{ id: number; runningBalance: string }>)
-        .map((row) => [row.id, row.runningBalance])
+      (
+        response.body.items as Array<{ id: number; runningBalance: string }>
+      ).map((row) => [row.id, row.runningBalance])
     )
 
     expect(byId.get(a)).toBe('90.00')
@@ -228,13 +229,10 @@ describe('the chronological running balance (e2e)', () => {
       )
     ).toEqual([])
 
-    // The old spec reached through the Nest app; here the same Drizzle
-    // handle builds straight from the isolate's D1 binding.
-    const db: Database = createDatabase(env.DB as never)
-    await db
-      .update(accounts)
-      .set({ balance: '999.00' })
-      .where(eq(accounts.id, accountId))
+    await new TestDatabaseHarness(env.DB).setAccountCachedBalance(
+      accountId,
+      '999.00'
+    )
 
     const drifted = await agent.get('/api/balances/consistency')
     expect(drifted.status).toBe(200)
@@ -318,10 +316,13 @@ describe('reconciling an account (e2e)', () => {
     await add(agent, categoryId, accountId, { transactionDt: '2026-10-05' })
     await add(agent, categoryId, accountId, { transactionDt: '2026-10-20' })
 
-    const preview = await agent.post(`/api/reconciliation/${accountId}/preview`, {
-      date: '2026-10-10',
-      bankBalance: '890.00',
-    })
+    const preview = await agent.post(
+      `/api/reconciliation/${accountId}/preview`,
+      {
+        date: '2026-10-10',
+        bankBalance: '890.00',
+      }
+    )
     expect(preview.status).toBe(200)
 
     expect(preview.body).toMatchObject({
@@ -391,9 +392,7 @@ describe('reconciling an account (e2e)', () => {
       net: '-100.00',
     })
     expect(
-      breakdown.body.groups[0].items.map(
-        (item: { name: string }) => item.name
-      )
+      breakdown.body.groups[0].items.map((item: { name: string }) => item.name)
     ).not.toContain('Balance adjustment')
 
     // Rows through the lock date ask for a confirmation.

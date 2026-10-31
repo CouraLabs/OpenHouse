@@ -1,9 +1,9 @@
 {
   // The landing page is a pure static site (no API), so this Worker serves
   // only its built assets — no "main", no bindings. Deployed separately from
-  // the app Worker ("openhouse"), e.g. on its own domain or subdomain.
+  // the app Worker ("kantim"), e.g. on its own domain or subdomain.
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "openhouse-landing",
+  "name": "kantim-landing",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "dist",
@@ -14,5 +14,5 @@
   // record and certificate (a plain route does not, so the host never
   // resolved); the app Worker's /api* and /app* routes still win, because a
   // route takes precedence over a custom domain.
-  "routes": [{ "pattern": "openhouse.couralabs.dev", "custom_domain": true }]
+  "routes": [{ "pattern": "kantim.couralabs.dev", "custom_domain": true }]
 }

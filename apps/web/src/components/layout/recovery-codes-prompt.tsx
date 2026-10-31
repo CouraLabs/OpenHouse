@@ -8,7 +8,7 @@ import { useAccountSecurity } from '@/lib/account-security.js'
 import { useSession } from '@/lib/auth.js'
 
 const dismissedKey = (userId: number) =>
-  `openhouse:recovery-prompt-dismissed:${userId}`
+  `kantim:recovery-prompt-dismissed:${userId}`
 
 function wasDismissed(userId: number | undefined): boolean {
   try {

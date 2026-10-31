@@ -1,5 +1,5 @@
 ---
-name: OpenHouse
+name: Kantim
 description: A drafting sheet for software, with hairline grid, plotted line primitives, and black and white ink in two peer themes.
 colors:
   sheet-black: "#0a0a0a"
@@ -254,7 +254,7 @@ Breakpoints: 1100px narrows the orbit. 900px stacks the hero (orbit moves above 
 
 **The One Column Rule.** Two-column cells divide at `split` so their dividers line up down the sheet. Don't invent a second column position.
 
-### The frame in OpenHouse
+### The frame in Kantim
 
 The landing (`apps/landing`) draws the same sheet, built from three primitives in `landing.css` and `components/`:
 
@@ -292,7 +292,7 @@ The sheet is flat. Depth comes from three things only: two tonal steps (raised p
 
 There are two families: hairline geometry drawn on the sheet, and fully rounded controls set on top of it.
 
-- **Primitives.** Stroked line drawings in a 100-unit box with round caps and joins and non-scaling strokes (1 to 1.5px). Codeboros is a ring with a gap and a node at its open end. OpenMixing is two overlapping circles, the second dotted (`stroke-dasharray: 0 0.026` at 1.9x width). OpenHouse is a roof over a square. Every stroke carries `pathLength="1"` and plots in by animating `stroke-dashoffset` from 1 to 0 (1500ms, second stroke 380ms later). The node dot and dotted trace then arrive by scaling up from 0.4. They appear at glyph size (26px), as the tab drawing, in the panel, and inside the hero orbit.
+- **Primitives.** Stroked line drawings in a 100-unit box with round caps and joins and non-scaling strokes (1 to 1.5px). Codeboros is a ring with a gap and a node at its open end. OpenMixing is two overlapping circles, the second dotted (`stroke-dasharray: 0 0.026` at 1.9x width). Kantim is a roof over a square. Every stroke carries `pathLength="1"` and plots in by animating `stroke-dashoffset` from 1 to 0 (1500ms, second stroke 380ms later). The node dot and dotted trace then arrive by scaling up from 0.4. They appear at glyph size (26px), as the tab drawing, in the panel, and inside the hero orbit.
 - **Orbit.** A hairline ring (`line-2`) plotted over 2400ms, a dotted inner ring counter-spinning over 160s, four short axis ticks, and a 5px node dot. The node sweeps 76 to 126deg (14s, alternate) on desktop so it stays clear of the headline. Below 900px, where the orbit sits alone above the headline, it spins the full ring over 40s.
 - **Circles.** Outline arcs crossing cell edges, the contact pair of rings with a masked dotted trace and node, and hollow 7px bullet rings on line lists.
 - **Corners.** Controls are fully round (`ctl`, 999px): pills, CTA labels and discs, tags, tools, status, copy button. Containers step down in radius: panel 20px, tab 16px, facts grid and run block 14px, `kbd` keys and focus rings 6px.

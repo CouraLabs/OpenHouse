@@ -2,12 +2,8 @@ import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import type {
-  AccountRef,
-  CreditCardStatement,
-  TransferBody,
-} from '@workspace/poco'
-import { compareMoney, transferSchema } from '@workspace/poco'
+import type { AccountRef, CreditCardStatement, TransferBody } from '@workspace/dto'
+import { transferSchema } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import { DialogFooter } from '@workspace/ui/components/dialog'
@@ -47,7 +43,7 @@ export function PayBillFields({
         ?.id as number,
       toAccountId: bill.accountId,
       paymentStatementId: bill.id,
-      amount: compareMoney(bill.amountDue, '0') > 0 ? bill.amountDue : '',
+      amount: bill.amountDueTone === 'positive' ? bill.amountDue : '',
       transactionDt: bill.dueDate > today ? bill.dueDate : today,
       categoryId: undefined,
       note: undefined,

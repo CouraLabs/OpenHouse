@@ -1,10 +1,10 @@
 import type { FieldError as FormFieldError } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { cycleDaysDiffer, cycleGapWarning } from '@workspace/poco'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { Field, FieldLabel } from '@workspace/ui/components/field'
 
 import { DayOfMonthPick } from './day-of-month-pick.js'
+import { useAccountPreview } from './use-accounts.js'
 
 export function CardCycleFields({
   closeDay,
@@ -25,8 +25,11 @@ export function CardCycleFields({
 }) {
   const { t } = useTranslation()
   const bothSet = closeDay != null && dueDay != null
-  const sameDay = bothSet && !cycleDaysDiffer(closeDay, dueDay)
-  const gap = bothSet && !sameDay ? cycleGapWarning(closeDay, dueDay) : null
+  const preview = useAccountPreview(
+    { closeDay: closeDay ?? null, dueDay: dueDay ?? null },
+    bothSet
+  )
+  const gap = bothSet ? (preview.data?.cycleGapWarning ?? null) : null
 
   return (
     <>

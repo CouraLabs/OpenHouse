@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { Transaction } from '@workspace/poco'
+import type { Transaction } from '@workspace/dto'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'

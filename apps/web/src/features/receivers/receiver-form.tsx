@@ -5,12 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type {
-  CreateReceiverBody,
-  Receiver,
-  ReceiverType,
-} from '@workspace/poco'
-import { createReceiverSchema, receiverTypes } from '@workspace/poco'
+import type { CreateReceiverBody, Receiver, ReceiverType } from '@workspace/dto'
+import { createReceiverSchema, receiverTypes } from '@workspace/dto'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {
   Select,

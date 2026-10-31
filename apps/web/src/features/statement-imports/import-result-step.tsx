@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { Account, ImportResult } from '@workspace/poco'
+import type { Account, ImportResult } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 
 import { ImportStepActions } from './import-step-actions.js'

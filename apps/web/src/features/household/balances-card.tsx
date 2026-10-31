@@ -1,9 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import {
-  compareMoney,
-  type HouseholdBalance,
-  type SettleSuggestion,
-} from '@workspace/poco'
+import { type HouseholdBalance, type SettleSuggestion } from '@workspace/dto'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import {
@@ -54,7 +50,7 @@ export function BalancesCard({
                 </span>
                 <span
                   className={
-                    compareMoney(row.balance, '0') < 0
+                    row.tone === 'negative'
                       ? 'text-destructive tabular-nums'
                       : 'tabular-nums'
                   }

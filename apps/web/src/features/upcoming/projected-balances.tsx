@@ -1,6 +1,6 @@
 import { TriangleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { ProjectedBalance, UpcomingResponse } from '@workspace/poco'
+import type { ProjectedBalance, UpcomingResponse } from '@workspace/dto'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'

@@ -1,44 +1,38 @@
 import { Hono } from 'hono'
-import type {
-  Category,
-  CategoryRef,
-  EntityStatus,
-} from '@workspace/poco'
+import type { Category, CategoryRef, EntityStatus } from '@workspace/dto'
+import { parseSplit } from '@workspace/business'
 import {
   createCategorySchema,
   exportCategoriesSchema,
-  parseSplit,
   searchCategoriesSchema,
+  suggestCategorySchema,
   updateCategorySchema,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
 import type { App, AppEnv } from '../common/context.js'
-import type { AuditRecorder } from '../common/audit/audit-recorder.js'
-import {
-  csvChunks,
-  pagesOf,
-  type CsvColumn,
-} from '../common/csv/csv.js'
+import { csvChunks, pagesOf, type CsvColumn } from '@workspace/business'
 import { parseJsonBody } from '../common/validation/parse.js'
-import { CATEGORY_CSV_COLUMNS } from './category-csv.js'
-import type { CategoryService } from './category.service.js'
+import { CATEGORY_CSV_COLUMNS } from '@workspace/business'
 
 const CSV_PAGE_SIZE = 500
 
-export function categoriesRoutes(deps: {
-  categories: CategoryService
-  audit: AuditRecorder
-}): { router: App } {
+export function categoriesRoutes(): { router: App } {
   const router = new Hono<AppEnv>()
+
+  router.post('/suggest', async (context) => {
+    const session = context.get('session')
+    const body = await parseJsonBody(context, suggestCategorySchema)
+
+    return context.json(
+      await context.var.business.categories.suggest(session.tenant.id, body.description)
+    )
+  })
 
   router.post('/', async (context) => {
     const session = context.get('session')
-    const body = await parseJsonBody(
-      context,
-      createCategorySchema
-    )
+    const body = await parseJsonBody(context, createCategorySchema)
 
-    const row = await deps.categories.create(
+    const row = await context.var.business.categories.create(
       session.tenant.id,
       session.user.id,
       body
@@ -49,12 +43,9 @@ export function categoriesRoutes(deps: {
 
   router.post('/search', async (context) => {
     const session = context.get('session')
-    const args = await parseJsonBody(
-      context,
-      searchCategoriesSchema
-    )
+    const args = await parseJsonBody(context, searchCategoriesSchema)
 
-    const { rows, total } = await deps.categories.search(
+    const { rows, total } = await context.var.business.categories.search(
       session.tenant.id,
       args
     )
@@ -64,12 +55,9 @@ export function categoriesRoutes(deps: {
 
   router.post('/export', async (context) => {
     const session = context.get('session')
-    const args = await parseJsonBody(
-      context,
-      exportCategoriesSchema
-    )
+    const args = await parseJsonBody(context, exportCategoriesSchema)
 
-    await deps.audit.record({
+    await context.var.business.audit.record({
       tenantId: session.tenant.id,
       actorId: session.user.id,
       action: 'csv.export',
@@ -77,7 +65,7 @@ export function categoriesRoutes(deps: {
     })
 
     const read = async (skip: number, limit: number) => {
-      const { rows } = await deps.categories.search(session.tenant.id, {
+      const { rows } = await context.var.business.categories.search(session.tenant.id, {
         ...args,
         skip,
         limit,
@@ -96,7 +84,7 @@ export function categoriesRoutes(deps: {
 
   router.get('/', async (context) => {
     const session = context.get('session')
-    const rows = await deps.categories.listActive(session.tenant.id)
+    const rows = await context.var.business.categories.listActive(session.tenant.id)
 
     const refs: CategoryRef[] = rows.map((row) => ({
       id: row.id,
@@ -111,17 +99,16 @@ export function categoriesRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    return context.json(toWire(await deps.categories.find(session.tenant.id, id)))
+    return context.json(
+      toWire(await context.var.business.categories.find(session.tenant.id, id))
+    )
   })
 
   router.put('/', async (context) => {
     const session = context.get('session')
-    const body = await parseJsonBody(
-      context,
-      updateCategorySchema
-    )
+    const body = await parseJsonBody(context, updateCategorySchema)
 
-    const row = await deps.categories.update(
+    const row = await context.var.business.categories.update(
       session.tenant.id,
       session.user.id,
       body
@@ -134,7 +121,7 @@ export function categoriesRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    await deps.categories.softDelete(session.tenant.id, session.user.id, id)
+    await context.var.business.categories.softDelete(session.tenant.id, session.user.id, id)
 
     return context.body(null, 204)
   })

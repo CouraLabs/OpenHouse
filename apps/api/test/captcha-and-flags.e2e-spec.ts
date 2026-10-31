@@ -114,7 +114,7 @@ describe('feature switches (e2e)', () => {
   })
 
   it('signs the user in at sign-up when email verification is off', async () => {
-    const { app } = startApp({ OPENHOUSE_ENABLE_EMAIL_VERIFICATION: 'false' })
+    const { app } = startApp({ KANTIM_ENABLE_EMAIL_VERIFICATION: 'false' })
     const email = uniqueEmail()
 
     const created = await post(app, '/api/auth/sign-up', {
@@ -135,7 +135,7 @@ describe('feature switches (e2e)', () => {
   })
 
   it('skips the bot check when the captcha switch is off', async () => {
-    const { app } = startApp({ OPENHOUSE_ENABLE_CAPTCHA_CHECK: 'false' })
+    const { app } = startApp({ KANTIM_ENABLE_CAPTCHA_CHECK: 'false' })
 
     const created = await post(app, '/api/auth/sign-up', {
       tenantName: `t-${randomUUID()}`,

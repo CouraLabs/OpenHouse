@@ -2,11 +2,7 @@ import { useSearch } from '@tanstack/react-router'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  statementStatuses,
-  type SearchStatementsArgs,
-  type StatementStatus,
-} from '@workspace/poco'
+import { statementStatuses, type SearchStatementsArgs, type StatementStatus } from '@workspace/dto'
 import { DataTable } from '@workspace/ui/components/data-table'
 import {
   FilterDialog,

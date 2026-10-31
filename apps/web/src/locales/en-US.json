@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "OpenHouse",
+    "name": "Kantim",
     "name-styled": "<accent>Open</accent>House",
     "eyebrow": "Household finance",
     "headline": "Every coin in the house, in its place.",
@@ -1038,7 +1038,7 @@
     "title": "Set up {{name}}",
     "description": "Pick your time zone and main currency before you start. Days, limits, and goals follow them.",
     "currency-hint": "Limits and goals use this currency. Each account keeps its own, and you can change this later in Settings.",
-    "submit": "Start using OpenHouse"
+    "submit": "Start using Kantim"
   },
   "settings": {
     "title": "Settings",
@@ -1122,7 +1122,7 @@
       "done": "Done",
       "code": "Invite code",
       "link": "Sign-up link",
-      "share-title": "Join our household on OpenHouse",
+      "share-title": "Join our household on Kantim",
       "pending-title": "Pending invitations",
       "pending-empty": "No invitations are waiting.",
       "expires": "Expires {{date}}",
@@ -1166,7 +1166,7 @@
       "done": "Done",
       "code": "Reset code",
       "link": "Reset link",
-      "share-title": "Your OpenHouse password reset code"
+      "share-title": "Your Kantim password reset code"
     },
     "recovery": {
       "title": "Recovery codes",
@@ -1184,7 +1184,7 @@
       "copy": "Copy codes",
       "download": "Download",
       "print": "Print",
-      "sheet-heading": "OpenHouse recovery codes",
+      "sheet-heading": "Kantim recovery codes",
       "sheet-note": "Each code resets your password once. Keep this sheet somewhere safe."
     },
     "member-export": {
@@ -1200,7 +1200,7 @@
       "delete-explanation": "Permanently deletes the household and everything recorded in it, after a 30-day grace period during which you can cancel.",
       "delete-button": "Delete household",
       "delete-title": "Delete this household?",
-      "delete-description": "The household and all its data are permanently deleted after {{days}} days, and you can cancel until then. Export your data first if you want a copy.",
+      "delete-description": "The household and all its data are permanently deleted after 30 days, and you can cancel until then. Export your data first if you want a copy.",
       "delete-type-name": "Type \"{{name}}\" to confirm",
       "delete-confirm": "Schedule deletion",
       "deleting": "Scheduling…"
@@ -1224,7 +1224,7 @@
         "recurringTransactions": "Recurring transactions"
       },
       "compare": "Plans",
-      "change-hint": "Plans are changed by the OpenHouse team for now. Get in touch to upgrade.",
+      "change-hint": "Plans are changed by the Kantim team for now. Get in touch to upgrade.",
       "current": "Current",
       "price": "{{price}} / month",
       "extra-user": "+{{price}} per extra user",
@@ -1415,7 +1415,7 @@
     "error": "Could not load your notifications.",
     "digest": "Daily digest · {{count}} reminders",
     "preferences": "Notification preferences",
-    "preferences-description": "Choose how and when OpenHouse reminds you about bills, recurring expenses and limits.",
+    "preferences-description": "Choose how and when Kantim reminds you about bills, recurring expenses and limits.",
     "channels": "Channels",
     "in-app": "In-app notifications",
     "in-app-help": "The bell in the header.",
@@ -1429,7 +1429,7 @@
     "push-unavailable": "Web push is not set up on this server.",
     "push-unsupported": "This browser does not support web push.",
     "push-denied": "Notifications are blocked for this site. Allow them in the browser settings to use push.",
-    "push-ios-hint": "On iPhone and iPad, web push needs the app on your Home Screen: tap Share, then Add to Home Screen, and open OpenHouse from there.",
+    "push-ios-hint": "On iPhone and iPad, web push needs the app on your Home Screen: tap Share, then Add to Home Screen, and open Kantim from there.",
     "lead": "Reminders",
     "bill-lead": "Card bills: days before the due date",
     "recurring-lead": "Recurring expenses: days before",

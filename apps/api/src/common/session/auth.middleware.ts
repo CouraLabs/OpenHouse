@@ -1,13 +1,12 @@
 import { getCookie } from 'hono/cookie'
 
 import type { AppEnv } from '../context.js'
-import { UnauthorizedError, ForbiddenError } from '../errors.js'
-import type { SessionResolver } from './session-resolver.js'
-import type { Session } from './session.js'
+import { UnauthorizedError, ForbiddenError } from '@workspace/business'
+import type { Session } from '@workspace/business'
 import { ACCESS_COOKIE } from './cookies.js'
-import type { UserRole } from '@workspace/db'
+import type { UserRole } from '@workspace/dto'
 
-export function authMiddleware(sessions: SessionResolver) {
+export function authMiddleware() {
   return async (
     context: import('hono').Context<AppEnv>,
     next: () => Promise<void>
@@ -22,7 +21,7 @@ export function authMiddleware(sessions: SessionResolver) {
       throw new UnauthorizedError('Missing session.')
     }
 
-    const session = await sessions.resolve(rawToken)
+    const session = await context.var.business.sessions.resolve(rawToken)
 
     if (session === null) {
       throw new UnauthorizedError('Session expired or invalid.')

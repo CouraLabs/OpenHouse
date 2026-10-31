@@ -1,6 +1,6 @@
 import { Check, Minus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { TierPlan } from '@workspace/poco'
+import type { TierPlan } from '@workspace/dto'
 import { cn } from 'cn'
 
 import { formatMoney } from '@/lib/format-money.js'

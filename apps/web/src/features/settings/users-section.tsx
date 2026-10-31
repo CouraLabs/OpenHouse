@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { compareMoney, type InviteCode, type TenantUser } from '@workspace/poco'
+import { type InviteCode, type TenantUser } from '@workspace/dto'
 import type { PaginationState, SortingState } from '@tanstack/react-table'
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
@@ -188,11 +188,11 @@ export function UsersSection() {
             name: removing?.name ?? '',
           }),
           ...(balanceCheck.data?.lines ?? []).map((line) =>
-            compareMoney(line.balance, '0') < 0
+            line.tone === 'negative'
               ? t('settings.users.remove-owes', {
                   name: removing?.name ?? '',
                   amount: formatMoney(
-                    line.balance.replace('-', ''),
+                    line.absBalance,
                     formattingLocale(),
                     line.currency
                   ),
@@ -200,7 +200,7 @@ export function UsersSection() {
               : t('settings.users.remove-owed', {
                   name: removing?.name ?? '',
                   amount: formatMoney(
-                    line.balance,
+                    line.absBalance,
                     formattingLocale(),
                     line.currency
                   ),

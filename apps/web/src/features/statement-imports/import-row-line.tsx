@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { CategoryRef, Currency, ReceiverRef } from '@workspace/poco'
+import type { CategoryRef, Currency, ReceiverRef } from '@workspace/dto'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { Field, FieldLabel } from '@workspace/ui/components/field'
 import {

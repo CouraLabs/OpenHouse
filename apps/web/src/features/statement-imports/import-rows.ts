@@ -1,4 +1,4 @@
-import type { ImportCommitRow, ImportPreviewRow } from '@workspace/poco'
+import type { ImportCommitRow, ImportPreviewRow } from '@workspace/dto'
 
 export interface RowEdit {
   selected?: boolean

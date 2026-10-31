@@ -4,29 +4,24 @@ import {
   notificationPreferencesSchema,
   pushSubscriptionSchema,
   pushUnsubscribeSchema,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
 import type { App, AppEnv } from '../common/context.js'
 import { parseJsonBody } from '../common/validation/parse.js'
-import type { NotificationService } from './notification.service.js'
-import type { PushService } from './push.service.js'
 
-export function notificationsRoutes(deps: {
-  notifications: NotificationService
-  push: PushService
-}): App {
+export function notificationsRoutes(): App {
   const router: App = new Hono<AppEnv>()
 
   router.get('/', async (context) => {
     const session = context.get('session')
 
-    return context.json(await deps.notifications.list(session.user.id))
+    return context.json(await context.var.business.notifications.list(session.user.id))
   })
 
   router.post('/read-all', async (context) => {
     const session = context.get('session')
 
-    await deps.notifications.markAllRead(session.user.id)
+    await context.var.business.notifications.markAllRead(session.user.id)
 
     return context.body(null, 204)
   })
@@ -35,7 +30,10 @@ export function notificationsRoutes(deps: {
     const session = context.get('session')
 
     return context.json(
-      await deps.notifications.getPreferences(session.tenant.id, session.user.id)
+      await context.var.business.notifications.getPreferences(
+        session.tenant.id,
+        session.user.id
+      )
     )
   })
 
@@ -44,7 +42,7 @@ export function notificationsRoutes(deps: {
     const body = await parseJsonBody(context, notificationPreferencesSchema)
 
     return context.json(
-      await deps.notifications.savePreferences(
+      await context.var.business.notifications.savePreferences(
         session.tenant.id,
         session.user.id,
         body
@@ -52,13 +50,13 @@ export function notificationsRoutes(deps: {
     )
   })
 
-  router.get('/push-config', (context) => context.json(deps.push.config()))
+  router.get('/push-config', (context) => context.json(context.var.business.push.config()))
 
   router.post('/push-subscriptions', async (context) => {
     const session = context.get('session')
     const body = await parseJsonBody(context, pushSubscriptionSchema)
 
-    await deps.push.subscribe(
+    await context.var.business.push.subscribe(
       session.tenant.id,
       session.user.id,
       body,
@@ -72,7 +70,7 @@ export function notificationsRoutes(deps: {
     const session = context.get('session')
     const body = await parseJsonBody(context, pushUnsubscribeSchema)
 
-    await deps.push.unsubscribe(session.user.id, body.endpoint)
+    await context.var.business.push.unsubscribe(session.user.id, body.endpoint)
 
     return context.body(null, 204)
   })
@@ -81,7 +79,7 @@ export function notificationsRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    await deps.notifications.markRead(session.user.id, id)
+    await context.var.business.notifications.markRead(session.user.id, id)
 
     return context.body(null, 204)
   })

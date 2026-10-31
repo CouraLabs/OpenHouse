@@ -1,7 +1,7 @@
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { currencies, type Currency } from '@workspace/poco'
+import { currencies, type Currency } from '@workspace/dto'
 import { BrandMark } from '@workspace/ui/components/brand-mark'
 import { Button } from '@workspace/ui/components/button'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
@@ -10,9 +10,9 @@ import { TimeZoneCombobox } from '@workspace/ui/components/time-zone-combobox'
 
 import { useSignOut } from '@/lib/auth.js'
 import {
-  browserCurrency,
   browserTimeZone,
   useSaveSettings,
+  useSettingsDefaults,
   useTenantSettings,
 } from '@/lib/settings.js'
 
@@ -23,12 +23,15 @@ function RequiredStar() {
 export function InitialSetup({ tenantName }: { tenantName: string }) {
   const { t } = useTranslation()
   const settings = useTenantSettings()
+  const defaults = useSettingsDefaults()
   const save = useSaveSettings()
   const signOut = useSignOut()
   const [timezone, setTimezone] = useState(
     () => browserTimeZone() ?? settings.timezone
   )
-  const [mainCurrency, setMainCurrency] = useState<Currency>(browserCurrency)
+  const [pickedCurrency, setPickedCurrency] = useState<Currency | null>(null)
+  const mainCurrency =
+    pickedCurrency ?? defaults.data?.mainCurrency ?? settings.mainCurrency
 
   return (
     <main className="flex min-h-svh items-center justify-center p-4">
@@ -70,7 +73,7 @@ export function InitialSetup({ tenantName }: { tenantName: string }) {
           <CurrencySelect
             id="setup-currency"
             value={mainCurrency}
-            onValueChange={(value) => setMainCurrency(value as Currency)}
+            onValueChange={(value) => setPickedCurrency(value as Currency)}
             codes={currencies}
             labels={{
               USD: t('currency.USD'),

@@ -22,9 +22,9 @@ import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/links.js'
 
 export const ptBR: Content = {
   meta: {
-    title: 'OpenHouse | O dinheiro da casa, em um só lugar',
+    title: 'Kantim | O dinheiro da casa, em um só lugar',
     description:
-      'O OpenHouse reúne todas as contas e cartões da casa em um livro-caixa compartilhado. Ele lança as contas fixas, soma a fatura do cartão enquanto você gasta e avisa antes de cada vencimento. Grátis para começar, de código aberto e grátis para sempre se você hospedar.',
+      'O Kantim reúne todas as contas e cartões da casa em um livro-caixa compartilhado. Ele lança as contas fixas, soma a fatura do cartão enquanto você gasta e avisa antes de cada vencimento. Grátis para começar, de código aberto e grátis para sempre se você hospedar.',
   },
 
   navLinks: [
@@ -46,11 +46,11 @@ export const ptBR: Content = {
   hero: {
     headline: 'Saiba o que vence antes da conta chegar.',
     tagline:
-      'O OpenHouse reúne as contas bancárias e os cartões da casa em um só lugar, e todo mundo que mora nela vê os mesmos números. O aluguel e as assinaturas entram sozinhos todo mês, a fatura do cartão vai somando enquanto você gasta e você recebe um aviso alguns dias antes de cada vencimento.',
+      'O Kantim reúne as contas bancárias e os cartões da casa em um só lugar, e todo mundo que mora nela vê os mesmos números. O aluguel e as assinaturas entram sozinhos todo mês, a fatura do cartão vai somando enquanto você gasta e você recebe um aviso alguns dias antes de cada vencimento.',
     primary: { label: 'Comece grátis', href: SIGN_UP_URL },
     secondary: { label: 'Hospede você mesmo', href: GITHUB_URL },
     stack: 'Plano grátis, sem cartão de crédito. O código é aberto no GitHub.',
-    windowTitle: 'openhouse · Transações',
+    windowTitle: 'kantim · Transações',
     balance: {
       label: 'Conta corrente · Banco da Praça',
       amount: 'R$ 8.412,36',
@@ -149,9 +149,9 @@ export const ptBR: Content = {
   ruleStatus: { posted: 'Lançada', scheduled: 'Agendada' },
 
   problemsIntro: {
-    eyebrow: 'Por que o OpenHouse',
+    eyebrow: 'Por que o Kantim',
     title: 'O dinheiro da casa sai do controle sempre do mesmo jeito.',
-    lede: 'Os números costumam ficar na cabeça de uma pessoa, numa planilha que ninguém atualiza e em três ou quatro apps de banco. O OpenHouse junta tudo em um lugar e mantém em dia.',
+    lede: 'Os números costumam ficar na cabeça de uma pessoa, numa planilha que ninguém atualiza e em três ou quatro apps de banco. O Kantim junta tudo em um lugar e mantém em dia.',
   },
 
   problems: [
@@ -184,7 +184,7 @@ export const ptBR: Content = {
   houseIntro: {
     eyebrow: 'O que vem',
     title: 'O dinheiro é o primeiro cômodo. Outros estão a caminho.',
-    lede: 'O OpenHouse está virando um app para cuidar da casa inteira. Cada parte nova vai usar o mesmo login e os mesmos membros da casa.',
+    lede: 'O Kantim está virando um app para cuidar da casa inteira. Cada parte nova vai usar o mesmo login e os mesmos membros da casa.',
   },
 
   houseStatus: { live: 'Disponível', coming: 'Planejado' },
@@ -292,7 +292,7 @@ export const ptBR: Content = {
       tone: 'green',
       icon: Repeat,
       title: 'Contas que se lançam sozinhas',
-      body: 'Diga ao OpenHouse que o aluguel vence dia 1º e ele lança o pagamento todo mês, para nada sumir dos livros.',
+      body: 'Diga ao Kantim que o aluguel vence dia 1º e ele lança o pagamento todo mês, para nada sumir dos livros.',
     },
     limits: {
       key: 'limits',
@@ -384,7 +384,7 @@ export const ptBR: Content = {
     ],
     commands: [
       `git clone ${GITHUB_URL}.git`,
-      'cd OpenHouse && npm install',
+      'cd Kantim && npm install',
       'npx wrangler login && npm run deploy',
     ],
     cta: { label: 'Baixe no GitHub', href: GITHUB_URL },
@@ -464,7 +464,7 @@ export const ptBR: Content = {
 
   faq: [
     {
-      question: 'O OpenHouse se conecta ao meu banco?',
+      question: 'O Kantim se conecta ao meu banco?',
       answer:
         'Não. Você lança as transações à mão, por contas fixas ou enviando o extrato do banco (OFX, QFX ou CSV). O arquivo é lido uma vez e não fica guardado, e uma importação pode ser desfeita por 24 horas.',
     },
@@ -476,7 +476,7 @@ export const ptBR: Content = {
     {
       question: 'Onde ficam os meus dados?',
       answer:
-        'Se você hospedar, num banco D1 na sua própria conta Cloudflare. Num plano hospedado, o OpenHouse cuida do servidor, dos backups e das atualizações.',
+        'Se você hospedar, num banco D1 na sua própria conta Cloudflare. Num plano hospedado, o Kantim cuida do servidor, dos backups e das atualizações.',
     },
     {
       question: 'Mais de uma pessoa pode usar os mesmos livros?',
@@ -508,7 +508,7 @@ export const ptBR: Content = {
   openSource: {
     eyebrow: 'Código aberto',
     title: 'Sua casa. Seu servidor. Seu código.',
-    body: 'Todo o OpenHouse está no GitHub. Leia o código, rode na sua própria conta ou mande um pull request quando a casa precisar de um cômodo novo.',
+    body: 'Todo o Kantim está no GitHub. Leia o código, rode na sua própria conta ou mande um pull request quando a casa precisar de um cômodo novo.',
     points: [
       { icon: Bank, label: 'Dados no seu próprio banco D1' },
       { icon: House, label: 'Um Worker, um comando de deploy' },

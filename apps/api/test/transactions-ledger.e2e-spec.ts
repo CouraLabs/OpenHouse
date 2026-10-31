@@ -158,10 +158,10 @@ describe('the transaction ledger (e2e)', () => {
       expect(await balanceOf(agent, to)).toBe('1300.00')
 
       const outId = response.body[0].id
-      const canceled = await agent.patch(
-        `/api/transactions/${outId}/status`,
-        { id: outId, status: 'Canceled' }
-      )
+      const canceled = await agent.patch(`/api/transactions/${outId}/status`, {
+        id: outId,
+        status: 'Canceled',
+      })
       expect(canceled.status).toBe(200)
 
       expect(await balanceOf(agent, from)).toBe('1000.00')

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import type { CreditCardStatement } from '@workspace/poco'
+import type { CreditCardStatement } from '@workspace/dto'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
 
 import { formatDayLabel } from '@/lib/format-date-only.js'

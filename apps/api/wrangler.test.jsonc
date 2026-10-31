@@ -3,20 +3,20 @@
 // assets (no web build in a test run) and with fixed test secrets.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "openhouse-test",
+  "name": "kantim-test",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "openhouse-test",
+      "database_name": "kantim-test",
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "../../packages/db/drizzle"
     }
   ],
   "queues": {
-    "producers": [{ "binding": "JOBS", "queue": "openhouse-jobs-test" }]
+    "producers": [{ "binding": "JOBS", "queue": "kantim-jobs-test" }]
   },
   "ratelimits": [
     {
@@ -37,8 +37,8 @@
   ],
   "vars": {
     "ENVIRONMENT": "production",
-    "OPENHOUSE_ENABLE_EMAIL_VERIFICATION": "true",
-    "OPENHOUSE_ENABLE_CAPTCHA_CHECK": "true",
+    "KANTIM_ENABLE_EMAIL_VERIFICATION": "true",
+    "KANTIM_ENABLE_CAPTCHA_CHECK": "true",
     "TURNSTILE_SECRET": "test-turnstile-secret",
     "TURNSTILE_SITE_KEY": "test-turnstile-site-key",
     "TURNSTILE_HOSTNAMES": "localhost",

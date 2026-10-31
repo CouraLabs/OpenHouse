@@ -1,4 +1,4 @@
-import { DEFAULT_UPCOMING_DAYS } from '@workspace/poco'
+import { DEFAULT_UPCOMING_DAYS } from '@workspace/dto'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@workspace/ui/components/skeleton'
 

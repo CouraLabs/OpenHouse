@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { AuthConfig } from '@workspace/poco'
+import type { AuthConfig } from '@workspace/dto'
 import { api } from './api.js'
 
 export function useAuthConfig() {

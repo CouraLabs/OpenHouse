@@ -2,13 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import type {
-  Currency,
-  CurrencyChangeConflict,
-  UnsplitMode,
-  UpdateSettingsBody,
-} from '@workspace/poco'
-import { currencies, unsplitModes, updateSettingsSchema } from '@workspace/poco'
+import type { Currency, CurrencyChangeConflict, UnsplitMode, UpdateSettingsBody } from '@workspace/dto'
+import { currencies, unsplitModes, updateSettingsSchema } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { CurrencySelect } from '@workspace/ui/components/currency-select'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Account } from '@workspace/poco'
+import type { Account } from '@workspace/dto'
 import { DatePicker } from '@workspace/ui/components/date-picker'
 import { Field, FieldLabel } from '@workspace/ui/components/field'
 

@@ -1,8 +1,8 @@
 import { RequiredMark } from '@workspace/ui/components/required-mark'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Account } from '@workspace/poco'
-import { IMPORT_MAX_BYTES, importFileExtensions } from '@workspace/poco'
+import type { Account } from '@workspace/dto'
+import { IMPORT_MAX_BYTES, importFileExtensions } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import {
   Field,

@@ -1,25 +1,12 @@
-import type { Database } from '@workspace/db'
-import { createDatabase } from '@workspace/db'
-
-import { AuditLogRepository } from '../audit/audit-log.repository.js'
-import { AuditLogService } from '../audit/audit-log.service.js'
-import { SystemClock } from '../common/clock/clock.js'
+import { businessFromEnv } from '../common/runtime.middleware.js'
 import type { AppEnv } from '../common/context.js'
-import { config } from '../config/env.js'
 import type { JobMessage } from '../index.js'
-import { checkBalancesForTenant } from '../balances/balances.jobs.js'
-import { runRecurringForTenant } from '../recurring-transactions/recurring.jobs.js'
-import { runRemindersForTenant } from '../notifications/reminders.jobs.js'
-import { deleteTenantNow } from '../tenant-deletion/tenant-deletion.jobs.js'
 
 export async function handleQueue(
   batch: MessageBatch<JobMessage>,
   env: AppEnv['Bindings']
 ): Promise<void> {
-  const db: Database = createDatabase(env.DB as never)
-  const config_ = config(env)
-  const clock = new SystemClock()
-  const audit = new AuditLogService(new AuditLogRepository(db))
+  const { jobs } = businessFromEnv(env)
 
   for (const message of batch.messages) {
     const { kind, tenantId } = message.body
@@ -27,16 +14,16 @@ export async function handleQueue(
     try {
       switch (kind) {
         case 'recurring':
-          await runRecurringForTenant(db, clock, tenantId)
+          await jobs.runRecurringForTenant(tenantId)
           break
         case 'reminders':
-          await runRemindersForTenant(db, config_, clock, tenantId)
+          await jobs.runRemindersForTenant(tenantId)
           break
         case 'delete-tenant':
-          await deleteTenantNow(db, clock, tenantId, audit)
+          await jobs.deleteTenantNow(tenantId)
           break
         case 'balances':
-          await checkBalancesForTenant(db, tenantId)
+          await jobs.checkBalancesForTenant(tenantId)
           break
       }
     } catch (error) {

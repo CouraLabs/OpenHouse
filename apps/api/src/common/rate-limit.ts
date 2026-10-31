@@ -1,5 +1,5 @@
 import type { Env } from '../config/env.js'
-import { TooManyRequestsError } from './errors.js'
+import { TooManyRequestsError } from '@workspace/business'
 
 export interface RateLimitBinding {
   limit(input: { key: string }): Promise<{ success: boolean }>

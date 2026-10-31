@@ -40,11 +40,17 @@ describe('tenant isolation (e2e)', () => {
     const { agent: memberB } = await joinAsMember(app, ownerB)
 
     for (const [route, filter] of SEARCHES) {
-      const response = await memberB.post(route, { sort: [], filter, limit: 100 })
+      const response = await memberB.post(route, {
+        sort: [],
+        filter,
+        limit: 100,
+      })
 
       expect(response.status, route).toBe(201)
 
-      const ids = (response.body.items as Array<{ id: number }>).map((row) => row.id)
+      const ids = (response.body.items as Array<{ id: number }>).map(
+        (row) => row.id
+      )
 
       expect(ids, route).not.toContain(accountIdA)
       expect(ids, route).not.toContain(categoryIdA)
@@ -84,5 +90,4 @@ describe('tenant isolation (e2e)', () => {
       expect(response.status, route).toBe(401)
     }
   })
-
 })

@@ -36,7 +36,7 @@ reset codes.
 
 ## Versioning
 
-`manifest.schemaVersion` is `EXPORT_SCHEMA_VERSION` in `packages/poco`
+`manifest.schemaVersion` is `EXPORT_SCHEMA_VERSION` in `packages/dto`
 (`data-export.ts`). Bump it when a file is renamed or a field changes
 meaning. Import order must follow foreign keys: tenant, settings, users,
 categories, receivers, accounts, statements, linkers, goals, limits,

@@ -48,6 +48,295 @@
     }
   },
   "overrides": [
+    // The layer graph in CLAUDE.md, enforced: each package may import only the
+    // packages below it. One override per file set, because a later override
+    // replaces the noRestrictedImports options of an earlier one.
+    {
+      "includes": [
+        "apps/web/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/domain",
+                      "@workspace/domain/**",
+                      "@workspace/business",
+                      "@workspace/business/**",
+                      "drizzle-orm",
+                      "drizzle-orm/**",
+                      "hono",
+                      "hono/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): apps/web imports only @workspace/dto and @workspace/ui."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/api/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/domain",
+                      "@workspace/domain/**",
+                      "drizzle-orm",
+                      "drizzle-orm/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): apps/api imports only @workspace/business and @workspace/dto."
+                  },
+                  {
+                    "group": [
+                      "@workspace/business/testing"
+                    ],
+                    "message": "Layers (CLAUDE.md): @workspace/business/testing is for apps/api/test only."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/api/test/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/domain",
+                      "@workspace/domain/**",
+                      "drizzle-orm",
+                      "drizzle-orm/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): apps/api imports only @workspace/business and @workspace/dto."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/business/src/**",
+        "!packages/business/src/**/*.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/ui",
+                      "@workspace/ui/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): business imports only @workspace/db, @workspace/domain and @workspace/dto."
+                  },
+                  {
+                    "group": [
+                      "hono",
+                      "hono/**",
+                      "cloudflare:*"
+                    ],
+                    "message": "Layers (CLAUDE.md): business has no platform code: take values and ports through createBusiness."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/business/src/**/*.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/ui",
+                      "@workspace/ui/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): business imports only @workspace/db, @workspace/domain and @workspace/dto."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/db/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/dto",
+                      "@workspace/dto/**",
+                      "@workspace/business",
+                      "@workspace/business/**",
+                      "@workspace/ui",
+                      "@workspace/ui/**",
+                      "zod",
+                      "zod/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): db imports only @workspace/domain and drizzle-orm."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/dto/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/business",
+                      "@workspace/business/**",
+                      "@workspace/ui",
+                      "@workspace/ui/**",
+                      "drizzle-orm",
+                      "drizzle-orm/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): dto imports only @workspace/domain and zod."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/domain/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/dto",
+                      "@workspace/dto/**",
+                      "@workspace/business",
+                      "@workspace/business/**",
+                      "@workspace/ui",
+                      "@workspace/ui/**",
+                      "zod",
+                      "zod/**",
+                      "drizzle-orm",
+                      "drizzle-orm/**",
+                      "hono",
+                      "hono/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): domain imports nothing from the repo and has no zod, drizzle or hono."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/ui/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/domain",
+                      "@workspace/domain/**",
+                      "@workspace/dto",
+                      "@workspace/dto/**",
+                      "@workspace/business",
+                      "@workspace/business/**"
+                    ],
+                    "message": "Layers (CLAUDE.md): ui is label-agnostic and imports nothing from the repo."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     {
       "includes": [
         "apps/web/src/features/transactions/day-header.tsx",

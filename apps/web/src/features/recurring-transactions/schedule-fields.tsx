@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { FieldErrors } from 'react-hook-form'
-import type { CreateRecurringTransactionBody, Frequency } from '@workspace/poco'
-import { frequencies, nextOccurrence } from '@workspace/poco'
+import type { CreateRecurringTransactionBody, Frequency } from '@workspace/dto'
+import { frequencies } from '@workspace/dto'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { FormSection } from '@workspace/ui/components/form-section'
 import { RequiredMark } from '@workspace/ui/components/required-mark'
@@ -16,6 +16,7 @@ import {
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formattingLocale } from '@/lib/i18n.js'
 import { readFrequency } from './recurring-transactions-columns.js'
+import { useNextOccurrence } from './use-recurring.js'
 
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1)
 
@@ -56,7 +57,8 @@ export function ScheduleFields({
           frequencyDay: frequencyDay ?? null,
           frequencyMonth: frequencyMonth ?? null,
         }
-  const next = rule === null ? null : nextOccurrence(rule, today)
+  const preview = useNextOccurrence(rule === null ? null : { ...rule, today })
+  const next = preview.data?.nextDate ?? null
 
   return (
     <FormSection legend={t('recurring.schedule')}>

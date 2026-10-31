@@ -1,7 +1,7 @@
 import { Button } from '@workspace/ui/components/button'
 import { FileArchive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { CreateDataExportBody } from '@workspace/poco'
+import type { CreateDataExportBody } from '@workspace/dto'
 
 import { useDataExport } from './use-data-export.js'
 

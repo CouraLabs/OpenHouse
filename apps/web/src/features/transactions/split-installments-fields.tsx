@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { InstallmentsBody, Transaction } from '@workspace/poco'
-import { installmentsSchema } from '@workspace/poco'
+import type { InstallmentsBody, Transaction } from '@workspace/dto'
+import { installmentsSchema } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { DialogFooter } from '@workspace/ui/components/dialog'
 

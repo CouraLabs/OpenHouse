@@ -1,16 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import type { Currency, InstallmentsBody } from '@workspace/poco'
-import {
-  addMoney,
-  amountSchema,
-  compareMoney,
-  negateMoney,
-  splitInstallments,
-  sumMoney,
-} from '@workspace/poco'
+import type { Currency, InstallmentsBody } from '@workspace/dto'
+import { amountSchema } from '@workspace/dto'
 
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
+import { useDebouncedValue } from '@/lib/use-debounced-value.js'
+import { useInstallmentsPreview } from './use-transactions.js'
 
 export function PurchasePreview({
   amount,
@@ -26,28 +21,35 @@ export function PurchasePreview({
   currency: Currency
 }) {
   const { t } = useTranslation()
-
-  if (!amountSchema.safeParse(amount).success) {
-    return null
-  }
-
   const count =
     Number.isInteger(installments.count) && installments.count >= 1
       ? installments.count
       : 1
-  const parts = splitInstallments(amount, count, installments.amountMode)
-  const total = sumMoney(parts)
-  const money = (value: string) => formatMoney(value, formattingLocale(), currency)
-  const left =
-    availableLimit === null
-      ? null
-      : addMoney(availableLimit, negateMoney(total))
-  const extra =
-    count > 1 &&
-    installments.amountMode === 'perInstallment' &&
-    amountSchema.safeParse(cashPrice).success
-      ? addMoney(total, negateMoney(cashPrice))
+  const settledAmount = useDebouncedValue(amount)
+  const settledCashPrice = useDebouncedValue(cashPrice)
+  const validAmount = amountSchema.safeParse(amount).success
+  const preview = useInstallmentsPreview(
+    validAmount
+      ? {
+          amount: settledAmount,
+          count,
+          amountMode: installments.amountMode,
+          cashPrice: amountSchema.safeParse(settledCashPrice).success
+            ? settledCashPrice
+            : undefined,
+          availableLimit,
+        }
       : null
+  )
+
+  if (!validAmount || preview.data === undefined) {
+    return null
+  }
+
+  const { parts, total, extra, availableAfter, availableAfterTone } =
+    preview.data
+  const money = (value: string) =>
+    formatMoney(value, formattingLocale(), currency)
 
   return (
     <div className="flex flex-col gap-1 text-sm text-muted-foreground">
@@ -72,15 +74,17 @@ export function PurchasePreview({
           {t('transactions.installments-extra', { amount: money(extra) })}
         </span>
       ) : null}
-      {left !== null ? (
+      {availableAfter !== null ? (
         <span
           className={
-            compareMoney(left, '0') < 0 ? 'text-destructive' : undefined
+            availableAfterTone === 'negative' ? 'text-destructive' : undefined
           }
         >
-          {compareMoney(left, '0') < 0
-            ? t('transactions.over-limit', { amount: money(left) })
-            : t('transactions.available-after', { amount: money(left) })}
+          {availableAfterTone === 'negative'
+            ? t('transactions.over-limit', { amount: money(availableAfter) })
+            : t('transactions.available-after', {
+                amount: money(availableAfter),
+              })}
         </span>
       ) : null}
     </div>

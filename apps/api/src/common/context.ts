@@ -1,13 +1,11 @@
-import type { Database } from '@workspace/db'
-import type { Session } from './session/session.js'
-import type { Config, Env } from '../config/env.js'
+import type { Business, Session } from '@workspace/business'
+import type { Env } from '../config/env.js'
 
 export type AppEnv = {
   Bindings: Env
   Variables: {
     session: Session
-    db: Database
-    config: Config
+    business: Business
   }
 }
 

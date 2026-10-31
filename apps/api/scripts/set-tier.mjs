@@ -6,7 +6,7 @@
  *   npm run set-tier -- --tenant 12 --tier 1
  *   npm run set-tier -- --tenant "The Smiths" --tier 3 --remote
  *
- * Tiers: -1 Developer, 0 Free, 1 Plus, 2 Pro, 3 Max (see packages/poco
+ * Tiers: -1 Developer, 0 Free, 1 Plus, 2 Pro, 3 Max (see packages/domain
  * src/tiers.ts). The D1 database is reached through `wrangler d1 execute`
  * (`--local` unless `--remote` is passed).
  */

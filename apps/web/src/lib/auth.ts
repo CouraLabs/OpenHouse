@@ -1,16 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import type {
-  ChangePasswordBody,
-  ResendVerificationBody,
-  ResetPasswordBody,
-  SessionResponse,
-  SignInBody,
-  SignUpBody,
-  SignUpResponse,
-  VerifyEmailBody,
-} from '@workspace/poco'
-import { isSignUpAccepted } from '@workspace/poco'
+import type { ChangePasswordBody, ResendVerificationBody, ResetPasswordBody, SessionResponse, SignInBody, SignUpBody, SignUpResponse, VerifyEmailBody } from '@workspace/dto'
 import { ApiError, api } from './api.js'
 import { SESSION_QUERY_KEY } from './query.js'
 
@@ -59,7 +49,7 @@ export function useSignUp() {
         body: JSON.stringify(input),
       }),
     onSuccess: (response) => {
-      if (!isSignUpAccepted(response)) {
+      if (response.status === 'accepted') {
         queryClient.setQueryData(SESSION_QUERY_KEY, response)
       }
     },

@@ -19,7 +19,7 @@ function parse(vars: Partial<Env>) {
 const turnstile = {
   TURNSTILE_SECRET: 'secret',
   TURNSTILE_SITE_KEY: 'site-key',
-  TURNSTILE_HOSTNAMES: 'openhouse.couralabs.dev',
+  TURNSTILE_HOSTNAMES: 'kantim.couralabs.dev',
 }
 
 describe('config', () => {
@@ -32,8 +32,8 @@ describe('config', () => {
   it('turns both switches off in development, whatever they say', () => {
     const parsed = parse({
       ENVIRONMENT: 'development',
-      OPENHOUSE_ENABLE_EMAIL_VERIFICATION: 'true',
-      OPENHOUSE_ENABLE_CAPTCHA_CHECK: 'true',
+      KANTIM_ENABLE_EMAIL_VERIFICATION: 'true',
+      KANTIM_ENABLE_CAPTCHA_CHECK: 'true',
     })
 
     expect(parsed.environment).toBe('development')
@@ -47,8 +47,8 @@ describe('config', () => {
   it('reads the switches in production', () => {
     const parsed = parse({
       JWT_SECRET: 'a-real-secret',
-      OPENHOUSE_ENABLE_EMAIL_VERIFICATION: 'false',
-      OPENHOUSE_ENABLE_CAPTCHA_CHECK: 'true',
+      KANTIM_ENABLE_EMAIL_VERIFICATION: 'false',
+      KANTIM_ENABLE_CAPTCHA_CHECK: 'true',
       ...turnstile,
     })
 
@@ -60,7 +60,7 @@ describe('config', () => {
     expect(() =>
       parse({
         JWT_SECRET: 'a-real-secret',
-        OPENHOUSE_ENABLE_CAPTCHA_CHECK: 'true',
+        KANTIM_ENABLE_CAPTCHA_CHECK: 'true',
       })
     ).toThrow(/TURNSTILE_SECRET/)
   })

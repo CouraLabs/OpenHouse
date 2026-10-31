@@ -1,56 +1,44 @@
 import { Hono } from 'hono'
-import type { TenantCode } from '@workspace/db'
+import { toWireInviteCode, toWireUser } from '@workspace/business'
 import type {
   CreateInviteCodeBody,
   InviteCode,
   TenantUser,
-} from '@workspace/poco'
-import { createInviteCodeSchema } from '@workspace/poco'
+} from '@workspace/dto'
+import { createInviteCodeSchema } from '@workspace/dto'
 
 import type { App, AppEnv } from '../common/context.js'
 import { clientAddressOf } from '../common/rate-limit.js'
-import type { TurnstileVerifier } from '../common/turnstile/turnstile-verifier.js'
 import { requireRole } from '../common/session/auth.middleware.js'
 import { parseJsonBody } from '../common/validation/parse.js'
-import type { InviteCodeService } from './invite-code.service.js'
-import type { TenantUserRow } from './tenant-user.repository.js'
-import type { TenantUserService } from './tenant-user.service.js'
 
-export function tenantsRoutes(deps: {
-  inviteCodes: InviteCodeService
-  tenantUsers: TenantUserService
-  turnstile: TurnstileVerifier
-}): App {
+export function tenantsRoutes(): App {
   const router: App = new Hono<AppEnv>()
 
-  router.post(
-    '/invite-codes',
-    requireRole(['owner']),
-    async (context) => {
-      const session = context.get('session')
-      const body: CreateInviteCodeBody = await parseJsonBody(
-        context,
-        createInviteCodeSchema
-      )
+  router.post('/invite-codes', requireRole(['owner']), async (context) => {
+    const session = context.get('session')
+    const body: CreateInviteCodeBody = await parseJsonBody(
+      context,
+      createInviteCodeSchema
+    )
 
-      await deps.turnstile.verify(
-        body.turnstileToken,
-        'invite',
-        clientAddressOf(context.req.raw)
-      )
+    await context.var.business.turnstile.verify(
+      body.turnstileToken,
+      'invite',
+      clientAddressOf(context.req.raw)
+    )
 
-      const created = await deps.inviteCodes.create(
-        session.tenant.id,
-        body.expiresInDays
-      )
+    const created = await context.var.business.inviteCodes.create(
+      session.tenant.id,
+      body.expiresInDays
+    )
 
-      return context.json(toWireInviteCode(created), 201)
-    }
-  )
+    return context.json(toWireInviteCode(created), 201)
+  })
 
   router.get('/invite-codes', requireRole(['owner']), async (context) => {
     const session = context.get('session')
-    const rows = await deps.inviteCodes.list(session.tenant.id)
+    const rows = await context.var.business.inviteCodes.list(session.tenant.id)
 
     return context.json(rows.map(toWireInviteCode))
   })
@@ -62,7 +50,7 @@ export function tenantsRoutes(deps: {
       const session = context.get('session')
       const id = Number.parseInt(context.req.param('id') ?? '', 10)
 
-      await deps.inviteCodes.revoke(session.tenant.id, id)
+      await context.var.business.inviteCodes.revoke(session.tenant.id, id)
 
       return context.body(null, 204)
     }
@@ -70,7 +58,7 @@ export function tenantsRoutes(deps: {
 
   router.get('/users', requireRole(['owner']), async (context) => {
     const session = context.get('session')
-    const rows = await deps.tenantUsers.list(session.tenant.id)
+    const rows = await context.var.business.tenantUsers.list(session.tenant.id)
 
     return context.json(rows.map(toWireUser))
   })
@@ -82,7 +70,7 @@ export function tenantsRoutes(deps: {
       const session = context.get('session')
       const id = Number.parseInt(context.req.param('id') ?? '', 10)
 
-      const row = await deps.tenantUsers.deactivate(
+      const row = await context.var.business.tenantUsers.deactivate(
         session.tenant.id,
         session.user.id,
         id
@@ -99,7 +87,7 @@ export function tenantsRoutes(deps: {
       const session = context.get('session')
       const id = Number.parseInt(context.req.param('id') ?? '', 10)
 
-      const row = await deps.tenantUsers.anonymize(
+      const row = await context.var.business.tenantUsers.anonymize(
         session.tenant.id,
         session.user.id,
         id
@@ -116,33 +104,14 @@ export function tenantsRoutes(deps: {
       const session = context.get('session')
       const id = Number.parseInt(context.req.param('id') ?? '', 10)
 
-      const row = await deps.tenantUsers.reactivate(session.tenant.id, id)
+      const row = await context.var.business.tenantUsers.reactivate(
+        session.tenant.id,
+        id
+      )
 
       return context.json(toWireUser(row))
     }
   )
 
   return router
-}
-
-function toWireInviteCode(row: TenantCode): InviteCode {
-  return {
-    id: row.id,
-    code: row.code,
-    usedAt: row.usedAt?.toISOString() ?? null,
-    expiresAt: row.expiresAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-  }
-}
-
-function toWireUser(row: TenantUserRow): TenantUser {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    role: row.role,
-    isActive: row.isActive,
-    anonymizedAt: row.anonymizedAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-  }
 }

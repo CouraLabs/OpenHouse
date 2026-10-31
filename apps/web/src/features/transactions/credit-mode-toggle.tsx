@@ -1,4 +1,4 @@
-import type { CreditMode } from '@workspace/poco'
+import type { CreditMode } from '@workspace/dto'
 import { CalendarClock, ShoppingCart } from 'lucide-react'
 
 import {

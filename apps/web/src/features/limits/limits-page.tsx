@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateLimitBody, LimitUsage } from '@workspace/poco'
+import type { CreateLimitBody, LimitUsage } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
 import { Spinner } from '@workspace/ui/components/spinner'

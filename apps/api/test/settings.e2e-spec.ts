@@ -111,10 +111,18 @@ describe('tenant settings (e2e, #15)', () => {
       mainCurrency: 'BRL',
       timezoneConfirmed: true,
       unsplitMode: 'personal',
+      today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     })
     const me = await browser.get('/api/auth/me')
     expect(me.status).toBe(200)
     expect(me.body.settings.mainCurrency).toBe('BRL')
+    expect(me.body.settings.today).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+
+    const defaults = await browser.get('/api/settings/defaults?locale=pt-BR')
+    expect(defaults.status).toBe(200)
+    expect(defaults.body).toEqual({
+      mainCurrency: 'BRL',
+    })
   })
 
   it('rejects a sign-up with an unknown time zone, creating nothing', async () => {
@@ -147,6 +155,7 @@ describe('tenant settings (e2e, #15)', () => {
       mainCurrency: 'EUR',
       timezoneConfirmed: true,
       unsplitMode: 'personal',
+      today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     })
 
     const unknownZone = await owner.put('/api/settings', {
@@ -305,6 +314,26 @@ describe('change password (e2e, #15)', () => {
 
     expect(response.status).toBe(400)
     expect(response.body.message).toBe('Current password is incorrect.')
+  })
+
+  it('refuses a sixth password change attempt within the window', async () => {
+    const { app } = startApp()
+    const agent = await signUp(app)
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await agent.post('/api/auth/password/change', {
+        currentPassword: 'wrong-pass',
+        newPassword: 'password-new',
+      })
+      expect(response.status).toBe(400)
+    }
+
+    const blocked = await agent.post('/api/auth/password/change', {
+      currentPassword: 'wrong-pass',
+      newPassword: 'password-new',
+    })
+
+    expect(blocked.status).toBe(429)
   })
 
   it('rejects a new password equal to the current one', async () => {

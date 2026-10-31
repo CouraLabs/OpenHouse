@@ -37,6 +37,7 @@ describe('tenant tiers (e2e)', () => {
     const status = await agent.get('/api/tiers/current')
     expect(status.status).toBe(200)
     expect(status.body.plan.name).toBe('Free')
+    expect(status.body.plans.length).toBeGreaterThan(0)
     expect(status.body.usage.users).toBe(1)
     expect(status.body.transactionWindowStart).toMatch(/^\d{4}-\d{2}-01$/)
   })

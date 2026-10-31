@@ -1,13 +1,10 @@
 import { Hono } from 'hono'
-import { updatePreferencesSchema } from '@workspace/poco'
+import { updatePreferencesSchema } from '@workspace/dto'
 
 import type { App, AppEnv } from '../common/context.js'
 import { parseJsonBody } from '../common/validation/parse.js'
-import type { PreferencesService } from './preferences.service.js'
 
-export function preferencesRoutes(deps: {
-  preferences: PreferencesService
-}): App {
+export function preferencesRoutes(): App {
   const router: App = new Hono<AppEnv>()
 
   router.put('/', async (context) => {
@@ -15,7 +12,11 @@ export function preferencesRoutes(deps: {
     const body = await parseJsonBody(context, updatePreferencesSchema)
 
     return context.json(
-      await deps.preferences.update(session.tenant.id, session.user.id, body)
+      await context.var.business.preferences.update(
+        session.tenant.id,
+        session.user.id,
+        body
+      )
     )
   })
 

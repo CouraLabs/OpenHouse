@@ -1,20 +1,19 @@
 import { Hono } from 'hono'
 
-import { householdOverviewSchema } from '@workspace/poco'
+import { householdOverviewSchema } from '@workspace/dto'
 
 import type { App, AppEnv } from '../common/context.js'
 import { parseJsonBody } from '../common/validation/parse.js'
-import type { HouseholdService } from './household.service.js'
 
-export function householdRoutes(deps: {
-  household: HouseholdService
-}): App {
+export function householdRoutes(): App {
   const router: App = new Hono<AppEnv>()
 
   router.get('/members', async (context) => {
     const session = context.get('session')
 
-    return context.json(await deps.household.listMembers(session.tenant.id))
+    return context.json(
+      await context.var.business.household.listMembers(session.tenant.id)
+    )
   })
 
   router.get('/members/:id/balance', async (context) => {
@@ -22,7 +21,7 @@ export function householdRoutes(deps: {
     const id = Number.parseInt(context.req.param('id'), 10)
 
     return context.json(
-      await deps.household.balanceCheck(session.tenant.id, id)
+      await context.var.business.household.balanceCheck(session.tenant.id, id)
     )
   })
 
@@ -31,7 +30,7 @@ export function householdRoutes(deps: {
     const body = await parseJsonBody(context, householdOverviewSchema)
 
     return context.json(
-      await deps.household.overview(session.tenant.id, body)
+      await context.var.business.household.overview(session.tenant.id, body)
     )
   })
 

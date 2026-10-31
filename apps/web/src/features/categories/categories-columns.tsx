@@ -1,4 +1,4 @@
-import type { Category } from '@workspace/poco'
+import type { Category } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'
 import { Pencil, Trash2 } from 'lucide-react'

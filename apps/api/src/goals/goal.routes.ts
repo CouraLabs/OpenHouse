@@ -1,29 +1,20 @@
 import { Hono } from 'hono'
-import type {
-  Currency,
-  EntityStatus,
-  Goal,
-} from '@workspace/poco'
+import type { Currency, EntityStatus, Goal } from '@workspace/dto'
 import {
   createGoalSchema,
   exportGoalsSchema,
   searchGoalsSchema,
   updateGoalSchema,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
-import type { AuditRecorder } from '../common/audit/audit-recorder.js'
 import type { App, AppEnv } from '../common/context.js'
-import { csvChunks, pagesOf, } from '../common/csv/csv.js'
+import { csvChunks, pagesOf } from '@workspace/business'
 import { parseJsonBody } from '../common/validation/parse.js'
-import { GOAL_CSV_COLUMNS } from './goal-csv.js'
-import type { GoalService } from './goal.service.js'
+import { GOAL_CSV_COLUMNS } from '@workspace/business'
 
 const CSV_PAGE_SIZE = 500
 
-export function goalRoutes(deps: {
-  goals: GoalService
-  audit: AuditRecorder
-}): App {
+export function goalRoutes(): App {
   const router: App = new Hono<AppEnv>()
 
   router.post('/', async (context) => {
@@ -31,7 +22,7 @@ export function goalRoutes(deps: {
     const body = await parseJsonBody(context, createGoalSchema)
 
     return context.json(
-      toWire(await deps.goals.create(session.tenant.id, session.user.id, body)),
+      toWire(await context.var.business.goals.create(session.tenant.id, session.user.id, body)),
       201
     )
   })
@@ -40,7 +31,7 @@ export function goalRoutes(deps: {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchGoalsSchema)
 
-    const { rows, total } = await deps.goals.search(session.tenant.id, args)
+    const { rows, total } = await context.var.business.goals.search(session.tenant.id, args)
 
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
@@ -49,7 +40,7 @@ export function goalRoutes(deps: {
     const session = context.get('session')
     const args = await parseJsonBody(context, exportGoalsSchema)
 
-    await deps.audit.record({
+    await context.var.business.audit.record({
       tenantId: session.tenant.id,
       actorId: session.user.id,
       action: 'csv.export',
@@ -59,7 +50,7 @@ export function goalRoutes(deps: {
     const chunks = csvChunks(
       GOAL_CSV_COLUMNS,
       pagesOf(async (skip, size) => {
-        const { rows } = await deps.goals.search(session.tenant.id, {
+        const { rows } = await context.var.business.goals.search(session.tenant.id, {
           ...args,
           skip,
           limit: size,
@@ -77,7 +68,7 @@ export function goalRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    return context.json(toWire(await deps.goals.find(session.tenant.id, id)))
+    return context.json(toWire(await context.var.business.goals.find(session.tenant.id, id)))
   })
 
   router.put('/', async (context) => {
@@ -85,7 +76,7 @@ export function goalRoutes(deps: {
     const body = await parseJsonBody(context, updateGoalSchema)
 
     return context.json(
-      toWire(await deps.goals.update(session.tenant.id, session.user.id, body))
+      toWire(await context.var.business.goals.update(session.tenant.id, session.user.id, body))
     )
   })
 
@@ -93,7 +84,7 @@ export function goalRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    await deps.goals.softDelete(session.tenant.id, session.user.id, id)
+    await context.var.business.goals.softDelete(session.tenant.id, session.user.id, id)
 
     return context.body(null, 204)
   })

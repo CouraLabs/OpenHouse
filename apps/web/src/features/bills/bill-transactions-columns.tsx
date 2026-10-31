@@ -1,4 +1,4 @@
-import type { Transaction } from '@workspace/poco'
+import type { Transaction } from '@workspace/dto'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import type { DataTableColumn } from '@workspace/ui/components/data-table'

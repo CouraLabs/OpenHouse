@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { TenantUser } from '@workspace/poco'
+import type { TenantUser } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 

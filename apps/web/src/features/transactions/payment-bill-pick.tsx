@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { defaultPaymentStatement } from '@workspace/poco'
 import { Field, FieldLabel } from '@workspace/ui/components/field'
 import {
   Select,
@@ -31,7 +30,8 @@ export function PaymentBillPick({
   })
   const items = bills.data?.items ?? []
   const shown =
-    items.find((bill) => bill.id === value) ?? defaultPaymentStatement(items)
+    items.find((bill) => bill.id === value) ??
+    items.find((bill) => bill.isDefaultPayment)
   const label = (bill: (typeof items)[number]) =>
     t('bills.bill-option', {
       due: formatDayLabel(bill.dueDate, formattingLocale()),

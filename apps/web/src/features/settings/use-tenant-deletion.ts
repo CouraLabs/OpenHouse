@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import type { TenantDeletion } from '@workspace/poco'
+import type { TenantDeletion } from '@workspace/dto'
 
 import { api } from '@/lib/api.js'
 import { SESSION_QUERY_KEY } from '@/lib/query.js'

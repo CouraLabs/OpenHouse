@@ -1,6 +1,6 @@
 # Domain invariants
 
-Rules every feature touching tenants, money, dates, bills, deletion or credentials keeps. The code is the source of truth; this file describes it. `CLAUDE.md` has one line per section.
+Rules every feature touching tenants, money, dates, bills, deletion or credentials keeps. The code is the source of truth; this file describes it. `CLAUDE.md` has one line per section. Package names and paths follow the layout in `CLAUDE.md`.
 
 ## Tenant entities
 
@@ -24,9 +24,9 @@ Tables outside the recipe, each with its own columns and no soft delete:
 
 ## Time
 
-- "Today" is `todayIn(settings.timezone)` in the API and `useTenantToday()` on the web, never the server or device zone.
+- "Today" is `todayIn(settings.timezone)` in business. The API returns it, and the web never computes it or reads the device or server zone.
 - `date` columns are calendar days and never shift when the zone changes.
-- Day logic in services takes the injected `Clock` (`common/clock/`). Instant stamps (`updateDt`, `createdAt`, `usedAt`) may use `new Date()`.
+- Day logic in business takes the injected `Clock` port. Instant stamps (`updateDt`, `createdAt`, `usedAt`) may use `new Date()`.
 
 ## Currency
 
@@ -44,9 +44,9 @@ Tables outside the recipe, each with its own columns and no soft delete:
 
 - Stored as integer cents via the `money` type (`packages/db`), which maps decimal strings like `"12.34"` and rejects values above 2^53 cents.
 - Raw SQL returns cents through `centsToDecimal`, never a cast.
-- On the wire: decimal strings validated by poco's regex.
-- Arithmetic on money uses `toCents`/`formatCents` (bigint), never floats.
-- On the web: displayed through `lib/format-money.ts` (the row's currency, else `useMainCurrency()`; the locale picks separators) and typed into `MoneyField`. `Number()` is only for chart values and ratios.
+- On the wire: decimal strings validated by dto's regex.
+- Arithmetic on money happens in business and uses `toCents`/`formatCents` (bigint), never floats.
+- On the web: displayed through `lib/format-money.ts` (the row's currency, else `useMainCurrency()`; the locale picks separators) and typed into `MoneyField`. The web only formats values the API computed. `Number()` is only for chart values and ratios.
 
 ## Transactions
 
@@ -55,12 +55,12 @@ Tables outside the recipe, each with its own columns and no soft delete:
 - **Installments:** share an `installmentGroupId`, with `1 <= installmentNumber <= installmentCount <= 48` (DB check). Only a hand-entered purchase splits: not a transfer, not recurring, not already split.
 - **Recurring:** at most one active row per rule and day (unique index).
 - **Imported:** at most one active row per account and `externalId` (unique index).
-- **History:** every create, update and delete writes a `transaction_history` row in the same batch (`common/ledger/transaction-history.ts`).
+- **History:** every create, update and delete writes a `transaction_history` row in the same batch (business ledger).
 
 ## Household splits
 
 - `transaction_splits` holds one active share per member, each greater than 0, summing to the amount.
-- `resolveSplit` (poco) supports three modes:
+- `resolveSplit` (business) supports three modes:
   - `equal`;
   - `percentage` (must total 100);
   - `exact`.
@@ -77,7 +77,7 @@ Tables outside the recipe, each with its own columns and no soft delete:
   - `closeDate` is the exclusive end (the day after the close day on a `closeDayInclusive` card);
   - `dueDate` is set at creation.
 - Totals, `paid`, carry-over (`previousBalance`, `amountDue`, `carriedTo`) and status are computed on read, never stored.
-- A purchase's bill comes from poco's `resolveStatement`. `statementPinned` keeps a manual choice.
+- A purchase's bill comes from business `resolveStatement`. `statementPinned` keeps a manual choice.
 - A payment settles the bill named by `paymentStatementId`, chosen explicitly or from `defaultPaymentStatement`, never from the payment date.
 - `minimumDue` and `bankTotal` are typed in from the bank's bill.
 - `closedAt` and `reconciledAt` are audit stamps no logic reads.
@@ -108,7 +108,7 @@ Tables outside the recipe, each with its own columns and no soft delete:
 ## Environment switches
 
 - `ENVIRONMENT` is `development` or `production` (unset = production).
-- In production, `OPENHOUSE_ENABLE_EMAIL_VERIFICATION` and `OPENHOUSE_ENABLE_CAPTCHA_CHECK` enable:
+- In production, `KANTIM_ENABLE_EMAIL_VERIFICATION` and `KANTIM_ENABLE_CAPTCHA_CHECK` enable:
   - the sign-up confirmation link;
   - Turnstile on sign-up, on a sign-in retried within 5 s, on confirmation resends and on invite codes.
 - Production also hardens Hono: HSTS, a CSRF origin check, and no error detail in responses.
@@ -119,8 +119,8 @@ Tables outside the recipe, each with its own columns and no soft delete:
 ## Plans
 
 - `tenants.tier`: -1 Developer (no caps; the dev default), 0 Free (the prod default), 1 Plus, 2 Pro, 3 Max.
-- The catalog is poco's `TIER_PLANS`. There is no billing; a tier changes only through `npm run set-tier`.
-- Caps are enforced in `app.ts` through `TierGate`:
+- The catalog is domain's `TIER_PLANS`. There is no billing; a tier changes only through `npm run set-tier`.
+- Caps are checked in business (`TierGate`), and the API answers a refusal:
   - creating an account, category, receiver, linker, limit, goal or recurring rule counts its active rows (system categories excluded);
   - invites count active users;
   - exports and import commits count `tenant_usage` per month.

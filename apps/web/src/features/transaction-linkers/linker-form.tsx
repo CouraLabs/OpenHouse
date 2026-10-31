@@ -5,12 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { z } from 'zod'
-import type {
-  CreateTransactionLinkerBody,
-  ReceiverRef,
-  TransactionLinker,
-} from '@workspace/poco'
-import { createTransactionLinkerSchema } from '@workspace/poco'
+import type { CreateTransactionLinkerBody, ReceiverRef, TransactionLinker } from '@workspace/dto'
+import { createTransactionLinkerSchema } from '@workspace/dto'
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import {
   Select,

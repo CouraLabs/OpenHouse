@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Transaction } from '@workspace/poco'
+import type { Transaction } from '@workspace/dto'
 
 import { groupByDay } from './group-by-day.js'
 

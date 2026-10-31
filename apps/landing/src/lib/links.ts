@@ -1,4 +1,4 @@
-export const GITHUB_URL = 'https://github.com/CouraLabs/OpenHouse'
+export const GITHUB_URL = 'https://github.com/CouraLabs/Kantim'
 
 export const APP_URL: string = import.meta.env.VITE_APP_URL.replace(/\/$/, '')
 

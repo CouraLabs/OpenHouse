@@ -1,4 +1,4 @@
-import type { CsvLocale } from '@workspace/poco'
+import type { CsvLocale } from '@workspace/dto'
 
 export function csvLocaleOf(language: string): CsvLocale {
   return language.toLowerCase().startsWith('pt') ? 'pt-BR' : 'en-US'

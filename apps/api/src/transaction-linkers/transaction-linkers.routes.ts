@@ -1,21 +1,15 @@
 import { Hono } from 'hono'
-import type {
-  EntityStatus,
-  TransactionLinker,
-} from '@workspace/poco'
+import type { EntityStatus, TransactionLinker } from '@workspace/dto'
 import {
   createTransactionLinkerSchema,
   searchTransactionLinkersSchema,
   updateTransactionLinkerSchema,
-} from '@workspace/poco'
+} from '@workspace/dto'
 
 import type { App, AppEnv } from '../common/context.js'
 import { parseJsonBody } from '../common/validation/parse.js'
-import type { TransactionLinkerService } from './transaction-linker.service.js'
 
-export function transactionLinkersRoutes(deps: {
-  linkers: TransactionLinkerService
-}): { router: App } {
+export function transactionLinkersRoutes(): { router: App } {
   const router = new Hono<AppEnv>()
 
   router.post('/', async (context) => {
@@ -23,7 +17,9 @@ export function transactionLinkersRoutes(deps: {
     const body = await parseJsonBody(context, createTransactionLinkerSchema)
 
     return context.json(
-      toWire(await deps.linkers.create(session.tenant.id, session.user.id, body)),
+      toWire(
+        await context.var.business.transactionLinkers.create(session.tenant.id, session.user.id, body)
+      ),
       201
     )
   })
@@ -32,7 +28,7 @@ export function transactionLinkersRoutes(deps: {
     const session = context.get('session')
     const args = await parseJsonBody(context, searchTransactionLinkersSchema)
 
-    const { rows, total } = await deps.linkers.search(session.tenant.id, args)
+    const { rows, total } = await context.var.business.transactionLinkers.search(session.tenant.id, args)
 
     return context.json({ total, items: rows.map(toWire) }, 201)
   })
@@ -41,7 +37,7 @@ export function transactionLinkersRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    return context.json(toWire(await deps.linkers.find(session.tenant.id, id)))
+    return context.json(toWire(await context.var.business.transactionLinkers.find(session.tenant.id, id)))
   })
 
   router.put('/', async (context) => {
@@ -49,7 +45,9 @@ export function transactionLinkersRoutes(deps: {
     const body = await parseJsonBody(context, updateTransactionLinkerSchema)
 
     return context.json(
-      toWire(await deps.linkers.update(session.tenant.id, session.user.id, body))
+      toWire(
+        await context.var.business.transactionLinkers.update(session.tenant.id, session.user.id, body)
+      )
     )
   })
 
@@ -57,7 +55,7 @@ export function transactionLinkersRoutes(deps: {
     const session = context.get('session')
     const id = Number.parseInt(context.req.param('id'), 10)
 
-    await deps.linkers.softDelete(session.tenant.id, session.user.id, id)
+    await context.var.business.transactionLinkers.softDelete(session.tenant.id, session.user.id, id)
 
     return context.body(null, 204)
   })

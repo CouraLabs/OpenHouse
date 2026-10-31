@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu'
-import type { SessionUser } from '@workspace/poco'
+import type { SessionUser } from '@workspace/dto'
 
 import { useSignOut } from '@/lib/auth.js'
 

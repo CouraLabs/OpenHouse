@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { resetPasswordSchema } from '@workspace/poco'
+import { resetPasswordSchema } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { TextField } from '@workspace/ui/components/text-field'
 

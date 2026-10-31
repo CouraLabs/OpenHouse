@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Transaction, TransactionStatus } from '@workspace/poco'
+import type { Transaction, TransactionStatus } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { Spinner } from '@workspace/ui/components/spinner'

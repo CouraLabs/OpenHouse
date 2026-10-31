@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Account } from '@workspace/poco'
-import { isZeroMoney } from '@workspace/poco'
+import type { Account } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { DatePicker } from '@workspace/ui/components/date-picker'
@@ -42,7 +41,7 @@ export function ReconcileForm({
     preview.data !== undefined && settledBalance === bankBalance
       ? preview.data
       : undefined
-  const differs = result !== undefined && !isZeroMoney(result.difference)
+  const differs = result !== undefined && result.tone !== 'zero'
   const createAdjustment = differs
 
   const submit = () =>

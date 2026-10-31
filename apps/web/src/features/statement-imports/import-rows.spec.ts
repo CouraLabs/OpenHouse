@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ImportPreviewRow } from '@workspace/poco'
+import type { ImportPreviewRow } from '@workspace/dto'
 
 import {
   isSelectedByDefault,

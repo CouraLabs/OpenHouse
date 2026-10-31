@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { InstallmentGroup } from '@workspace/poco'
+import type { InstallmentGroup } from '@workspace/dto'
 import { Button } from '@workspace/ui/components/button'
 
 import { InstallmentGroupEditFields } from './installment-group-edit-fields.js'

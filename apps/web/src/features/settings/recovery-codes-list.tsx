@@ -25,7 +25,7 @@ export function RecoveryCodesList({ codes }: { codes: string[] }) {
     const url = URL.createObjectURL(new Blob([sheet], { type: 'text/plain' }))
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = 'openhouse-recovery-codes.txt'
+    anchor.download = 'kantim-recovery-codes.txt'
     anchor.click()
     URL.revokeObjectURL(url)
   }

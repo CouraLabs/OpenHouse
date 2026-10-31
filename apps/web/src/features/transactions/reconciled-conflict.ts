@@ -1,4 +1,4 @@
-import type { ReconciledEditConflict } from '@workspace/poco'
+import type { ReconciledEditConflict } from '@workspace/dto'
 
 import { ApiError } from '@/lib/api.js'
 
