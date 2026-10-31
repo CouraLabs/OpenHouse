@@ -7,7 +7,7 @@ import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
 import { formattingLocale } from '@/lib/i18n.js'
 
-const BALANCE_COLOR = '#2a78d6'
+const BALANCE_COLOR = 'var(--chart-1)'
 
 export function BalanceHistoryChart({ history }: { history: BalanceHistory }) {
   const { t } = useTranslation()

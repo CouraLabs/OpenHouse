@@ -31,7 +31,7 @@ export function HouseGlyph({
         strokeWidth={weight}
         d="M22 52 H78 V88 H22 Z"
       />
-      <circle cx="50" cy="12" r="4.2" fill="currentColor" stroke="none" />
+      <circle cx="50" cy="12" r="4.2" fill="var(--brand)" stroke="none" />
     </svg>
   )
 }

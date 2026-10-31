@@ -10,17 +10,17 @@ import { Cell, Pie, PieChart } from 'recharts'
 import { formatMoney } from '@/lib/format-money.js'
 
 const SERIES = [
-  '#2a78d6',
-  '#eb6834',
-  '#1baf7a',
-  '#eda100',
-  '#e87ba4',
-  '#008300',
-  '#4a3aa7',
-  '#e34948',
+  'var(--module-finance)',
+  'var(--module-pantry)',
+  'var(--module-tasks)',
+  'var(--module-pets)',
+  'var(--module-home-care)',
+  'var(--module-household)',
+  'var(--brand)',
+  'var(--ink-2)',
 ] as const
 
-const OTHER_COLOR = '#898781'
+const OTHER_COLOR = 'var(--muted-foreground)'
 
 const MAX_SLICES = SERIES.length
 

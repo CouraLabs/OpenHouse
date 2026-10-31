@@ -7,7 +7,7 @@ export function BrandName({ className }: { className?: string }) {
       <Trans
         i18nKey="app.name-styled"
         components={{
-          accent: <span className="font-medium text-wordmark-soft" />,
+          accent: <span className="font-medium text-brand" />,
         }}
       />
     </span>

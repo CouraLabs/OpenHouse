@@ -70,12 +70,12 @@ export function LimitUsageCard({
 
 function colorFor(pct: number): string {
   if (pct >= 100) {
-    return '#d03b3b'
+    return 'var(--destructive)'
   }
 
   if (pct >= 50) {
-    return '#fab219'
+    return 'var(--attention)'
   }
 
-  return '#0ca30c'
+  return 'var(--primary)'
 }

@@ -78,7 +78,7 @@ export function ProjectionLineChart({
                 <TooltipRow
                   value={Number(value)}
                   name={String(name)}
-                  color={colorByKey.get(String(name)) ?? '#898781'}
+                  color={colorByKey.get(String(name)) ?? 'var(--muted-foreground)'}
                   formatValue={formatValue}
                 />
               )}

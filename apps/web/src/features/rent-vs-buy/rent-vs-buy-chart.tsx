@@ -15,8 +15,8 @@ import { useMainCurrency } from '@/lib/settings.js'
 import type { RentVsBuyRow } from '@workspace/dto'
 import { formattingLocale } from '@/lib/i18n.js'
 
-const PROPERTY_COLOR = '#2a78d6'
-const INVESTMENT_COLOR = '#eb6834'
+const PROPERTY_COLOR = 'var(--chart-1)'
+const INVESTMENT_COLOR = 'var(--chart-2)'
 
 interface RentVsBuyChartProps {
   rows: RentVsBuyRow[]

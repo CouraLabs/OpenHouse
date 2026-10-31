@@ -15,8 +15,8 @@ import { useMainCurrency } from '@/lib/settings.js'
 import type { InterestRow } from '@workspace/dto'
 import { formattingLocale } from '@/lib/i18n.js'
 
-const SIMPLE_COLOR = '#2a78d6'
-const COMPOUND_COLOR = '#eb6834'
+const SIMPLE_COLOR = 'var(--chart-1)'
+const COMPOUND_COLOR = 'var(--chart-2)'
 
 interface InterestGrowthChartProps {
   rows: InterestRow[]
