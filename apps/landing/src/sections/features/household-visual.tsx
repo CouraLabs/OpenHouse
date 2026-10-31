@@ -11,7 +11,7 @@ export function HouseholdVisual() {
         {MEMBERS.map((initials) => (
           <span
             key={initials}
-            className="border-surface bg-bone text-ink flex size-9 items-center justify-center rounded-full border-2 font-mono text-[11px]"
+            className="border-surface bg-bone text-ink flex size-9 items-center justify-center rounded-full border-2 font-mono text-[0.74rem]"
           >
             {initials}
           </span>
@@ -19,7 +19,7 @@ export function HouseholdVisual() {
       </div>
       <div className="flex items-center gap-2 text-xs text-muted">
         {sampleHousehold.inviteLabel}
-        <kbd className="border-line bg-bone text-ink rounded border px-1.5 py-0.5 font-mono text-[11px]">
+        <kbd className="border-line bg-bone text-ink rounded border px-1.5 py-0.5 font-mono text-[0.74rem]">
           {sampleHousehold.code}
         </kbd>
       </div>

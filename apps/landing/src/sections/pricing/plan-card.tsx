@@ -7,7 +7,7 @@ import { PerkList } from './perk-list.js'
 import { PlanPrice } from './plan-price.js'
 
 export function PlanCard({ plan }: { plan: Plan }) {
-  const { featuredBadge } = useContent()
+  const { featuredBadge, earlyAccessBadge } = useContent()
 
   return (
     <article className="border-line bg-surface hover:bg-bone flex h-full flex-col gap-8 rounded-[20px] border p-7 transition-shadow duration-200 md:p-8">
@@ -16,7 +16,10 @@ export function PlanCard({ plan }: { plan: Plan }) {
           <h3 className="text-ink font-display text-[1.05rem] font-medium tracking-[-0.02em]">
             {plan.name}
           </h3>
-          {plan.featured && <Tag tone="blue">{featuredBadge}</Tag>}
+          {plan.featured && <Tag tone="green">{featuredBadge}</Tag>}
+          {plan.earlyAccess && (
+            <Tag className="ring-line text-muted">{earlyAccessBadge}</Tag>
+          )}
         </div>
         <p className="text-sm text-pretty text-muted">{plan.tagline}</p>
       </div>

@@ -42,6 +42,7 @@ export const ptBR: Content = {
     start: { label: 'Comece grátis', href: SIGN_UP_URL },
     themeToggle: 'Alternar tema escuro',
     localeToggle: 'Ver em inglês',
+    menu: 'Seções',
   },
 
   hero: {
@@ -398,6 +399,7 @@ export const ptBR: Content = {
         },
       ],
       cta: { label: 'Comece grátis', href: SIGN_UP_URL },
+      featured: true,
     },
     {
       name: 'Plus',
@@ -416,7 +418,7 @@ export const ptBR: Content = {
         },
       ],
       cta: { label: 'Entre no acesso antecipado', href: SIGN_UP_URL },
-      featured: true,
+      earlyAccess: true,
     },
     {
       name: 'Pro',
@@ -431,6 +433,7 @@ export const ptBR: Content = {
         { label: 'Assistente da casa', included: false },
       ],
       cta: { label: 'Entre no acesso antecipado', href: SIGN_UP_URL },
+      earlyAccess: true,
     },
     {
       name: 'Max',
@@ -442,10 +445,12 @@ export const ptBR: Content = {
         { label: 'Assistente da casa (em breve)' },
       ],
       cta: { label: 'Entre no acesso antecipado', href: SIGN_UP_URL },
+      earlyAccess: true,
     },
   ],
 
-  featuredBadge: 'Ideal para a casa',
+  featuredBadge: 'Disponível hoje',
+  earlyAccessBadge: 'Acesso antecipado',
 
   faqIntro: {
     eyebrow: 'Dúvidas',

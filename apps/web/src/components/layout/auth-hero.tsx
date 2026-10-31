@@ -33,9 +33,6 @@ export function AuthHero() {
         <circle cx="50" cy="12" r="3.2" fill="currentColor" stroke="none" />
       </svg>
       <div className="relative flex max-w-lg animate-page-in flex-col gap-6">
-        <span className="w-max rounded-full px-3 py-0.5 font-mono text-xs text-ink-2 ring-1 ring-input">
-          {t('app.eyebrow')}
-        </span>
         <h1 className="text-5xl leading-[1.02] tracking-[-0.045em] text-balance lg:text-6xl">
           {t('app.headline')}
         </h1>

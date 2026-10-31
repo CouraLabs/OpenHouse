@@ -35,7 +35,7 @@ test.describe('settings', () => {
 
     await test.step('Expect: the codes are listed in place of the empty state, with a save-once warning', async () => {
       await expect(page.getByText('You have no recovery codes yet.')).toHaveCount(0)
-      await expect(page.getByText('Save these now — they are shown only once.')).toBeVisible()
+      await expect(page.getByText('Save these now. They are shown only once.')).toBeVisible()
       await expect(page.locator('ol li').first()).toBeVisible()
     })
   })

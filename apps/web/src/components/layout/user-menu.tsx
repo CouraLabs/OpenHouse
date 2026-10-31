@@ -16,6 +16,7 @@ import {
 import type { SessionUser } from '@workspace/dto'
 
 import { useSignOut } from '@/lib/auth.js'
+import { firstName } from '@/lib/first-name.js'
 
 export function UserMenu({ user }: { user: SessionUser }) {
   const { t } = useTranslation()
@@ -63,10 +64,6 @@ export function UserMenu({ user }: { user: SessionUser }) {
       </DropdownMenuContent>
     </DropdownMenu>
   )
-}
-
-function firstName(name: string): string {
-  return name.trim().split(/\s+/)[0] ?? ''
 }
 
 function initials(name: string): string {

@@ -1,3 +1,5 @@
+import { cn } from 'cn'
+
 import type { LedgerRow } from '@/lib/content.js'
 
 export function LedgerRows({
@@ -9,7 +11,7 @@ export function LedgerRows({
     <div className="flex flex-col gap-5">
       {days.map((group) => (
         <div key={group.day} className="flex flex-col">
-          <span className="pb-1 font-mono text-[11px] tracking-[0.05em] text-muted uppercase">
+          <span className="pb-1 font-mono text-[0.74rem] tracking-[0.05em] text-muted uppercase">
             {group.day}
           </span>
           <ul className="divide-line flex flex-col divide-y">
@@ -24,7 +26,12 @@ export function LedgerRows({
                   </span>
                   <span className="text-xs text-muted">{row.category}</span>
                 </div>
-                <span className="text-ink shrink-0 font-mono text-[13px] tabular-nums">
+                <span
+                  className={cn(
+                    'shrink-0 font-mono text-[0.82rem] tabular-nums',
+                    row.income ? 'text-action' : 'text-alert'
+                  )}
+                >
                   {row.amount}
                 </span>
               </li>

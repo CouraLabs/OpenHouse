@@ -16,7 +16,7 @@ export function FeaturesSection() {
   return (
     <Section id="features">
       <SectionHeading {...featuresIntro} />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+      <div className="border-line -mx-(--pad) -mt-14 -mb-(--pad) grid grid-cols-1 md:-mt-20 md:grid-cols-6 md:[&>*:nth-child(2)>article]:border-r-0 md:[&>*:nth-child(3)>article]:border-r-0 md:[&>*:nth-child(5)>article]:border-r-0 md:[&>*:nth-child(7)>article]:border-r-0 [&>*:nth-last-child(-n+1)>article]:border-b-0 md:[&>*:nth-last-child(-n+2)>article]:border-b-0 max-md:[&>*>article]:border-r-0">
         <FeatureCard
           feature={features.transactions}
           className="md:col-span-3 md:row-span-2"

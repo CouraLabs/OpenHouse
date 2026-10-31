@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateTransactionBody, CreditMode, ReconciledEditConflict, SearchTransactionsArgs, Transaction, TransactionStatus, TransactionType, TransferBody } from '@workspace/dto'
+import type {
+  CreateTransactionBody,
+  CreditMode,
+  ReconciledEditConflict,
+  SearchTransactionsArgs,
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+  TransferBody,
+} from '@workspace/dto'
 import {
   ArrowLeftRight,
-  Ellipsis,
   Gauge,
   PieChart,
   Plus,
@@ -14,28 +22,18 @@ import {
 import { Button } from '@workspace/ui/components/button'
 import { ConfirmDialog } from '@workspace/ui/components/confirm-dialog'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@workspace/ui/components/dropdown-menu'
-import {
   FilterDialog,
   type FilterValues,
 } from '@workspace/ui/components/filter-dialog'
-import {
-  ExportCsvButton,
-  ExportCsvMenuItem,
-  useExportCsv,
-} from '@/components/export-csv-button.js'
+import { useExportCsv } from '@/components/export-csv-button.js'
 import { PageHeader } from '@/components/page-header.js'
 import { formatDateOnly } from '@/lib/format-date-only.js'
 import { useMainCurrency, useTenantToday } from '@/lib/settings.js'
 import { ClosedBillDialog } from './closed-bill-dialog.js'
-import { CreditModeToggle } from './credit-mode-toggle.js'
 import { CurrentBillCard } from './current-bill-card.js'
 import { ExpensePieCard } from './expense-pie-card.js'
 import { TransactionWindowNotice } from './transaction-window-notice.js'
-import { FilterChips } from './filter-chips.js'
+import { FilterChips, type FilterChipValue } from './filter-chips.js'
 import { InstallmentGroupDialog } from './installment-group-dialog.js'
 import { GoalGaugesCard } from './goal-gauges-card.js'
 import { LastMonthCard } from './last-month-card.js'
@@ -51,6 +49,7 @@ import { mainCurrencyFirst } from '@/lib/main-currency-first.js'
 import { TransactionForm } from './transaction-form.js'
 import { TransactionGrid } from './transaction-grid.js'
 import { TransferForm } from './transfer-form.js'
+import { TransactionsMoreMenu } from './transactions-more-menu.js'
 import { type TransactionsView, ViewToggle } from './view-toggle.js'
 import {
   useCurrentBills,
@@ -226,15 +225,14 @@ export function TransactionsPage() {
   }).format(anchor)
 
   const chips = useMemo(() => {
-    const list = [
-      {
-        label: t('transactions.chip-month', { month: monthLabel }),
-        onClear: () =>
-          setAnchor(
-            new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-          ),
-      },
-    ]
+    const list: FilterChipValue[] = []
+
+    if (creditMode === 'cash') {
+      list.push({
+        label: `${t('transactions.mode')}: ${t('transactions.mode-cash')}`,
+        onClear: () => setCreditMode('accrual'),
+      })
+    }
 
     if (filter.categoryId !== undefined) {
       const category = (categories.data ?? []).find(
@@ -293,7 +291,7 @@ export function TransactionsPage() {
     }
 
     return list
-  }, [t, monthLabel, filter, categories.data, accounts.data, receivers.data])
+  }, [t, creditMode, filter, categories.data, accounts.data, receivers.data])
 
   const submitSave = (
     body: CreateTransactionBody,
@@ -351,6 +349,17 @@ export function TransactionsPage() {
         },
       }
     )
+  }
+
+  const openNew = () => {
+    setEditing(null)
+    save.reset()
+    setFormOpen(true)
+  }
+
+  const openTransfer = () => {
+    transfer.reset()
+    setTransferOpen(true)
   }
 
   const submitTransfer = (body: TransferBody) => {
@@ -416,7 +425,7 @@ export function TransactionsPage() {
   }
 
   return (
-    <main className="flex h-full min-h-0 w-full animate-page-in flex-col gap-6 px-4 py-8 md:px-10 md:py-10">
+    <main className="flex h-full min-h-0 w-full animate-page-in flex-col gap-6 px-4 pt-8 pb-24 md:px-10 md:py-10">
       <PageHeader
         title={t('transactions.title')}
         subtitle={t('transactions.subtitle')}
@@ -431,27 +440,11 @@ export function TransactionsPage() {
                 metrics: t('transactions.view-metrics'),
               }}
             />
-            <CreditModeToggle
-              value={creditMode}
-              onChange={setCreditMode}
-              labels={{
-                group: t('transactions.mode'),
-                accrual: t('transactions.mode-accrual'),
-                cash: t('transactions.mode-cash'),
-              }}
-            />
             <MonthFilter
               label={monthLabel}
               onPrevious={() => setAnchor((current) => shiftMonth(current, -1))}
               onNext={() => setAnchor((current) => shiftMonth(current, 1))}
             />
-            <div className="hidden min-[1100px]:flex">
-              <ExportCsvButton
-                path="/transactions/export"
-                args={args}
-                csv={exportCsv}
-              />
-            </div>
             <FilterDialog
               fields={[
                 {
@@ -522,55 +515,38 @@ export function TransactionsPage() {
             />
             <Button
               variant="outline"
-              onClick={() => {
-                transfer.reset()
-                setTransferOpen(true)
-              }}
+              className="max-md:hidden"
+              onClick={openTransfer}
             >
               <ArrowLeftRight />
               {t('transactions.transfer')}
             </Button>
-            <div className="flex items-center gap-2 min-[1100px]:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      aria-label={t('transactions.more-actions')}
-                      title={t('transactions.more-actions')}
-                    />
-                  }
-                >
-                  <Ellipsis />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <ExportCsvMenuItem
-                    path="/transactions/export"
-                    args={args}
-                    csv={exportCsv}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {exportCsv.isError ? (
-                <p role="alert" className="text-xs text-destructive">
-                  {t('export.csv-error')}
-                </p>
-              ) : null}
-            </div>
-            <Button
-              onClick={() => {
-                setEditing(null)
-                save.reset()
-                setFormOpen(true)
+            <TransactionsMoreMenu
+              exportArgs={args}
+              csv={exportCsv}
+              creditMode={creditMode}
+              onCreditModeChange={setCreditMode}
+              onTransfer={openTransfer}
+              labels={{
+                trigger: t('transactions.more-actions'),
+                transfer: t('transactions.transfer'),
+                mode: t('transactions.mode'),
+                accrual: t('transactions.mode-accrual'),
+                cash: t('transactions.mode-cash'),
               }}
-            >
+            />
+            <Button className="max-md:hidden" onClick={openNew}>
               <Plus />
               {t('transactions.new')}
             </Button>
           </>
         }
       />
+      {exportCsv.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {t('export.csv-error')}
+        </p>
+      ) : null}
       <TransactionWindowNotice />
       <FilterChips chips={chips} />
       {view === 'metrics' ? (
@@ -750,6 +726,14 @@ export function TransactionsPage() {
           {saveError ?? statusChangeError}
         </p>
       ) : null}
+      <Button
+        size="lg"
+        className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-20 shadow-lg md:hidden"
+        onClick={openNew}
+      >
+        <Plus />
+        {t('transactions.new')}
+      </Button>
       <TransactionForm
         open={formOpen}
         transaction={editing}

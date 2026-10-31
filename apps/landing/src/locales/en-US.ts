@@ -42,6 +42,7 @@ export const enUS: Content = {
     start: { label: 'Start free', href: SIGN_UP_URL },
     themeToggle: 'Toggle dark theme',
     localeToggle: 'View in Portuguese',
+    menu: 'Sections',
   },
 
   hero: {
@@ -395,6 +396,7 @@ export const enUS: Content = {
         { label: 'Signed in on several devices at once', included: false },
       ],
       cta: { label: 'Start free', href: SIGN_UP_URL },
+      featured: true,
     },
     {
       name: 'Plus',
@@ -413,7 +415,7 @@ export const enUS: Content = {
         { label: 'Signed in on several devices at once', included: false },
       ],
       cta: { label: 'Join early access', href: SIGN_UP_URL },
-      featured: true,
+      earlyAccess: true,
     },
     {
       name: 'Pro',
@@ -428,6 +430,7 @@ export const enUS: Content = {
         { label: 'Household assistant', included: false },
       ],
       cta: { label: 'Join early access', href: SIGN_UP_URL },
+      earlyAccess: true,
     },
     {
       name: 'Max',
@@ -439,10 +442,12 @@ export const enUS: Content = {
         { label: 'Household assistant (coming soon)' },
       ],
       cta: { label: 'Join early access', href: SIGN_UP_URL },
+      earlyAccess: true,
     },
   ],
 
-  featuredBadge: 'Best for households',
+  featuredBadge: 'Available today',
+  earlyAccessBadge: 'Early access',
 
   faqIntro: {
     eyebrow: 'Questions',

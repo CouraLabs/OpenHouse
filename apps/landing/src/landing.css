@@ -23,6 +23,7 @@
   --color-attention: var(--attention);
   --color-attention-soft: var(--attention-soft);
   --color-attention-foreground: var(--attention-foreground);
+  --color-alert: var(--alert);
   --color-module-finance: var(--module-finance);
   --color-module-pantry: var(--module-pantry);
   --color-module-tasks: var(--module-tasks);
@@ -56,6 +57,7 @@
   --attention: #f2b33d;
   --attention-soft: #fbebc6;
   --attention-foreground: #6b4700;
+  --alert: #b42335;
   --module-finance: #2f6b4f;
   --module-pantry: #d0643a;
   --module-tasks: #3a6ea8;
@@ -90,6 +92,7 @@
   --attention: #f6cf7a;
   --attention-soft: #3a2e14;
   --attention-foreground: #f6cf7a;
+  --alert: #f08a92;
   --module-finance: #7cc29f;
   --module-pantry: #e8845c;
   --module-tasks: #7fa9dc;

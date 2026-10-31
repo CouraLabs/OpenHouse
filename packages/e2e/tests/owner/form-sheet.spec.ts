@@ -1,7 +1,7 @@
 import { expect, test } from '../../support/test.js'
 
 test.describe('form sheet', () => {
-  test('the form opens full screen at 375px with the first field focused and Save in view', async ({
+  test('the form opens full screen at 375px with the first text field focused and Save in view', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 })
@@ -13,9 +13,9 @@ test.describe('form sheet', () => {
 
     const dialog = page.getByRole('dialog')
 
-    await test.step('Expect: the sheet fills the screen and the first field has focus', async () => {
+    await test.step('Expect: the sheet fills the screen and the first text field has focus', async () => {
       await expect(dialog).toBeVisible()
-      await expect(dialog.getByRole('radio').first()).toBeFocused()
+      await expect(dialog.getByRole('textbox').first()).toBeFocused()
       const box = await dialog.boundingBox()
       expect(box?.width).toBeGreaterThanOrEqual(374)
     })

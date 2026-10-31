@@ -36,7 +36,7 @@ interface FormSheetProps {
 }
 
 const FIRST_FIELD =
-  'input:not([type=hidden]):not([readonly]):not(:disabled), textarea:not(:disabled), button[role=combobox]:not(:disabled)'
+  'input:not([type=hidden]):not([type=radio]):not([type=checkbox]):not([aria-hidden=true]):not([readonly]):not(:disabled), textarea:not(:disabled), button[role=combobox]:not(:disabled)'
 
 export function FormSheet({
   open = true,

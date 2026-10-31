@@ -19,7 +19,7 @@ test.describe('sign-up', () => {
 
     await test.step('Expect: the app is locked on the initial setup until the household is configured', async () => {
       await expect(page.getByRole('heading', { name: `Set up ${owner.household}` })).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Dashboard' })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: 'Home', exact: true })).toHaveCount(0)
     })
 
     await test.step('Action: confirm the time zone and main currency', async () => {
@@ -28,7 +28,7 @@ test.describe('sign-up', () => {
 
     await test.step('Expect: the app unlocks and opens the dashboard for the new household', async () => {
       await expect(page).toHaveURL(/\/app\/$/)
-      await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible()
       await expect(page.getByText(owner.household, { exact: true }).first()).toBeVisible()
     })
   })
@@ -120,7 +120,7 @@ test.describe('sign-in', () => {
 
     await test.step('Expect: the dashboard opens with the household name in the shell', async () => {
       await expect(page).toHaveURL(/\/app\/$/)
-      await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible()
     })
   })
 
@@ -134,7 +134,7 @@ test.describe('sign-in', () => {
       await page.getByLabel('Email').fill(account.email)
       await page.getByLabel('Password').fill(account.password)
       await page.getByRole('button', { name: /sign in/i }).click()
-      await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible()
     })
 
     await test.step('Action: open the profile menu and choose "Log out"', async () => {

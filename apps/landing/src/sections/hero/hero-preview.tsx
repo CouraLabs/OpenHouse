@@ -18,7 +18,7 @@ export function HeroPreview() {
           <LedgerRows days={sampleLedger} />
         </div>
         <aside className="border-line bg-bone/60 flex flex-col gap-5 border-t p-6 md:border-t-0 md:border-l">
-          <span className="font-mono text-[11px] tracking-[0.05em] text-muted uppercase">
+          <span className="font-mono text-[0.74rem] tracking-[0.05em] text-muted uppercase">
             {hero.limitsTitle}
           </span>
           {sampleLimits.map((limit) => (

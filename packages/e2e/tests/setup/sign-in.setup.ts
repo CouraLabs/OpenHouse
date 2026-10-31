@@ -22,7 +22,7 @@ setup('signs up a separate household for the sign-in tests', async ({ page }) =>
   })
 
   await page.goto('')
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible()
 
   saveSignInAccount(account)
 })

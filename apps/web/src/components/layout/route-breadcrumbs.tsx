@@ -1,6 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
+import { cn } from 'cn'
 
 import {
   BreadcrumbItem,
@@ -9,14 +10,14 @@ import {
   BreadcrumbSeparator,
 } from '@workspace/ui/components/breadcrumb'
 
-import { FINANCIAL_GROUP } from './nav.js'
+import { NAV_GROUPS } from './nav.js'
 import { findNavTrail } from './nav-trail.js'
 
 export function RouteBreadcrumbs() {
   const { t } = useTranslation()
   const location = useLocation()
   const segments = location.pathname.split('/').filter(Boolean)
-  const navTrail = findNavTrail([FINANCIAL_GROUP], location.pathname)
+  const navTrail = findNavTrail(NAV_GROUPS, location.pathname)
 
   const crumbs: Array<{ label: string; to?: string }> = navTrail
     ? navTrail.map((step) => ({ label: t(step.key), to: step.to }))
@@ -34,10 +35,10 @@ export function RouteBreadcrumbs() {
 
     return (
       <Fragment key={crumb.to ?? crumb.label}>
-        {index > 0 ? <BreadcrumbSeparator /> : null}
-        <BreadcrumbItem>
+        {index > 0 ? <BreadcrumbSeparator className="max-md:hidden" /> : null}
+        <BreadcrumbItem className={cn('min-w-0', !isLast && 'max-md:hidden')}>
           {isLast || crumb.to === undefined ? (
-            <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+            <BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
           ) : (
             <BreadcrumbLink render={<Link to={crumb.to} />}>
               {crumb.label}

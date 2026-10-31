@@ -44,13 +44,12 @@ export function RecoveryCodesPrompt() {
         dismissedKey(user.id),
         new Date().toISOString()
       )
-    } catch {
-    }
+    } catch {}
     setDismissed(true)
   }
 
   return (
-    <div className="mx-4 mt-4 flex flex-col gap-3 rounded-2xl bg-primary/10 p-4 ring-1 ring-primary/15 md:mx-10 md:flex-row md:items-center">
+    <div className="flex flex-col gap-3 border-y border-border py-4 md:flex-row md:items-center">
       <div className="flex flex-1 items-start gap-3">
         <KeyRound aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
         <div className="flex flex-col gap-0.5">

@@ -9,6 +9,7 @@ import { Badge } from '@workspace/ui/components/badge'
 import { GaugeBar } from '@workspace/ui/components/gauge-bar'
 
 import { formatMoney } from '@/lib/format-money.js'
+import { goalGaugeColor } from '@/lib/goal-gauge-color.js'
 
 export function GoalGaugesCard({
   title,
@@ -53,9 +54,7 @@ export function GoalGaugesCard({
                 format={(amount) =>
                   formatMoney(String(amount), locale, goal.currency)
                 }
-                colorFor={(pct) =>
-                  `rgba(34, 197, 94, ${(pct / 100).toFixed(2)})`
-                }
+                colorFor={goalGaugeColor}
                 aria-label={ariaLabelFor(goal)}
               />
             </div>

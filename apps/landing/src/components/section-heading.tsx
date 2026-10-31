@@ -27,19 +27,26 @@ export function SectionHeading({
           <Eyebrow>{eyebrow}</Eyebrow>
         </Reveal>
         {lede && (
-          <Reveal index={2}>
+          <Reveal index={2} className="max-md:hidden">
             <p className="text-body max-w-[42ch] text-[1.02rem] text-pretty">
               {lede}
             </p>
           </Reveal>
         )}
       </div>
-      <div className="split-rule flex items-end p-(--pad) pt-0 md:pt-(--pad)">
+      <div className="split-rule flex flex-col items-start justify-end gap-5 p-(--pad) pt-0 md:flex-row md:items-end md:pt-(--pad)">
         <Reveal index={1}>
           <h2 className="text-ink font-display text-[clamp(2.2rem,4.6vw,4rem)] leading-[1] font-medium tracking-[-0.05em] text-balance">
             {title}
           </h2>
         </Reveal>
+        {lede && (
+          <Reveal index={2} className="md:hidden">
+            <p className="text-body max-w-[42ch] text-[1.02rem] text-pretty">
+              {lede}
+            </p>
+          </Reveal>
+        )}
       </div>
       <span className="hidden md:contents">
         <Tick x="var(--split)" y="0" />

@@ -9,7 +9,7 @@ import { BrandHeader } from './brand-header.js'
 import { MonthSummaryFooter } from './month-summary-footer.js'
 import { NavButtonItem } from './nav-button-item.js'
 import { NavGroupContent } from './nav-group-content.js'
-import { DASHBOARD_ITEM, FINANCIAL_GROUP } from './nav.js'
+import { DASHBOARD_ITEM, NAV_GROUPS } from './nav.js'
 
 export function AppSidebar({ tenantName }: { tenantName: string }) {
   return (
@@ -21,7 +21,9 @@ export function AppSidebar({ tenantName }: { tenantName: string }) {
             <NavButtonItem item={DASHBOARD_ITEM} />
           </SidebarMenu>
         </SidebarGroup>
-        <NavGroupContent group={FINANCIAL_GROUP} />
+        {NAV_GROUPS.map((group) => (
+          <NavGroupContent key={group.key} group={group} />
+        ))}
       </SidebarContent>
       <MonthSummaryFooter />
     </Sidebar>

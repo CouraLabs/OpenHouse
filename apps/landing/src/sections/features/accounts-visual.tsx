@@ -15,10 +15,10 @@ export function AccountsVisual() {
             <span className="text-xs text-muted">{account.kind}</span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <span className="text-ink font-mono text-[13px] tabular-nums">
+            <span className="text-ink font-mono text-[0.82rem] tabular-nums">
               {account.amount}
             </span>
-            <span className="border-line bg-bone rounded border px-1 font-mono text-[11px] text-muted">
+            <span className="border-line bg-bone rounded border px-1 font-mono text-[0.74rem] text-muted">
               {account.currency}
             </span>
           </div>

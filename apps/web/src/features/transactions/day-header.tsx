@@ -30,18 +30,22 @@ export function DayHeader({
       >
         {group.totals.map((total) => (
           <span key={total.currency} className="flex gap-3">
-            <span>
-              {labels.groupIncomes}{' '}
-              <span className="text-primary">
-                {formatMoney(total.incomes, locale, total.currency)}
+            {isZero(total.incomes) ? null : (
+              <span>
+                {labels.groupIncomes}{' '}
+                <span className="text-primary">
+                  {formatMoney(total.incomes, locale, total.currency)}
+                </span>
               </span>
-            </span>
-            <span>
-              {labels.groupExpenses}{' '}
-              <span className="text-destructive">
-                {formatMoney(total.expenses, locale, total.currency)}
+            )}
+            {isZero(total.expenses) ? null : (
+              <span>
+                {labels.groupExpenses}{' '}
+                <span className="text-destructive">
+                  {formatMoney(total.expenses, locale, total.currency)}
+                </span>
               </span>
-            </span>
+            )}
             <span>
               {labels.groupNet}{' '}
               <span className="tabular-nums">
@@ -53,4 +57,8 @@ export function DayHeader({
       </span>
     </div>
   )
+}
+
+function isZero(amount: string): boolean {
+  return /^-?0*(\.0*)?$/.test(amount)
 }

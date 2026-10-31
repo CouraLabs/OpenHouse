@@ -69,7 +69,7 @@ test.describe('dashboard', () => {
     })
 
     await test.step('Expect: the account name and its balance appear on the dashboard', async () => {
-      await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible()
       await expect(page.getByText(account.name, { exact: true }).first()).toBeVisible()
       await expect(page.getByText('R$321.00').first()).toBeVisible()
     })

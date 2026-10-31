@@ -22,7 +22,7 @@ setup('signs up the shared owner household in BRL', async ({ page }) => {
   })
 
   await page.goto('')
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible()
 
   await page.context().storageState({ path: AUTH_FILE })
   saveOwnerAccount(owner)

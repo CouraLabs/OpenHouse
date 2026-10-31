@@ -3,15 +3,13 @@ import {
   ArrowLeftRight,
   CalendarClock,
   HeartHandshake,
-  House,
-  Landmark,
   LayoutDashboard,
   Lightbulb,
   Link,
-  Percent,
   PiggyBank,
   ReceiptText,
   Repeat,
+  Settings,
   Tags,
   Target,
   Users,
@@ -76,30 +74,18 @@ export const FINANCIAL_GROUP: NavGroup = {
       items: [
         { key: 'nav.limits', to: '/limits', icon: PiggyBank },
         { key: 'nav.goals', to: '/goals', icon: Target },
-        { key: 'nav.household', to: '/household', icon: HeartHandshake },
-      ],
-    },
-    {
-      key: 'nav.subgroup.tips',
-      items: [
         { key: 'nav.tips', to: '/tips', icon: Lightbulb },
-        {
-          key: 'nav.interest-comparison',
-          to: '/tips/interest-comparison',
-          icon: Percent,
-        },
-        {
-          key: 'nav.rate-conversion',
-          to: '/tips/rate-conversion',
-          icon: ArrowLeftRight,
-        },
-        {
-          key: 'nav.financial-independence',
-          to: '/tips/financial-independence',
-          icon: Landmark,
-        },
-        { key: 'nav.rent-vs-buy', to: '/tips/rent-vs-buy', icon: House },
       ],
     },
   ],
 }
+
+export const HOME_GROUP: NavGroup = {
+  key: 'nav.your-home',
+  items: [
+    { key: 'nav.household', to: '/household', icon: HeartHandshake },
+    { key: 'nav.settings', to: '/settings', icon: Settings },
+  ],
+}
+
+export const NAV_GROUPS: NavGroup[] = [FINANCIAL_GROUP, HOME_GROUP]

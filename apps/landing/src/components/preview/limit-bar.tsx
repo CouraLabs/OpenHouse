@@ -1,3 +1,5 @@
+import { cn } from 'cn'
+
 import { useInView } from '@/lib/use-in-view.js'
 
 export function LimitBar({
@@ -24,7 +26,14 @@ export function LimitBar({
       <div className="bg-bone h-1.5 overflow-hidden rounded-full">
         <div
           style={{ transform: `scaleX(${inView ? percent / 100 : 0})` }}
-          className="ease-out-expo bg-ink h-full origin-left rounded-full transition-transform duration-1000 motion-reduce:transition-none"
+          className={cn(
+            'ease-out-expo h-full origin-left rounded-full transition-transform duration-1000 motion-reduce:transition-none',
+            percent >= 100
+              ? 'bg-alert'
+              : percent >= 80
+                ? 'bg-attention'
+                : 'bg-ink'
+          )}
         />
       </div>
     </div>

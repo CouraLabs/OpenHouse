@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { FINANCIAL_GROUP } from './nav.js'
+import { FINANCIAL_GROUP, NAV_GROUPS } from './nav.js'
 import { findNavTrail } from './nav-trail.js'
 
 describe('findNavTrail', () => {
@@ -13,10 +13,9 @@ describe('findNavTrail', () => {
   })
 
   it('follows the menu grouping, not the url segments', () => {
-    expect(findNavTrail([FINANCIAL_GROUP], '/tips/rent-vs-buy')).toEqual([
-      { key: 'nav.financial' },
-      { key: 'nav.subgroup.tips' },
-      { key: 'nav.rent-vs-buy', to: '/tips/rent-vs-buy' },
+    expect(findNavTrail(NAV_GROUPS, '/household')).toEqual([
+      { key: 'nav.your-home' },
+      { key: 'nav.household', to: '/household' },
     ])
   })
 
@@ -46,7 +45,15 @@ describe('findNavTrail', () => {
     ])
   })
 
+  it('gives a planner the trail of the tips page', () => {
+    expect(findNavTrail(NAV_GROUPS, '/tips/rent-vs-buy')).toEqual([
+      { key: 'nav.financial' },
+      { key: 'nav.subgroup.planning' },
+      { key: 'nav.tips', to: '/tips' },
+    ])
+  })
+
   it('returns undefined for routes outside the menu', () => {
-    expect(findNavTrail([FINANCIAL_GROUP], '/settings/general')).toBeUndefined()
+    expect(findNavTrail(NAV_GROUPS, '/no-such-page')).toBeUndefined()
   })
 })

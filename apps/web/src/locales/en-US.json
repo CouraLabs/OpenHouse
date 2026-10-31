@@ -1,14 +1,15 @@
 {
   "app": {
     "name": "Kantim",
+    "skip-to-content": "Skip to content",
     "name-styled": "kantim<accent>.</accent>",
-    "eyebrow": "Household finance",
     "headline": "Every coin in the house, in its place.",
-    "tagline": "Accounts, budgets, and goals kept together — calm, clear, and yours."
+    "tagline": "Accounts, budgets and goals kept together. Calm, clear and yours."
   },
   "nav": {
     "home": "Home",
-    "dashboard": "Dashboard",
+    "dashboard": "Home",
+    "your-home": "Your home",
     "financial": "Financial",
     "subgroup": {
       "setup": "Setup",
@@ -65,7 +66,7 @@
   },
   "categories": {
     "title": "Categories",
-    "subtitle": "Group the records of your household — every category carries a name and a color.",
+    "subtitle": "Group the records of your household. Every category carries a name and a color.",
     "name": "Name",
     "name-placeholder": "Office supplies",
     "color": "Color",
@@ -85,7 +86,7 @@
     "page-of": "Page {{page}} of {{count}}",
     "previous-page": "Previous page",
     "next-page": "Next page",
-    "empty": "No categories found.",
+    "empty": "No categories yet. Add one to sort where the money goes.",
     "error": "Something went wrong. Try again."
   },
   "limits": {
@@ -119,7 +120,7 @@
     "page-of": "Page {{page}} of {{count}}",
     "previous-page": "Previous page",
     "next-page": "Next page",
-    "empty": "No limits found.",
+    "empty": "No limits yet. Add one to get a warning before a category runs over.",
     "error": "Something went wrong. Try again."
   },
   "goals": {
@@ -162,12 +163,12 @@
     "page-of": "Page {{page}} of {{count}}",
     "previous-page": "Previous page",
     "next-page": "Next page",
-    "empty": "No goals found.",
+    "empty": "No goals yet. Add one and watch it fill.",
     "error": "Something went wrong. Try again."
   },
   "accounts": {
     "title": "Accounts",
-    "subtitle": "Keep the accounts of your household — a bank account or a credit card, its balance and its dates.",
+    "subtitle": "Keep the accounts of your household. A bank account or a credit card, its balance and its dates.",
     "name": "Name",
     "name-placeholder": "Everyday checking",
     "account": "Account",
@@ -215,7 +216,7 @@
     "page-of": "Page {{page}} of {{count}}",
     "previous-page": "Previous page",
     "next-page": "Next page",
-    "empty": "No accounts found.",
+    "empty": "No accounts yet. Add the first one, then record what moves through it.",
     "error": "Something went wrong. Try again.",
     "is-default": "Default account",
     "default-badge": "Default",
@@ -452,7 +453,7 @@
   },
   "tips": {
     "title": "Financial Tips",
-    "subtitle": "Short guides to organize your money — no data required, just good habits.",
+    "subtitle": "Short guides to organize your money. No data required, just good habits.",
     "ten-tips": {
       "title": "10 Tips for Financial Organization",
       "description": "Small habits that keep your money under control, one day at a time.",
@@ -471,7 +472,7 @@
         },
         "pay-yourself-first": {
           "title": "Pay yourself first",
-          "body": "Set your savings aside the day the money arrives — spend what's left, not the other way around."
+          "body": "Set your savings aside the day the money arrives. Spend what's left, not the other way around."
         },
         "cut-expenses": {
           "title": "Cut unnecessary expenses",
@@ -479,7 +480,7 @@
         },
         "impulse": {
           "title": "Avoid impulse purchases",
-          "body": "Wait before buying anything non-essential — the urge usually fades."
+          "body": "Wait before buying anything non-essential. The urge usually fades."
         },
         "installments": {
           "title": "Avoid installments",
@@ -505,7 +506,7 @@
       "items": {
         "goal": {
           "title": "Set a clear goal",
-          "body": "Know what you are saving for and by when — a goal without a date is just a wish."
+          "body": "Know what you are saving for and by when. A goal without a date is just a wish."
         },
         "numbers": {
           "title": "Know your numbers",
@@ -539,7 +540,7 @@
       "items": {
         "necessities": {
           "title": "Necessities",
-          "body": "Housing, food, transport, and bills — the fixed cost of living."
+          "body": "Housing, food, transport, and bills. The fixed cost of living."
         },
         "freedom": {
           "title": "Financial freedom",
@@ -551,11 +552,11 @@
         },
         "savings": {
           "title": "Savings and goals",
-          "body": "The long-term projects — a trip, a car, a house."
+          "body": "The long-term projects. A trip, a car, a house."
         },
         "fun": {
           "title": "Fun",
-          "body": "Guilt-free spending — enjoy the money you worked for."
+          "body": "Guilt-free spending. Enjoy the money you worked for."
         },
         "giving": {
           "title": "Giving",
@@ -569,7 +570,7 @@
       "items": {
         "map": {
           "title": "Map income and expenses",
-          "body": "List everything coming in and going out for a full month — knowledge comes first."
+          "body": "List everything coming in and going out for a full month. Knowledge comes first."
         },
         "debts": {
           "title": "Organize your debts",
@@ -589,14 +590,14 @@
         },
         "monitor": {
           "title": "Monitor and adjust",
-          "body": "Review monthly — a budget is a living plan, not a one-time document."
+          "body": "Review monthly. A budget is a living plan, not a one-time document."
         }
       }
     }
   },
   "receivers": {
     "title": "Receivers",
-    "subtitle": "Who your money goes to — a person, a service, a merchant, or a charity.",
+    "subtitle": "Who your money goes to. A person, a service, a merchant, or a charity.",
     "name": "Name",
     "name-placeholder": "City Power",
     "type": "Type",
@@ -622,7 +623,7 @@
     "page-of": "Page {{page}} of {{count}}",
     "previous-page": "Previous page",
     "next-page": "Next page",
-    "empty": "No receivers found.",
+    "empty": "No receivers yet. They are added as you name who you pay.",
     "error": "Something went wrong. Try again."
   },
   "linkers": {
@@ -651,12 +652,12 @@
     "page-of": "Page {{page}} of {{count}}",
     "previous-page": "Previous page",
     "next-page": "Next page",
-    "empty": "No transaction linkers found.",
+    "empty": "No linkers yet. Add one to fill in recurring names, categories and accounts for you.",
     "error": "Something went wrong. Try again."
   },
   "recurring": {
     "title": "Recurring Transactions",
-    "subtitle": "Rules that materialize a transaction on a schedule — daily, weekly, monthly, or yearly.",
+    "subtitle": "Rules that materialize a transaction on a schedule. Daily, weekly, monthly, or yearly.",
     "receiver": "Receiver",
     "receiver-placeholder": "Pick a receiver…",
     "no-match": "No matches",
@@ -712,7 +713,7 @@
     "page-of": "Page {{page}} of {{count}}",
     "previous-page": "Previous page",
     "next-page": "Next page",
-    "empty": "No recurring rules found.",
+    "empty": "No recurring rules yet. Add rent, power or a salary once and Kantim schedules it.",
     "error": "Something went wrong. Try again."
   },
   "transactions": {
@@ -721,7 +722,7 @@
     "account-placeholder": "Pick an account…",
     "category-placeholder": "Pick a category…",
     "title": "Transactions",
-    "subtitle": "Every movement of your money — filter by month, group by day, and keep the balances true.",
+    "subtitle": "Every movement of your money. Filter by month, group by day, and keep the balances true.",
     "when": "When",
     "category": "Category",
     "account": "Account",
@@ -742,11 +743,10 @@
     "filter-receiver-placeholder": "Any receiver",
     "month-previous": "Previous month",
     "month-next": "Next month",
-    "chip-month": "Month: {{month}}",
     "chip-range": "From {{from}} to {{to}}",
     "chip-clear": "Remove filter",
     "selected-count": "{{count}} selected",
-    "summary-incomes": "Incomes",
+    "summary-incomes": "Income",
     "summary-expenses": "Expenses",
     "summary-net": "Net",
     "summary-credit-expenses": "Credit Card Expenses",
@@ -769,7 +769,7 @@
     "view": "View",
     "view-transactions": "Transactions",
     "view-metrics": "Metrics",
-    "group-incomes": "Incomes",
+    "group-incomes": "Income",
     "group-expenses": "Expenses",
     "group-net": "Net",
     "select-all": "Select all loaded rows",
@@ -841,7 +841,7 @@
     "group-confirm-refund": "Delete the unbilled installments and credit the billed ones on the open bill?",
     "group-confirm-collapse": "Merge the installments back into one charge on the first bill?",
     "group-refund-name": "Refund: {{name}}",
-    "empty": "No transactions found.",
+    "empty": "Nothing recorded in this month yet. Add a transaction to start the ledger.",
     "error": "Something went wrong. Try again.",
     "transfer": "Transfer",
     "transfer-title": "Transfer between accounts",
@@ -862,7 +862,7 @@
     "category-account": "Category / Account",
     "status-change": "Change status",
     "more-actions": "More actions",
-    "toast-saved": "Transaction saved — the books absorbed it.",
+    "toast-saved": "Transaction saved. The books absorbed it.",
     "toast-deleted": "Transaction deleted and the balance reverted.",
     "toast-transferred": "Transfer recorded on both accounts.",
     "toast-status-updated": "Status updated.",
@@ -897,7 +897,7 @@
   },
   "interest-comparison": {
     "title": "Simple vs Compound Interest",
-    "subtitle": "Watch the same money grow two ways — interest on the principal only, or interest on the interest.",
+    "subtitle": "Watch the same money grow two ways. Interest on the principal only, or interest on the interest.",
     "params": {
       "title": "Projection",
       "present-value": "Present value",
@@ -932,7 +932,7 @@
   },
   "rate-conversion": {
     "title": "Rate Conversion",
-    "subtitle": "Translate a rate between year, month, and business day — by compounding, never by dividing.",
+    "subtitle": "Translate a rate between year, month, and business day. By compounding, never by dividing.",
     "converter": {
       "title": "Convert a rate",
       "rate": "Rate (%)",
@@ -960,7 +960,7 @@
   },
   "financial-independence": {
     "title": "Financial Independence",
-    "subtitle": "How much to put away every month to reach a target — and how much an accumulated balance pays out monthly.",
+    "subtitle": "How much to put away every month to reach a target. And how much an accumulated balance pays out monthly.",
     "accumulation": {
       "title": "Reaching a target",
       "description": "The monthly contribution that turns today's balance into your target over the years, net of inflation, fees, and income tax on the gains.",
@@ -978,7 +978,7 @@
     },
     "withdrawal": {
       "title": "Living off the accumulation",
-      "description": "The constant monthly withdrawal an accumulated balance supports over the years — the tax charged on the interest share only.",
+      "description": "The constant monthly withdrawal an accumulated balance supports over the years. The tax charged on the interest share only.",
       "balance": "Accumulated balance",
       "rate": "Net return (% a month)",
       "inflation": "Inflation (% a month)",
@@ -1071,7 +1071,7 @@
     },
     "preferences": {
       "title": "Preferences",
-      "description": "Your own choices — they apply only to you.",
+      "description": "Your own choices. They apply only to you.",
       "start-page": "Page to open after signing in",
       "home": "Home"
     },
@@ -1180,7 +1180,7 @@
       "regenerate-title": "Replace your recovery codes?",
       "regenerate-description": "The codes you have now stop working at once.",
       "regenerate-confirm": "Generate new codes",
-      "shown-once": "Save these now — they are shown only once.",
+      "shown-once": "Save these now. They are shown only once.",
       "copy": "Copy codes",
       "download": "Download",
       "print": "Print",
@@ -1374,12 +1374,13 @@
     "expenses": "Expenses",
     "net": "Net",
     "goals": "Goals",
-    "goals-empty": "No goals yet. Set one and watch it fill.",
+    "goals-empty": "No goals yet. Add one from Goals and watch it fill.",
     "goal-aria": "Progress toward {{name}}",
     "limits": "Limits",
-    "limits-empty": "No limits yet. Set one to watch a category.",
+    "limits-empty": "No limits yet. Add one from Limits to watch a category.",
     "limit-aria": "Spending against the {{name}} limit",
-    "limit-excluded": "{{count}} expenses left out of this total."
+    "limit-excluded": "{{count}} expenses left out of this total.",
+    "greeting": "Hi, {{name}}. Here is where the house stands."
   },
   "upcoming": {
     "title": "Upcoming",

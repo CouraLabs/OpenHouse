@@ -100,6 +100,7 @@ export interface Plan {
   perks: Perk[]
   cta: NavLink
   featured?: boolean
+  earlyAccess?: boolean
 }
 
 export interface SelfHostedPlan {
@@ -126,6 +127,7 @@ export interface Content {
     start: NavLink
     themeToggle: string
     localeToggle: string
+    menu: string
   }
   hero: {
     headline: string
@@ -164,6 +166,7 @@ export interface Content {
   selfHosted: SelfHostedPlan
   hostedPlans: Plan[]
   featuredBadge: string
+  earlyAccessBadge: string
   faqIntro: Intro
   faq: Question[]
   openSource: {

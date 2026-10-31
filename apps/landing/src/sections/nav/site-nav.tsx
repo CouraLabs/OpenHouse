@@ -5,6 +5,7 @@ import { HouseGlyph } from '@/components/house-glyph.js'
 import { useContent } from '@/lib/use-locale.js'
 
 import { LocaleToggle } from './locale-toggle.js'
+import { NavMenu } from './nav-menu.js'
 import { ThemeToggle } from './theme-toggle.js'
 
 export function SiteNav() {
@@ -31,6 +32,7 @@ export function SiteNav() {
           ))}
         </ul>
         <div className="flex items-center gap-2 sm:gap-4">
+          <NavMenu />
           <LocaleToggle />
           <ThemeToggle />
           <a

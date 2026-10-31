@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 
 import { parseDateOnly } from '@/lib/format-date-only.js'
 import { formatMoney } from '@/lib/format-money.js'
+import { goalGaugeColor } from '@/lib/goal-gauge-color.js'
 
 export interface GoalRowActions {
   onEdit: (goal: Goal) => void
@@ -62,7 +63,7 @@ export function buildGoalColumns(
             format={(amount) =>
               formatMoney(String(amount), locale, goal.currency)
             }
-            colorFor={(pct) => `rgba(34, 197, 94, ${(pct / 100).toFixed(2)})`}
+            colorFor={goalGaugeColor}
             aria-label={t('goals.progress-aria', { name: goal.name })}
           />
         )

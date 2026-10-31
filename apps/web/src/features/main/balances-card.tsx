@@ -45,58 +45,54 @@ export function BalancesCard({ className }: { className?: string }) {
   return (
     <section
       className={cn(
-        'rounded-[2rem] bg-foreground/[0.03] p-1.5 ring-1 ring-foreground/[0.06]',
+        'flex flex-col rounded-2xl bg-card p-6 ring-1 ring-foreground/[0.06]',
         className
       )}
     >
-      <div className="flex h-full flex-col rounded-[calc(2rem-0.375rem)] bg-card p-6 shadow-soft">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-heading text-xl leading-snug font-medium tracking-tight">
-            {t('main.balances')}
-          </h2>
-          <Link
-            to="/accounts"
-            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-          >
-            {t('main.see-all')}
-          </Link>
-        </div>
-        <div className="mt-3 flex flex-1 flex-col">
-          {accounts.isPending ? (
-            <div className="flex flex-col gap-3">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : accounts.isError ? (
-            <p className="text-sm text-destructive">
-              {t('main.balances-error')}
-            </p>
-          ) : items.length === 0 ? (
-            <Empty className="flex-1 py-8">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <PiggyBank />
-                </EmptyMedia>
-                <EmptyTitle>{t('main.balances-empty-title')}</EmptyTitle>
-                <EmptyDescription>{t('main.balances-empty')}</EmptyDescription>
-              </EmptyHeader>
-              <Button
-                nativeButton={false}
-                render={<Link to="/accounts" search={{}} />}
-              >
-                <Plus />
-                {t('accounts.new')}
-              </Button>
-            </Empty>
-          ) : (
-            <ul className="flex flex-col divide-y">
-              {items.map((account) => (
-                <AccountRow key={account.id} account={account} />
-              ))}
-            </ul>
-          )}
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-heading text-xl leading-snug font-medium tracking-tight">
+          {t('main.balances')}
+        </h2>
+        <Link
+          to="/accounts"
+          className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          {t('main.see-all')}
+        </Link>
+      </div>
+      <div className="mt-3 flex flex-1 flex-col">
+        {accounts.isPending ? (
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : accounts.isError ? (
+          <p className="text-sm text-destructive">{t('main.balances-error')}</p>
+        ) : items.length === 0 ? (
+          <Empty className="flex-1 py-8">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <PiggyBank />
+              </EmptyMedia>
+              <EmptyTitle>{t('main.balances-empty-title')}</EmptyTitle>
+              <EmptyDescription>{t('main.balances-empty')}</EmptyDescription>
+            </EmptyHeader>
+            <Button
+              nativeButton={false}
+              render={<Link to="/accounts" search={{}} />}
+            >
+              <Plus />
+              {t('accounts.new')}
+            </Button>
+          </Empty>
+        ) : (
+          <ul className="flex flex-col divide-y">
+            {items.map((account) => (
+              <AccountRow key={account.id} account={account} />
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   )

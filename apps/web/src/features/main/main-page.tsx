@@ -1,7 +1,10 @@
 import { Gauge, Target } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { RecoveryCodesPrompt } from '@/components/layout/recovery-codes-prompt.js'
 import { PageHeader } from '@/components/page-header.js'
+import { useSession } from '@/lib/auth.js'
+import { firstName } from '@/lib/first-name.js'
 import { GoalGaugesCard } from '@/features/transactions/goal-gauges-card.js'
 import { LimitUsageCard } from '@/features/transactions/limit-usage-card.js'
 import {
@@ -17,10 +20,19 @@ export function MainPage() {
   const { t } = useTranslation()
   const goals = useGoals()
   const limitUsage = useLimitUsage()
+  const user = useSession().data?.user
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 animate-page-in flex-col gap-8 px-4 py-8 md:px-10 md:py-12">
-      <PageHeader title={t('nav.dashboard')} subtitle={t('app.headline')} />
+      <PageHeader
+        title={t('nav.dashboard')}
+        subtitle={
+          user === undefined
+            ? undefined
+            : t('main.greeting', { name: firstName(user.name) })
+        }
+      />
+      <RecoveryCodesPrompt />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <BalancesCard className="md:col-span-2" />
         <MonthSummaryCard />

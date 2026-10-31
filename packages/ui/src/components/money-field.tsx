@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ComponentProps } from 'react'
+import { cn } from 'cn'
 
 import { Field, FieldError, FieldLabel } from '@workspace/ui/components/field'
 import { Input } from '@workspace/ui/components/input'
@@ -27,6 +28,7 @@ export function MoneyField({
   required,
   currency,
   onBlur,
+  className,
   ...inputProps
 }: MoneyFieldProps &
   Omit<
@@ -35,6 +37,7 @@ export function MoneyField({
   >) {
   const [text, setText] = useState(() => formatInput(value, locale))
   const errorId = `${labelFor}-error`
+  const currencyId = `${labelFor}-currency`
 
   useEffect(() => {
     if (parseInput(text, locale) !== (value ?? '')) {
@@ -52,19 +55,27 @@ export function MoneyField({
         {currency !== undefined ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-muted-foreground"
+            className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted-foreground"
           >
             {currency}
           </span>
         ) : null}
         <Input
+          {...inputProps}
           id={labelFor}
           type="text"
           inputMode="decimal"
           required={required}
           aria-invalid={error !== undefined}
-          aria-describedby={error !== undefined ? errorId : undefined}
-          className={currency !== undefined ? 'pl-12' : undefined}
+          aria-describedby={
+            [
+              currency !== undefined ? currencyId : undefined,
+              error !== undefined ? errorId : undefined,
+            ]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
+          className={cn(currency !== undefined && 'pl-12', className)}
           value={text}
           onChange={(event) => {
             const raw = event.target.value
@@ -76,9 +87,13 @@ export function MoneyField({
             setText(formatInput(parseInput(text, locale), locale))
             onBlur?.(event)
           }}
-          {...inputProps}
         />
       </div>
+      {currency !== undefined ? (
+        <span id={currencyId} className="sr-only">
+          {currency}
+        </span>
+      ) : null}
       <FieldError
         id={errorId}
         errors={error !== undefined ? [error] : undefined}

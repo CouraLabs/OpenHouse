@@ -24,7 +24,7 @@ export function WindowChrome({
           <span className="bg-line size-2.5 rounded-full" />
         </div>
         {title && (
-          <span className="absolute inset-x-0 text-center font-mono text-[11px] text-muted">
+          <span className="absolute inset-x-0 text-center font-mono text-[0.74rem] text-muted">
             {title}
           </span>
         )}
