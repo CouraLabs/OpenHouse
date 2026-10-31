@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Kantim",
-    "name-styled": "<accent>Open</accent>House",
+    "name-styled": "kantim<accent>.</accent>",
     "eyebrow": "Household finance",
     "headline": "Every coin in the house, in its place.",
     "tagline": "Accounts, budgets, and goals kept together — calm, clear, and yours."
