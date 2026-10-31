@@ -85,7 +85,6 @@ export interface HouseModule {
   kind: string
   description: string
   tone: Tone
-  status: 'live' | 'coming'
 }
 
 export interface Perk {
@@ -141,7 +140,6 @@ export interface Content {
   problemsIntro: Intro
   problems: Problem[]
   houseIntro: Intro
-  houseStatus: { live: string; coming: string }
   houseModules: HouseModule[]
   sampleLedger: LedgerDay[]
   sampleLimits: SampleLimit[]

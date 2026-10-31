@@ -4,15 +4,16 @@ import {
   Calculator,
   CalendarCheck,
   CreditCard,
-  FileArrowUp,
   Gauge,
   House,
   Lightbulb,
+  ListChecks,
+  PawPrint,
   Percent,
   Plant,
   Repeat,
+  ShoppingCart,
   Target,
-  TrendDown,
   UsersThree,
   Wallet,
 } from '@phosphor-icons/react'
@@ -22,16 +23,16 @@ import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/links.js'
 
 export const ptBR: Content = {
   meta: {
-    title: 'Kantim | O dinheiro da casa, em um só lugar',
+    title: 'Kantim | Seu cantinho, bem cuidado',
     description:
-      'O Kantim reúne todas as contas e cartões da casa em um livro-caixa compartilhado. Ele lança as contas fixas, soma a fatura do cartão enquanto você gasta e avisa antes de cada vencimento. Grátis para começar, de código aberto e grátis para sempre se você hospedar.',
+      'O Kantim é o assistente da sua casa. Ele cuida do seu dinheiro, das contas, da saúde, da família, dos pets, das tarefas, da manutenção e da comida, tudo em um só lugar, e lembra o que vence para você não precisar guardar tudo na cabeça. Grátis para começar, de código aberto e grátis para sempre se você hospedar.',
   },
 
   navLinks: [
     { label: 'Por quê', href: '#why' },
+    { label: 'Sua casa', href: '#the-house' },
     { label: 'Recursos', href: '#features' },
     { label: 'Planejadores', href: '#planners' },
-    { label: 'O que vem', href: '#the-house' },
     { label: 'Preços', href: '#pricing' },
     { label: 'Dúvidas', href: '#faq' },
   ],
@@ -44,9 +45,9 @@ export const ptBR: Content = {
   },
 
   hero: {
-    headline: 'Saiba o que vence antes da conta chegar.',
+    headline: 'Seu cantinho, bem cuidado.',
     tagline:
-      'O Kantim reúne as contas bancárias e os cartões da casa em um só lugar, e todo mundo que mora nela vê os mesmos números. O aluguel e as assinaturas entram sozinhos todo mês, a fatura do cartão vai somando enquanto você gasta e você recebe um aviso alguns dias antes de cada vencimento.',
+      'O Kantim é o assistente da sua casa. Ele cuida do seu dinheiro, das contas, da saúde, da família, dos pets, das tarefas, da manutenção e da comida, tudo em um só lugar. Ele lembra o que vence e o que está acabando, para você não precisar lembrar de tudo.',
     primary: { label: 'Comece grátis', href: SIGN_UP_URL },
     secondary: { label: 'Hospede você mesmo', href: GITHUB_URL },
     stack: 'Plano grátis, sem cartão de crédito. O código é aberto no GitHub.',
@@ -150,126 +151,114 @@ export const ptBR: Content = {
 
   problemsIntro: {
     eyebrow: 'Por que o Kantim',
-    title: 'O dinheiro da casa sai do controle sempre do mesmo jeito.',
-    lede: 'Os números costumam ficar na cabeça de uma pessoa, numa planilha que ninguém atualiza e em três ou quatro apps de banco. O Kantim junta tudo em um lugar e mantém em dia.',
+    title:
+      'A casa funciona com centenas de coisinhas. A maioria mora na cabeça de alguém.',
+    lede: 'A conta de luz fica num aplicativo, a lista de compras num bilhete na geladeira, a consulta do pet num grupo de conversa, e as tarefas da casa em lugar nenhum. O Kantim junta tudo em um só lugar e mantém tudo em dia, para que nada dependa de quem lembrou.',
   },
 
   problems: [
     {
       icon: CreditCard,
       tone: 'red',
-      pain: 'A fatura do cartão veio maior do que todo mundo esperava.',
-      fix: 'Cada compra entra na fatura certa, então você acompanha o total o mês inteiro. Um lembrete chega alguns dias antes do vencimento.',
+      pain: 'A conta venceu ontem e ninguém lembrou.',
+      fix: 'Toda conta tem data de vencimento e um aviso alguns dias antes. As faturas dos cartões vão somando conforme você gasta, então o total nunca é surpresa.',
     },
     {
-      icon: TrendDown,
+      icon: ShoppingCart,
       tone: 'yellow',
-      pain: 'A conta fica no vermelho e quem avisa é o banco.',
-      fix: 'A página Próximos projeta seus saldos a partir das contas agendadas e das faturas, e mostra o dia em que uma conta ficaria negativa.',
+      pain: 'Duas pessoas compraram leite, e o detergente acabou de novo.',
+      fix: 'A despensa mostra o que tem, o que está acabando e o que vai vencer. A lista de compras está sempre atualizada.',
     },
     {
-      icon: FileArrowUp,
+      icon: PawPrint,
       tone: 'blue',
-      pain: 'A planilha de orçamento durou duas semanas.',
-      fix: 'Envie o extrato do banco em OFX, QFX ou CSV e as transações entram. Aluguel e assinaturas se lançam sozinhos todo mês.',
+      pain: 'A vacina venceu no mês passado e ninguém percebeu.',
+      fix: 'Cada pet tem a sua ficha: vacinas, consultas, remédios e alimentação. As próximas consultas e doses chegam para você antes de atrasar.',
     },
     {
-      icon: UsersThree,
+      icon: ListChecks,
       tone: 'green',
-      pain: 'Só uma pessoa sabe como está o dinheiro.',
-      fix: 'Todo mundo da casa entra nos mesmos livros e vê os mesmos saldos, limites e metas. Quem chega entra com um código de convite.',
+      pain: 'As tarefas da casa ficam na cabeça de uma pessoa só.',
+      fix: 'Cada tarefa tem um responsável, uma data e um lembrete, então todo mundo na casa sabe o que é seu e o que falta.',
     },
   ],
 
   houseIntro: {
-    eyebrow: 'O que vem',
-    title: 'O dinheiro é o primeiro cômodo. Outros estão a caminho.',
-    lede: 'O Kantim está virando um app para cuidar da casa inteira. Cada parte nova vai usar o mesmo login e os mesmos membros da casa.',
+    eyebrow: 'A casa toda',
+    title: 'Um assistente para tudo o que a sua casa precisa.',
+    lede: 'O nome vem de “meu cantinho”: o seu lugar, aquele canto onde a rotina acontece e onde você vive com as pessoas que ama. O Kantim cuida de tudo isso, para uma pessoa sozinha ou para a família inteira.',
   },
-
-  houseStatus: { live: 'Disponível', coming: 'Planejado' },
 
   houseModules: [
     {
       name: 'Dinheiro',
-      kind: 'O livro-caixa',
-      description: 'Contas, cartões, faturas, transações, limites e metas.',
+      kind: 'Seu patrimônio',
+      description:
+        'Contas e cartões em reais, dólares ou euros, orçamentos, metas de economia e as despesas que a casa divide.',
       tone: 'green',
-      status: 'live',
     },
     {
-      name: 'Despensa',
-      kind: 'Os armários',
+      name: 'Contas',
+      kind: 'Em dia',
       description:
-        'O que tem nos armários, o que está acabando, o que comprar.',
+        'Aluguel, luz, água, assinaturas e faturas de cartão, cada uma com um aviso antes do vencimento.',
       tone: 'yellow',
-      status: 'coming',
-    },
-    {
-      name: 'Refeições',
-      kind: 'A mesa',
-      description: 'Planeje as refeições da semana com o que tem na despensa.',
-      tone: 'red',
-      status: 'coming',
-    },
-    {
-      name: 'Lavanderia & organização',
-      kind: 'Os guarda-roupas',
-      description: 'Onde as coisas estão guardadas e o que está limpo.',
-      tone: 'blue',
-      status: 'coming',
-    },
-    {
-      name: 'Pets',
-      kind: 'Os bichos',
-      description:
-        'Alimentação, consultas no veterinário e a ficha de cada bicho.',
-      tone: 'yellow',
-      status: 'coming',
     },
     {
       name: 'Saúde',
       kind: 'Bem-estar',
-      description: 'Consultas, remédios e os registros da família.',
+      description:
+        'Consultas, remédios e registros de todo mundo que mora na casa.',
       tone: 'red',
-      status: 'coming',
+    },
+    {
+      name: 'Família',
+      kind: 'Juntos',
+      description:
+        'Um calendário compartilhado, avisos para todos e os eventos de cada membro.',
+      tone: 'blue',
+    },
+    {
+      name: 'Pets',
+      kind: 'Cuidado',
+      description:
+        'Vacinas, consultas no veterinário, remédios, banho e tosa e a rotina de alimentação de cada pet.',
+      tone: 'yellow',
     },
     {
       name: 'Tarefas',
       kind: 'A lista',
-      description: 'Uma lista de tarefas que a casa inteira vê.',
-      tone: 'blue',
-      status: 'coming',
-    },
-    {
-      name: 'Calendário',
-      kind: 'As datas',
-      description: 'Um calendário só para a casa toda.',
-      tone: 'yellow',
-      status: 'coming',
-    },
-    {
-      name: 'E-mail',
-      kind: 'As cartas',
       description:
-        'A correspondência da casa, ligada às suas caixas de entrada.',
-      tone: 'blue',
-      status: 'coming',
+        'Afazeres diários e semanais, uma escala de limpeza e um responsável por cada tarefa.',
+      tone: 'green',
     },
     {
-      name: 'Telegram & WhatsApp',
-      kind: 'As conversas',
+      name: 'Manutenção',
+      kind: 'Cuidados',
       description:
-        'Lembretes e novidades nos apps de conversa que você já usa.',
+        'Manutenção preventiva, garantias, histórico de serviços e os documentos da casa, para o ar-condicionado ser revisado antes de quebrar.',
       tone: 'red',
-      status: 'coming',
+    },
+    {
+      name: 'Comida',
+      kind: 'A despensa',
+      description:
+        'O que tem nos armários e na geladeira, datas de validade, a lista de compras e ideias de refeição com o que você já tem.',
+      tone: 'blue',
+    },
+    {
+      name: 'Lembretes',
+      kind: 'O empurrãozinho',
+      description:
+        'Um sistema de lembretes para todas as áreas da casa, no app e, em planos com mensagens, no Telegram e no WhatsApp.',
+      tone: 'yellow',
     },
   ],
 
   featuresIntro: {
-    eyebrow: 'Recursos',
-    title: 'O que a casa gasta, guarda e deve, em um só livro-caixa.',
-    lede: 'Cadastre suas contas uma vez. Depois disso, quase toda a contabilidade acontece sem você.',
+    eyebrow: 'Como funciona',
+    title: 'Configure uma vez. Depois a casa se mantém em dia.',
+    lede: 'O Kantim faz a contabilidade e a memória, para você cuidar do seu dia.',
   },
 
   features: {
@@ -277,43 +266,43 @@ export const ptBR: Content = {
       key: 'transactions',
       tone: 'blue',
       icon: ArrowsLeftRight,
-      title: 'Cada transação, dia a dia',
-      body: 'Veja o que saiu em cada dia com o total do dia, filtre por mês e acompanhe cada saldo mudar conforme o dinheiro entra e sai.',
+      title: 'Tudo que se movimentou, dia a dia',
+      body: 'Veja o que saiu e o que entrou em cada dia, com o total do dia. Filtre por mês e acompanhe cada saldo mudar conforme o dinheiro entra e sai.',
     },
     accounts: {
       key: 'accounts',
       tone: 'yellow',
       icon: Wallet,
-      title: 'Contas e cartões',
-      body: 'Conta corrente, poupança e cartões lado a lado, com o fechamento e o vencimento de cada cartão. As contas podem ser em reais, dólares ou euros.',
+      title: 'Todas as contas e cartões, lado a lado',
+      body: 'Conta corrente, poupança e cartões de crédito numa só tela, cada um com a data de fechamento e de vencimento. As contas podem ser em reais, dólares ou euros.',
     },
     recurring: {
       key: 'recurring',
       tone: 'green',
       icon: Repeat,
-      title: 'Contas que se lançam sozinhas',
-      body: 'Diga ao Kantim que o aluguel vence dia 1º e ele lança o pagamento todo mês, para nada sumir dos livros.',
+      title: 'Contas que se registram sozinhas',
+      body: 'Diga ao Kantim que o aluguel vence dia 1º. Ele registra o pagamento todo mês, e você recebe um aviso antes do vencimento.',
     },
     limits: {
       key: 'limits',
       tone: 'red',
       icon: Gauge,
-      title: 'Limites de gasto',
+      title: 'Limites de gasto que avisam antes',
       body: 'Defina um teto para mercado ou restaurantes por dia, semana, mês ou ano, e veja quanto falta antes de estourar.',
     },
     goals: {
       key: 'goals',
       tone: 'green',
       icon: Target,
-      title: 'Metas de economia',
-      body: 'Escolha uma conta de reserva e um saldo-alvo. A meta enche conforme a conta cresce.',
+      title: 'Metas de economia que você enxerga',
+      body: 'Escolha uma conta de reserva e um valor-alvo. A meta enche conforme o dinheiro cresce.',
     },
     household: {
       key: 'household',
       tone: 'blue',
       icon: UsersThree,
-      title: 'Compartilhado com a casa',
-      body: 'Parceiros e família entram nos mesmos livros. Quem chega entra com um código de convite.',
+      title: 'Uma casa, todos os membros',
+      body: 'Parceiros, filhos e colegas de casa entram na mesma casa e veem as mesmas contas, tarefas e saldos. Quem chega entra com um código de convite.',
     },
     linkers: {
       key: 'linkers',
@@ -327,7 +316,7 @@ export const ptBR: Content = {
   plannersIntro: {
     eyebrow: 'Planejadores',
     title: 'Faça as contas antes de decidir.',
-    lede: 'Calculadoras para as grandes perguntas sobre dinheiro. Elas não mexem no seu livro-caixa: mude um número e veja o que acontece nos próximos vinte anos.',
+    lede: 'Calculadoras para as grandes decisões da casa. Elas funcionam sem conta e não mexem nos seus livros: mude um número e veja o que acontece nos próximos vinte anos.',
   },
 
   planners: [
@@ -359,25 +348,25 @@ export const ptBR: Content = {
       icon: Lightbulb,
       tone: 'yellow',
       title: 'Dicas financeiras',
-      body: 'Guias curtos sobre o método dos seis potes, hábitos de economia e um jeito de organizar as finanças. Não precisa de conta.',
+      body: 'Guias curtos sobre o método dos seis potes, hábitos de economia e um jeito de organizar as finanças da casa. Não precisa de conta.',
     },
   ],
 
   pricingIntro: {
     eyebrow: 'Preços',
-    title: 'Comece grátis. Pague quando a casa precisar de mais.',
-    lede: 'Todos os planos rodam o mesmo código. Os preços hospedados são por mês. Hospedar você mesmo não custa nada.',
+    title: 'Comece grátis. Pague quando sua casa crescer.',
+    lede: 'Todos os planos têm o app inteiro. Os planos pagos aumentam o espaço para mais contas, membros e histórico, além de mensagens e IA. Os preços hospedados são por mês, em reais. Hospedar você mesmo não custa nada.',
   },
 
   selfHosted: {
     badge: 'Grátis · Auto-hospedado',
     name: 'Hospede você mesmo',
     tagline:
-      'Todos os recursos, sem limites, na sua própria conta Cloudflare. Clone o código, rode um comando e seus dados ficam na sua conta.',
+      'O app inteiro, sem limites, na sua própria conta Cloudflare. Clone o código, rode um comando e os dados da sua casa ficam com você.',
     price: 'R$ 0',
     priceNote: 'grátis para sempre, código aberto',
     perks: [
-      { label: 'Todos os recursos, sem limite de contas ou histórico' },
+      { label: 'Todas as áreas da casa, sem limite de contas ou histórico' },
       { label: 'Seu próprio banco D1 e seus próprios backups' },
       { label: 'Um comando de deploy, no ar em minutos' },
       { label: 'Ajuda da comunidade no GitHub' },
@@ -397,6 +386,7 @@ export const ptBR: Content = {
       price: 'R$ 0',
       priceNote: 'por mês',
       perks: [
+        { label: 'Todas as áreas da casa, do dinheiro aos pets' },
         { label: 'Até 2 contas, categorias, limites, metas e contas fixas' },
         { label: 'Os últimos 3 meses de transações' },
         { label: '1 importação de extrato e 1 exportação por mês' },
@@ -411,7 +401,7 @@ export const ptBR: Content = {
     },
     {
       name: 'Plus',
-      tagline: 'Para a casa que cuida das finanças aqui.',
+      tagline: 'Para a casa que cuida de tudo por aqui.',
       price: 'R$ 15',
       priceNote: 'por mês, mais R$ 2 por membro extra',
       perks: [
@@ -459,14 +449,29 @@ export const ptBR: Content = {
 
   faqIntro: {
     eyebrow: 'Dúvidas',
-    title: 'Antes de trazer as contas para cá.',
+    title: 'Antes de mudar a sua casa para cá.',
   },
 
   faq: [
     {
+      question: 'O Kantim é só para dinheiro?',
+      answer:
+        'Não. O Kantim cuida da casa inteira: dinheiro e contas, saúde, família, pets, tarefas, manutenção e comida. Tudo usa o mesmo login e os mesmos membros, então funciona junto.',
+    },
+    {
+      question: 'Preciso ter família para usar?',
+      answer:
+        'Não. O Kantim funciona para uma pessoa morando sozinha, um casal, uma família ou uma casa dividida. Numa casa de uma pessoa só, as partes compartilhadas ficam de lado.',
+    },
+    {
       question: 'O Kantim se conecta ao meu banco?',
       answer:
         'Não. Você lança as transações à mão, por contas fixas ou enviando o extrato do banco (OFX, QFX ou CSV). O arquivo é lido uma vez e não fica guardado, e uma importação pode ser desfeita por 24 horas.',
+    },
+    {
+      question: 'Mais de uma pessoa pode usar a mesma casa?',
+      answer:
+        'Sim, a partir do Plus e em toda instalação própria. Todo mundo entra na mesma casa e vê as mesmas contas, tarefas e saldos. Quem chega entra com um código de convite. Num plano hospedado, cada membro extra custa R$ 2 por mês.',
     },
     {
       question: 'É mesmo grátis hospedar por conta própria?',
@@ -477,11 +482,6 @@ export const ptBR: Content = {
       question: 'Onde ficam os meus dados?',
       answer:
         'Se você hospedar, num banco D1 na sua própria conta Cloudflare. Num plano hospedado, o Kantim cuida do servidor, dos backups e das atualizações.',
-    },
-    {
-      question: 'Mais de uma pessoa pode usar os mesmos livros?',
-      answer:
-        'Sim, a partir do Plus e em toda instalação própria. Todo mundo entra no mesmo livro-caixa, e quem chega entra com um código de convite. Cada membro extra custa R$ 2 por mês num plano hospedado.',
     },
     {
       question: 'O que acontece com as transações antigas no plano Free?',
@@ -498,31 +498,29 @@ export const ptBR: Content = {
       answer:
         'Não. Todos os planos rodam o mesmo código. Os planos mudam em quem cuida do servidor e em quanto você pode guardar.',
     },
-    {
-      question: 'O que vem depois do dinheiro?',
-      answer:
-        'Despensa, refeições, tarefas, pets, saúde, calendário, e-mail e Telegram e WhatsApp estão planejados. Cada um vai entrar no mesmo app, com o mesmo login e os mesmos membros, e a parte do dinheiro continua funcionando como hoje.',
-    },
   ],
 
   openSource: {
     eyebrow: 'Código aberto',
     title: 'Sua casa. Seu servidor. Seu código.',
-    body: 'Todo o Kantim está no GitHub. Leia o código, rode na sua própria conta ou mande um pull request quando a casa precisar de um cômodo novo.',
+    body: 'Todo o Kantim está no GitHub. Leia o código, rode na sua própria conta ou mande um pull request quando a sua casa precisar de um cômodo novo.',
     points: [
       { icon: Bank, label: 'Dados no seu próprio banco D1' },
       { icon: House, label: 'Um Worker, um comando de deploy' },
-      { icon: UsersThree, label: 'Casas com vários membros' },
+      {
+        icon: UsersThree,
+        label: 'Feito para uma pessoa ou para a família inteira',
+      },
     ],
     cta: { label: 'Dê uma estrela no GitHub', href: GITHUB_URL },
   },
 
   footer: {
-    tagline: 'O dinheiro da casa, em um só lugar.',
+    tagline: 'Tudo sobre a sua casa, em um só lugar.',
     copyright: `© ${new Date().getFullYear()} CouraLabs`,
     links: [
       { label: 'GitHub', href: GITHUB_URL },
-      { label: 'Recursos', href: '#features' },
+      { label: 'Sua casa', href: '#the-house' },
       { label: 'Preços', href: '#pricing' },
       { label: 'Entrar', href: SIGN_IN_URL },
     ],

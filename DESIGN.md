@@ -274,7 +274,7 @@ The landing (`apps/landing`) draws the same sheet, built from three primitives i
 - **`Tick`** is the 13px Ink 3 crosshair, positioned by its centre (`x`, `y` as CSS lengths).
 
 - **Nav links** are mono `/path` labels made from the translated name, lowercased and hyphenated (`/the-house`, `/features` in en-US; `/a-casa`, `/recursos` in pt-BR).
-- **Wordmark** (`components/wordmark.tsx`, Jost): "Open" at 500 in Wordmark Soft (`#a0a09d` dark, `#666663` light), "House" at 600 in full ink (`#f2f2f0` dark, `#0c0c0c` light). Nav and footer pair it with the house glyph. The web app draws the same wordmark through `BrandName` (`components/layout/brand-name.tsx`) on the `--wordmark-soft` token in `packages/ui` globals.
+- **Wordmark** (`components/wordmark.tsx`, Jost): "kantim" at 600 in full ink (`#f2f2f0` dark, `#0c0c0c` light), closed by a period at 500 in Wordmark Soft (`#a0a09d` dark, `#666663` light). Nav and footer pair it with the house glyph. The web app's `BrandName` (`components/layout/brand-name.tsx`) draws the same lockup from `app.name-styled` in `apps/web/src/locales/en-US.json`.
 - **FAQ** is a ledger right of the `split` column rule, which runs on from the head row to the cell's bottom: a mono `01` index, the question, and a 34px hairline tool (`+`/`−`) that inverts on hover; the row lifts one ground step.
 
 The hero is the one cell without a top rule; the nav's bottom rule closes it. The web app (Operate mode) does not draw the frame: it shares the tokens, type, hairlines and inversion grammar, and keeps its sidebar shell.

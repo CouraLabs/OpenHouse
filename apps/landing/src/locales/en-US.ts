@@ -4,15 +4,16 @@ import {
   Calculator,
   CalendarCheck,
   CreditCard,
-  FileArrowUp,
   Gauge,
   House,
   Lightbulb,
+  ListChecks,
+  PawPrint,
   Percent,
   Plant,
   Repeat,
+  ShoppingCart,
   Target,
-  TrendDown,
   UsersThree,
   Wallet,
 } from '@phosphor-icons/react'
@@ -22,16 +23,16 @@ import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/links.js'
 
 export const enUS: Content = {
   meta: {
-    title: 'Kantim | Household money, shared',
+    title: 'Kantim | Your home, looked after',
     description:
-      'Kantim keeps every account and credit card your household uses in one shared ledger. It records the recurring bills, adds up each card bill as you spend, and reminds you before anything is due. Free to start, open source, and free forever if you host it yourself.',
+      'Kantim is your home’s assistant. It keeps your money, bills, health, family, pets, tasks, upkeep and food in one place, and it remembers what’s due so you don’t have to. Free to start, open source, and free forever if you host it yourself.',
   },
 
   navLinks: [
     { label: 'Why', href: '#why' },
+    { label: 'Your home', href: '#the-house' },
     { label: 'Features', href: '#features' },
     { label: 'Planners', href: '#planners' },
-    { label: 'What’s next', href: '#the-house' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'Questions', href: '#faq' },
   ],
@@ -44,12 +45,12 @@ export const enUS: Content = {
   },
 
   hero: {
-    headline: 'Know what’s due before the bill shows up.',
+    headline: 'Your home, looked after.',
     tagline:
-      'Kantim keeps every bank account and credit card in your home in one place, and everyone who lives there sees the same numbers. Rent and subscriptions are logged each month without anyone typing them, card bills add up as you spend, and you get a reminder a few days before each due date.',
+      'Kantim is your home’s assistant. It keeps your money, bills, health, family, pets, tasks, upkeep and food in one place. It remembers what’s due and what’s running low, so you don’t have to.',
     primary: { label: 'Start free', href: SIGN_UP_URL },
     secondary: { label: 'Host it yourself', href: GITHUB_URL },
-    stack: 'Free plan, no credit card. The code is open on GitHub.',
+    stack: 'Free plan, no credit card. Open source on GitHub.',
     windowTitle: 'kantim · Transactions',
     balance: { label: 'Checking · Main Street Bank', amount: '$8,412.36' },
     limitsTitle: 'Limits · October',
@@ -147,122 +148,114 @@ export const enUS: Content = {
 
   problemsIntro: {
     eyebrow: 'Why Kantim',
-    title: 'Household money goes wrong in the same few ways.',
-    lede: 'The numbers usually live in one person’s head, a spreadsheet nobody updates, and three or four banking apps. Kantim brings them into one place and keeps them current.',
+    title:
+      'A home runs on hundreds of small things. Most of them live in someone’s head.',
+    lede: 'The bills sit in one app, the groceries on a sticky note, the vet visit in a group chat, and the chores nowhere at all. Kantim gathers all of it in one place and keeps it current, so nothing depends on who remembered.',
   },
 
   problems: [
     {
       icon: CreditCard,
       tone: 'red',
-      pain: 'The card bill is bigger than anyone expected.',
-      fix: 'Every charge lands on the bill it belongs to, so you see the running total all month. A reminder arrives a few days before the due date.',
+      pain: 'The bill was due yesterday, and nobody remembered.',
+      fix: 'Every bill has a due date and a reminder a few days before it. Card bills add up as you spend, so the total is never a surprise.',
     },
     {
-      icon: TrendDown,
+      icon: ShoppingCart,
       tone: 'yellow',
-      pain: 'An account dips below zero and the bank tells you first.',
-      fix: 'The Upcoming page projects your balances from scheduled bills and card payments, and shows the date an account would go negative.',
+      pain: 'Two people bought milk, and the detergent ran out again.',
+      fix: 'The pantry shows what’s on hand, what’s running low and what’s about to expire. The shopping list is always up to date.',
     },
     {
-      icon: FileArrowUp,
+      icon: PawPrint,
       tone: 'blue',
-      pain: 'The budget spreadsheet lasted two weeks.',
-      fix: 'Upload your bank’s OFX, QFX or CSV statement and the transactions come in. Rent and subscriptions record themselves every month.',
+      pain: 'The vaccine was due last month, and nobody noticed.',
+      fix: 'Each pet has its own record: vaccines, vet visits, medication and feeding. Upcoming vet dates and doses reach you before they’re late.',
     },
     {
-      icon: UsersThree,
+      icon: ListChecks,
       tone: 'green',
-      pain: 'Only one person knows where the money stands.',
-      fix: 'Everyone in the house signs in to the same books and sees the same balances, limits and goals. New members join with an invite code.',
+      pain: 'The chores live in one person’s head.',
+      fix: 'Every task has an owner, a due date and a reminder, so everyone in the home knows what’s theirs and what’s left.',
     },
   ],
 
   houseIntro: {
-    eyebrow: 'What’s next',
-    title: 'Money is the first room. More are on the way.',
-    lede: 'Kantim is growing into one app for running the home. Each new part will use the same sign-in and the same household members.',
+    eyebrow: 'The whole home',
+    title: 'One assistant for everything your home needs.',
+    lede: 'Kantim comes from “meu cantinho,” the affectionate Brazilian way of saying “my little corner.” It’s the place where daily life happens and where you live with the people you love. Kantim looks after all of it, for one person or for the whole family.',
   },
-
-  houseStatus: { live: 'Available now', coming: 'Planned' },
 
   houseModules: [
     {
       name: 'Money',
-      kind: 'The ledger',
-      description: 'Accounts, cards, bills, transactions, limits and goals.',
+      kind: 'Your wealth',
+      description:
+        'Accounts and cards in dollars, reais or euros, budgets, savings goals and the expenses everyone shares.',
       tone: 'green',
-      status: 'live',
     },
     {
-      name: 'Pantry',
-      kind: 'The cupboards',
-      description: 'What’s in the cupboards, what’s running out, what to buy.',
+      name: 'Bills',
+      kind: 'On time',
+      description:
+        'Rent, power, water, subscriptions and card bills, each with a reminder before it’s due.',
       tone: 'yellow',
-      status: 'coming',
-    },
-    {
-      name: 'Meals',
-      kind: 'The table',
-      description: 'Plan the week’s meals from what’s in the pantry.',
-      tone: 'red',
-      status: 'coming',
-    },
-    {
-      name: 'Laundry & storage',
-      kind: 'The closets',
-      description: 'Where things are kept and what’s clean.',
-      tone: 'blue',
-      status: 'coming',
-    },
-    {
-      name: 'Pets',
-      kind: 'The animals',
-      description: 'Feeding, vet appointments and each pet’s records.',
-      tone: 'yellow',
-      status: 'coming',
     },
     {
       name: 'Health',
       kind: 'Wellbeing',
-      description: 'Appointments, medications and the family’s records.',
+      description:
+        'Appointments, medication and records for everyone in the house.',
       tone: 'red',
-      status: 'coming',
     },
     {
-      name: 'Todos',
-      kind: 'The list',
-      description: 'One to-do list the whole house can see.',
+      name: 'Family',
+      kind: 'Together',
+      description:
+        'A shared calendar, announcements for everyone, and events that matter to each member.',
       tone: 'blue',
-      status: 'coming',
     },
     {
-      name: 'Calendar',
-      kind: 'The dates',
-      description: 'One calendar for the whole house.',
+      name: 'Pets',
+      kind: 'Care',
+      description:
+        'Vaccines, vet visits, medication, grooming and feeding routines for every pet.',
       tone: 'yellow',
-      status: 'coming',
     },
     {
-      name: 'Mail',
-      kind: 'The letters',
-      description: 'Household mail, connected to your inboxes.',
-      tone: 'blue',
-      status: 'coming',
+      name: 'Tasks',
+      kind: 'The to-do list',
+      description:
+        'Daily and weekly chores, a cleaning schedule, and an owner for every task.',
+      tone: 'green',
     },
     {
-      name: 'Telegram & WhatsApp',
-      kind: 'The conversations',
-      description: 'Reminders and updates in the chat apps you already use.',
+      name: 'Home care',
+      kind: 'Upkeep',
+      description:
+        'Preventive maintenance, warranties, service history and the home’s documents, so the boiler gets serviced before it breaks.',
       tone: 'red',
-      status: 'coming',
+    },
+    {
+      name: 'Food',
+      kind: 'The pantry',
+      description:
+        'What’s in the cupboards and the fridge, expiry dates, the shopping list, and meal ideas from what you already have.',
+      tone: 'blue',
+    },
+    {
+      name: 'Reminders',
+      kind: 'The nudge',
+      description:
+        'One reminder system for every area of the home, sent in the app and, on plans with messaging, in Telegram and WhatsApp.',
+      tone: 'yellow',
     },
   ],
 
   featuresIntro: {
-    eyebrow: 'Features',
-    title: 'What the house spends, saves and owes, in one ledger.',
-    lede: 'Set up your accounts once. After that, most of the bookkeeping happens without you.',
+    eyebrow: 'How it works',
+    title: 'Set it up once. Then the home keeps itself up to date.',
+    lede: 'Kantim does the bookkeeping and the remembering, so you can get on with your day.',
   },
 
   features: {
@@ -270,43 +263,43 @@ export const enUS: Content = {
       key: 'transactions',
       tone: 'blue',
       icon: ArrowsLeftRight,
-      title: 'Every transaction, day by day',
-      body: 'See what went out each day with the day’s totals, filter by month, and watch each balance update as money comes in and goes out.',
+      title: 'Everything that moved, day by day',
+      body: 'See what went out and came in each day, with the day’s totals. Filter by month and watch every balance change as money moves.',
     },
     accounts: {
       key: 'accounts',
       tone: 'yellow',
       icon: Wallet,
-      title: 'Bank accounts and cards',
-      body: 'Checking, savings and credit cards side by side, with each card’s closing and due dates. Accounts can be in US dollars, reais or euros.',
+      title: 'Every account and card, side by side',
+      body: 'Checking, savings and credit cards in one view, each with its closing and due dates. Accounts can be in US dollars, reais or euros.',
     },
     recurring: {
       key: 'recurring',
       tone: 'green',
       icon: Repeat,
       title: 'Bills that record themselves',
-      body: 'Tell Kantim the rent is due on the 1st and it records the payment every month, so nothing goes missing from the books.',
+      body: 'Tell Kantim the rent is due on the 1st. It’s recorded every month, and you get a reminder before it’s due.',
     },
     limits: {
       key: 'limits',
       tone: 'red',
       icon: Gauge,
-      title: 'Spending limits',
-      body: 'Set a cap for groceries or dining out per day, week, month or year, and see how close you are before you go over.',
+      title: 'Spending limits that warn you early',
+      body: 'Set a cap for groceries or eating out per day, week, month or year, and see how close you are before you go over.',
     },
     goals: {
       key: 'goals',
       tone: 'green',
       icon: Target,
-      title: 'Savings goals',
-      body: 'Pick a savings account and a target balance. The goal fills as the account grows.',
+      title: 'Savings goals you can see',
+      body: 'Pick a savings account and a target. The goal fills up as the money grows.',
     },
     household: {
       key: 'household',
       tone: 'blue',
       icon: UsersThree,
-      title: 'Shared with the house',
-      body: 'Partners and family sign in to the same books. New members join with an invite code.',
+      title: 'One home, every member',
+      body: 'Partners, kids and housemates sign in to the same home and see the same bills, tasks and balances. New members join with an invite code.',
     },
     linkers: {
       key: 'linkers',
@@ -320,7 +313,7 @@ export const enUS: Content = {
   plannersIntro: {
     eyebrow: 'Planners',
     title: 'Run the numbers before you decide.',
-    lede: 'Calculators for the big money questions. They don’t touch your ledger: change a number and see what happens over the next twenty years.',
+    lede: 'Calculators for the big decisions of the home. They work without an account and never touch your books: change a number and see what happens over the next twenty years.',
   },
 
   planners: [
@@ -352,25 +345,25 @@ export const enUS: Content = {
       icon: Lightbulb,
       tone: 'yellow',
       title: 'Money tips',
-      body: 'Short guides on the six jars method, saving habits and a way to organize your finances. No account needed.',
+      body: 'Short guides on the six jars method, saving habits and a way to organize the home’s finances. No account needed.',
     },
   ],
 
   pricingIntro: {
     eyebrow: 'Pricing',
-    title: 'Start free. Pay when the house needs more.',
-    lede: 'Every plan runs the same code. Hosted prices are per month, in Brazilian reais. Hosting it yourself costs nothing.',
+    title: 'Start free. Pay when your home grows.',
+    lede: 'Every plan gets the whole app. Paid plans add room for more accounts, members and history, plus messaging and AI. Hosted prices are per month, in Brazilian reais. Hosting it yourself costs nothing.',
   },
 
   selfHosted: {
     badge: 'Free · Self-hosted',
     name: 'Host it yourself',
     tagline:
-      'Every feature with no limits, on your own Cloudflare account. Clone the code, run one command, and your data stays on your account.',
+      'The whole app with no limits, on your own Cloudflare account. Clone the code, run one command, and your home’s data stays with you.',
     price: '$0',
     priceNote: 'free forever, open source',
     perks: [
-      { label: 'Every feature, no caps on accounts or history' },
+      { label: 'Every area of the home, with no caps on accounts or history' },
       { label: 'Your own D1 database and your own backups' },
       { label: 'One deploy command, running in minutes' },
       { label: 'Community help on GitHub' },
@@ -390,6 +383,7 @@ export const enUS: Content = {
       price: 'R$0',
       priceNote: 'per month',
       perks: [
+        { label: 'Every area of the home, from money to pets' },
         {
           label:
             'Up to 2 accounts, categories, limits, goals and recurring bills',
@@ -404,7 +398,7 @@ export const enUS: Content = {
     },
     {
       name: 'Plus',
-      tagline: 'For a household that keeps its books here.',
+      tagline: 'For a household that runs its home here.',
       price: 'R$15',
       priceNote: 'per month, plus R$2 per extra member',
       perks: [
@@ -452,14 +446,29 @@ export const enUS: Content = {
 
   faqIntro: {
     eyebrow: 'Questions',
-    title: 'Before you move the books in.',
+    title: 'Before you move your home in.',
   },
 
   faq: [
     {
+      question: 'Is it only for money?',
+      answer:
+        'No. Kantim covers the whole home: money and bills, health, family, pets, tasks, upkeep and food. Everything shares one sign-in and one set of members, so it all works together.',
+    },
+    {
+      question: 'Do I need a family to use it?',
+      answer:
+        'No. Kantim works for one person living alone, a couple, a family or a shared flat. A home of one just skips the shared parts.',
+    },
+    {
       question: 'Does Kantim connect to my bank?',
       answer:
         'No. You add transactions by hand, from recurring bills, or by uploading a statement file (OFX, QFX or CSV) from your bank. The file is read once and not stored, and an import can be undone for 24 hours.',
+    },
+    {
+      question: 'Can more than one person use the same home?',
+      answer:
+        'Yes, on Plus and above, and on every self-hosted install. Everyone signs in to the same home and sees the same bills, tasks and balances. New members join with an invite code. On a hosted plan, each extra member is R$2 a month.',
     },
     {
       question: 'Is it really free to host it myself?',
@@ -470,11 +479,6 @@ export const enUS: Content = {
       question: 'Where does my data live?',
       answer:
         'If you host it yourself, in a D1 database on your own Cloudflare account. On a hosted plan, Kantim runs the server and handles backups and updates.',
-    },
-    {
-      question: 'Can more than one person use the same books?',
-      answer:
-        'Yes, on Plus and above, and on every self-hosted install. Everyone signs in to the same ledger, and new members join with an invite code. Each extra member is R$2 a month on a hosted plan.',
     },
     {
       question: 'What happens to older transactions on the Free plan?',
@@ -491,31 +495,26 @@ export const enUS: Content = {
       answer:
         'No. Every plan runs the same code. The plans differ in who runs the server and how much you can store.',
     },
-    {
-      question: 'What comes after the money?',
-      answer:
-        'Pantry, meals, todos, pets, health, calendar, mail and Telegram and WhatsApp are planned. Each will join the same app with the same sign-in and members, and the money side keeps working as it does today.',
-    },
   ],
 
   openSource: {
     eyebrow: 'Open source',
-    title: 'Your house. Your server. Your code.',
-    body: 'All of Kantim is on GitHub. Read the code, run it on your own account, or send a pull request when the house needs a new room.',
+    title: 'Your home. Your server. Your code.',
+    body: 'All of Kantim is on GitHub. Read the code, run it on your own account, or send a pull request when your home needs a new room.',
     points: [
-      { icon: Bank, label: 'Data in your own D1 database' },
+      { icon: Bank, label: 'Your data in your own D1 database' },
       { icon: House, label: 'One Worker, one deploy command' },
-      { icon: UsersThree, label: 'Households with several members' },
+      { icon: UsersThree, label: 'Built for one person or a whole family' },
     ],
     cta: { label: 'Star on GitHub', href: GITHUB_URL },
   },
 
   footer: {
-    tagline: 'Household money, shared.',
+    tagline: 'Everything about your home, in one place.',
     copyright: `© ${new Date().getFullYear()} CouraLabs`,
     links: [
       { label: 'GitHub', href: GITHUB_URL },
-      { label: 'Features', href: '#features' },
+      { label: 'Your home', href: '#the-house' },
       { label: 'Pricing', href: '#pricing' },
       { label: 'Sign in', href: SIGN_IN_URL },
     ],
