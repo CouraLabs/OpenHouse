@@ -1,8 +1,8 @@
 import { SidebarTrigger } from '@workspace/ui/components/sidebar'
 
 import { BrandName } from '@/components/layout/brand-name.js'
-
 import { CommandPalette } from '@/components/layout/command-palette.js'
+import { LocaleSwitcher } from '@/components/layout/locale-switcher.js'
 import { MonthNetPill } from '@/components/layout/month-net-pill.js'
 import { NewTransactionButton } from '@/components/layout/new-transaction-button.js'
 import { NotificationBell } from '@/components/layout/notification-bell.js'
@@ -19,6 +19,7 @@ export function AppHeader() {
         <MonthNetPill />
         <PrivacyToggle />
         <ThemeSwitcher />
+        <LocaleSwitcher />
         <NotificationBell />
         <NewTransactionButton />
       </div>

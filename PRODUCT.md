@@ -112,8 +112,8 @@ parked.
 - Stack: Hono on Cloudflare Workers, Drizzle on D1 (API); React, Vite,
   TanStack Router, Query and Table, react-hook-form, i18next (web); shadcn/ui
   on base-ui with Tailwind (UI); npm workspaces and Turborepo.
-- Every user-facing string goes through the locale files: the web app has
-  `en-US`, the landing page has `en-US` and `pt-BR`.
+- Every user-facing string goes through the locale files: the web app and
+  the landing page have `en-US` and `pt-BR`.
 
 ## Brand commitments
 

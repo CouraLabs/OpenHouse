@@ -10,9 +10,9 @@ import {
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu'
 
-import { changeLocale, DEFAULT_LOCALE } from '@/lib/i18n.js'
+import { changeLocale, SUPPORTED_LOCALES } from '@/lib/i18n.js'
 
-const LOCALES = [DEFAULT_LOCALE] as const
+const LOCALES = SUPPORTED_LOCALES
 
 export function LocaleSwitcher() {
   const { t, i18n } = useTranslation()
@@ -32,7 +32,7 @@ export function LocaleSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup
-          value={i18n.language}
+          value={i18n.resolvedLanguage ?? i18n.language}
           onValueChange={(locale) => changeLocale(locale)}
         >
           {LOCALES.map((locale) => (

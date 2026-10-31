@@ -65,7 +65,8 @@
   },
   "language": {
     "label": "Language",
-    "en-US": "English"
+    "en-US": "English",
+    "pt-BR": "Português (Brasil)"
   },
   "filter": {
     "trigger": "Filter",
