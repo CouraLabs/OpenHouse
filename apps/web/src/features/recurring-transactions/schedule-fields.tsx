@@ -16,6 +16,7 @@ import {
 import { formatDayLabel } from '@/lib/format-date-only.js'
 import { formattingLocale } from '@/lib/i18n.js'
 import { readFrequency } from './recurring-transactions-columns.js'
+import { MonthDayInput } from './month-day-input.js'
 import { useNextOccurrence } from './use-recurring.js'
 
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1)
@@ -36,7 +37,7 @@ export function ScheduleFields({
   today: string
   errors: FieldErrors<CreateRecurringTransactionBody>
   onFrequencyChange: (value: Frequency) => void
-  onDayChange: (value: number) => void
+  onDayChange: (value: number | undefined) => void
   onMonthChange: (value: number) => void
 }) {
   const { t } = useTranslation()
@@ -45,10 +46,7 @@ export function ScheduleFields({
     new Intl.DateTimeFormat(locale, { month: 'long' }).format(
       new Date(2026, month - 1, 1)
     )
-  const dayOptions =
-    frequency === 'Weekly'
-      ? Array.from({ length: 7 }, (_, index) => index + 1)
-      : Array.from({ length: 31 }, (_, index) => index + 1)
+  const dayOptions = Array.from({ length: 7 }, (_, index) => index + 1)
   const rule =
     frequency === undefined
       ? null
@@ -126,29 +124,38 @@ export function ScheduleFields({
             {t('recurring.frequency-day')}
             <RequiredMark />
           </FieldLabel>
-          <Select
-            value={frequencyDay}
-            onValueChange={(value) => onDayChange(Number(value))}
-          >
-            <SelectTrigger id="recurring-frequency-day">
-              <SelectValue>
-                {frequencyDay === undefined
-                  ? t('recurring.frequency-day-placeholder')
-                  : frequency === 'Weekly'
-                    ? t(`recurring.weekday-${frequencyDay}`)
-                    : String(frequencyDay)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {dayOptions.map((day) => (
-                <SelectItem key={day} value={day}>
-                  {frequency === 'Weekly'
-                    ? t(`recurring.weekday-${day}`)
-                    : String(day)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {frequency === 'Weekly' ? (
+            <Select
+              value={frequencyDay}
+              onValueChange={(value) => onDayChange(Number(value))}
+            >
+              <SelectTrigger
+                id="recurring-frequency-day"
+                aria-invalid={errors.frequencyDay !== undefined}
+              >
+                <SelectValue>
+                  {frequencyDay === undefined
+                    ? t('recurring.frequency-day-placeholder')
+                    : t(`recurring.weekday-${frequencyDay}`)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {dayOptions.map((day) => (
+                  <SelectItem key={day} value={day}>
+                    {t(`recurring.weekday-${day}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <MonthDayInput
+              id="recurring-frequency-day"
+              value={frequencyDay}
+              placeholder={t('recurring.frequency-day-month-placeholder')}
+              invalid={errors.frequencyDay !== undefined}
+              onChange={onDayChange}
+            />
+          )}
           {errors.frequencyDay !== undefined ? (
             <FieldError>{errors.frequencyDay.message}</FieldError>
           ) : null}

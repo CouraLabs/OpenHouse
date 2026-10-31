@@ -54,8 +54,8 @@ test.describe('navigation', () => {
       await page.goto(`no-such-page-${Date.now().toString(36)}`)
     })
 
-    await test.step('Expect: "Nothing here." is shown', async () => {
-      await expect(page.getByText('Nothing here.')).toBeVisible()
+    await test.step('Expect: "Nothing here" is shown', async () => {
+      await expect(page.getByText('Nothing here', { exact: true })).toBeVisible()
     })
   })
 })

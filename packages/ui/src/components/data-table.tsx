@@ -112,7 +112,7 @@ export function DataTable<TData extends RowData>({
                   colSpan={columns.length}
                   className="h-28 text-center text-muted-foreground"
                 >
-                  {emptyMessage}
+                  {isLoading ? null : emptyMessage}
                 </TableCell>
               </TableRow>
             )}

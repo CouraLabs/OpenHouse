@@ -87,3 +87,29 @@ export async function seedReceiver(
 ): Promise<SeededRow> {
   return apiPost<SeededRow>(request, '/receivers', { name, type: 'Merchant' })
 }
+
+export async function seedGoal(
+  request: APIRequestContext,
+  input: { name?: string; accountId: number; targetBalance: string }
+): Promise<SeededRow> {
+  return apiPost<SeededRow>(request, '/goals', {
+    name: input.name ?? uniqueName('Seed Goal'),
+    linkedAccountId: input.accountId,
+    targetBalance: input.targetBalance,
+  })
+}
+
+export async function seedIncome(
+  request: APIRequestContext,
+  input: { name: string; amount: string; accountId: number; categoryId: number }
+): Promise<SeededRow> {
+  return apiPost<SeededRow>(request, '/transactions', {
+    name: input.name,
+    amount: input.amount,
+    transactionDt: todayIso(),
+    linkedAccountId: input.accountId,
+    categoryId: input.categoryId,
+    type: 'Income',
+    status: 'Verify',
+  })
+}

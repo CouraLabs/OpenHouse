@@ -38,4 +38,15 @@ describe('the session guard (e2e)', () => {
     expect(response.status).toBe(200)
     expect(response.body.user.email).toContain('@example.com')
   })
+
+  it('answers an unknown API route with the app\'s own not-found message', async () => {
+    const agent = await signUp(app)
+    const response = await agent.get('/api/no-such-route')
+
+    expect(response.status).toBe(404)
+    expect(response.body).toMatchObject({
+      message: 'Not found.',
+      statusCode: 404,
+    })
+  })
 })

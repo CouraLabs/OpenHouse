@@ -148,8 +148,6 @@
     "no-savings": "Você ainda não tem uma conta poupança. As metas acompanham uma conta desse tipo.",
     "no-savings-link": "Criar uma conta poupança",
     "balance": "Saldo",
-    "balance-in": "Saldo ({{currency}})",
-    "balance-date": "Data do saldo",
     "target-balance": "Saldo alvo",
     "target-balance-in": "Saldo alvo ({{currency}})",
     "target-date": "Data alvo",

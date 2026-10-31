@@ -14,8 +14,6 @@ export const createGoalSchema = z.object({
     .number({ error: "Pick an account." })
     .int()
     .positive("Pick an account."),
-  balance: amountSchema,
-  balanceDt: dateOnlySchema,
   targetBalance: amountSchema,
   targetDt: dateOnlySchema.nullish(),
 })

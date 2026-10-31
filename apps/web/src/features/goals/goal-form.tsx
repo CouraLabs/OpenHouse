@@ -34,11 +34,9 @@ const goalFormSchema = createGoalSchema
 
 type GoalFormValues = z.infer<typeof goalFormSchema>
 
-const newGoal = (today: string): GoalFormValues => ({
+const newGoal = (): GoalFormValues => ({
   name: '',
   linkedAccountId: undefined as unknown as number,
-  balance: '',
-  balanceDt: today,
   targetBalance: '',
   targetDt: undefined,
 })
@@ -71,21 +69,17 @@ export function GoalForm({
     resolver: zodResolver(goalFormSchema),
     defaultValues:
       goal === null
-        ? newGoal(today)
+        ? newGoal()
         : {
             name: goal.name,
             linkedAccountId: goal.linkedAccountId,
-            balance: goal.balance,
-            balanceDt: goal.balanceDt,
             targetBalance: goal.targetBalance,
             targetDt: goal.targetDt,
           },
   })
 
   const linkedAccountId = watch('linkedAccountId')
-  const balanceDt = watch('balanceDt')
   const targetDt = watch('targetDt')
-  const balance = watch('balance')
   const targetBalance = watch('targetBalance')
   const accounts = useActiveAccounts()
   const allSavings = (accounts.data ?? []).filter(
@@ -136,15 +130,6 @@ export function GoalForm({
                 shouldValidate: true,
                 shouldDirty: true,
               })
-
-              const picked = savings.find((account) => account.id === value)
-
-              if (goal === null && picked !== undefined && balance === '') {
-                setValue('balance', picked.balance, {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                })
-              }
             }}
             items={savings.map((account) => ({
               label: account.name,
@@ -187,50 +172,6 @@ export function GoalForm({
               })}
             </FieldDescription>
           ) : null}
-        </Field>
-        <MoneyField
-          locale={formattingLocale()}
-          currency={mainCurrency}
-
-          label={t('goals.balance-in', { currency: mainCurrency })}
-          labelFor="goal-balance"
-          placeholder={t('goals.amount-placeholder')}
-          value={balance}
-          onValueChange={(value) =>
-            setValue('balance', value, {
-              shouldValidate: true,
-              shouldDirty: true,
-            })
-          }
-          error={errors.balance}
-          required
-        />
-        <Field data-invalid={errors.balanceDt !== undefined}>
-          <FieldLabel htmlFor="goal-balance-dt">
-            {t('goals.balance-date')}
-            <RequiredMark />
-          </FieldLabel>
-          <DatePicker
-            id="goal-balance-dt"
-
-            locale={formattingLocale()}
-            value={parseDateOnly(balanceDt)}
-            onChange={(date) =>
-              setValue('balanceDt', formatDateOnly(date), {
-                shouldValidate: true,
-                shouldDirty: true,
-              })
-            }
-            labels={{
-              placeholder: t('goals.date-placeholder'),
-              today: t('goals.today'),
-            }}
-          />
-          <FieldError
-            errors={
-              errors.balanceDt !== undefined ? [errors.balanceDt] : undefined
-            }
-          />
         </Field>
         <MoneyField
           locale={formattingLocale()}

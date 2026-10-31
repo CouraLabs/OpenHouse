@@ -33,4 +33,34 @@ test.describe('bills', () => {
       await expect(page.getByText("No bills yet. A card's first charge opens its bill.")).toBeVisible()
     })
   })
+
+  test('the empty-state line waits until the bills have loaded', async ({ page, request }) => {
+    const card = await seedCreditCard(request, { name: uniqueName('QA Loading Card') })
+    let release!: () => void
+    const released = new Promise<void>((resolve) => {
+      release = resolve
+    })
+
+    await test.step('Action: hold the bill list response and open Bills for the card', async () => {
+      await page.route('**/api/credit-card-statements/search', async (route) => {
+        await released
+        await route.continue()
+      })
+      const requested = page.waitForRequest((req) => req.url().endsWith('/api/credit-card-statements/search'))
+      await page.goto(`bills?accountId=${card.id}`)
+      await requested
+    })
+
+    await test.step('Expect: the empty-state line is not shown while the bills load', async () => {
+      await expect(page.getByText("No bills yet. A card's first charge opens its bill.")).toHaveCount(0)
+    })
+
+    await test.step('Action: let the bill list response through', async () => {
+      release()
+    })
+
+    await test.step('Expect: the empty-state line appears once the bills have loaded', async () => {
+      await expect(page.getByText("No bills yet. A card's first charge opens its bill.")).toBeVisible()
+    })
+  })
 })

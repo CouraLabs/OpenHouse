@@ -61,7 +61,7 @@ export function buildGoalColumns(
             value={Number(
               goal.accountCurrency === goal.currency
                 ? goal.accountBalance
-                : goal.balance
+                : 0
             )}
             max={Number(goal.targetBalance)}
             format={(amount) =>

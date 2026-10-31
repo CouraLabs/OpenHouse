@@ -181,16 +181,7 @@ export function createApp(env: AppEnv['Bindings']): {
 
   app.get('/health', (context) => context.json({ status: 'ok' }))
 
-  app.notFound((context) =>
-    context.json(
-      {
-        message: `Cannot ${context.req.method} ${context.req.path}`,
-        error: 'Not Found',
-        statusCode: 404,
-      },
-      404
-    )
-  )
+  app.notFound((context) => renderError(context, 'Not found.', 404))
 
   app.onError((error, context) => {
     if (error instanceof HTTPException) {

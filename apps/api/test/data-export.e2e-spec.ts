@@ -89,8 +89,6 @@ describe('data export and tenant deletion (e2e, #10)', () => {
     const goal = await owner.post('/api/goals', {
       name: 'Trip',
       linkedAccountId: savings,
-      balance: '0.00',
-      balanceDt: today,
       targetBalance: '900.00',
     })
 

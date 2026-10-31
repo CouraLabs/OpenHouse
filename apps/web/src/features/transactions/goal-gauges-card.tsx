@@ -29,6 +29,8 @@ export function GoalGaugesCard({
   labels: { empty: string; currencyMismatch: string; of?: string }
 }) {
   const targeted = goals.filter((goal) => goal.targetBalance !== '0.00')
+  const progressOf = (goal: Goal) =>
+    goal.accountCurrency === goal.currency ? goal.accountBalance : '0.00'
 
   return (
     <Card>
@@ -52,11 +54,11 @@ export function GoalGaugesCard({
               aria-label={ariaLabelFor(goal)}
               aria-valuemin={0}
               aria-valuemax={Number(goal.targetBalance)}
-              aria-valuenow={Number(goal.balance)}
+              aria-valuenow={Number(progressOf(goal))}
               className="flex items-center gap-3"
             >
               <RingGauge
-                fraction={Number(goal.balance) / Number(goal.targetBalance)}
+                fraction={Number(progressOf(goal)) / Number(goal.targetBalance)}
                 tone="blue"
               />
               <span className="flex min-w-0 flex-1 flex-col">
@@ -70,7 +72,7 @@ export function GoalGaugesCard({
                 </span>
                 <span className="text-[0.8125rem] text-muted-foreground">
                   <span className="font-semibold text-foreground">
-                    {formatMoney(goal.balance, locale, goal.currency)}
+                    {formatMoney(progressOf(goal), locale, goal.currency)}
                   </span>
                   {' / '}
                   {labels.of !== undefined ? `${labels.of} ` : ''}

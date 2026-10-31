@@ -82,8 +82,6 @@ const settingsIn = (mainCurrency: Currency) =>
 const body = {
   name: 'Emergency fund',
   linkedAccountId: 5,
-  balance: '100.00',
-  balanceDt: '2026-01-31',
   targetBalance: '1000.00',
   targetDt: '2026-12-31',
 } as const
@@ -103,7 +101,11 @@ describe('GoalService', () => {
 
     expect(created.accountName).toBe('Rainy day')
     expect(created.currency).toBe('USD')
-    expect(repo.insert).toHaveBeenCalledWith(1, 7, body)
+    expect(repo.insert).toHaveBeenCalledWith(1, 7, {
+      ...body,
+      balance: '0.00',
+      balanceDt: '2026-01-01',
+    })
   })
 
   it('rejects an account outside the main currency with 409', async () => {

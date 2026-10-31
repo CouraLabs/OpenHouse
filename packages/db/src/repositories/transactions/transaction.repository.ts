@@ -12,6 +12,7 @@ import {
   isNull,
   lte,
   ne,
+  or,
   sql,
   type SQL,
 } from 'drizzle-orm'
@@ -618,7 +619,14 @@ export class TransactionRepository {
       .groupBy(
         accounts.currency,
         nameColumn,
-        ...(colorColumn === undefined ? [] : [colorColumn])
+        ...(colorColumn === undefined ? [] : [colorColumn]),
+        categories.status
+      )
+      .having(
+        or(
+          ne(categories.status, 'DELETED'),
+          sql`coalesce(sum(${transactions.amount}), 0) <> 0`
+        )
       )
 
     return totals

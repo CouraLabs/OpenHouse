@@ -66,6 +66,17 @@ const AGENCY_LESS_TYPES: readonly AccountType[] = ['Wallet', 'Credit Card']
 
 const NUMBER_LESS_TYPES: readonly AccountType[] = ['Wallet', 'Credit Card']
 
+function focusFirstInvalid() {
+  requestAnimationFrame(() => {
+    const field = document.querySelector<HTMLElement>(
+      'form [aria-invalid="true"]'
+    )
+
+    field?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    field?.focus()
+  })
+}
+
 export function AccountForm({
   account,
   onSubmit,
@@ -132,17 +143,19 @@ export function AccountForm({
       isSaving={isSaving}
       error={error}
       onCancel={onCancel}
-      onSubmit={handleSubmit((values) =>
-        onSubmit({
-          ...values,
-          agency:
-            values.agency === '' || AGENCY_LESS_TYPES.includes(values.type)
+      onSubmit={handleSubmit(
+        (values) =>
+          onSubmit({
+            ...values,
+            agency:
+              values.agency === '' || AGENCY_LESS_TYPES.includes(values.type)
+                ? null
+                : values.agency,
+            number: NUMBER_LESS_TYPES.includes(values.type)
               ? null
-              : values.agency,
-          number: NUMBER_LESS_TYPES.includes(values.type)
-            ? null
-            : values.number,
-        })
+              : values.number,
+          }),
+        focusFirstInvalid
       )}
     >
       <div className="flex flex-col gap-4">

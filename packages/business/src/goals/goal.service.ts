@@ -1,4 +1,5 @@
 import type {
+  Account,
   AccountRepository,
   Currency,
   GoalRepository,
@@ -29,7 +30,7 @@ export class GoalService {
     body: CreateGoalBody
   ): Promise<GoalView> {
     const mainCurrency = await this.mainCurrencyOf(tenantId)
-    await this.assertSavingsAccountUsable(
+    const linked = await this.assertSavingsAccountUsable(
       tenantId,
       body.linkedAccountId,
       mainCurrency
@@ -37,6 +38,8 @@ export class GoalService {
 
     const row = await this.repository.insert(tenantId, userId, {
       ...body,
+      balance: '0.00',
+      balanceDt: linked.openingDt,
       targetDt: body.targetDt ?? null,
     })
 
@@ -92,8 +95,6 @@ export class GoalService {
     const updated = await this.repository.update(tenantId, body.id, userId, {
       name: body.name,
       linkedAccountId: body.linkedAccountId,
-      balance: body.balance,
-      balanceDt: body.balanceDt,
       targetBalance: body.targetBalance,
       targetDt: body.targetDt ?? null,
     })
@@ -128,7 +129,7 @@ export class GoalService {
     tenantId: number,
     accountId: number,
     mainCurrency: Currency
-  ): Promise<void> {
+  ): Promise<Account> {
     const account = await this.accounts.findById(tenantId, accountId)
 
     if (account === undefined || account.status === 'DELETED') {
@@ -144,5 +145,7 @@ export class GoalService {
         `This account is in ${account.currency}; goals use your main currency (${mainCurrency}).`
       )
     }
+
+    return account
   }
 }

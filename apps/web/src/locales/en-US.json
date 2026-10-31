@@ -148,8 +148,6 @@
     "no-savings": "You have no savings account yet. Goals track one.",
     "no-savings-link": "Create a savings account",
     "balance": "Balance",
-    "balance-in": "Balance ({{currency}})",
-    "balance-date": "Balance date",
     "target-balance": "Target balance",
     "target-balance-in": "Target balance ({{currency}})",
     "target-date": "Target date",

@@ -18,8 +18,6 @@ function goalOn(linkedAccountId: number) {
   return {
     name: 'Emergency fund',
     linkedAccountId,
-    balance: '100.00',
-    balanceDt: '2026-10-01',
     targetBalance: '1000.00',
   }
 }
@@ -153,7 +151,7 @@ describe('currency lives on accounts (e2e, #19)', () => {
     const goals = await owner.post('/api/goals/search', {})
     expect(goals.status).toBe(201)
     expect(goals.body.items[0]).toMatchObject({
-      balance: '100.00',
+      balance: '0.00',
       currency: 'BRL',
       accountCurrency: 'USD',
     })

@@ -212,6 +212,46 @@ test.describe('accounts', () => {
       await expect(page.getByRole('row').filter({ hasText: name })).toHaveCount(0)
     })
   })
+  test('a card closing on the 31st and due on the 1st is saved', async ({ page }) => {
+    const name = uniqueName('QA Card 31')
+
+    await test.step('Action: create a Credit Card closing on the 31st and due on the 1st', async () => {
+      await page.goto('accounts')
+      await page.getByRole('button', { name: 'New account' }).click()
+      await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name)
+      await chooseRadio(page, 'Credit Card')
+      await page.getByRole('textbox', { name: 'Limit', exact: true }).fill('3000.00')
+      await chooseOption(page, 'Currency', currencyOption('BRL'))
+      await chooseDay(page, 'Close date', 31)
+      await chooseDay(page, 'Due date', 1)
+      await page.getByRole('button', { name: 'Save', exact: true }).click()
+    })
+
+    await test.step('Expect: the form closes and the card is listed with its close and due days', async () => {
+      const row = page.getByRole('row').filter({ hasText: name })
+      await expect(page.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0)
+      await expect(row).toContainText('Credit Card')
+    })
+  })
+
+  test('a card missing its limit moves the focus to the Limit field', async ({ page }) => {
+    await test.step('Action: save a Credit Card closing on the 31st and due on the 1st with no limit', async () => {
+      await page.goto('accounts')
+      await page.getByRole('button', { name: 'New account' }).click()
+      await page.getByRole('textbox', { name: 'Name', exact: true }).fill(uniqueName('QA Card No Limit'))
+      await chooseRadio(page, 'Credit Card')
+      await chooseOption(page, 'Currency', currencyOption('BRL'))
+      await chooseDay(page, 'Close date', 31)
+      await chooseDay(page, 'Due date', 1)
+      await page.getByRole('button', { name: 'Save', exact: true }).click()
+    })
+
+    await test.step('Expect: "Enter the limit." is shown and the Limit field has focus', async () => {
+      await expect(page.getByText('Enter the limit.')).toBeVisible()
+      await expect(page.getByRole('textbox', { name: 'Limit', exact: true })).toBeFocused()
+    })
+  })
+
 })
 
 async function chooseDay(page: Page, combobox: string, day: number): Promise<void> {

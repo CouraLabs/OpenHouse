@@ -122,15 +122,13 @@ export class GoalRepository {
     tenantId: number,
     id: number,
     userId: number,
-    data: GoalWrite
+    data: Omit<GoalWrite, 'balance' | 'balanceDt'>
   ): Promise<GoalRow | undefined> {
     const [row] = await this.db
       .update(goals)
       .set({
         name: data.name,
         linkedAccountId: data.linkedAccountId,
-        balance: data.balance,
-        balanceDt: data.balanceDt,
         targetBalance: data.targetBalance,
         targetDt: data.targetDt,
         updateBy: userId,
